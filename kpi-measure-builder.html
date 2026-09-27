@@ -2013,12 +2013,39 @@ init();
 
   if (!document.getElementById('suiteCss')) {
     const st = document.createElement('style'); st.id = 'suiteCss';
-    st.textContent = '.suite-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;font-size:13.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px}.suite-bar[hidden]{display:none!important}.suite-bar .ok{color:var(--ok)}.suite-bar .btn{padding:4px 10px}.brandbar .eyebrow a.home-link{color:inherit;text-decoration:none}.brandbar .eyebrow a.home-link:hover{text-decoration:underline}';
+    st.textContent = '.suite-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;font-size:13.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px}.suite-bar[hidden]{display:none!important}.suite-bar .ok{color:var(--ok)}.suite-bar .btn{padding:4px 10px}'
+      + '.suite-nav{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:-8px}'
+      + '.suite-nav a.home{display:inline-flex;align-items:center;gap:6px;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--accent);text-decoration:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px}'
+      + '.suite-nav a.home:hover{border-color:var(--accent);background:var(--accent-soft)}'
+      + '.suite-nav a.home:focus-visible,.suite-nav select:focus-visible,.brandbar a.logo-link:focus-visible{outline:2px solid var(--gold);outline-offset:2px}'
+      + '.suite-nav .switch{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}'
+      + '.suite-nav select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 8px;max-width:60vw}'
+      + '.brandbar a.logo-link{display:flex;flex:none;border-radius:6px}';
     document.head.appendChild(st);
   }
-  // Link the eyebrow back to the home page
-  const eb = document.querySelector('.brandbar .eyebrow');
-  if (eb && !eb.querySelector('a') && !document.body.dataset.home) eb.innerHTML = '<a href="' + HOME + '" class="home-link">' + eb.innerHTML + ' &middot; all tools</a>';
+  // Navigation back to the home page and across tools
+  S.TOOLS = [
+    ['kpi-measure-builder.html', 'KPI Measure Builder'],
+    ['measure-describer.html', 'Measure Describer'],
+    ['prep-for-ai-writer.html', 'Prep for AI Writer'],
+    ['dax-reviewer.html', 'DAX Reviewer'],
+    ['validation-query-builder.html', 'Validation Query Builder'],
+    ['power-query-explainer.html', 'Power Query Explainer'],
+    ['date-table-generator.html', 'Date Table Generator']
+  ];
+  const top = document.querySelector('header.top');
+  if (top && !document.body.dataset.home && !document.getElementById('suiteNav')) {
+    const here = (location.pathname.split('/').pop() || '').toLowerCase();
+    const nav = document.createElement('nav'); nav.id = 'suiteNav'; nav.className = 'suite-nav'; nav.setAttribute('aria-label', 'Toolkit');
+    nav.innerHTML = '<a class="home" href="' + HOME + '"><span aria-hidden="true">&larr;</span> Toolkit home</a>'
+      + '<label class="switch"><span>Switch tool</span><select id="suiteSwitch">'
+      + S.TOOLS.map(t => '<option value="' + t[0] + '"' + (t[0] === here ? ' selected' : '') + '>' + esc(t[1]) + '</option>').join('')
+      + '</select></label>';
+    top.insertAdjacentElement('beforebegin', nav);
+    nav.querySelector('select').addEventListener('change', e => { location.href = e.target.value; });
+    const img = top.querySelector('.brandbar img');
+    if (img && !img.closest('a')) { const a = document.createElement('a'); a.href = HOME; a.className = 'logo-link'; a.title = 'Toolkit home'; a.setAttribute('aria-label', 'Toolkit home'); img.replaceWith(a); a.appendChild(img); }
+  }
 
   // cfg: { input: textarea id, prefix: this page's storage prefix, mode: 'export' | 'dates', open: details id to open }
   S.hook = cfg => {
