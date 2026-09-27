@@ -1,0 +1,1461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SF Power BI Toolkit</title>
+<meta name="description" content="Power BI tools for building and checking models with or without Copilot. Export your model once and every tool uses it.">
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --brand:#003F88;
+  --gold:#F5A800;
+  --gold-ink:#1A1300;
+  --bg:#F2F5FA;
+  --surface:#FFFFFF;
+  --surface-2:#EAF0F8;
+  --ink:#121B2B;
+  --muted:#51607A;
+  --line:#D3DCE9;
+  --accent:#003F88;
+  --accent-ink:#FFFFFF;
+  --accent-soft:#E2ECF8;
+  --code-bg:#F6F8FC;
+  --ok:#23734A; --ok-soft:#E1F1E7;
+  --warn:#8F5200; --warn-soft:#FBEFD9;
+  --err:#AF2A22; --err-soft:#FBE4E1;
+  --info:#2F5B8A; --info-soft:#E3ECF6;
+  --ws:#A3B2C8;
+  --band:#003F88; --band-ink:#FFFFFF; --band-muted:#BFD3EE;
+  --sans:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans","Arial Narrow",-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0A1220; --surface:#111C2E; --surface-2:#172538; --ink:#E6ECF6; --muted:#9AA8BF;
+    --line:#24334B; --accent:#F5A800; --accent-ink:#1A1300; --accent-soft:#2A2410; --code-bg:#0D1726;
+    --ok:#6FCF97; --ok-soft:#1A3326; --warn:#F0B35A; --warn-soft:#3A2C14; --err:#F08A80; --err-soft:#3C1E1B;
+    --info:#8DB6E6; --info-soft:#1A2A40; --ws:#3D4F6B;
+    --band:#003F88; --band-ink:#FFFFFF; --band-muted:#BFD3EE;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0A1220; --surface:#111C2E; --surface-2:#172538; --ink:#E6ECF6; --muted:#9AA8BF;
+  --line:#24334B; --accent:#F5A800; --accent-ink:#1A1300; --accent-soft:#2A2410; --code-bg:#0D1726;
+  --ok:#6FCF97; --ok-soft:#1A3326; --warn:#F0B35A; --warn-soft:#3A2C14; --err:#F08A80; --err-soft:#3C1E1B;
+  --info:#8DB6E6; --info-soft:#1A2A40; --ws:#3D4F6B;
+  --band:#003F88; --band-ink:#FFFFFF; --band-muted:#BFD3EE;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 64px;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--cond);font-weight:600;line-height:1.2;text-wrap:balance;margin:0}
+h1{font-size:30px;letter-spacing:-.01em}
+h2{font-size:21px}
+h3{font-size:15px;font-weight:600}
+p{margin:0}
+code,.mono{font-family:var(--mono);font-size:.9em}
+a{color:var(--accent)}
+
+/* header */
+.top{display:flex;flex-direction:column;gap:14px}
+.brandbar{display:flex;gap:18px;align-items:center;background:var(--band);color:var(--band-ink);border-radius:14px;padding:18px 22px;border-bottom:4px solid var(--gold)}
+.brandbar img{width:53px;height:64px;flex:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.25))}
+.brandbar .txt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.brandbar .eyebrow{font-family:var(--cond);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.brandbar h1{color:var(--band-ink)}
+.lede{color:var(--band-muted);max-width:62ch}
+@media (max-width:520px){.brandbar{padding:14px 16px;gap:12px}.brandbar img{width:40px;height:48px}h1{font-size:25px}}
+.dest{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.dest .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;width:100%}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:12.5px;color:var(--muted);font-weight:500}
+input[type=text]{font-family:var(--mono);font-size:14px;color:var(--ink);background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:210px;max-width:100%}
+input[type=text]:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+
+.banner{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--info-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--info) 30%,transparent);border-radius:10px;padding:10px 14px;font-size:14px}
+.banner strong{color:var(--info)}
+.banner .btns{display:flex;gap:8px;flex-wrap:wrap}
+
+/* steps */
+.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;display:grid;grid-template-columns:92px minmax(0,1fr);gap:4px 18px}
+.step-num{font-family:var(--cond);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding-top:5px}
+.step-num b{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--gold);color:#002A5C;font-size:22px;line-height:1;letter-spacing:0;margin-top:8px}
+.step-body{display:flex;flex-direction:column;gap:14px;min-width:0}
+.step-head{display:flex;flex-direction:column;gap:4px}
+.step-head p{color:var(--muted);max-width:70ch}
+@media (max-width:640px){
+  .step{grid-template-columns:1fr;padding:16px}
+  .step-num{display:flex;align-items:center;gap:8px;padding-top:0}
+  .step-num b{width:28px;height:28px;font-size:15px;margin-top:0}
+}
+
+ol.how{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px;max-width:70ch}
+ol.how li::marker{color:var(--muted);font-variant-numeric:tabular-nums}
+.note{font-size:13.5px;color:var(--muted);max-width:74ch}
+
+/* code blocks */
+.codebox{position:relative;border:1px solid var(--line);border-radius:8px;background:var(--code-bg);min-width:0}
+.codebox-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:7px 8px 7px 12px;border-bottom:1px solid var(--line)}
+.codebox-bar .t{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.codebox-bar .r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+pre{margin:0;padding:12px 14px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.55;tab-size:4;-moz-tab-size:4;color:var(--ink);white-space:pre}
+pre.tall{max-height:420px}
+pre.short{max-height:260px}
+.ws-tab{color:var(--ws)}
+.tok-kw{color:var(--accent);font-weight:500}
+.tok-com{color:var(--muted);font-style:italic}
+.tok-str{color:var(--warn)}
+
+textarea{width:100%;font-family:var(--mono);font-size:13px;line-height:1.5;color:var(--ink);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;resize:vertical;tab-size:4}
+textarea.big{min-height:170px}
+textarea.mid{min-height:120px}
+textarea.req{font-family:var(--sans);font-size:14.5px;min-height:118px}
+
+/* buttons */
+button{font:inherit;cursor:pointer}
+.btn{font-family:var(--sans);font-size:13.5px;font-weight:500;border-radius:6px;padding:6px 12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08);color:var(--accent-ink)}
+.btn:focus-visible,.chip:focus-visible,.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.btn.done{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+
+/* summary chips */
+.stats{display:flex;flex-wrap:wrap;gap:8px}
+.stat{display:flex;align-items:baseline;gap:6px;background:var(--surface-2);border-radius:999px;padding:4px 12px;font-size:13.5px}
+.stat b{font-variant-numeric:tabular-nums;font-weight:600}
+.msg{font-size:13.5px;border-radius:8px;padding:8px 12px}
+.msg.err{background:var(--err-soft);color:var(--err)}
+.msg.warn{background:var(--warn-soft);color:var(--warn)}
+.msg.ok{background:var(--ok-soft);color:var(--ok)}
+
+/* table picker */
+.picker{display:flex;flex-direction:column;gap:8px}
+.picker-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--mono);font-size:12.5px;border-radius:999px;padding:4px 10px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.chip small{font-family:var(--sans);color:var(--muted);margin-left:4px}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font-size:13px;text-decoration:underline;text-underline-offset:2px}
+.chip.remote{border-style:dashed}
+.chip .src{font-family:var(--sans);font-size:11px;color:var(--info);margin-left:5px}
+details.extra{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+details.extra summary{cursor:pointer;padding:9px 12px;font-size:14px;font-weight:500}
+details.extra summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.extra-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:8px}
+.stat.remote{background:var(--info-soft);color:var(--info)}
+.details-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.detail-list{display:flex;flex-direction:column;gap:12px}
+.detail-list:empty{display:none}
+.dcard{border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px;background:var(--surface)}
+.dcard-head{display:flex;gap:10px;align-items:center}
+.dcard-head input{flex:1;width:auto;font-family:var(--sans);font-weight:500}
+.dtag{font-family:var(--cond);font-weight:600;font-size:13px;background:var(--gold);color:#002A5C;border-radius:6px;padding:3px 8px;flex:none}
+.dcard label.lab{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:500;color:var(--ink)}
+.dcard label.lab .hint{font-weight:400;color:var(--muted)}
+.dcard textarea{min-height:58px;font-family:var(--sans);font-size:14px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.dbox{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--code-bg);min-width:0}
+.dbox .t{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.dbox select{width:100%}
+select{font-family:var(--sans);font-size:13.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;max-width:100%}
+select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.addrow{display:flex;gap:6px}
+.addrow select{flex:1;min-width:0}
+.tchips{display:flex;flex-wrap:wrap;gap:5px}
+.tchip{font-family:var(--mono);font-size:12px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:999px;padding:2px 4px 2px 9px;display:inline-flex;gap:4px;align-items:center}
+.tchip button{border:0;background:none;color:var(--muted);font-size:14px;line-height:1;padding:0 4px;border-radius:50%}
+.tchip button:hover{color:var(--err)}
+.dpaths{font-size:13px;display:flex;flex-direction:column;gap:4px}
+.dpaths .no{color:var(--warn);font-weight:600}
+.dpaths .mono{font-size:12.5px}
+.tip{font-size:13.5px;color:var(--ink);background:var(--surface-2);border-radius:8px;padding:9px 12px;max-width:none}
+.tip b{color:var(--accent)}
+.vals{display:flex;flex-direction:column;gap:4px;margin:0;padding:0;list-style:none}
+.vals li{font-size:13px}
+.vals .mono{font-size:12.5px}
+.stat.limited{background:var(--warn-soft);color:var(--warn)}
+
+.opts{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14px}
+.opts label{display:flex;gap:7px;align-items:center}
+input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
+.count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.count.high{color:var(--warn)}
+
+/* segmented */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--surface)}
+.seg label{position:relative}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;padding:6px 12px;font-size:13.5px;color:var(--muted);cursor:pointer}
+.seg input:checked+span{background:var(--accent);color:var(--accent-ink)}
+
+/* review table */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.nm{font-family:var(--mono);font-size:13px;white-space:nowrap}
+td.fmt{font-family:var(--mono);font-size:12.5px;white-space:nowrap;color:var(--muted)}
+td ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:2px}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.replace{background:var(--info-soft);color:var(--info)}
+.pill.err{background:var(--err-soft);color:var(--err)}
+.pill.skip{background:var(--surface-2);color:var(--muted);border:1px dashed var(--line)}
+.muted{color:var(--muted)}
+
+.out-head{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.apply{font-size:14px;max-width:74ch}
+.apply ol{margin:6px 0 0;padding-left:1.3em;display:flex;flex-direction:column;gap:3px}
+.small{font-size:13px}
+footer{font-size:12.5px;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+.saved{display:flex;flex-direction:column;gap:10px;border:1px solid color-mix(in srgb,var(--ok) 35%,transparent);background:var(--ok-soft);border-radius:10px;padding:12px 14px}
+.saved[hidden]{display:none!important}
+.saved-head{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
+.saved-title{font-family:var(--cond);font-weight:600;font-size:16px;color:var(--ok)}
+.saved .stat{background:var(--surface)}
+.reply-actions{display:flex;gap:10px;flex-wrap:wrap}
+#modelName{width:260px;font-family:var(--sans)}
+.tools-sec,.about{display:flex;flex-direction:column;gap:12px}
+.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.tool{display:flex;flex-direction:column;gap:8px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;border-bottom:3px solid var(--gold);transition:border-color .15s,transform .15s}
+.tool:hover{border-color:var(--accent);transform:translateY(-1px)}
+.tool:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tool .tn{font-family:var(--cond);font-weight:600;font-size:19px;color:var(--accent)}
+.tool .td{font-size:14px;color:var(--muted);line-height:1.5;flex:1}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.tag.exp{background:var(--accent-soft);color:var(--accent)}
+.tag.ai{background:var(--info-soft);color:var(--info)}
+.tag.noai{background:var(--ok-soft);color:var(--ok)}
+.about ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;max-width:80ch}
+.msg.info{background:var(--info-soft);color:var(--info)}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brandbar">
+      <img src="data:image/png;base64,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" alt="SF logo">
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>SF Power BI Toolkit</h1>
+        <p class="lede">Tools for building and checking Power BI models, with or without Copilot. Export your model once below and every tool that needs it picks it up.</p>
+      </div>
+    </div>
+  </header>
+
+  <section class="step" aria-labelledby="h1s">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="h1s">Export your model from Power BI Desktop</h2>
+        <p>One DAX query lists the model&rsquo;s tables, columns, measures (with their formulas and descriptions) and relationships. It reads the model&rsquo;s definition only, not your data.</p>
+      </div>
+      <ol class="how">
+        <li>Open your report in Power BI Desktop and select <b>DAX query view</b> on the left rail.</li>
+        <li>Paste the query below into a new query tab and select <b>Run</b>.</li>
+        <li>Above the results grid, select <b>Copy</b>. It copies every row with the column headers.</li>
+      </ol>
+      <div class="codebox">
+        <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" id="copyQuery">Copy query</button></span></div>
+        <pre class="short" id="queryView"></pre>
+      </div>
+      <p class="note">Tip: rename the query tab to <i>Toolkit export</i> and keep it. DAX query view saves it in the file, so next time you only select Run and Copy.</p>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="h2s">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="h2s">Paste it once</h2>
+        <p>It&rsquo;s saved in this browser and shared by every tool on this site. Paste a new export whenever the model changes.</p>
+      </div>
+      <div class="field"><label for="modelName">Model name <span class="muted">(optional, shown in each tool)</span></label><input type="text" id="modelName" placeholder="Sales model" autocomplete="off"></div>
+      <textarea id="exportInput" class="big" spellcheck="false" aria-label="Model export" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
+      <div id="saveMsg"></div>
+      <div class="saved" id="saved" hidden>
+        <div class="saved-head"><span class="saved-title">&#10003; Saved model export</span><span id="savedWhen" class="muted"></span></div>
+        <div class="stats" id="savedStats"></div>
+        <div class="reply-actions"><button type="button" class="btn" id="clearSaved">Remove the saved export</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tools-sec" aria-labelledby="toolsH">
+    <h2 id="toolsH">The tools</h2>
+    <p class="muted">Tools marked <span class="tag exp">Uses your export</span> load the saved export as they open. Tools marked <span class="tag ai">Copilot</span> write a prompt you paste into Copilot, then check its reply.</p>
+    <div class="tools" id="tools"></div>
+  </section>
+
+  <section class="about">
+    <h2>Good to know</h2>
+    <ul>
+      <li><b>Nothing leaves your browser.</b> The pages don&rsquo;t send data anywhere. Prompts only reach Copilot when you paste them yourself.</li>
+      <li><b>Where the export is kept:</b> in this browser&rsquo;s storage for this site, so it&rsquo;s there next time on this computer, but not on another computer or in another browser.</li>
+      <li><b>One export at a time.</b> Pasting a model export into any tool also replaces the saved one, so every tool stays on the same model.</li>
+      <li><b>Each tool keeps its own work</b> (requests, replies, settings). Its <b>Clear entries</b> button empties that tool only; the saved export stays until you remove it here.</li>
+      <li><b>The Power Query Explainer</b> reads Power Query code, so its whole-model mode has its own export query. The <b>Date Table Generator</b> fills its date-column list from the saved export.</li>
+    </ul>
+  </section>
+
+  <footer>Everything runs in this page. Your model export is saved only in this browser.</footer>
+</div>
+
+<script>
+document.body.dataset.home = "1";
+/*CORE-START*/
+const NL_MARK = '\u21B5';
+const TAB = '\t';
+
+const CLEAN = (col, tabRepl) => 'SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( ' + col + ', UNICHAR ( 13 ), "" ), UNICHAR ( 10 ), UNICHAR ( 8629 ) ), UNICHAR ( 9 ), "' + tabRepl + '" )';
+const DAX_QUERY = [
+'// SF Power BI Toolkit: model export',
+'// Run in DAX query view, then select Copy above the results grid.',
+'EVALUATE',
+'// Lookups that find which remote model (if any) each table comes from',
+'VAR _tableIds = SELECTCOLUMNS ( INFO.TABLES (), "TID", [ID], "TName", [Name] )',
+'VAR _remoteParts =',
+'\tSELECTCOLUMNS (',
+'\t\tFILTER ( INFO.PARTITIONS (), [ExpressionSourceID] > 0 ),',
+'\t\t"PTID", [TableID],',
+'\t\t"PEID", [ExpressionSourceID]',
+'\t)',
+'VAR _expressions = SELECTCOLUMNS ( INFO.EXPRESSIONS (), "EID", [ID], "EName", [Name] )',
+'VAR _tables =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.VIEW.TABLES (),',
+'\t\t"Kind", "Table",',
+'\t\t"Table", [Name],',
+'\t\t"Name", [Name],',
+'\t\t"Type", [DataCategory],',
+'\t\t"Folder", "",',
+'\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [IsPrivate], " private", "" ),',
+'\t\t"Description", ' + CLEAN('[Description]', ' ') + ',',
+'\t\t"Expression", "",',
+'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Storage", [StorageMode],',
+'\t\t"Source",',
+'\t\t\tVAR _tn = [Name]',
+'\t\t\tVAR _tid = MAXX ( FILTER ( _tableIds, [TName] = _tn ), [TID] )',
+'\t\t\tVAR _eid = MAXX ( FILTER ( _remoteParts, [PTID] = _tid ), [PEID] )',
+'\t\t\tRETURN CONCATENATEX ( FILTER ( _expressions, [EID] = _eid ), [EName], ", " )',
+'\t)',
+'VAR _columns =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.VIEW.COLUMNS (),',
+'\t\t"Kind", "Column",',
+'\t\t"Table", [Table],',
+'\t\t"Name", [Name],',
+'\t\t"Type", [DataType],',
+'\t\t"Folder", [DisplayFolder],',
+'\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [IsKey], " key", "" ),',
+'\t\t"Description", ' + CLEAN('[Description]', ' ') + ',',
+'\t\t"Expression", ' + CLEAN('[Expression]', '    ') + ',',
+'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
+'VAR _measures =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.VIEW.MEASURES (),',
+'\t\t"Kind", "Measure",',
+'\t\t"Table", [Table],',
+'\t\t"Name", [Name],',
+'\t\t"Type", [FormatString],',
+'\t\t"Folder", [DisplayFolder],',
+'\t\t"Flags", IF ( [IsHidden], "hidden", "" ),',
+'\t\t"Description", ' + CLEAN('[Description]', ' ') + ',',
+'\t\t"Expression", ' + CLEAN('[Expression]', '    ') + ',',
+'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
+'VAR _relationships =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.VIEW.RELATIONSHIPS (),',
+'\t\t"Kind", "Relationship",',
+'\t\t"Table", [FromTable],',
+'\t\t"Name", [FromColumn],',
+'\t\t"Type", [FromCardinality] & ":" & [ToCardinality],',
+'\t\t"Folder", "",',
+'\t\t"Flags", [CrossFilteringBehavior] & IF ( [IsActive], "", " inactive" ),',
+'\t\t"Description", "",',
+'\t\t"Expression", "",',
+'\t\t"ToTable", [ToTable],',
+'\t\t"ToColumn", [ToColumn],',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
+'RETURN',
+'\tUNION ( _tables, _columns, _measures, _relationships )',
+'ORDER BY [Kind], [Table], [Name]'
+].join('\n');
+
+function unquoteCell(s){
+  if (s.length >= 2 && s[0] === '"' && s[s.length-1] === '"') {
+    const inner = s.slice(1, -1);
+    if (!/(^|[^"])"([^"]|$)/.test(inner.replace(/""/g, ''))) return inner.replace(/""/g, '"');
+  }
+  return s;
+}
+function restore(s){ return (s || '').split(NL_MARK).join('\n'); }
+function lc(s){ return (s || '').toLowerCase(); }
+
+function parseModel(text){
+  const res = { tables: [], columns: [], measures: [], rels: [], error: null, skipped: 0 };
+  const raw = (text || '').replace(/\r/g, '');
+  if (!raw.trim()) return res;
+  const lines = raw.split('\n');
+  let hIdx = -1, map = {};
+  for (let i = 0; i < Math.min(lines.length, 15); i++) {
+    const cells = lines[i].split('\t').map(c => lc(unquoteCell(c.trim())).replace(/^\[|\]$/g, '').replace(/^.*\[|\]$/g, ''));
+    if (cells.includes('kind') && cells.includes('table') && cells.includes('name')) {
+      hIdx = i; cells.forEach((c, j) => { map[c] = j; }); break;
+    }
+  }
+  if (hIdx < 0) {
+    res.error = 'The header row (Kind, Table, Name…) wasn\u2019t found. Use the Copy button above the results grid so the column names come along, and make sure the query from Step 1 is the one you ran.';
+    return res;
+  }
+  const get = (cells, k) => map[k] === undefined ? '' : restore(unquoteCell((cells[map[k]] || '').trim()));
+  const tablesSeen = new Map();
+  for (let i = hIdx + 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const c = lines[i].split('\t');
+    const kind = lc(get(c, 'kind'));
+    const table = get(c, 'table');
+    const name = get(c, 'name');
+    const flags = lc(get(c, 'flags'));
+    if (/^(localdatetable_|datetabletemplate_)/i.test(table)) { res.skipped++; continue; }
+    if (kind === 'table') {
+      if (flags.includes('private')) { res.skipped++; continue; }
+      const t = { name, category: get(c, 'type'), hidden: flags.includes('hidden'), description: get(c, 'description'),
+        storage: get(c, 'storage'), source: get(c, 'source') };
+      res.tables.push(t); tablesSeen.set(lc(name), t);
+    } else if (kind === 'column') {
+      if (/^RowNumber-/i.test(name)) { res.skipped++; continue; }
+      res.columns.push({ table, name, dataType: get(c, 'type'), hidden: flags.includes('hidden'), key: flags.includes('key'),
+        description: get(c, 'description'), expression: get(c, 'expression') });
+    } else if (kind === 'measure') {
+      res.measures.push({ table, name, formatString: get(c, 'type'), folder: get(c, 'folder'), hidden: flags.includes('hidden'),
+        description: get(c, 'description'), expression: get(c, 'expression') });
+    } else if (kind === 'relationship') {
+      const card = get(c, 'type').split(':');
+      const toT = get(c, 'totable');
+      if (/^(localdatetable_|datetabletemplate_)/i.test(toT)) { res.skipped++; continue; }
+      res.rels.push({ fromTable: table, fromColumn: name, toTable: toT, toColumn: get(c, 'tocolumn'),
+        fromCard: card[0] || '', toCard: card[1] || '', both: /both/i.test(flags), inactive: /inactive/.test(flags) });
+    }
+  }
+  // tables referenced by columns/measures but missing a table row
+  for (const x of [...res.columns, ...res.measures]) {
+    if (x.table && !tablesSeen.has(lc(x.table))) { const t = { name: x.table, category: '', hidden: false, description: '' }; res.tables.push(t); tablesSeen.set(lc(x.table), t); }
+  }
+  res.tables.sort((a, b) => a.name.localeCompare(b.name));
+  if (!res.tables.length && !res.columns.length) res.error = 'The header row was found but no model rows came with it. Paste the full results.';
+  annotateSources(res);
+  return res;
+}
+
+/* ---------- composite models ----------
+   A source group is the set of tables that come from one source. Import tables form one group;
+   each DirectQuery source (a SQL database, a remote semantic model) is its own group; Dual tables
+   belong to the import group and their DirectQuery source. A relationship between tables that share
+   no group, or any many-to-many relationship, is a limited relationship. */
+function remoteLabel(source){
+  return (source || '').replace(/^DirectQuery to (AS|PBI|Analysis Services)\s*-\s*/i, '').trim();
+}
+function sourceGroups(t){
+  const mode = lc(t.storage);
+  const src = t.source ? 'remote:' + lc(t.source) : '';
+  if (mode === 'dual') return ['import', src || 'directquery'];
+  if (mode === 'directquery') return [src || 'directquery'];
+  if (mode === 'directlake') return [src || 'directlake'];
+  return [src || 'import'];
+}
+function annotateSources(model){
+  const byName = new Map(model.tables.map(t => [lc(t.name), t]));
+  const groups = new Set();
+  model.tables.forEach(t => { t.groups = sourceGroups(t); t.remote = !!t.source; groups.add(t.groups[0]); });
+  model.composite = groups.size > 1;
+  model.hasRemote = model.tables.some(t => t.remote);
+  model.rels.forEach(r => {
+    const a = byName.get(lc(r.fromTable)), b = byName.get(lc(r.toTable));
+    const cross = a && b && !a.groups.some(g => b.groups.includes(g));
+    r.crossSource = !!cross;
+    r.limited = !!cross || (lc(r.fromCard) === 'many' && lc(r.toCard) === 'many');
+  });
+  return model;
+}
+// Measures the export can't see (for example from a remote model), pasted one name per line.
+function parseExtraMeasures(text){
+  return (text || '').replace(/\r/g, '').split('\n')
+    .map(l => l.replace(/^\s*([-*•]|\d+[.)])\s*/, '').split(/\s(=|\|)\s|\t/)[0].trim())
+    .map(l => l.replace(/^'[^']*'\s*(?=\[)/, '').replace(/^\[(.*)\]$/, '$1').trim())
+    .filter(Boolean);
+}
+function withExtraMeasures(model, names){
+  if (!names.length) return model;
+  const have = new Set(model.measures.map(m => lc(m.name)));
+  const extra = [...new Set(names)].filter(n => !have.has(lc(n))).map(n => ({ table: '', name: n, formatString: '', folder: '', hidden: false, description: '', expression: '', remote: true }));
+  return Object.assign({}, model, { measures: model.measures.concat(extra), extraCount: extra.length });
+}
+
+function storageTag(t){
+  const bits = [];
+  if (t.remote) bits.push('from remote model ' + qName(remoteLabel(t.source)));
+  else if (t.storage && lc(t.storage) !== 'import') bits.push(t.storage);
+  else bits.push('Import');
+  return bits.join(', ');
+}
+
+function qName(n){ return "'" + n.replace(/'/g, "''") + "'"; }
+function bracket(n){ return '[' + n.replace(/\]/g, ']]') + ']'; }
+function oneLine(s){ return (s || '').replace(/\s+/g, ' ').trim(); }
+
+// Tables a DAX expression references directly: 'Table'[Col], Table[Col], 'Table', or a bare table name as a function argument.
+function tableRefs(expr, model){
+  const out = new Set();
+  if (!expr) return out;
+  const code = stripDax(expr);
+  const known = new Map(model.tables.map(t => [lc(t.name), t.name]));
+  let r;
+  const quoted = /'((?:[^']|'')+)'/g;
+  while ((r = quoted.exec(code))) { const n = r[1].replace(/''/g, "'"); if (known.has(lc(n))) out.add(known.get(lc(n))); }
+  const bare = /(^|[^\w'\]])([A-Za-z_][A-Za-z0-9_]*)\s*(?=[\[,)])/g;
+  while ((r = bare.exec(code))) { if (known.has(lc(r[2]))) out.add(known.get(lc(r[2]))); }
+  return out;
+}
+
+// Existing measures worth sending: when only some tables are selected, drop measures that only use unselected tables.
+function measuresForPrompt(model, tables){
+  if (!tables) return { list: model.measures, dropped: 0 };
+  const sel = new Set(tables.map(lc));
+  if (model.tables.every(t => sel.has(lc(t.name)))) return { list: model.measures, dropped: 0 };
+  const list = model.measures.filter(m => {
+    if (m.remote) return true;
+    const refs = [...tableRefs(m.expression, model)];
+    return !refs.length || refs.some(t => sel.has(lc(t)));
+  });
+  return { list, dropped: model.measures.length - list.length };
+}
+
+/* ---------- table suggestions for big models ---------- */
+const STOP_WORDS = new Set(('the and for with from per by of to in on at an or vs versus over under between than that this these those each all any '
+  + 'total totals count counts number numbers average avg sum rate rates percent percentage pct ratio share amount value values '
+  + 'using based only excluding including exclude include measure measures calculate calculated show new like who which where when '
+  + 'not without have has had are was were will would should can could how many much more less most least into out what is it its be '
+  + 'distinct unique minus plus divided times grand overall current selected same so as do does '
+  + 'filter filtered filtering type types split broken breakdown separate separately individual one').split(/\s+/));
+const TIME_WORDS = new Set(('year years yearly month months monthly week weeks weekly day days daily quarter quarters quarterly date dates '
+  + 'ytd mtd qtd yoy mom qoq wow prior previous last rolling trailing trend period periods fiscal ly py since ago growth change '
+  + 'annual annualized cumulative running').split(/\s+/));
+function stem(w){
+  if (w.length > 4 && w.endsWith('ies')) return w.slice(0, -3) + 'y';
+  if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1);
+  return w;
+}
+function wordsOf(s){
+  return (s || '').replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(stem);
+}
+function wordMatch(a, b){ return a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5)); }
+
+function suggestTables(model, requestsText, targetTable){
+  const raw = (requestsText || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const tokens = [...new Set(raw.map(stem).filter(w => w.length >= 3 && !/^\d+$/.test(w) && !STOP_WORDS.has(w) && !TIME_WORDS.has(w)))];
+  const wantsTime = raw.some(w => TIME_WORDS.has(w) || TIME_WORDS.has(stem(w)));
+  const picked = new Map(); // table name -> reason
+  const hit = (words) => tokens.find(t => words.some(w => wordMatch(t, w)));
+  for (const t of model.tables) {
+    const tw = hit(wordsOf(t.name));
+    if (tw) { picked.set(t.name, 'name matches “' + tw + '”'); continue; }
+    for (const c of model.columns) {
+      if (lc(c.table) !== lc(t.name)) continue;
+      const cw = hit(wordsOf(c.name));
+      if (cw) { picked.set(t.name, 'column ' + bracket(c.name) + ' matches “' + cw + '”'); break; }
+    }
+  }
+  for (const m of model.measures) {
+    const mw = hit(wordsOf(m.name));
+    if (!mw) continue;
+    for (const t of tableRefs(m.expression, model)) if (!picked.has(t)) picked.set(t, 'used by measure ' + bracket(m.name));
+  }
+  const matched = new Set(picked.keys());
+  // bring in the dimensions each matched table filters through (many side -> one side)
+  for (const r of model.rels) {
+    const from = model.tables.find(t => lc(t.name) === lc(r.fromTable));
+    const to = model.tables.find(t => lc(t.name) === lc(r.toTable));
+    if (!from || !to) continue;
+    const manyToOne = lc(r.toCard) === 'one' || !r.toCard;
+    if (matched.has(from.name) && manyToOne && !picked.has(to.name)) picked.set(to.name, 'related to ' + qName(from.name));
+    if (matched.has(to.name) && lc(r.fromCard) === 'one' && lc(r.toCard) === 'many' && !picked.has(from.name)) picked.set(from.name, 'related to ' + qName(to.name));
+  }
+  if (wantsTime) model.tables.filter(t => lc(t.category) === 'time').forEach(t => { if (!picked.has(t.name)) picked.set(t.name, 'date table (time words in requests)'); });
+  const home = model.tables.find(t => lc(t.name) === lc(targetTable || ''));
+  if (home && picked.size && !picked.has(home.name)) picked.set(home.name, 'home table for new measures');
+  return { picked, matchedCount: matched.size, tokens };
+}
+
+/* ---------- column values ----------
+   The export has names only. For filters on specific text values, the user can run a second small
+   query that lists the values of chosen columns, and paste the result back. */
+const VALUES_LIMIT = 50;
+
+// 'Table'[Column] / Table[Column] / [Column] (if unique) lines -> canonical column refs
+function parseColumnList(text, model){
+  const out = [], bad = [], seen = new Set();
+  for (let line of (text || '').replace(/\r/g, '').split('\n')) {
+    line = line.replace(/^\s*([-*•]|\d+[.)])\s*/, '').trim();
+    if (!line) continue;
+    let tn = null, cn = null, r;
+    if ((r = line.match(/^'((?:[^']|'')+)'\s*\[((?:[^\]]|\]\])+)\]/))) { tn = r[1].replace(/''/g, "'"); cn = r[2].replace(/\]\]/g, ']'); }
+    else if ((r = line.match(/^([A-Za-z_][\w ]*?)\s*\[((?:[^\]]|\]\])+)\]/))) { tn = r[1].trim(); cn = r[2].replace(/\]\]/g, ']'); }
+    else if ((r = line.match(/^\[((?:[^\]]|\]\])+)\]$/)) || (r = [null, line])) { cn = r[1].replace(/\]\]/g, ']'); }
+    let col;
+    if (tn) col = model.columns.find(c => lc(c.table) === lc(tn) && lc(c.name) === lc(cn));
+    else {
+      const hits = model.columns.filter(c => lc(c.name) === lc(cn));
+      if (hits.length === 1) col = hits[0];
+    }
+    if (!col) { bad.push(line); continue; }
+    const ref = qName(col.table) + bracket(col.name);
+    if (seen.has(lc(ref))) continue;
+    seen.add(lc(ref));
+    out.push({ table: col.table, column: col.name, ref });
+  }
+  return { cols: out, bad };
+}
+
+function valuesQuery(cols){
+  if (!cols.length) return '';
+  const part = c => 'SELECTCOLUMNS ( TOPN ( ' + VALUES_LIMIT + ', DISTINCT ( ' + c.ref + ' ), ' + c.ref + ', ASC ), '
+    + '"Column", "' + c.ref.replace(/"/g, '""') + '", "Value", ' + c.ref + ' & "", "Distinct", COUNTROWS ( DISTINCT ( ' + c.ref + ' ) ) )';
+  const body = cols.length === 1 ? part(cols[0]) : 'UNION (\n' + cols.map(c => '\t' + part(c)).join(',\n') + '\n)';
+  return ['// KPI Measure Builder: column values (first ' + VALUES_LIMIT + ' per column)',
+    '// Run in DAX query view, then select Copy above the results grid.',
+    'EVALUATE', body, 'ORDER BY [Column], [Value]'].join('\n');
+}
+
+// Pasted results -> Map(lc ref -> { ref, values, distinct })
+function parseValues(text){
+  const map = new Map();
+  const lines = (text || '').replace(/\r/g, '').split('\n');
+  let h = -1, idx = {};
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const cells = lines[i].split('\t').map(c => lc(unquoteCell(c.trim())).replace(/^.*\[|\]$/g, ''));
+    if (cells.includes('column') && cells.includes('value')) { h = i; cells.forEach((c, j) => { idx[c] = j; }); break; }
+  }
+  if (h < 0) return map;
+  for (let i = h + 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const c = lines[i].split('\t');
+    const ref = unquoteCell((c[idx.column] || '').trim());
+    if (!ref) continue;
+    const v = unquoteCell((c[idx.value] || '').replace(/^\s+|\s+$/g, ''));
+    const d = parseInt((c[idx.distinct] || '').trim(), 10);
+    const k = lc(ref);
+    if (!map.has(k)) map.set(k, { ref, values: [], distinct: isNaN(d) ? null : d });
+    map.get(k).values.push(v);
+  }
+  return map;
+}
+
+// Text columns whose names share words with the requests, best matches first
+function suggestValueColumns(model, requestsText, limit){
+  const raw = (requestsText || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const tokens = [...new Set(raw.map(stem).filter(w => w.length >= 3 && !STOP_WORDS.has(w) && !TIME_WORDS.has(w)))];
+  const scored = [];
+  for (const c of model.columns) {
+    if (!/^(string|text)$/i.test(c.dataType || '') || c.key) continue;
+    const cw = wordsOf(c.name);
+    const score = tokens.filter(t => cw.some(w => wordMatch(t, w))).length;
+    if (score) scored.push({ c, score });
+  }
+  scored.sort((a, b) => b.score - a.score || a.c.name.length - b.c.name.length);
+  return scored.slice(0, limit || 6).map(x => qName(x.c.table) + bracket(x.c.name));
+}
+
+function daxString(v){ return '"' + v.replace(/"/g, '""') + '"'; }
+
+/* ---------- relationship paths ----------
+   Filters flow from the one side (ToTable) to the many side (FromTable); both ways only when the
+   relationship filters both directions. */
+function hopFlows(r, fromT, toT){
+  if (lc(fromT) === lc(r.toTable) && lc(toT) === lc(r.fromTable)) return true;
+  return !!r.both;
+}
+function relPath(model, a, b, allowInactive){
+  if (lc(a) === lc(b)) return [];
+  const rels = model.rels.filter(r => allowInactive || !r.inactive);
+  const prev = new Map([[lc(a), null]]);
+  const queue = [a];
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const r of rels) {
+      let next = null;
+      if (lc(r.fromTable) === lc(cur)) next = r.toTable; else if (lc(r.toTable) === lc(cur)) next = r.fromTable;
+      if (!next || prev.has(lc(next))) continue;
+      prev.set(lc(next), { from: cur, rel: r, to: next });
+      if (lc(next) === lc(b)) {
+        const hops = []; let k = lc(b);
+        while (prev.get(k)) { const h = prev.get(k); hops.unshift(h); k = lc(h.from); }
+        return hops;
+      }
+      queue.push(next);
+    }
+  }
+  return null;
+}
+function describePath(model, a, b){
+  let hops = relPath(model, a, b, false), inactive = false;
+  if (!hops) { hops = relPath(model, a, b, true); inactive = !!hops; }
+  if (!hops) return { text: 'No relationship path connects ' + qName(a) + ' and ' + qName(b) + '. Relating them needs TREATAS or a relationship change.', tables: [], ok: false, forward: false, back: false };
+  const names = [a].concat(hops.map(h => h.to));
+  const forward = hops.every(h => hopFlows(h.rel, h.from, h.to));
+  const back = hops.slice().reverse().every(h => hopFlows(h.rel, h.to, h.from));
+  const limited = hops.some(h => h.rel.limited);
+  const inact = hops.filter(h => h.rel.inactive);
+  const parts = [names.map(qName).join(' → ') + '.'];
+  parts.push('A filter on ' + qName(a) + ' reaches ' + qName(b) + ': ' + (forward ? 'yes' : 'NO') + '. A filter on ' + qName(b) + ' reaches ' + qName(a) + ': ' + (back ? 'yes' : 'NO') + '.');
+  if (inactive) parts.push('Uses INACTIVE relationship(s) ' + inact.map(h => qName(h.rel.fromTable) + bracket(h.rel.fromColumn) + ' → ' + qName(h.rel.toTable) + bracket(h.rel.toColumn)).join(', ') + '; activate with USERELATIONSHIP.');
+  if (limited) parts.push('Includes a LIMITED relationship.');
+  return { text: parts.join(' '), tables: names, ok: true, forward, back, inactive };
+}
+
+/* ---------- detailed measures ---------- */
+const COMBINE = {
+  sum: ['Sum', 'add up the per-row results (SUMX)'],
+  max: ['Largest', 'take the largest per-row result (MAXX)'],
+  min: ['Smallest', 'take the smallest per-row result (MINX)'],
+  avg: ['Average', 'average the per-row results (AVERAGEX)'],
+  count: ['Count rows with a result', 'count the rows whose result is not blank'],
+  auto: ['Let Copilot decide', 'combine the per-row results in the way that fits the goal, and say how in NOTES']
+};
+function blankDetail(){ return { name: '', goal: '', tables: [], iterate: '', combine: 'sum', from: '', to: '', filters: '', example: '', edge: '', other: '' }; }
+
+function detailTables(model, d){
+  const set = new Map();
+  const add = n => { const t = model.tables.find(x => lc(x.name) === lc(n)); if (t) set.set(lc(t.name), t.name); };
+  (d.tables || []).forEach(add);
+  const col = r => { const m = /^'((?:[^']|'')+)'\[/.exec(r || ''); return m ? m[1].replace(/''/g, "'") : null; };
+  [d.iterate, d.from.startsWith('col:') ? d.from.slice(4) : '', d.to.startsWith('col:') ? d.to.slice(4) : ''].map(col).filter(Boolean).forEach(add);
+  return [...set.values()];
+}
+function detailPaths(model, d){
+  const ts = detailTables(model, d);
+  const out = [];
+  for (let i = 0; i < ts.length; i++) for (let j = i + 1; j < ts.length; j++) out.push(describePath(model, ts[i], ts[j]));
+  return out;
+}
+function windowEnd(v, d, dateCol){
+  if (v === 'sel') return 'the selected date, meaning ' + (dateCol ? 'MAX ( ' + dateCol + ' )' : 'the latest date') + ' in the current filter context';
+  if (v === 'periodStart') return 'the first date of the selected period' + (dateCol ? ', meaning MIN ( ' + dateCol + ' )' : '');
+  if (v === 'periodEnd') return 'the last date of the selected period' + (dateCol ? ', meaning MAX ( ' + dateCol + ' )' : '');
+  if (v.startsWith('col:')) return 'the value of ' + v.slice(4) + (d.iterate ? ' for the current row of the iteration' : ' in the current context');
+  return '';
+}
+function detailSection(model, d, n, dateCol){
+  const L = [];
+  L.push('### Detailed measure D' + n + (d.name ? ': ' + d.name : ''));
+  L.push('Goal: ' + (d.goal || '(not described)').trim());
+  const ts = detailTables(model, d);
+  if (ts.length) L.push('Tables involved: ' + ts.map(qName).join(', '));
+  const paths = detailPaths(model, d);
+  if (paths.length) { L.push('How these tables connect (from the model’s relationships):'); paths.forEach(p => L.push('- ' + p.text)); }
+  if (d.iterate) {
+    const c = COMBINE[d.combine] || COMBINE.sum;
+    L.push('Calculation shape: this is ONE measure. Iterate over each value of ' + d.iterate + ', calculate the result for that value, then ' + c[1] + '.');
+  }
+  if (d.from || d.to) {
+    const f = windowEnd(d.from, d, dateCol) || 'no lower limit', t = windowEnd(d.to, d, dateCol) || 'no upper limit';
+    L.push('Date window: from ' + f + ', up to and including ' + t + '.' + (d.iterate && (d.from.startsWith('col:') || d.to.startsWith('col:')) ? ' The window is different for each row of the iteration.' : ''));
+    if (d.from === 'sel' || d.to === 'sel' || d.from === 'periodEnd' || d.to === 'periodEnd' || d.from === 'periodStart' || d.to === 'periodStart')
+      L.push('Capture the selected date(s) in VARs before iterating. Inside the calculation, remove the slicer’s own date filter and apply this window instead.');
+  }
+  if (d.filters.trim()) L.push('Filters to keep or ignore: ' + oneLine(d.filters));
+  if (d.example.trim()) L.push('Worked example: ' + oneLineKeepBreaks(d.example).split('\n').join(' / '));
+  if (d.edge.trim()) L.push('Edge cases: ' + oneLineKeepBreaks(d.edge).split('\n').join(' / '));
+  if (d.other.trim()) L.push('Other notes: ' + oneLineKeepBreaks(d.other).split('\n').join(' / '));
+  return L;
+}
+function hasDetails(details){ return (details || []).some(d => (d.goal || '').trim() || (d.name || '').trim()); }
+
+function buildPrompt(model, requestsText, opts){
+  const o = Object.assign({ tables: null, hidden: true, formulas: true, descriptions: true, targetTable: '_Measures' }, opts || {});
+  const reqs = (requestsText || '').split('\n').map(s => s.replace(/^\s*(\d+[.)]|[-*•])\s*/, '').trim()).filter(Boolean);
+  const dateTables = model.tables.filter(t => lc(t.category) === 'time').map(t => t.name);
+  const dateTbl = dateTables[0];
+  const details = (o.details || []).filter(d => (d.goal || '').trim() || (d.name || '').trim());
+  const forced = new Set();
+  details.forEach(d => {
+    detailTables(model, d).forEach(t => forced.add(lc(t)));
+    detailPaths(model, d).forEach(p => p.tables.forEach(t => forced.add(lc(t))));
+    if ((d.from || d.to) && dateTbl) forced.add(lc(dateTbl));
+  });
+  const include = o.tables ? new Set(o.tables.map(lc).concat([...forced])) : null;
+  const inc = t => !include || include.has(lc(t));
+  const dateColObj = dateTbl && (model.columns.find(c => lc(c.table) === lc(dateTbl) && /^date$/i.test(c.name)) || model.columns.find(c => lc(c.table) === lc(dateTbl) && /date/i.test(c.dataType || '')));
+  const dateCol = dateColObj ? qName(dateColObj.table) + bracket(dateColObj.name) : null;
+  const L = [];
+  L.push('You are an expert in Power BI and DAX. Write DAX measures for the semantic model described below.');
+  L.push('');
+  L.push('## Measures to write');
+  reqs.forEach((r, i) => L.push((i + 1) + '. ' + r));
+  details.forEach((d, i) => L.push((reqs.length + i + 1) + '. ' + (d.name || 'Detailed measure D' + (i + 1)) + ': see Detailed measure D' + (i + 1) + ' below.'));
+  if (!reqs.length && !details.length) L.push('1. (describe the measures you need here)');
+  if (details.length) {
+    L.push('');
+    L.push('## Detailed measures');
+    L.push('These are complex. Read every line of each one before writing it.');
+    details.forEach((d, i) => { L.push(''); detailSection(model, d, i + 1, dateCol).forEach(x => L.push(x)); });
+  }
+  L.push('');
+  L.push('## Rules');
+  L.push('- Use only the tables, columns and measures listed under "Model". Do not invent names.');
+  L.push("- Reference columns as 'Table'[Column]. Reference measures as [Measure] with no table prefix.");
+  L.push('- Reuse an existing measure when it already calculates what you need.');
+  L.push('- Use DIVIDE() for division. Use VAR ... RETURN when a measure has more than one step.');
+  if (dateTables.length) L.push("- The marked date table is " + dateTables.map(qName).join(', ') + '. Use it for all time intelligence.');
+  else L.push('- No table is marked as a date table. For time intelligence, use the date table you can identify from the relationships and state which one in the description.');
+  L.push('- Filter through relationships. Do not use FILTER over a whole fact table when a simple column filter works.');
+  L.push('- Give each measure a clear Title Case name that is not already used by an existing measure or column.');
+  L.push('- FORMAT must be a Power BI format string, for example #,0 or #,0.00 or 0.0% or \\$#,0.');
+  if (o.descriptions) L.push('- DESCRIPTION is one plain-English sentence a report user would understand.');
+  L.push('- You can see table and column names, not the data. When a filter needs specific text values, use only values listed under "Known column values" or written in the request, spelled exactly as given.');
+  L.push('- If a request needs text values you were not given, do not guess them, and do not replace them with a generic filter such as VALUES() or KEEPFILTERS(VALUES()). Write a SKIPPED block whose REASON names the column whose values are needed.');
+  L.push('- When a one-line request asks for a separate measure "for each" value of a column, write one measure per value, named with the value, for example "Sales - Consumer". This does not apply to detailed measures, where "iterate over each value" means one measure that loops.');
+  if (model.composite) {
+    L.push('');
+    L.push('## Composite model rules');
+    L.push('This model combines tables from more than one data source. Each table below says where it comes from.');
+    L.push('- Relationships marked LIMITED connect different data sources, or are many-to-many. Filters still flow across them.');
+    L.push('- Across a LIMITED relationship, do not use RELATED or RELATEDTABLE, and do not iterate the rows of one table while reading columns of a table on the other side.');
+    L.push('- Prefer aggregating within one source and then combining the results, for example DIVIDE ( [Measure from one source], [Measure from another source] ).');
+    L.push('- Across a LIMITED relationship, rows with no matching key are not grouped under a blank value, so visible rows may not add up to the total.');
+  }
+  if (details.length) {
+    L.push('');
+    L.push('## Rules for detailed measures');
+    L.push('- Add a NOTES line (2 to 4 plain sentences) explaining your approach, just before DAX:.');
+    L.push('- Capture values from the outer filter context, such as the selected date, in VARs BEFORE any iterator. Inside an iterator, CALCULATE and measure references cause context transition, which changes those values.');
+    L.push('- Iterate over the smallest table that works: VALUES of the column you iterate over, or SUMMARIZE of the columns you need. Do not iterate a whole fact table unless the request says to.');
+    L.push('- Inside the iterator, use CALCULATE (or a measure reference) so the current row becomes a filter. When a date window differs from the slicer selection, remove the date table filter (REMOVEFILTERS on the date table) and apply the window explicitly, for example DATESBETWEEN or a filter on the date column.');
+    L.push('- Follow the relationship paths given. If a path does not pass filters in the direction you need, use TREATAS or CROSSFILTER inside CALCULATE, and say so in NOTES.');
+    L.push('- Handle the edge cases listed, and make the worked example come out as described.');
+    L.push('- Break the DAX into named VAR steps with a short // comment on each.');
+  }
+  L.push('');
+  L.push('## Output format');
+  L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block.');
+  L.push('Inside the code block, write each measure in exactly this layout:');
+  L.push('');
+  L.push('@@@ MEASURE @@@');
+  L.push('NAME: Measure Name');
+  L.push('FORMAT: #,0');
+  if (o.descriptions) L.push('DESCRIPTION: One sentence.');
+  if (details.length) L.push('NOTES: (detailed measures only) How the calculation works.');
+  L.push('DAX:');
+  L.push('CALCULATE (');
+  L.push('    [Existing Measure],');
+  L.push("    'Table'[Column] = \"value\"");
+  L.push(')');
+  L.push('@@@ END @@@');
+  L.push('');
+  L.push('Rules for this layout:');
+  L.push('- Write the DAX exactly as you would type it in Power BI, on as many lines as you like. Do not escape quotes, brackets or backslashes.');
+  L.push('- Do not start the DAX with the measure name and "=".');
+  L.push('- Do not use JSON, tables or bullet points.');
+  L.push('');
+  L.push('If a measure cannot be calculated from this model, do NOT write a placeholder such as BLANK(), 0 or ERROR(). Write a SKIPPED block instead, and say what is missing:');
+  L.push('');
+  L.push('@@@ SKIPPED @@@');
+  L.push('NAME: Measure Name');
+  L.push('REASON: What the model is missing, for example a column or relationship.');
+  L.push('@@@ END @@@');
+  L.push('');
+  L.push('## Model');
+  L.push('');
+  L.push('### Tables and columns');
+  for (const t of model.tables) {
+    if (!inc(t.name)) continue;
+    const cols = model.columns.filter(c => lc(c.table) === lc(t.name) && (o.hidden || !c.hidden));
+    const tags = [];
+    if (lc(t.category) === 'time') tags.push('date table');
+    if (!cols.length && model.measures.some(m => lc(m.table) === lc(t.name))) tags.push('measure table');
+    if (model.composite) tags.push(storageTag(t));
+    L.push(qName(t.name) + (tags.length ? ' (' + tags.join(', ') + ')' : '') + (t.description ? ': ' + oneLine(t.description) : ''));
+    for (const c of cols) {
+      const bits = [c.dataType || 'unknown type'];
+      if (c.key) bits.push('key');
+      if (c.hidden) bits.push('hidden');
+      if (c.expression) bits.push('calculated');
+      L.push('  - ' + bracket(c.name) + ': ' + bits.join(', ') + (c.description ? ' — ' + oneLine(c.description) : ''));
+    }
+  }
+  const rels = model.rels.filter(r => inc(r.fromTable) && inc(r.toTable));
+  if (rels.length) {
+    L.push('');
+    L.push('### Relationships');
+    for (const r of rels) {
+      L.push('- ' + qName(r.fromTable) + bracket(r.fromColumn) + ' (' + (r.fromCard || '?') + ') → ' + qName(r.toTable) + bracket(r.toColumn) + ' (' + (r.toCard || '?') + ')'
+        + (r.both ? ', filters both directions' : ', single direction')
+        + (r.crossSource ? ', LIMITED (crosses data sources)' : r.limited ? ', LIMITED (many-to-many)' : '')
+        + (r.inactive ? ', INACTIVE (use USERELATIONSHIP)' : ''));
+    }
+  }
+  if (o.knownValues && o.knownValues.size) {
+    L.push('');
+    L.push('### Known column values');
+    for (const kv of o.knownValues.values()) {
+      const shown = kv.values.map(v => v === '' ? '(blank)' : daxString(v)).join(', ');
+      const partial = kv.distinct !== null && kv.distinct > kv.values.length;
+      L.push('- ' + kv.ref + ': ' + shown + (partial ? ' (first ' + kv.values.length + ' of ' + kv.distinct + ' values; the list is incomplete)' : ''));
+    }
+  }
+  const mp = measuresForPrompt(model, o.tables);
+  if (mp.list.length) {
+    L.push('');
+    L.push('### Existing measures');
+    for (const m of mp.list) {
+      let line = '- ' + bracket(m.name);
+      if (m.remote) { L.push(line + ' (from the remote model; formula not available)'); continue; }
+      const home = model.tables.find(t => lc(t.name) === lc(m.table));
+      const tags = [];
+      if (m.formatString) tags.push('format ' + m.formatString);
+      if (home && home.remote) tags.push('from remote model ' + qName(remoteLabel(home.source)));
+      if (tags.length) line += ' (' + tags.join('; ') + ')';
+      if (o.formulas && m.expression) {
+        let e = oneLine(m.expression);
+        if (e.length > 300) e = e.slice(0, 300).replace(/\s+\S*$/, '') + ' … [formula shortened]';
+        line += ' = ' + e;
+      }
+      L.push(line);
+    }
+  }
+  if (o.formulas && mp.list.some(m => oneLine(m.expression).length > 300)) {
+    L.push('');
+    L.push('Formulas marked [formula shortened] are cut to save space. Reuse those measures by name; do not copy their partial formulas.');
+  }
+  L.push('');
+  L.push('=== END OF PROMPT ===');
+  return L.join('\n');
+}
+
+function repairJson(s){
+  let out = '', inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) {
+      if (esc) { out += ch; esc = false; continue; }
+      if (ch === '\\') { out += ch; esc = true; continue; }
+      if (ch === '"') { inStr = false; out += ch; continue; }
+      if (ch === '\n') { out += '\\n'; continue; }
+      if (ch === '\r') continue;
+      if (ch === '\t') { out += '\\t'; continue; }
+      out += ch;
+    } else {
+      if (ch === '"') inStr = true;
+      out += ch;
+    }
+  }
+  return out.replace(/,\s*([\]}])/g, '$1');
+}
+
+function pick(obj, keys){
+  const lower = {};
+  for (const k of Object.keys(obj)) lower[lc(k).replace(/[\s_-]/g, '')] = obj[k];
+  for (const k of keys) if (lower[k] !== undefined && lower[k] !== null) return String(lower[k]);
+  return '';
+}
+
+// Chat UIs often add markdown escapes (\[ \] \_ \*) when text is copied outside a code block.
+function unMarkdown(s){
+  let prev;
+  do { prev = s; s = s.replace(/(^|[^\\])\\([\[\]_*])/g, '$1$2'); } while (s !== prev);
+  return s;
+}
+function cleanField(v){
+  let s = (v || '').trim();
+  s = s.replace(/^`+|`+$/g, '').trim();
+  if (s.length >= 2 && ((s[0] === '"' && s[s.length - 1] === '"') || (s[0] === "'" && s[s.length - 1] === "'"))) {
+    const inner = s.slice(1, -1);
+    if (!inner.includes(s[0])) s = inner;
+  }
+  return s;
+}
+function toMeasure(name, expr, fmt, desc){
+  name = cleanField(name).replace(/^\[(.*)\]$/s, '$1').replace(/^'(.*)'$/s, '$1').trim();
+  expr = (expr || '').replace(/\r/g, '');
+  // strip a leading "Name =" if Copilot repeated the measure name
+  const m = expr.match(/^\s*(?:'([^']+)'|\[([^\]]+)\]|([^=\n(\[]+?))\s*:?=\s*/);
+  if (m) { const n = (m[1] || m[2] || m[3] || '').trim(); if (n && lc(n) === lc(name)) expr = expr.slice(m[0].length); }
+  return { name, expression: expr, formatString: cleanField(fmt), description: oneLineKeepBreaks(cleanField(desc)) };
+}
+
+// Preferred format: @@@ MEASURE @@@ ... @@@ END @@@ blocks, no escaping needed.
+// @@@ SKIPPED @@@ blocks carry a NAME and REASON for measures Copilot couldn't write.
+function parseBlocks(t){
+  const out = [];
+  const parts = t.split(/@@@\s*(MEASURE|SKIPPED)\s*@@@/i);
+  for (let p = 1; p < parts.length; p += 2) {
+    const skipped = parts[p].toUpperCase() === 'SKIPPED';
+    const body = parts[p + 1].split(/@@@\s*END\s*@@@/i)[0].replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '');
+    const re = /(^|\s)(NAME|FORMAT|DESCRIPTION|NOTES|REASON|DAX)[ \t]*:/g;
+    const found = {};
+    let r;
+    while ((r = re.exec(body))) {
+      const label = r[2];
+      if (found[label]) continue;
+      found[label] = { start: r.index + r[1].length, value: re.lastIndex };
+      if (label === 'DAX') break; // everything after DAX: belongs to the expression
+    }
+    const order = Object.entries(found).sort((a, b) => a[1].start - b[1].start);
+    const val = {};
+    order.forEach(([label, pos], i) => {
+      const end = i + 1 < order.length ? order[i + 1][1].start : body.length;
+      val[label] = body.slice(pos.value, end);
+    });
+    if (skipped) {
+      if (!found.NAME) continue;
+      const m = toMeasure(val.NAME, '', '', '');
+      m.skipped = true;
+      m.reason = oneLine(cleanField(val.REASON || val.DESCRIPTION || ''));
+      out.push(m);
+      continue;
+    }
+    if (!found.NAME && !found.DAX) continue;
+    let dax = (val.DAX || '').replace(/^[ \t]*\n/, '');
+    const mm = toMeasure(val.NAME || '', dax, val.FORMAT || '', val.DESCRIPTION || '');
+    if (val.NOTES) mm.notes = oneLine(cleanField(val.NOTES));
+    out.push(mm);
+  }
+  return out;
+}
+
+// DAX that computes nothing: BLANK(), 0, "", TRUE()/FALSE(), ERROR("..."), or only comments.
+function isPlaceholder(expr){
+  const code = stripDax(expr || '').replace(/\s+/g, '');
+  return /^(|BLANK\(\)|0|0\.0+|""|TRUE\(\)|FALSE\(\)|ERROR\(""\))$/i.test(code);
+}
+
+// Fallback for JSON-ish replies with unescaped quotes, missing [ or other damage:
+// read each value from its key to the next known key, instead of trusting the quoting.
+const JSON_KEYS = { name: 'name', measurename: 'name', measure: 'name', expression: 'expression', dax: 'expression', formula: 'expression',
+  daxexpression: 'expression', formatstring: 'formatString', format: 'formatString', description: 'description', desc: 'description' };
+function lenientJson(t){
+  const keyAlt = Object.keys(JSON_KEYS).sort((a, b) => b.length - a.length).join('|');
+  const startRe = new RegExp('"(' + keyAlt + ')"\\s*:\\s*"', 'gi');
+  const endRe = new RegExp('"\\s*(?:,\\s*"(?:' + keyAlt + ')"\\s*:|\\}\\s*(?=,\\s*\\{|\\]|$))', 'gi');
+  const objs = [];
+  let cur = null, r, lastEnd = 0;
+  while ((r = startRe.exec(t))) {
+    if (r.index < lastEnd) continue;
+    const field = JSON_KEYS[r[1].toLowerCase()];
+    endRe.lastIndex = startRe.lastIndex;
+    const e = endRe.exec(t);
+    const end = e ? e.index : t.length;
+    let v = t.slice(startRe.lastIndex, end);
+    v = v.replace(/\\(["\\\/nrt])/g, (m, c) => ({ n: '\n', r: '', t: '\t', '"': '"', '\\': '\\', '/': '/' }[c]));
+    if (!cur || field === 'name' && cur.name !== undefined || cur[field] !== undefined) { cur = {}; objs.push(cur); }
+    cur[field] = v;
+    lastEnd = end;
+    startRe.lastIndex = end;
+  }
+  return objs.map(o => toMeasure(o.name || '', o.expression || '', o.formatString || '', o.description || ''));
+}
+
+function parseResponse(text){
+  const res = { measures: [], error: null, format: '' };
+  let t = (text || '').replace(/\r/g, '').trim();
+  if (!t) return res;
+  t = unMarkdown(t).replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'").replace(/\u00A0/g, ' ');
+
+  if (/@@@\s*(MEASURE|SKIPPED)\s*@@@/i.test(t)) {
+    res.measures = parseBlocks(t);
+    res.format = 'blocks';
+    if (!res.measures.length) res.error = 'Measure blocks were found, but none had a NAME or DAX line. Check the reply and paste again.';
+    return res;
+  }
+
+  // JSON: strict first, then lenient
+  const j = t.replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '');
+  const a = j.search(/\[\s*\{/), c = j.indexOf('{'), d = j.lastIndexOf('}');
+  let body = null;
+  if (a >= 0) { const b = j.lastIndexOf(']'); body = j.slice(a, b > a ? b + 1 : undefined); }
+  else if (c >= 0 && d > c) body = '[' + j.slice(c, d + 1) + ']';
+  if (body) {
+    for (const x of [body, repairJson(body)]) {
+      try {
+        let data = JSON.parse(x);
+        if (!Array.isArray(data) && data && Array.isArray(data.measures)) data = data.measures;
+        if (!Array.isArray(data)) data = [data];
+        res.measures = data.filter(i => i && typeof i === 'object').map(i =>
+          toMeasure(pick(i, ['name', 'measurename', 'measure']), pick(i, ['expression', 'dax', 'formula', 'daxexpression', 'definition']),
+            pick(i, ['formatstring', 'format']), pick(i, ['description', 'desc'])));
+        res.format = 'json';
+        break;
+      } catch (e) {}
+    }
+  }
+  if (!res.measures.length) { res.measures = lenientJson(j); if (res.measures.length) res.format = 'json-repaired'; }
+  if (!res.measures.length) res.error = 'No measures were found in the reply. Copy the prompt again from Step 3 and make sure Copilot answers inside a code block with @@@ MEASURE @@@ blocks.';
+  return res;
+}
+function oneLineKeepBreaks(s){ return (s || '').replace(/\r/g, '').split('\n').map(x => x.trim()).filter(Boolean).join('\n'); }
+
+// Remove comments without touching "//" or "--" inside string literals (URLs, SVG namespaces)
+function stripComments(e){
+  return (e || '').replace(/"(?:[^"]|"")*"|\/\*[\s\S]*?\*\/|\/\/[^\n]*|--[^\n]*/g, m => m[0] === '"' ? m : ' ');
+}
+function stripDax(e){
+  return stripComments(e).replace(/"(?:[^"]|"")*"/g, '""');
+}
+
+function validate(measures, model, opts){
+  const target = (opts && opts.targetTable) || '_Measures';
+  const hasModel = model && (model.tables.length || model.columns.length);
+  const existing = new Map(); (model ? model.measures : []).forEach(m => existing.set(lc(m.name), m));
+  const tableSet = new Map(); (model ? model.tables : []).forEach(t => tableSet.set(lc(t.name), t));
+  const colsByTable = new Map();
+  (model ? model.columns : []).forEach(c => { const k = lc(c.table); if (!colsByTable.has(k)) colsByTable.set(k, new Set()); colsByTable.get(k).add(lc(c.name)); });
+  const allColNames = new Set((model ? model.columns : []).map(c => lc(c.name)));
+  const batch = new Map();
+  const notWritten = m => m.skipped || isPlaceholder(m.expression);
+  measures.filter(m => !notWritten(m)).forEach(m => { const k = lc(m.name); batch.set(k, (batch.get(k) || 0) + 1); });
+  return measures.map(m => {
+    // Copilot said it couldn't write this one, or wrote a placeholder instead of a calculation
+    if (m.skipped) {
+      return { measure: m, status: 'skip', errors: [], warns: [], infos: [m.reason ? 'Copilot’s reason: ' + m.reason : 'Copilot skipped this measure without giving a reason.'] };
+    }
+    if (m.expression.trim() && isPlaceholder(m.expression)) {
+      const infos = ['The DAX is only ' + oneLine(m.expression) + ', a placeholder rather than a calculation.'];
+      if (m.description) infos.push('Copilot’s note: ' + oneLine(m.description));
+      return { measure: m, status: 'skip', errors: [], warns: [], infos };
+    }
+    const errors = [], warns = [], infos = [];
+    let replaces = false;
+    if (!m.name) errors.push('Missing a name.');
+    if (!m.expression.trim()) errors.push('Missing a DAX expression.');
+    if (m.name && batch.get(lc(m.name)) > 1) errors.push('This name appears more than once in the reply.');
+    if (m.name && /[\[\]]/.test(m.name)) errors.push('Measure names can\u2019t contain [ or ].');
+    const ex = existing.get(lc(m.name));
+    if (ex) {
+      if (ex.remote) errors.push('A measure in the remote model already uses this name. Measure names must be unique across the model.');
+      else if (lc(ex.table) === lc(target)) { replaces = true; infos.push('Replaces the existing measure with this name in ' + qName(ex.table) + '.'); }
+      else errors.push('Name already used by a measure in ' + qName(ex.table) + '. Measure names must be unique across the model.');
+    }
+    if (m.name && colsByTable.has(lc(target)) && colsByTable.get(lc(target)).has(lc(m.name))) errors.push('A column in ' + qName(target) + ' already has this name.');
+    if (hasModel && m.expression) {
+      const code = stripDax(m.expression);
+      const seen = new Set();
+      const tcRe = /(?:'((?:[^']|'')+)'|([A-Za-z_][A-Za-z0-9_]*))\s*\[((?:[^\]]|\]\])+)\]/g;
+      let r;
+      while ((r = tcRe.exec(code))) {
+        const tn = (r[1] !== undefined ? r[1].replace(/''/g, "'") : r[2]);
+        const cn = r[3].replace(/\]\]/g, ']');
+        const key = lc(tn) + '|' + lc(cn);
+        if (seen.has(key)) continue; seen.add(key);
+        if (!tableSet.has(lc(tn))) { warns.push('Table ' + qName(tn) + ' isn\u2019t in the model export.'); continue; }
+        const cols = colsByTable.get(lc(tn));
+        const isCol = cols && cols.has(lc(cn));
+        const isMeas = existing.has(lc(cn)) || batch.has(lc(cn));
+        if (!isCol && !isMeas) warns.push(qName(tn) + bracket(cn) + ' isn\u2019t a column in that table.');
+      }
+      const qtRe = /'((?:[^']|'')+)'(\s*\[)?/g;
+      while ((r = qtRe.exec(code))) {
+        if (r[2]) continue; // 'Table'[Column] already checked above
+        const tn = r[1].replace(/''/g, "'");
+        const key = 't|' + lc(tn);
+        if (seen.has(key)) continue; seen.add(key);
+        if (!tableSet.has(lc(tn))) warns.push('Table ' + qName(tn) + ' isn’t in the model export.');
+      }
+      const bareRe = /(^|[^\w'\]])\[((?:[^\]]|\]\])+)\]/g;
+      while ((r = bareRe.exec(code))) {
+        const n = r[2].replace(/\]\]/g, ']');
+        const key = 'm|' + lc(n);
+        if (seen.has(key)) continue; seen.add(key);
+        // skip when this bracket is actually a Table [Column] with a space before it
+        const before = code.slice(0, r.index + r[1].length).replace(/\s+$/, '');
+        if (/('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_]*)$/.test(before) && !/\b(VAR|RETURN|IN|AND|OR|NOT|TRUE|FALSE)$/i.test(before)) {
+          const tm = before.match(/('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_]*)$/)[1];
+          const tn = tm[0] === "'" ? tm.slice(1, -1).replace(/''/g, "'") : tm;
+          if (tableSet.has(lc(tn))) continue;
+        }
+        if (lc(n) === lc(m.name)) { errors.push('The measure refers to itself.'); continue; }
+        if (existing.has(lc(n)) || batch.has(lc(n))) continue;
+        if (allColNames.has(lc(n))) continue; // column in row context
+        warns.push(bracket(n) + ' isn\u2019t a measure in the model or in this reply.');
+      }
+    }
+    if (m.expression && /KEEPFILTERS\s*\(\s*VALUES\s*\(/i.test(stripDax(m.expression))) {
+      warns.push('KEEPFILTERS ( VALUES ( ... ) ) keeps the filter already in place, so it changes nothing. If you wanted one measure per value, list the values (Step 3, \u201cColumn values\u201d) and ask again.');
+    }
+    const kvs = opts && opts.knownValues;
+    if (kvs && kvs.size && m.expression) {
+      const code = stripComments(m.expression);
+      const rx = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      for (const kv of kvs.values()) {
+        if (kv.distinct !== null && kv.distinct > kv.values.length) continue; // incomplete list: can't judge
+        const mm = kv.ref.match(/^'((?:[^']|'')+)'\[(.*)\]$/);
+        if (!mm) continue;
+        const tn = mm[1].replace(/''/g, "'"), cn = mm[2].replace(/\]\]/g, ']');
+        const tPat = "(?:'" + rx(tn.replace(/'/g, "''")) + "'" + (/^[A-Za-z_]\w*$/.test(tn) ? '|' + rx(tn) : '') + ')';
+        const colPat = tPat + '\\s*\\[' + rx(cn.replace(/\]/g, ']]')) + '\\]';
+        const eqRe = new RegExp(colPat + '\\s*(?:==|=|<>)\\s*"((?:[^"]|"")*)"', 'gi');
+        const inRe = new RegExp(colPat + '\\s+IN\\s*\\{([^}]*)\\}', 'gi');
+        const known = new Set(kv.values.map(lc));
+        const found = [];
+        let r;
+        while ((r = eqRe.exec(code))) found.push(r[1].replace(/""/g, '"'));
+        while ((r = inRe.exec(code))) (r[1].match(/"((?:[^"]|"")*)"/g) || []).forEach(l => found.push(l.slice(1, -1).replace(/""/g, '"')));
+        for (const v of new Set(found)) if (!known.has(lc(v))) warns.push(daxString(v) + ' isn\u2019t one of the known values of ' + kv.ref + '.');
+      }
+    }
+    if (m.notes) infos.unshift('Copilot\u2019s approach: ' + m.notes);
+    if (!m.formatString) infos.push('No format string. Power BI will use General.');
+    let status = 'ok';
+    if (errors.length) status = 'err'; else if (warns.length) status = 'warn'; else if (replaces) status = 'replace';
+    return { measure: m, status, errors, warns, infos };
+  });
+}
+
+function tmdlName(n){ return /^[A-Za-z_][A-Za-z0-9_]*$/.test(n) ? n : qName(n); }
+function tmdlValue(v){
+  if (/"/.test(v) || /^\s|\s$/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+  return v;
+}
+function exprLines(expr){
+  let lines = expr.replace(/\r/g, '').split('\n').map(l => l.replace(/\s+$/, ''));
+  while (lines.length && !lines[0].trim()) lines.shift();
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  lines = lines.map(l => { const m = l.match(/^[ \t]*/)[0]; return m.replace(/\t/g, '    ') + l.slice(m.length); });
+  const ind = Math.min(...lines.filter(l => l.trim()).map(l => l.match(/^ */)[0].length));
+  return lines.map(l => {
+    if (!l.trim()) return '';
+    const s = l.slice(isFinite(ind) ? ind : 0);
+    const lead = s.match(/^ */)[0].length;
+    return TAB.repeat(Math.floor(lead / 4)) + ' '.repeat(lead % 4) + s.slice(lead);
+  });
+}
+
+function normFolder(f){ return (f || '').trim().replace(/\//g, '\\').replace(/\\{2,}/g, '\\').replace(/^\\|\\$/g, ''); }
+
+function toTmdl(measures, opts){
+  const mode = opts.mode || 'script';
+  const table = (opts.targetTable || '_Measures').trim();
+  const folder = normFolder(opts.folder);
+  const base = mode === 'script' ? 2 : 1;
+  const out = [];
+  if (mode === 'script') { out.push('createOrReplace', '', TAB + 'ref table ' + tmdlName(table), ''); }
+  for (const m of measures) {
+    const ind = TAB.repeat(base);
+    if (m.description) m.description.split('\n').forEach(d => out.push(ind + '/// ' + d.trim()));
+    const lines = exprLines(m.expression);
+    if (lines.length <= 1) out.push(ind + 'measure ' + tmdlName(m.name) + ' = ' + (lines[0] || '').trim());
+    else {
+      out.push(ind + 'measure ' + tmdlName(m.name) + ' =');
+      lines.forEach(l => out.push(l ? TAB.repeat(base + 2) + l : ''));
+    }
+    if (m.formatString) out.push(TAB.repeat(base + 1) + 'formatString: ' + tmdlValue(m.formatString));
+    if (folder) out.push(TAB.repeat(base + 1) + 'displayFolder: ' + tmdlValue(folder));
+    out.push('');
+  }
+  while (out.length && out[out.length - 1] === '') out.pop();
+  return out.join('\n') + '\n';
+}
+
+function testQuery(measures){
+  if (!measures.length) return '';
+  const rows = measures.map((m, i) => TAB + '"' + m.name.replace(/"/g, '""') + '", ' + bracket(m.name) + (i < measures.length - 1 ? ',' : ''));
+  return ['// Run in DAX query view after applying the TMDL.', 'EVALUATE', 'ROW (', ...rows, ')'].join('\n');
+}
+/*CORE-END*/
+
+/*SUITE-START*/
+/* ---------- SF Power BI Toolkit: one model export shared by every page on the site ---------- */
+(function(){
+  const KEY = 'sfpbi.shared.model';
+  const HOME = 'index.html';
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const S = window.SF_SUITE = window.SF_SUITE || {};
+  S.get = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && v.text ? v : null; } catch (e) { return null; } };
+  S.set = (text, name) => {
+    try {
+      const prev = S.get();
+      localStorage.setItem(KEY, JSON.stringify({ text, name: name !== undefined ? name : (prev ? prev.name || '' : ''), savedAt: Date.now() }));
+      return true;
+    } catch (e) { return false; }
+  };
+  S.clear = () => { try { localStorage.removeItem(KEY); } catch (e) {} };
+  // Header row (Kind, Table, Name) plus at least one row
+  S.looksLikeExport = t => {
+    const lines = (t || '').replace(/\r/g, '').split('\n');
+    const h = lines.slice(0, 15).findIndex(l => { const c = l.toLowerCase().split('\t').map(x => x.replace(/^"|"$/g, '').replace(/^.*\[|\]$/g, '').trim()); return c.includes('kind') && c.includes('table') && c.includes('name'); });
+    return h >= 0 && lines.slice(h + 1).some(l => l.trim());
+  };
+  S.counts = t => {
+    const lines = (t || '').replace(/\r/g, '').split('\n');
+    const out = { table: 0, column: 0, measure: 0, relationship: 0 };
+    let ki = -1;
+    for (const l of lines) {
+      const c = l.split('\t').map(x => x.replace(/^"|"$/g, '').trim());
+      if (ki < 0) { const i = c.map(x => x.toLowerCase().replace(/^.*\[|\]$/g, '')).indexOf('kind'); if (i >= 0 && c.map(x => x.toLowerCase()).some(x => /table/.test(x))) ki = i; continue; }
+      const k = (c[ki] || '').toLowerCase(); if (k in out) out[k]++;
+    }
+    return out;
+  };
+  S.describe = v => {
+    const c = S.counts(v.text), d = new Date(v.savedAt || Date.now());
+    const when = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    return (v.name ? '<b>' + esc(v.name) + '</b> &middot; ' : '') + c.table + ' tables, ' + c.measure + ' measures &middot; saved ' + esc(when);
+  };
+  // Date columns from the export, in the Date Table Generator's "Table, Column, Type, Hidden" layout
+  S.dateColumns = t => {
+    const lines = (t || '').replace(/\r/g, '').split('\n'); let idx = null; const rows = [];
+    for (const l of lines) {
+      const c = l.split('\t').map(x => x.replace(/^"(.*)"$/, '$1').replace(/""/g, '"').trim());
+      if (!idx) { const low = c.map(x => x.toLowerCase().replace(/^.*\[|\]$/g, '')); if (low.includes('kind') && low.includes('table')) idx = { kind: low.indexOf('kind'), table: low.indexOf('table'), name: low.indexOf('name'), type: low.indexOf('type'), flags: low.indexOf('flags') }; continue; }
+      if ((c[idx.kind] || '').toLowerCase() !== 'column') continue;
+      if (!/date/i.test(c[idx.type] || '') || /^(LocalDateTable_|DateTableTemplate_)/i.test(c[idx.table] || '')) continue;
+      rows.push([c[idx.table], c[idx.name], c[idx.type], /hidden/i.test(c[idx.flags] || '') ? 'True' : 'False'].join('\t'));
+    }
+    return rows.length ? 'Table\tColumn\tType\tHidden\n' + rows.join('\n') : '';
+  };
+
+  if (!document.getElementById('suiteCss')) {
+    const st = document.createElement('style'); st.id = 'suiteCss';
+    st.textContent = '.suite-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;font-size:13.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px}.suite-bar[hidden]{display:none!important}.suite-bar .ok{color:var(--ok)}.suite-bar .btn{padding:4px 10px}.brandbar .eyebrow a.home-link{color:inherit;text-decoration:none}.brandbar .eyebrow a.home-link:hover{text-decoration:underline}';
+    document.head.appendChild(st);
+  }
+  // Link the eyebrow back to the home page
+  const eb = document.querySelector('.brandbar .eyebrow');
+  if (eb && !eb.querySelector('a') && !document.body.dataset.home) eb.innerHTML = '<a href="' + HOME + '" class="home-link">' + eb.innerHTML + ' &middot; all tools</a>';
+
+  // cfg: { input: textarea id, prefix: this page's storage prefix, mode: 'export' | 'dates', open: details id to open }
+  S.hook = cfg => {
+    const ta = document.getElementById(cfg.input); if (!ta) return;
+    const mode = cfg.mode || 'export';
+    const bar = document.createElement('div'); bar.className = 'suite-bar'; bar.setAttribute('role', 'status');
+    ta.insertAdjacentElement('beforebegin', bar);
+    const valueFor = v => mode === 'dates' ? S.dateColumns(v.text) : v.text;
+    const exampleShowing = () => { const b = document.getElementById('exampleBanner'); return !!(b && !b.hidden); };
+    let note = '';
+    const hash = t => { let h = 5381; const x = (t || '').trim(); for (let i = 0; i < x.length; i++) h = ((h << 5) + h + x.charCodeAt(i)) | 0; return String(h >>> 0); };
+    const followKey = cfg.prefix + 'suiteFollow';
+    const remember = () => { try { localStorage.setItem(followKey, hash(ta.value)); } catch (e) {} };
+    const following = () => { try { return localStorage.getItem(followKey) === hash(ta.value); } catch (e) { return false; } };
+    const render = () => {
+      const v = S.get();
+      if (!v) { bar.innerHTML = mode === 'dates' ? '' : '<span>Tip: save your model export once on the <a href="' + HOME + '">toolkit home page</a> and every tool picks it up. Pasting one here saves it too.</span>'; bar.hidden = mode === 'dates'; return; }
+      bar.hidden = false;
+      const same = ta.value.trim() === valueFor(v).trim();
+      if (mode === 'dates' && !valueFor(v)) { bar.innerHTML = '<span>The saved model export has no date columns.</span>'; return; }
+      bar.innerHTML = same
+        ? '<span class="ok">&#10003; ' + (mode === 'dates' ? 'Date columns from the saved model export: ' : 'Using the saved model export: ') + S.describe(v) + (note ? ' &middot; ' + note : '') + '</span>'
+        : '<span>' + (mode === 'dates' ? 'Fill this list from the saved model export? ' : 'The toolkit has a saved model export: ') + S.describe(v) + '</span><button type="button" class="btn" data-suite="use">' + (mode === 'dates' ? 'Fill from saved export' : 'Use it') + '</button>';
+    };
+    const use = () => {
+      const v = S.get(); if (!v) return;
+      if (exampleShowing()) { const c = document.getElementById('clearAll'); if (c) c.click(); }
+      ta.value = valueFor(v);
+      if (cfg.open) { const d = document.getElementById(cfg.open); if (d) d.open = true; }
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      try { localStorage.removeItem(cfg.prefix + 'blank'); } catch (e) {}
+      remember(); note = ''; render();
+    };
+    bar.addEventListener('click', e => { if (e.target.closest('[data-suite=use]')) use(); });
+    // Pasting an export here saves it for every tool
+    ta.addEventListener('input', e => {
+      if (e.isTrusted && mode === 'export' && S.looksLikeExport(ta.value)) {
+        const prev = S.get();
+        if (!prev || prev.text !== ta.value) { const ok = S.set(ta.value, ''); note = ok ? 'saved for the other tools too' : 'too large to share with the other tools (browser storage limit)'; if (ok) remember(); }
+      }
+      render();
+    });
+    // On opening: load the saved export when this page shows its example or is empty (and wasn't cleared on purpose)
+    const v = S.get();
+    let blank = false; try { blank = localStorage.getItem(cfg.prefix + 'blank') === '1'; } catch (e) {}
+    // ...or when this page is still on an older saved export it took from the toolkit
+    if (v && valueFor(v) && ta.value.trim() !== valueFor(v).trim() && (exampleShowing() || (!ta.value.trim() && !blank) || (ta.value.trim() && following()))) use();
+    else render();
+    window.addEventListener('storage', e => { if (e.key === KEY) render(); });
+  };
+})();
+/*SUITE-END*/
+
+
+/* ---------- home page ---------- */
+const TOOLS = [
+  { file: 'kpi-measure-builder.html', name: 'KPI Measure Builder', desc: 'Describe measures in plain English. Copilot writes the DAX; the page checks every name and outputs tab-indented TMDL into your measures folder.', tags: ['exp', 'ai'] },
+  { file: 'measure-describer.html', name: 'Measure Describer', desc: 'Copilot writes descriptions for your measures in batches; you review them and save them to the model from DAX query view.', tags: ['exp', 'ai'] },
+  { file: 'prep-for-ai-writer.html', name: 'Prep for AI Writer', desc: 'AI instructions, synonyms and table and column descriptions that help Copilot in Power BI answer questions about your model.', tags: ['exp', 'ai'] },
+  { file: 'dax-reviewer.html', name: 'DAX Reviewer', desc: 'Review a measure against your own checklist. Instant checks on every measure, a Copilot review, and a rewrite tested against the original.', tags: ['exp', 'ai'] },
+  { file: 'validation-query-builder.html', name: 'Validation Query Builder', desc: 'DAX queries that check measure results, totals, reconciliation with source columns, relationship keys and table profiles.', tags: ['exp', 'noai'] },
+  { file: 'power-query-explainer.html', name: 'Power Query Explainer', desc: 'Comment every step of a Power Query query, or get a cleaner version checked against the original. One query or the whole model.', tags: ['ai'] },
+  { file: 'date-table-generator.html', name: 'Date Table Generator', desc: 'A date table with your fiscal year, weeks and holidays, as DAX, Power Query or a TMDL script. Can start and end with your data.', tags: ['dates', 'noai'] }
+];
+const TAG = { exp: '<span class="tag exp">Uses your export</span>', dates: '<span class="tag exp">Date columns from your export</span>', ai: '<span class="tag ai">Copilot</span>', noai: '<span class="tag noai">No AI</span>' };
+const $ = id => document.getElementById(id);
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function msg(level, html){ return '<div class="msg ' + level + '">' + html + '</div>'; }
+function copyText(text, btn){
+  const done = () => { const o = btn.dataset.label || btn.textContent; btn.dataset.label = o; btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(() => { btn.textContent = o; btn.classList.remove('done'); }, 1600); };
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); if (ok) done(); };
+  try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+}
+function renderSaved(){
+  const v = SF_SUITE.get();
+  $('saved').hidden = !v;
+  if (!v) return;
+  const m = parseModel(v.text);
+  const d = new Date(v.savedAt);
+  $('savedWhen').textContent = (v.name ? v.name + ' · ' : '') + 'saved ' + d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  $('savedStats').innerHTML = '<span class="stat"><b>' + m.tables.length + '</b> tables</span><span class="stat"><b>' + m.columns.length + '</b> columns</span><span class="stat"><b>' + m.measures.length + '</b> measures</span><span class="stat"><b>' + m.rels.length + '</b> relationships</span>' + (m.composite ? '<span class="stat remote">Composite model</span>' : '');
+  if (!$('modelName').value) $('modelName').value = v.name || '';
+}
+function renderTools(){
+  $('tools').innerHTML = TOOLS.map(t => '<a class="tool" href="' + t.file + '"><span class="tn">' + esc(t.name) + '</span><span class="td">' + esc(t.desc) + '</span><span class="tags">' + t.tags.map(x => TAG[x]).join('') + '</span></a>').join('');
+}
+function save(){
+  const text = $('exportInput').value;
+  if (!text.trim()) return;
+  const m = parseModel(text);
+  if (m.error) { $('saveMsg').innerHTML = msg('err', esc(m.error)); return; }
+  if (!SF_SUITE.set(text, $('modelName').value.trim())) { $('saveMsg').innerHTML = msg('err', 'This export is too large to save in the browser (the limit is about 5 MB). The tools still work if you paste it into each one.'); return; }
+  $('exportInput').value = '';
+  $('saveMsg').innerHTML = msg('ok', 'Saved. Open any tool below and it&rsquo;s already loaded.');
+  renderSaved();
+}
+function init(){
+  document.body.dataset.home = '1';
+  $('queryView').textContent = DAX_QUERY;
+  $('copyQuery').addEventListener('click', e => copyText(DAX_QUERY, e.currentTarget));
+  $('exportInput').addEventListener('input', save);
+  $('modelName').addEventListener('input', () => { const v = SF_SUITE.get(); if (v) { SF_SUITE.set(v.text, $('modelName').value.trim()); renderSaved(); } });
+  $('clearSaved').addEventListener('click', () => { SF_SUITE.clear(); $('modelName').value = ''; $('saveMsg').innerHTML = msg('info', 'The saved export is removed. Each tool keeps its own copy until you clear that tool.'); renderSaved(); });
+  window.addEventListener('storage', renderSaved);
+  renderTools(); renderSaved();
+}
+init();
+</script>
+
+</body>
+</html>

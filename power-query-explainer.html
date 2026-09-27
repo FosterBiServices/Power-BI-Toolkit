@@ -1,0 +1,1995 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Power Query Explainer</title>
+<meta name="description" content="Explain Power Query (M) queries step by step with Copilot, one query or the whole model, or get a cleaner version checked against the original.">
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --brand:#003F88;
+  --gold:#F5A800;
+  --gold-ink:#1A1300;
+  --bg:#F2F5FA;
+  --surface:#FFFFFF;
+  --surface-2:#EAF0F8;
+  --ink:#121B2B;
+  --muted:#51607A;
+  --line:#D3DCE9;
+  --accent:#003F88;
+  --accent-ink:#FFFFFF;
+  --accent-soft:#E2ECF8;
+  --code-bg:#F6F8FC;
+  --ok:#23734A; --ok-soft:#E1F1E7;
+  --warn:#8F5200; --warn-soft:#FBEFD9;
+  --err:#AF2A22; --err-soft:#FBE4E1;
+  --info:#2F5B8A; --info-soft:#E3ECF6;
+  --ws:#A3B2C8;
+  --band:#003F88; --band-ink:#FFFFFF; --band-muted:#BFD3EE;
+  --sans:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans","Arial Narrow",-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0A1220; --surface:#111C2E; --surface-2:#172538; --ink:#E6ECF6; --muted:#9AA8BF;
+    --line:#24334B; --accent:#F5A800; --accent-ink:#1A1300; --accent-soft:#2A2410; --code-bg:#0D1726;
+    --ok:#6FCF97; --ok-soft:#1A3326; --warn:#F0B35A; --warn-soft:#3A2C14; --err:#F08A80; --err-soft:#3C1E1B;
+    --info:#8DB6E6; --info-soft:#1A2A40; --ws:#3D4F6B;
+    --band:#003F88; --band-ink:#FFFFFF; --band-muted:#BFD3EE;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0A1220; --surface:#111C2E; --surface-2:#172538; --ink:#E6ECF6; --muted:#9AA8BF;
+  --line:#24334B; --accent:#F5A800; --accent-ink:#1A1300; --accent-soft:#2A2410; --code-bg:#0D1726;
+  --ok:#6FCF97; --ok-soft:#1A3326; --warn:#F0B35A; --warn-soft:#3A2C14; --err:#F08A80; --err-soft:#3C1E1B;
+  --info:#8DB6E6; --info-soft:#1A2A40; --ws:#3D4F6B;
+  --band:#003F88; --band-ink:#FFFFFF; --band-muted:#BFD3EE;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 64px;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--cond);font-weight:600;line-height:1.2;text-wrap:balance;margin:0}
+h1{font-size:30px;letter-spacing:-.01em}
+h2{font-size:21px}
+h3{font-size:15px;font-weight:600}
+p{margin:0}
+code,.mono{font-family:var(--mono);font-size:.9em}
+a{color:var(--accent)}
+
+/* header */
+.top{display:flex;flex-direction:column;gap:14px}
+.brandbar{display:flex;gap:18px;align-items:center;background:var(--band);color:var(--band-ink);border-radius:14px;padding:18px 22px;border-bottom:4px solid var(--gold)}
+.brandbar img{width:53px;height:64px;flex:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.25))}
+.brandbar .txt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.brandbar .eyebrow{font-family:var(--cond);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.brandbar h1{color:var(--band-ink)}
+.lede{color:var(--band-muted);max-width:62ch}
+@media (max-width:520px){.brandbar{padding:14px 16px;gap:12px}.brandbar img{width:40px;height:48px}h1{font-size:25px}}
+.dest{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.dest .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;width:100%}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:12.5px;color:var(--muted);font-weight:500}
+input[type=text]{font-family:var(--mono);font-size:14px;color:var(--ink);background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:210px;max-width:100%}
+input[type=text]:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+
+.banner{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--info-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--info) 30%,transparent);border-radius:10px;padding:10px 14px;font-size:14px}
+.banner strong{color:var(--info)}
+.banner .btns{display:flex;gap:8px;flex-wrap:wrap}
+
+/* steps */
+.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;display:grid;grid-template-columns:92px minmax(0,1fr);gap:4px 18px}
+.step-num{font-family:var(--cond);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding-top:5px}
+.step-num b{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--gold);color:#002A5C;font-size:22px;line-height:1;letter-spacing:0;margin-top:8px}
+.step-body{display:flex;flex-direction:column;gap:14px;min-width:0}
+.step-head{display:flex;flex-direction:column;gap:4px}
+.step-head p{color:var(--muted);max-width:70ch}
+@media (max-width:640px){
+  .step{grid-template-columns:1fr;padding:16px}
+  .step-num{display:flex;align-items:center;gap:8px;padding-top:0}
+  .step-num b{width:28px;height:28px;font-size:15px;margin-top:0}
+}
+
+ol.how{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px;max-width:70ch}
+ol.how li::marker{color:var(--muted);font-variant-numeric:tabular-nums}
+.note{font-size:13.5px;color:var(--muted);max-width:74ch}
+
+/* code blocks */
+.codebox{position:relative;border:1px solid var(--line);border-radius:8px;background:var(--code-bg);min-width:0}
+.codebox-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:7px 8px 7px 12px;border-bottom:1px solid var(--line)}
+.codebox-bar .t{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.codebox-bar .r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+pre{margin:0;padding:12px 14px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.55;tab-size:4;-moz-tab-size:4;color:var(--ink);white-space:pre}
+pre.tall{max-height:420px}
+pre.short{max-height:260px}
+.ws-tab{color:var(--ws)}
+.tok-kw{color:var(--accent);font-weight:500}
+.tok-com{color:var(--muted);font-style:italic}
+.tok-str{color:var(--warn)}
+
+textarea{width:100%;font-family:var(--mono);font-size:13px;line-height:1.5;color:var(--ink);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;resize:vertical;tab-size:4}
+textarea.big{min-height:170px}
+textarea.mid{min-height:120px}
+textarea.req{font-family:var(--sans);font-size:14.5px;min-height:118px}
+
+/* buttons */
+button{font:inherit;cursor:pointer}
+.btn{font-family:var(--sans);font-size:13.5px;font-weight:500;border-radius:6px;padding:6px 12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08);color:var(--accent-ink)}
+.btn:focus-visible,.chip:focus-visible,.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.btn.done{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+
+/* summary chips */
+.stats{display:flex;flex-wrap:wrap;gap:8px}
+.stat{display:flex;align-items:baseline;gap:6px;background:var(--surface-2);border-radius:999px;padding:4px 12px;font-size:13.5px}
+.stat b{font-variant-numeric:tabular-nums;font-weight:600}
+.msg{font-size:13.5px;border-radius:8px;padding:8px 12px}
+.msg.err{background:var(--err-soft);color:var(--err)}
+.msg.warn{background:var(--warn-soft);color:var(--warn)}
+.msg.ok{background:var(--ok-soft);color:var(--ok)}
+
+/* table picker */
+.picker{display:flex;flex-direction:column;gap:8px}
+.picker-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--mono);font-size:12.5px;border-radius:999px;padding:4px 10px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.chip small{font-family:var(--sans);color:var(--muted);margin-left:4px}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font-size:13px;text-decoration:underline;text-underline-offset:2px}
+.chip.remote{border-style:dashed}
+.chip .src{font-family:var(--sans);font-size:11px;color:var(--info);margin-left:5px}
+details.extra{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+details.extra summary{cursor:pointer;padding:9px 12px;font-size:14px;font-weight:500}
+details.extra summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.extra-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:8px}
+.stat.remote{background:var(--info-soft);color:var(--info)}
+.details-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.detail-list{display:flex;flex-direction:column;gap:12px}
+.detail-list:empty{display:none}
+.dcard{border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px;background:var(--surface)}
+.dcard-head{display:flex;gap:10px;align-items:center}
+.dcard-head input{flex:1;width:auto;font-family:var(--sans);font-weight:500}
+.dtag{font-family:var(--cond);font-weight:600;font-size:13px;background:var(--gold);color:#002A5C;border-radius:6px;padding:3px 8px;flex:none}
+.dcard label.lab{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:500;color:var(--ink)}
+.dcard label.lab .hint{font-weight:400;color:var(--muted)}
+.dcard textarea{min-height:58px;font-family:var(--sans);font-size:14px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.dbox{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--code-bg);min-width:0}
+.dbox .t{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.dbox select{width:100%}
+select{font-family:var(--sans);font-size:13.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;max-width:100%}
+select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.addrow{display:flex;gap:6px}
+.addrow select{flex:1;min-width:0}
+.tchips{display:flex;flex-wrap:wrap;gap:5px}
+.tchip{font-family:var(--mono);font-size:12px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:999px;padding:2px 4px 2px 9px;display:inline-flex;gap:4px;align-items:center}
+.tchip button{border:0;background:none;color:var(--muted);font-size:14px;line-height:1;padding:0 4px;border-radius:50%}
+.tchip button:hover{color:var(--err)}
+.dpaths{font-size:13px;display:flex;flex-direction:column;gap:4px}
+.dpaths .no{color:var(--warn);font-weight:600}
+.dpaths .mono{font-size:12.5px}
+.tip{font-size:13.5px;color:var(--ink);background:var(--surface-2);border-radius:8px;padding:9px 12px;max-width:none}
+.tip b{color:var(--accent)}
+.vals{display:flex;flex-direction:column;gap:4px;margin:0;padding:0;list-style:none}
+.vals li{font-size:13px}
+.vals .mono{font-size:12.5px}
+.stat.limited{background:var(--warn-soft);color:var(--warn)}
+
+.opts{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14px}
+.opts label{display:flex;gap:7px;align-items:center}
+input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
+.count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.count.high{color:var(--warn)}
+
+/* segmented */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--surface)}
+.seg label{position:relative}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;padding:6px 12px;font-size:13.5px;color:var(--muted);cursor:pointer}
+.seg input:checked+span{background:var(--accent);color:var(--accent-ink)}
+
+/* review table */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.nm{font-family:var(--mono);font-size:13px;white-space:nowrap}
+td.fmt{font-family:var(--mono);font-size:12.5px;white-space:nowrap;color:var(--muted)}
+td ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:2px}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.replace{background:var(--info-soft);color:var(--info)}
+.pill.err{background:var(--err-soft);color:var(--err)}
+.pill.skip{background:var(--surface-2);color:var(--muted);border:1px dashed var(--line)}
+.muted{color:var(--muted)}
+
+.out-head{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.apply{font-size:14px;max-width:74ch}
+.apply ol{margin:6px 0 0;padding-left:1.3em;display:flex;flex-direction:column;gap:3px}
+.small{font-size:13px}
+footer{font-size:12.5px;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+details.extra{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+details.extra summary{cursor:pointer;padding:9px 12px;font-size:14px;font-weight:500}
+details.extra summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.extra-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:8px}
+.stat.remote{background:var(--info-soft);color:var(--info)}
+.tip{font-size:13.5px;color:var(--ink);background:var(--surface-2);border-radius:8px;padding:9px 12px;max-width:none}
+.tip b{color:var(--accent)}
+.stat.limited{background:var(--warn-soft);color:var(--warn)}
+/* ---------- Measure Describer ---------- */
+.filters{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-end}
+.field.grow{flex:1 1 220px}
+.field.grow input{width:100%}
+.chk{display:flex;gap:7px;align-items:center;font-size:14px;padding-bottom:7px}
+.list-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;margin-bottom:-6px}
+.list-actions{display:flex;gap:14px;flex-wrap:wrap}
+.mlist{border:1px solid var(--line);border-radius:8px;max-height:320px;overflow:auto;background:var(--surface)}
+.mrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:7px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
+.mrow:last-child{border-bottom:0}
+.mrow:hover{background:var(--surface-2)}
+.mname{font-family:var(--mono);font-size:13px;overflow-wrap:anywhere}
+.mmeta{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.mdesc{font-size:11px;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:1px 8px}
+@media (max-width:560px){.mrow{grid-template-columns:auto minmax(0,1fr)}.mmeta,.mdesc{grid-column:2}}
+.style-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label.lab{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:500;color:var(--ink)}
+label.lab .hint{font-weight:400;color:var(--muted)}
+#houseRules{font-family:var(--sans);font-size:14px;min-height:64px}
+.batchnav{display:inline-flex;gap:6px;align-items:center}
+.btn:disabled{opacity:.4;cursor:default}
+.coverage{display:flex;flex-direction:column;gap:9px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--surface)}
+.cov-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.cov-num{font-family:var(--cond);font-size:30px;line-height:1;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+.cov-label{font-size:14px;color:var(--muted)}
+.cov-bar{height:10px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.cov-bar span{display:block;height:100%;background:var(--gold);border-radius:999px}
+.review-head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+.review td.ck,.review th.ck{width:34px;text-align:center}
+.review td{vertical-align:top}
+.review .nm .sub{font-family:var(--sans);font-size:11.5px;color:var(--muted);white-space:normal}
+.review .dcell{min-width:260px;width:62%}
+.review textarea{font-family:var(--sans);font-size:14px;min-height:54px;padding:7px 9px}
+.review textarea:disabled{opacity:.6}
+.review .dcell ul{margin-top:6px;font-size:12.5px;color:var(--muted)}
+.edited{display:inline-block;margin-top:4px;font-size:11.5px;color:var(--info)}
+.pill.new{background:var(--ok-soft);color:var(--ok)}
+.pill.same{background:var(--surface-2);color:var(--muted)}
+.progress{display:flex;flex-direction:column;gap:6px}
+.progress .cov-bar span{background:var(--accent)}
+.reply-actions{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.msg.info{background:var(--info-soft);color:var(--info)}
+.msg + .msg{margin-top:6px}
+.mdesc.drafted{color:var(--info);background:var(--info-soft)}
+.mdesc.skip{color:var(--muted);background:var(--surface-2);border:1px dashed var(--line)}
+.review .again{display:block;margin-top:6px;font-size:12px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.tabbar{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tabbar button{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:12px 16px;cursor:pointer}
+.tabbar button .tn{font-family:var(--cond);font-weight:600;font-size:18px}
+.tabbar button .td{font-size:13px;color:var(--muted)}
+.tabbar button[aria-selected="true"]{border:2px solid var(--accent);padding:11px 15px;background:var(--accent-soft);box-shadow:inset 0 -4px 0 var(--gold)}
+.tabbar button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:560px){.tabbar{grid-template-columns:1fr}}
+.pane{display:flex;flex-direction:column;gap:22px}
+.pane[hidden]{display:none!important}
+/* ---------- Clear entries ---------- */
+.clear-btn{margin-left:auto;align-self:flex-start;flex:none;font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--band-ink);background:transparent;border:1px solid rgba(255,255,255,.55);border-radius:6px;padding:6px 12px;cursor:pointer}
+.clear-btn:hover{background:rgba(255,255,255,.12);border-color:#fff}
+.clear-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.clear-confirm{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--err-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--err) 35%,transparent);border-radius:10px;padding:10px 14px;font-size:14px}
+.clear-confirm b{color:var(--err)}
+.clear-confirm .btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn.danger{background:var(--err);border-color:var(--err);color:#fff}
+.btn.danger:hover{filter:brightness(1.08);color:#fff}
+@media (max-width:520px){.brandbar{flex-wrap:wrap}.clear-btn{margin-left:0}}
+/* ---------- Power Query Explainer ---------- */
+.tok-qid{color:var(--info)}
+.modebar{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modebar button{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:12px 16px;cursor:pointer}
+.modebar button .tn{font-family:var(--cond);font-weight:600;font-size:18px}
+.modebar button .td{font-size:13px;color:var(--muted)}
+.modebar button[aria-selected="true"]{border:2px solid var(--accent);padding:11px 15px;background:var(--accent-soft);box-shadow:inset 0 -4px 0 var(--gold)}
+.modebar button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:560px){.modebar{grid-template-columns:1fr}}
+.mode{display:flex;flex-direction:column;gap:22px}
+.mode[hidden]{display:none!important}
+.smap td.n,.smap td.num{color:var(--muted);font-variant-numeric:tabular-nums;width:1%}
+.smap td.uses{font-family:var(--mono);font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.smap tr.flagged td.nm{color:var(--warn)}
+.smap td .pill{margin:1px 0}
+.mtable td.ck,.mtable th.ck{width:56px;text-align:center}
+.mtable td.nm{white-space:normal;overflow-wrap:anywhere}
+.mtable td.uses{overflow-wrap:normal;min-width:110px}
+.mtable .why{display:block;font-family:var(--sans);font-size:11.5px;color:var(--muted)}
+.mtable td.act{width:1%;text-align:right}
+.mtable .btn{padding:3px 10px;font-size:12.5px}
+.mcheck{display:flex;flex-direction:column;gap:14px}
+.findings h3,.params h3,#clChanges h3{margin-bottom:8px}
+.flist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.flist li{display:grid;grid-template-columns:86px minmax(0,1fr);gap:10px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:9px 12px;background:var(--surface);font-size:14px}
+.flist li .pill{justify-self:start;margin-top:2px}
+.flist li p{color:var(--muted);font-size:13.5px;margin-top:2px}
+@media (max-width:520px){.flist li{grid-template-columns:1fr;gap:4px}}
+.snote{margin-top:4px;font-size:13px;color:var(--warn)}
+.more{display:flex;flex-direction:column;gap:10px}
+.more .lab{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:500}
+.more .lab .hint{font-weight:400;color:var(--muted)}
+#exOut,#clOut,.mresults{display:flex;flex-direction:column;gap:14px}
+#exOut[hidden],#clOut[hidden],.mresults[hidden]{display:none!important}
+.mlist2{display:flex;flex-direction:column;gap:8px}
+details.mq summary{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+details.mq .mqn{font-family:var(--mono);font-size:13.5px;font-weight:500}
+details.mq .codebox-bar .linkbtn{margin-right:4px}
+.params{display:flex;flex-direction:column;gap:10px}
+.changes{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:3px;font-size:14px}
+pre.diff{padding:8px 0}
+.dl{display:block;padding:0 14px 0 0}
+.dl .dm{display:inline-block;width:26px;text-align:center;color:var(--muted);user-select:none}
+.dl.add{background:var(--ok-soft)}
+.dl.add .dm{color:var(--ok)}
+.dl.del{background:var(--err-soft);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--err) 45%,transparent)}
+.dl.del .dm{color:var(--err)}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brandbar">
+      <img src="data:image/png;base64,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" alt="SF logo">
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Power Query Explainer</h1>
+        <p class="lede">Get a comment on every step of your Power Query queries, or a cleaner version that returns the same data, checked before you paste it back. One query at a time, or the whole model at once.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties every box on this page and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste your own in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> The queries and Copilot replies on this page are samples. Paste your own in Step 1 to start.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <div class="modebar" role="tablist" aria-label="How many queries">
+    <button type="button" role="tab" id="modeOneBtn" aria-selected="true" aria-controls="modeOne"><span class="tn">One query</span><span class="td">Paste from the Advanced Editor. Explain it or clean it up.</span></button>
+    <button type="button" role="tab" id="modeModelBtn" aria-selected="false" aria-controls="modeModel"><span class="tn">Whole model</span><span class="td">Export every query at once. Check them all and explain them in batches.</span></button>
+  </div>
+
+  <div id="modeOne" role="tabpanel" aria-labelledby="modeOneBtn" class="mode">
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Paste a query from the Advanced Editor</h2>
+        <p>One query at a time. Nothing leaves this page until you paste the prompt into Copilot yourself.</p>
+      </div>
+      <ol class="how">
+        <li>In Power BI Desktop, select <b>Home &gt; Transform data</b> to open Power Query.</li>
+        <li>Select the query on the left, then <b>Home &gt; Advanced Editor</b>.</li>
+        <li>Click in the code, press <b>Ctrl+A</b> then <b>Ctrl+C</b>, and paste it below.</li>
+      </ol>
+      <div class="field"><label for="qName">Query name <span class="muted">(optional, helps Copilot)</span></label><input type="text" id="qName" placeholder="Sales" autocomplete="off"></div>
+      <textarea id="qInput" class="big" spellcheck="false" aria-label="Query code" placeholder="let&#10;    Source = ...&#10;in&#10;    ..."></textarea>
+      <div id="qMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2" id="mapStep" hidden>
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Check the steps</h2>
+        <p>Read straight from the code, without AI: what each step calls, which earlier step it uses, and things worth a look.</p>
+      </div>
+      <div class="stats" id="qStats"></div>
+      <div class="tablewrap"><table class="smap">
+        <thead><tr><th>#</th><th>Step</th><th>Calls</th><th>Uses</th><th>Findings</th></tr></thead>
+        <tbody id="mapBody"></tbody>
+      </table></div>
+      <div id="findings" class="findings"></div>
+    </div>
+  </section>
+
+  <div class="tabbar" role="tablist" aria-label="What to do with the query" id="tabs" hidden>
+    <button type="button" role="tab" id="tabEx" aria-selected="true" aria-controls="paneEx"><span class="tn">Explain it</span><span class="td">A plain-words comment above every step. The code isn&rsquo;t changed.</span></button>
+    <button type="button" role="tab" id="tabCl" aria-selected="false" aria-controls="paneCl"><span class="tn">Clean it up</span><span class="td">Clearer names, fewer steps, parameters. Same result.</span></button>
+  </div>
+
+  <!-- ================= EXPLAIN ================= -->
+  <div id="paneEx" role="tabpanel" aria-labelledby="tabEx" class="pane" hidden>
+    <section class="step" aria-labelledby="e3">
+      <div class="step-num">Step<b>3</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="e3">Copy the prompt into Copilot</h2>
+          <p>Choose who the comments are for, then paste the prompt into Copilot and send it.</p>
+        </div>
+        <div class="opts">
+          <span class="seg" role="radiogroup" aria-label="Audience">
+            <label><input type="radio" name="aud" value="business"><span>Report authors</span></label>
+            <label><input type="radio" name="aud" value="mixed" checked><span>People who maintain it</span></label>
+          </span>
+        </div>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">Prompt for Copilot</span><span class="r"><span class="count" id="exCount"></span><button class="btn primary" type="button" data-copy="exPrompt">Copy prompt</button></span></div>
+          <pre class="short" id="exPromptView"></pre>
+        </div>
+        <div id="exLong"></div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="e4">
+      <div class="step-num">Step<b>4</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="e4">Paste Copilot&rsquo;s reply</h2>
+          <p>Paste the whole reply. The comments go above each step; the code itself stays exactly as it is.</p>
+        </div>
+        <textarea id="exReply" class="mid" spellcheck="false" aria-label="Copilot reply" placeholder="Paste Copilot's reply here"></textarea>
+        <div id="exMsg"></div>
+        <div id="exMore" class="more" hidden>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">Follow-up prompt for the missing steps</span><span class="r"><button class="btn primary" type="button" data-copy="exFollow">Copy follow-up</button></span></div>
+            <pre class="short" id="exFollowView"></pre>
+          </div>
+          <label class="lab" for="exAdd">Paste the follow-up reply <span class="hint">It&rsquo;s added to the comments you already have.</span></label>
+          <textarea id="exAdd" class="mid" spellcheck="false" placeholder="Paste the follow-up reply here"></textarea>
+        </div>
+        <div id="exOut" hidden>
+          <div class="opts">
+            <label><input type="checkbox" id="exNotes" checked> Include notes about risky steps</label>
+            <label><input type="checkbox" id="exSummary" checked> Add the summary at the top</label>
+          </div>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">Commented query</span><span class="r"><button class="btn primary" type="button" data-copy="commented">Copy query</button></span></div>
+            <pre class="tall" id="commentedView"></pre>
+          </div>
+          <div class="apply">
+            <b>Put it back in Power BI</b>
+            <ol>
+              <li>Open the same query&rsquo;s <b>Advanced Editor</b>, press <b>Ctrl+A</b> and paste.</li>
+              <li>Select <b>Done</b>. Only <code>//</code> comment lines were added, so the data doesn&rsquo;t change.</li>
+              <li>The comment above each step also shows as its tooltip in <b>Applied Steps</b>.</li>
+            </ol>
+          </div>
+          <div id="exSumBox"></div>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Step</th><th>What it does</th></tr></thead>
+            <tbody id="exBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= CLEAN UP ================= -->
+  <div id="paneCl" role="tabpanel" aria-labelledby="tabCl" class="pane" hidden>
+    <section class="step" aria-labelledby="c3">
+      <div class="step-num">Step<b>3</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="c3">Choose the changes and copy the prompt</h2>
+          <p>Copilot is told to keep the result exactly the same. The findings from Step 2 go into the prompt too.</p>
+        </div>
+        <div class="opts" id="clOpts">
+          <label><input type="checkbox" data-opt="rename" checked> Rename default steps</label>
+          <label><input type="checkbox" data-opt="merge" checked> Merge repeated steps</label>
+          <label><input type="checkbox" data-opt="unused" checked> Remove unused steps</label>
+          <label><input type="checkbox" data-opt="params" checked> Use parameters for paths and servers</label>
+          <label><input type="checkbox" data-opt="comments"> Add step comments</label>
+        </div>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">Prompt for Copilot</span><span class="r"><span class="count" id="clCount"></span><button class="btn primary" type="button" data-copy="clPrompt">Copy prompt</button></span></div>
+          <pre class="short" id="clPromptView"></pre>
+        </div>
+        <div id="clLong"></div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="c4">
+      <div class="step-num">Step<b>4</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="c4">Paste Copilot&rsquo;s reply and check it</h2>
+          <p>The cleaned query is compared with yours: step references, the data source, filters and values that disappeared.</p>
+        </div>
+        <textarea id="clReply" class="mid" spellcheck="false" aria-label="Copilot reply" placeholder="Paste Copilot's reply here"></textarea>
+        <div id="clMsg"></div>
+        <div id="clOut" hidden>
+          <div id="clChecks"></div>
+          <div id="clParams"></div>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">Cleaned query</span><span class="r"><button class="btn primary" type="button" data-copy="clean">Copy query</button></span></div>
+            <pre class="tall" id="cleanView"></pre>
+          </div>
+          <details class="extra" id="diffBox">
+            <summary>Compare with the original <span class="muted" id="diffStat"></span></summary>
+            <div class="extra-body"><pre class="tall diff" id="diffView"></pre></div>
+          </details>
+          <div id="clChanges"></div>
+          <div class="apply">
+            <b>Put it back in Power BI</b>
+            <ol>
+              <li>Keep a copy first: right-click the query &gt; <b>Duplicate</b>.</li>
+              <li id="applyParams" hidden>Create the parameters above before you paste.</li>
+              <li>Open the original query&rsquo;s <b>Advanced Editor</b>, press <b>Ctrl+A</b>, paste the cleaned query and select <b>Done</b>.</li>
+              <li>Compare the two: the same columns and types, and the same row count (<b>Transform &gt; Count Rows</b> on each, then delete that step).</li>
+              <li>When they match, delete the duplicate.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  </div>
+  <!-- end one query -->
+
+  <!-- ================= WHOLE MODEL ================= -->
+  <div id="modeModel" role="tabpanel" aria-labelledby="modeModelBtn" class="mode" hidden>
+    <section class="step" aria-labelledby="m1">
+      <div class="step-num">Step<b>1</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="m1">Export every query from Power BI Desktop</h2>
+          <p>This query returns the Power Query code behind every loaded table, plus queries that aren&rsquo;t loaded, functions and parameters.</p>
+        </div>
+        <ol class="how">
+          <li>Open your report in Power BI Desktop and select <b>DAX query view</b> on the left rail.</li>
+          <li>Paste the query below into a new query tab and select <b>Run</b>.</li>
+          <li>Above the results grid, select <b>Copy</b>. It copies every row with the column headers.</li>
+        </ol>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">DAX query</span><span class="r"><button class="btn primary" type="button" data-copy="mExport">Copy query</button></span></div>
+          <pre class="short" id="mExportView"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="m2">
+      <div class="step-num">Step<b>2</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="m2">Paste the results and check every query</h2>
+          <p>These checks run without AI, across all queries at once. To clean up a query, select <b>Open</b> on its row.</p>
+        </div>
+        <textarea id="mInput" class="big" spellcheck="false" aria-label="Query results" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
+        <div id="mMsg"></div>
+        <div id="mCheck" class="mcheck" hidden>
+          <div class="stats" id="mStats"></div>
+          <div id="mFindings" class="findings"></div>
+          <div class="list-head"><h3>Queries</h3><span class="list-actions"><button type="button" class="linkbtn" id="mAllOn">Tick all except functions</button><button type="button" class="linkbtn" id="mAllOff">Untick all</button></span></div>
+          <div id="mFnNote"></div>
+          <div class="tablewrap"><table class="smap mtable">
+            <thead><tr><th class="ck"><span class="sr">Explain</span>Explain</th><th>Query</th><th>Type</th><th>Steps</th><th>Uses</th><th>Used by</th><th>Findings</th><th><span class="sr">Actions</span></th></tr></thead>
+            <tbody id="mBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="m3" id="mStep3" hidden>
+      <div class="step-num">Step<b>3</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="m3">Explain them in batches</h2>
+          <p>Each prompt covers the next few ticked queries that still need comments. Copy it, send it in Copilot, then paste the reply in Step 4. Repeat until the bar is full.</p>
+        </div>
+        <div class="filters">
+          <span class="seg" role="radiogroup" aria-label="Audience">
+            <label><input type="radio" name="maud" value="business"><span>Report authors</span></label>
+            <label><input type="radio" name="maud" value="mixed" checked><span>People who maintain it</span></label>
+          </span>
+          <div class="field"><label for="mBatch">Queries per prompt</label><select id="mBatch"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>8</option></select></div>
+        </div>
+        <div class="progress" id="mProgress"></div>
+        <div id="mQueueMsg"></div>
+        <div class="codebox" id="mPromptBox">
+          <div class="codebox-bar"><span class="t" id="mPromptTitle">Prompt for Copilot</span><span class="r"><span class="count" id="mCount"></span><button class="btn primary" type="button" data-copy="mPrompt">Copy prompt</button></span></div>
+          <pre class="short" id="mPromptView"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="m4" id="mStep4" hidden>
+      <div class="step-num">Step<b>4</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="m4">Paste each reply</h2>
+          <p>Each reply adds to the comments you already have; nothing is replaced. Steps Copilot leaves out go back in the queue.</p>
+        </div>
+        <textarea id="mReply" class="mid" spellcheck="false" aria-label="Copilot reply" placeholder="Paste Copilot's reply here. It's added as soon as you paste."></textarea>
+        <div class="reply-actions"><button type="button" class="btn" id="mAdd">Add reply</button></div>
+        <div id="mReplyMsg"></div>
+        <div id="mResults" class="mresults" hidden>
+          <div class="out-head">
+            <div class="opts">
+              <label><input type="checkbox" id="mNotes" checked> Include notes about risky steps</label>
+              <label><input type="checkbox" id="mSummary" checked> Add each summary at the top</label>
+            </div>
+            <button type="button" class="btn" data-copy="mAll">Copy all as one document</button>
+          </div>
+          <div class="apply">
+            <b>Put the comments back in Power BI</b>
+            <ol>
+              <li>Select <b>Home &gt; Transform data</b>, then for each query: select it, open <b>Advanced Editor</b>, press <b>Ctrl+A</b> and paste its commented code.</li>
+              <li>Select <b>Done</b>. Only <code>//</code> comment lines were added, so the data doesn&rsquo;t change.</li>
+              <li><b>Copy all as one document</b> is for keeping a record; don&rsquo;t paste it into a query.</li>
+            </ol>
+          </div>
+          <div id="mList" class="mlist2"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>Everything runs in this page. Your queries and inputs are saved only in this browser.</footer>
+</div>
+
+<script>
+/*MQ-CORE-START*/
+function lc(s){ return (s || '').toLowerCase(); }
+function oneLine(s){ return (s || '').replace(/\s+/g, ' ').trim(); }
+
+/* ---------- M tokenizer ----------
+   Tokens: ws, comment, str ("..." with "" escapes), qid (#"..."), id (letters, digits, _ and dots), num, punct. */
+function mTokenize(src){
+  const toks = []; let i = 0; const n = src.length;
+  const push = (t, s, e) => toks.push({ t, v: src.slice(s, e), s, e });
+  while (i < n) {
+    const c = src[i], d = src[i + 1];
+    if (/\s/.test(c)) { let j = i; while (j < n && /\s/.test(src[j])) j++; push('ws', i, j); i = j; continue; }
+    if (c === '/' && d === '/') { let j = i; while (j < n && src[j] !== '\n') j++; push('comment', i, j); i = j; continue; }
+    if (c === '/' && d === '*') { const j = src.indexOf('*/', i + 2); if (j < 0) return { error: 'A /* comment is never closed.', at: i }; push('comment', i, j + 2); i = j + 2; continue; }
+    if (c === '"' || (c === '#' && d === '"')) {
+      let j = c === '#' ? i + 2 : i + 1;
+      for (;;) {
+        if (j >= n) return { error: c === '#' ? 'A quoted name #"... is never closed.' : 'A text value "... is never closed.', at: i };
+        if (src[j] === '"') { if (src[j + 1] === '"') { j += 2; continue; } j++; break; }
+        j++;
+      }
+      push(c === '#' ? 'qid' : 'str', i, j); i = j; continue;
+    }
+    if (/[A-Za-z_]/.test(c)) { let j = i; while (j < n && /[A-Za-z0-9_.]/.test(src[j])) j++; while (src[j - 1] === '.') j--; push('id', i, j); i = j; continue; }
+    if (/[0-9]/.test(c)) { let j = i; while (j < n && /[0-9.eExX]/.test(src[j])) j++; push('num', i, j); i = j; continue; }
+    if (c === '#') { let j = i + 1; while (j < n && /[A-Za-z]/.test(src[j])) j++; push('id', i, j); i = j; continue; }
+    const two = src.slice(i, i + 2);
+    if (['=>', '<=', '>=', '<>', '..', '??'].includes(two)) { push('punct', i, i + 2); i += 2; continue; }
+    push('punct', i, i + 1); i++;
+  }
+  return { toks };
+}
+function qidName(v){ return v.slice(2, -1).replace(/""/g, '"'); }
+function lineOf(src, pos){ return src.slice(0, pos).split('\n').length; }
+
+/* ---------- parse a query into steps ---------- */
+function parseM(src){
+  const res = { steps: [], header: '', result: '', resultRefs: [], error: null, hasLet: false };
+  const tk = mTokenize(src || '');
+  if (tk.error) { res.error = tk.error + ' (line ' + lineOf(src, tk.at) + ')'; return res; }
+  const toks = tk.toks;
+  // bracket balance
+  const stack = [], pairs = { ')': '(', ']': '[', '}': '{' };
+  for (const t of toks) {
+    if (t.t !== 'punct') continue;
+    if ('([{'.includes(t.v)) stack.push(t);
+    else if (')]}'.includes(t.v)) {
+      const o = stack.pop();
+      if (!o || o.v !== pairs[t.v]) { res.error = 'Unmatched "' + t.v + '" on line ' + lineOf(src, t.s) + '.'; return res; }
+    }
+  }
+  if (stack.length) { res.error = 'Unclosed "' + stack[stack.length - 1].v + '" on line ' + lineOf(src, stack[stack.length - 1].s) + '.'; return res; }
+  // first let at bracket depth 0
+  let depth = 0, letIdx = -1;
+  for (let k = 0; k < toks.length; k++) {
+    const t = toks[k];
+    if (t.t === 'punct' && '([{'.includes(t.v)) depth++;
+    else if (t.t === 'punct' && ')]}'.includes(t.v)) depth--;
+    else if (t.t === 'id' && t.v === 'let' && depth === 0) { letIdx = k; break; }
+  }
+  if (letIdx < 0) { res.noLet = true; res.error = 'No "let ... in" block was found. Paste the whole query from the Advanced Editor, starting with "let".'; return res; }
+  res.hasLet = true;
+  res.header = src.slice(0, toks[letIdx].s);
+  depth = 0; let letDepth = 1, start = letIdx + 1, inIdx = -1;
+  const chunks = [];
+  for (let k = letIdx + 1; k < toks.length; k++) {
+    const t = toks[k];
+    if (t.t === 'punct' && '([{'.includes(t.v)) depth++;
+    else if (t.t === 'punct' && ')]}'.includes(t.v)) depth--;
+    else if (t.t === 'id' && t.v === 'let') letDepth++;
+    else if (t.t === 'id' && t.v === 'in') {
+      letDepth--;
+      if (letDepth === 0 && depth === 0) { chunks.push([start, k]); inIdx = k; break; }
+    } else if (t.t === 'punct' && t.v === ',' && depth === 0 && letDepth === 1) { chunks.push([start, k]); start = k + 1; }
+  }
+  if (inIdx < 0) { res.error = 'The "let" block has no matching "in". Check that the query ends with "in" and the name of the last step.'; return res; }
+  const names = [];
+  for (const [a, b] of chunks) {
+    let k = a; while (k < b && (toks[k].t === 'ws' || toks[k].t === 'comment')) k++;
+    if (k >= b) continue;
+    const nt = toks[k];
+    if (nt.t !== 'id' && nt.t !== 'qid') { res.error = 'Couldn’t read a step name on line ' + lineOf(src, nt.s) + '.'; return res; }
+    let e = k + 1; while (e < b && toks[e].t === 'ws') e++;
+    if (!(toks[e] && toks[e].t === 'punct' && toks[e].v === '=')) { res.error = 'Expected "=" after the step name on line ' + lineOf(src, nt.s) + '.'; return res; }
+    const name = nt.t === 'qid' ? qidName(nt.v) : nt.v;
+    const lineStart = src.lastIndexOf('\n', nt.s - 1) + 1;
+    const indent = src.slice(lineStart, nt.s).match(/^[ \t]*/)[0];
+    const exprToks = toks.slice(e + 1, b);
+    const expr = src.slice(toks[e].e, toks[b - 1] ? toks[b - 1].e : toks[e].e).trim();
+    names.push(name);
+    res.steps.push({ name, raw: nt.v, quoted: nt.t === 'qid', nameStart: nt.s, lineStart, indent, expr, exprToks, line: lineOf(src, nt.s), chunkStart: toks[a].s, chunkEnd: toks[b - 1] ? toks[b - 1].e : toks[e].e });
+  }
+  const nameSet = new Map(names.map(n => [n, true]));
+  const refsIn = (tks) => {
+    const out = [];
+    for (let k = 0; k < tks.length; k++) {
+      const t = tks[k];
+      let nm = null;
+      if (t.t === 'qid') nm = qidName(t.v);
+      else if (t.t === 'id' && nameSet.has(t.v)) {
+        let p = k - 1; while (p >= 0 && tks[p].t === 'ws') p--;
+        let q = k + 1; while (q < tks.length && tks[q].t === 'ws') q++;
+        if (tks[p] && tks[p].v === '[' && tks[q] && tks[q].v === ']') continue; // [Field] access, not a step
+        nm = t.v;
+      }
+      if (nm && nameSet.has(nm) && !out.includes(nm)) out.push(nm);
+    }
+    return out;
+  };
+  res.steps.forEach(s => {
+    s.refs = refsIn(s.exprToks);
+    const fn = s.exprToks.find((t, k) => t.t === 'id' && t.v.includes('.') && /^[A-Z]/.test(t.v) && (() => { let q = k + 1; while (q < s.exprToks.length && s.exprToks[q].t === 'ws') q++; return s.exprToks[q] && s.exprToks[q].v === '('; })());
+    const first = s.exprToks.find(t => t.t !== 'ws' && t.t !== 'comment');
+    s.fn = fn ? fn.v : (first && (first.t === 'qid' || nameSet.has(first.v)) && s.exprToks.some(t => t.v === '{') ? 'Navigation' : '');
+    s.strings = s.exprToks.filter(t => t.t === 'str').map(t => t.v.slice(1, -1).replace(/""/g, '"'));
+    delete s.exprToks;
+  });
+  const resultToks = toks.slice(inIdx + 1);
+  res.result = src.slice(toks[inIdx].e).trim();
+  res.resultRefs = refsIn(resultToks);
+  return res;
+}
+
+/* ---------- health checks (no AI) ---------- */
+const DEFAULT_NAMES = /^(Source|Navigation|Changed Type|Promoted Headers|Filtered Rows|Removed Columns|Removed Other Columns|Renamed Columns|Reordered Columns|Added Custom|Custom|Added Conditional Column|Added Index|Replaced Value|Replaced Errors|Removed Errors|Sorted Rows|Merged Queries|Appended Query|Expanded .+|Grouped Rows|Removed Duplicates|Removed Top Rows|Removed Bottom Rows|Removed Blank Rows|Kept First Rows|Kept Range of Rows|Split Column by .+|Trimmed Text|Cleaned Text|Uppercased Text|Lowercased Text|Capitalized Each Word|Pivoted Column|Unpivoted Columns|Unpivoted Other Columns|Transposed Table|Duplicated Column|Inserted .+|Extracted .+|Invoked Custom Function|Changed Type with Locale|Filled Down|Filled Up|Merged Columns|Calculated .+|Rounded Off|Multiplication|Division|Subtraction|Addition)\d*$/;
+const DB_SOURCES = /^(Sql\.Database|Sql\.Databases|Oracle\.Database|PostgreSQL\.Database|MySQL\.Database|Snowflake\.Databases|GoogleBigQuery\.Database|AmazonRedshift\.Database|Teradata\.Database|Databricks\.Catalogs|Odbc\.Query|Odbc\.DataSource|AzureDataExplorer\.Contents|Sybase\.Database|DB2\.Database)$/;
+const FOLD_BREAKERS = /^(Table\.Buffer|Table\.AddIndexColumn|Table\.FromRecords|Table\.FromList|Table\.FromRows|List\.Generate|List\.Accumulate|Table\.Profile|Table\.Transpose|Table\.ReplaceErrorValues)$/;
+const FILE_FNS = /^(File\.Contents|Folder\.Files|Folder\.Contents|Web\.Contents|SharePoint\.Files|SharePoint\.Contents|SharePoint\.Tables|Excel\.Workbook|Csv\.Document)$/;
+
+function sourceInfo(q){
+  const s = q.steps.find(x => DB_SOURCES.test(x.fn) || FILE_FNS.test(x.fn) || /^[A-Z][A-Za-z]+\.(Database|Databases|Contents|Files|Workbook|Document|Tables|Feed|Query)$/.test(x.fn));
+  if (!s) return { kind: 'other', step: null, fn: '' };
+  return { kind: DB_SOURCES.test(s.fn) ? 'database' : FILE_FNS.test(s.fn) ? 'file' : 'other', step: s, fn: s.fn };
+}
+function healthChecks(q){
+  const out = [];
+  const add = (level, step, title, detail) => out.push({ level, step, title, detail });
+  if (!q.steps.length) return out;
+  const src = sourceInfo(q);
+  // unused steps
+  const used = new Set(q.resultRefs);
+  q.steps.forEach(s => s.refs.forEach(r => used.add(r)));
+  q.steps.filter(s => !used.has(s.name)).forEach(s => add('warn', s.name, 'Step is never used', 'Nothing after it, and not the query’s result, refers to this step, so it has no effect. It can be deleted.'));
+  // default names
+  const defaults = q.steps.filter(s => DEFAULT_NAMES.test(s.name) && !/^(Source|Navigation)$/.test(s.name));
+  if (defaults.length) add('info', null, defaults.length + ' step' + (defaults.length > 1 ? 's have' : ' has') + ' a default name', 'Names like ' + defaults.slice(0, 4).map(s => '“' + s.name + '”').join(', ') + (defaults.length > 4 ? ' and ' + (defaults.length - 4) + ' more' : '') + ' say what kind of step it is, not why. Descriptive names make the Applied Steps list readable.');
+  // several type changes
+  const types = q.steps.filter(s => s.fn === 'Table.TransformColumnTypes');
+  if (types.length > 1) add('warn', types.map(s => s.name).join(', '), types.length + ' type-change steps', 'Power BI adds a type change after most edits. Usually one type step after the headers, plus types set directly in Table.AddColumn, is enough; extra ones add work and clutter.');
+  // hard-coded paths and servers
+  q.steps.forEach(s => {
+    const lits = s.strings.filter(v => /^[A-Za-z]:\\|^\\\\|^https?:\/\/|\.(xlsx|xlsm|xls|csv|txt|json|parquet)$/i.test(v));
+    if (lits.length && (FILE_FNS.test(s.fn) || /File\.Contents|Web\.Contents|Folder\.Files/.test(s.expr))) add('warn', s.name, 'Hard-coded file path or URL', lits.map(v => '“' + v + '”').join(', ') + '. A parameter makes it easy to repoint, and a personal folder like this breaks when someone else refreshes.');
+    if (DB_SOURCES.test(s.fn) && s.strings.length) add('info', s.name, 'Hard-coded server or database', s.strings.slice(0, 2).map(v => '“' + v + '”').join(', ') + '. Parameters make it easy to switch between test and production.');
+  });
+  // remove vs select columns
+  q.steps.filter(s => s.fn === 'Table.RemoveColumns').forEach(s => add('info', s.name, 'Removes columns by name', 'New columns added at the source will flow through, and the step fails if a named column disappears. Table.SelectColumns keeps an explicit list instead.'));
+  // sort mid-query
+  const last = q.steps[q.steps.length - 1];
+  q.steps.filter(s => s.fn === 'Table.Sort' && s !== last).forEach(s => add('info', s.name, 'Sort in the middle of the query', 'Row order isn’t kept when the table loads into the model, so this sort usually only costs time.'));
+  // folding
+  if (src.kind === 'database') {
+    q.steps.filter(s => FOLD_BREAKERS.test(s.fn)).forEach(s => add('warn', s.name, 'May stop query folding', s.fn + ' usually can’t be sent to the database, so this step and every step after it run in Power BI instead. Move it as late as possible, and right-click a step > View Native Query to check.'));
+  }
+  q.steps.filter(s => s.fn === 'Table.Buffer').forEach(s => { if (src.kind !== 'database') add('info', s.name, 'Table.Buffer', 'Buffering loads the whole table into memory. It helps in a few specific cases; otherwise it slows refresh.'); });
+  // result is not the last step
+  if (q.resultRefs.length === 1 && last && q.resultRefs[0] !== last.name) add('warn', last.name, 'The result isn’t the last step', 'The query returns “' + q.resultRefs[0] + '”, so steps after it are ignored. That is often left over from a deleted step.');
+  return out;
+}
+
+/* ---------- prompts ---------- */
+function stepListing(src, q){
+  const lines = [];
+  q.steps.forEach((s, i) => lines.push((i + 1) + '. ' + s.name + (s.fn ? ' (' + s.fn + ')' : '')));
+  return lines;
+}
+function explainPrompt(src, q, o){
+  const opts = Object.assign({ audience: 'mixed', name: '' }, o || {});
+  const L = [];
+  L.push('You are explaining a Power Query (M) query from Power BI' + (opts.name ? ', named "' + opts.name + '"' : '') + '. Write a short comment for every step and a summary of the whole query.');
+  L.push('');
+  L.push('## How to write the comments');
+  if (opts.audience === 'business') L.push('- Audience: report authors who don’t read M. Say what the step does to the data in plain words, not how the function works.');
+  else L.push('- Audience: people who maintain the query. Say what the step does and, where it isn’t obvious, why it matters.');
+  L.push('- One sentence per step, at most 120 characters. Start with a verb: "Keeps rows where...", "Renames...".');
+  L.push('- Be specific: name the columns, values and conditions from the code.');
+  L.push('- If a step looks wrong, unnecessary or risky, add a NOTE line saying why, briefly. Otherwise leave NOTE out.');
+  L.push('- SUMMARY: 2 to 4 sentences: where the data comes from, the main changes, and what one row of the result is.');
+  L.push('');
+  L.push('## Output format');
+  L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block. One STEP block per step, in the order listed, using each step name exactly as listed:');
+  L.push('');
+  L.push('@@@ SUMMARY @@@');
+  L.push('Two to four sentences.');
+  L.push('@@@ END @@@');
+  L.push('@@@ STEP @@@');
+  L.push('NAME: Step name');
+  L.push('COMMENT: One sentence.');
+  L.push('NOTE: Only if the step looks wrong or risky.');
+  L.push('@@@ END @@@');
+  L.push('');
+  L.push('## Steps');
+  stepListing(src, q).forEach(l => L.push(l));
+  L.push('');
+  L.push('## The query');
+  L.push(src.trim());
+  L.push('');
+  L.push('=== END OF PROMPT ===');
+  return L.join('\n');
+}
+function cleanupPrompt(src, q, checks, o){
+  const opts = Object.assign({ rename: true, merge: true, unused: true, params: true, comments: false, name: '' }, o || {});
+  const L = [];
+  L.push('You are cleaning up a Power Query (M) query from Power BI' + (opts.name ? ', named "' + opts.name + '"' : '') + '. Rewrite it so it is easier to read and maintain, WITHOUT changing its result.');
+  L.push('');
+  L.push('## Rules you must keep');
+  L.push('- The result must be exactly the same: the same columns with the same names, types and order, and the same rows.');
+  L.push('- Keep the same data source, server, database, file, sheet and credentials. Do not add or remove connectors.');
+  L.push('- Do not add Table.Buffer, Table.AddIndexColumn or other steps that can stop query folding, and do not move steps that filter or remove columns later than they are now.');
+  L.push('- Keep valid M that Power BI’s Advanced Editor accepts, starting with "let" and ending with "in" and the last step.');
+  L.push('');
+  L.push('## Changes to make');
+  if (opts.rename) L.push('- Rename default step names (such as "Changed Type1" or "Filtered Rows") to short names that say why, for example #"Kept Orders With Dates". Update every reference.');
+  if (opts.merge) L.push('- Merge consecutive steps of the same kind where the result is identical (for example two type changes or two renames in a row), and set the type of new columns directly in Table.AddColumn instead of a separate type step.');
+  if (opts.unused) L.push('- Remove steps that nothing uses, and sorts that don’t affect the result.');
+  if (opts.params) L.push('- Replace hard-coded file paths, URLs, server and database names with parameters. List each parameter in a PARAMETER block and use its name in the code; do not write the parameter queries into the code.');
+  if (opts.comments) L.push('- Add a short // comment above each step saying what it does.');
+  L.push('- Change nothing else. If a change could alter the result, leave it out and mention it in CHANGES as a suggestion.');
+  if (checks && checks.length) {
+    L.push('');
+    L.push('## Issues found in this query');
+    checks.forEach(c => L.push('- ' + (c.step ? c.step + ': ' : '') + c.title + '. ' + c.detail));
+  }
+  L.push('');
+  L.push('## Output format');
+  L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block:');
+  L.push('');
+  L.push('@@@ CODE @@@');
+  L.push('let');
+  L.push('    ...');
+  L.push('in');
+  L.push('    ...');
+  L.push('@@@ END @@@');
+  if (opts.params) {
+    L.push('@@@ PARAMETER @@@');
+    L.push('NAME: ParameterName');
+    L.push('TYPE: Text');
+    L.push('VALUE: the original value');
+    L.push('@@@ END @@@');
+  }
+  L.push('@@@ CHANGES @@@');
+  L.push('- One line per change, in plain words.');
+  L.push('@@@ END @@@');
+  L.push('');
+  L.push('## The query');
+  L.push(src.trim());
+  L.push('');
+  L.push('=== END OF PROMPT ===');
+  return L.join('\n');
+}
+
+/* ---------- reply parsing ---------- */
+function unMarkdown(s){ let p; do { p = s; s = s.replace(/(^|[^\\])\\([\[\]_*#])/g, '$1$2'); } while (s !== p); return s; }
+function cleanReply(t){ return unMarkdown((t || '').replace(/\r/g, '')).replace(/[“”]/g, '"').replace(/ /g, ' '); }
+function blocks(t){
+  const out = [];
+  const parts = t.split(/@@@\s*([A-Z]+)\s*@@@/);
+  for (let i = 1; i < parts.length; i += 2) {
+    const kind = parts[i].toUpperCase();
+    if (kind === 'END') continue;
+    out.push({ kind, body: parts[i + 1].split(/@@@\s*END\s*@@@/i)[0] });
+  }
+  return out;
+}
+function field(body, label, labels){
+  const re = new RegExp('(^|\\n)[ \\t]*' + label + '[ \\t]*:', 'i');
+  const m = re.exec(body); if (!m) return '';
+  const start = m.index + m[0].length;
+  let end = body.length;
+  for (const l of labels) { if (l === label) continue; const r = new RegExp('(^|\\n)[ \\t]*' + l + '[ \\t]*:', 'i'); const x = r.exec(body.slice(start)); if (x) end = Math.min(end, start + x.index); }
+  return body.slice(start, end).replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '').trim();
+}
+function parseExplain(text){
+  const t = cleanReply(text).replace(/[‘’]/g, "'");
+  if (!t.trim()) return { summary: '', steps: [], error: null };
+  const bs = blocks(t);
+  const L = ['NAME', 'COMMENT', 'NOTE'];
+  const steps = bs.filter(b => b.kind === 'STEP').map(b => ({
+    name: field(b.body, 'NAME', L).replace(/^#"(.*)"$/s, '$1').replace(/^"(.*)"$/s, '$1').replace(/""/g, '"').trim(),
+    comment: oneLine(field(b.body, 'COMMENT', L)), note: oneLine(field(b.body, 'NOTE', L))
+  })).filter(s => s.name);
+  const sb = bs.find(b => b.kind === 'SUMMARY');
+  const summary = sb ? oneLine(sb.body.replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '')) : '';
+  return { summary, steps, error: steps.length || summary ? null : 'No @@@ STEP @@@ blocks were found. Make sure Copilot answered inside one code block, and paste its whole answer.' };
+}
+function parseCleanup(text){
+  const t = cleanReply(text);
+  if (!t.trim()) return { code: '', params: [], changes: [], error: null };
+  const bs = blocks(t);
+  const cb = bs.find(b => b.kind === 'CODE');
+  let code = cb ? cb.body.replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '').replace(/^\s*\n|\s+$/g, '') : '';
+  if (!cb) { const m = t.match(/```(?:m|powerquery|pq)?\s*\n([\s\S]*?\blet\b[\s\S]*?)```/i); if (m) code = m[1].trim(); }
+  const PL = ['NAME', 'TYPE', 'VALUE'];
+  const params = bs.filter(b => b.kind === 'PARAMETER').map(b => ({ name: field(b.body, 'NAME', PL).replace(/^#"(.*)"$/s, '$1').trim(), type: field(b.body, 'TYPE', PL) || 'Text', value: field(b.body, 'VALUE', PL) })).filter(p => p.name);
+  const ch = bs.find(b => b.kind === 'CHANGES');
+  const changes = ch ? ch.body.split('\n').map(s => s.replace(/^\s*[-*•]\s*/, '').trim()).filter(Boolean) : [];
+  return { code, params, changes, error: code ? null : 'No @@@ CODE @@@ block was found. Make sure Copilot answered inside one code block, and paste its whole answer.' };
+}
+
+/* ---------- outputs ---------- */
+function wrapComment(indent, text, width){
+  const words = oneLine(text).split(' '); const out = []; let line = '';
+  for (const w of words) { if (line && (line + ' ' + w).length > (width || 100)) { out.push(indent + '// ' + line); line = w; } else line = line ? line + ' ' + w : w; }
+  if (line) out.push(indent + '// ' + line);
+  return out;
+}
+// Insert // comments above each step; the code itself is not touched
+function commentedCode(src, q, ex, o){
+  const opts = Object.assign({ notes: true, summary: true }, o || {});
+  const byName = new Map(ex.steps.map(s => [lc(s.name), s]));
+  const inserts = [];
+  q.steps.forEach(s => {
+    const e = byName.get(lc(s.name)); if (!e || !e.comment) return;
+    const lines = wrapComment(s.indent, e.comment);
+    if (opts.notes && e.note) wrapComment(s.indent, 'Note: ' + e.note).forEach(l => lines.push(l));
+    // skip if the same comment is already right above
+    const before = src.slice(0, s.lineStart).replace(/\s+$/, '');
+    const prevLine = before.slice(before.lastIndexOf('\n') + 1).trim();
+    if (prevLine === lines[lines.length - 1].trim()) return;
+    inserts.push({ at: s.lineStart, text: lines.join('\n') + '\n' });
+  });
+  let out = src;
+  inserts.sort((a, b) => b.at - a.at).forEach(ins => { out = out.slice(0, ins.at) + ins.text + out.slice(ins.at); });
+  if (opts.summary && ex.summary) {
+    const letPos = out.search(/(^|\n)[ \t]*let\b/);
+    const at = letPos < 0 ? 0 : (out[letPos] === '\n' ? letPos + 1 : letPos);
+    out = out.slice(0, at) + wrapComment('', 'Summary: ' + ex.summary).join('\n') + '\n' + out.slice(at);
+  }
+  const matched = q.steps.filter(s => byName.has(lc(s.name))).length;
+  const unknown = ex.steps.filter(e => !q.steps.some(s => lc(s.name) === lc(e.name))).map(e => e.name);
+  return { code: out, matched, total: q.steps.length, missing: q.steps.filter(s => !byName.has(lc(s.name))).map(s => s.name), unknown };
+}
+function mText(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }
+function paramQuery(p){
+  let v = (p.value || '').trim();
+  const type = /^(number|decimal)/i.test(p.type) ? 'Number' : /^date/i.test(p.type) ? 'Date' : /^(true|false|logical)/i.test(p.type) ? 'Logical' : 'Text';
+  if (type === 'Text') { if (!/^".*"$/s.test(v)) v = mText(v); }
+  return v + ' meta [IsParameterQuery=true, Type="' + type + '", IsParameterQueryRequired=true]';
+}
+// Compare original and cleaned query; flag anything that could change the result
+function checkCleanup(orig, clean, params){
+  const notes = [];
+  const add = (level, text) => notes.push({ level, text });
+  if (clean.error) { add('err', 'The cleaned query can’t be read: ' + clean.error); return notes; }
+  const paramNames = new Set((params || []).map(p => p.name));
+  // every referenced name exists
+  const cleanNames = new Set(clean.steps.map(s => s.name));
+  const bare = /^[A-Za-z_][A-Za-z0-9_.]*$/;
+  clean.steps.forEach(s => {
+    const quoted = (s.expr.match(/#"(?:[^"]|"")*"/g) || []).map(qidName);
+    quoted.filter(n => !cleanNames.has(n) && !paramNames.has(n)).forEach(n => add('err', 'Step “' + s.name + '” refers to #"' + n + '", which isn’t a step in the cleaned query.'));
+  });
+  if (!clean.resultRefs.length || !clean.resultRefs.every(r => cleanNames.has(r))) add('err', 'The final "in" line doesn’t point to a step in the cleaned query.');
+  // same source
+  const a = sourceInfo(orig), b = sourceInfo(clean);
+  if (a.fn && a.fn !== b.fn) add('err', 'The data source changed from ' + a.fn + ' to ' + (b.fn || 'something else') + '.');
+  else if (a.step && b.step) {
+    const litsA = a.step.strings.slice().sort().join('|'), litsB = b.step.strings.slice().sort().join('|');
+    if (litsA !== litsB) {
+      const moved = a.step.strings.filter(v => !b.step.strings.includes(v));
+      const covered = moved.every(v => (params || []).some(p => p.value.replace(/^"|"$/g, '') === v));
+      add(covered ? 'info' : 'warn', covered ? 'The source now uses parameters for ' + moved.map(v => '“' + v + '”').join(', ') + '. Create the parameters below first.' : 'The source arguments changed (' + moved.map(v => '“' + v + '”').join(', ') + ' no longer appear). Check the source step carefully.');
+    }
+  }
+  // risky functions added
+  const fnsA = new Set(orig.steps.map(s => s.fn));
+  clean.steps.filter(s => FOLD_BREAKERS.test(s.fn) && !fnsA.has(s.fn)).forEach(s => add('warn', 'Adds ' + s.fn + ' (step “' + s.name + '”), which can stop query folding and wasn’t in the original.'));
+  // filters and column choices kept
+  const count = (q, re) => q.steps.filter(s => re.test(s.fn)).length;
+  if (count(clean, /^Table\.SelectRows$/) < count(orig, /^Table\.SelectRows$/)) {
+    const origConds = orig.steps.filter(s => s.fn === 'Table.SelectRows').length;
+    add('info', 'The original has ' + origConds + ' row filter step' + (origConds > 1 ? 's' : '') + '; the cleaned query has ' + count(clean, /^Table\.SelectRows$/) + '. Check the conditions were combined, not dropped.');
+  }
+  const usedIn = q => { const u = new Set(q.resultRefs); for (let k = q.steps.length - 1; k >= 0; k--) if (u.has(q.steps[k].name)) q.steps[k].refs.forEach(r => u.add(r)); return u; };
+  const liveA = usedIn(orig);
+  const lit = (q, live) => new Set([].concat(...q.steps.filter(s => !live || live.has(s.name)).map(s => s.strings)));
+  const la = lit(orig, liveA), lb = lit(clean);
+  const lost = [...la].filter(v => !lb.has(v) && !(params || []).some(p => p.value.replace(/^"|"$/g, '') === v));
+  if (lost.length) add('warn', 'These values from the original no longer appear: ' + lost.slice(0, 8).map(v => '“' + v + '”').join(', ') + (lost.length > 8 ? ' and ' + (lost.length - 8) + ' more' : '') + '. Check nothing a filter, rename or type change needs was lost.');
+  const dflt = clean.steps.filter(s => DEFAULT_NAMES.test(s.name) && !/^(Source|Navigation)$/.test(s.name));
+  if (dflt.length) add('info', dflt.length + ' default step name' + (dflt.length > 1 ? 's' : '') + ' left: ' + dflt.slice(0, 5).map(s => s.name).join(', ') + '.');
+  if (!notes.some(n => n.level !== 'info')) add('ok', 'The cleaned query reads correctly, every step reference exists, and the source is unchanged.');
+  return notes;
+}
+// Line diff (LCS)
+function lineDiff(a, b){
+  const A = a.replace(/\r/g, '').split('\n'), B = b.replace(/\r/g, '').split('\n');
+  const n = A.length, m = B.length;
+  if (n * m > 4e6) return null;
+  const dp = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = A[i].trim() === B[j].trim() ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const out = []; let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (A[i].trim() === B[j].trim()) { out.push({ t: ' ', v: B[j] }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) out.push({ t: '-', v: A[i++] });
+    else out.push({ t: '+', v: B[j++] });
+  }
+  while (i < n) out.push({ t: '-', v: A[i++] });
+  while (j < m) out.push({ t: '+', v: B[j++] });
+  return out;
+}
+
+/* ---------- whole model: export every query ---------- */
+const NL_MARK = '↵';
+const M_CLEAN = col => 'SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( ' + col + ', UNICHAR ( 13 ), "" ), UNICHAR ( 10 ), UNICHAR ( 8629 ) ), UNICHAR ( 9 ), "    " )';
+const M_EXPORT_QUERY = [
+'// Power Query Explainer: export every Power Query query in the model',
+'// Run in DAX query view, then select Copy above the results grid.',
+'EVALUATE',
+'VAR _tables = SELECTCOLUMNS ( INFO.TABLES (), "TID", [ID], "TName", [Name] )',
+'// What each query returns, as Power BI records it (Table, Function, Text...)',
+'VAR _types = SELECTCOLUMNS ( FILTER ( INFO.ANNOTATIONS (), [Name] = "PBI_ResultType" ), "AID", [ObjectID], "AValue", [Value] )',
+'// Loaded tables: the query behind each table (M partitions only)',
+'VAR _loaded =',
+'\tSELECTCOLUMNS (',
+'\t\tFILTER ( INFO.PARTITIONS (), [Type] = 4 ),',
+'\t\t"Kind", "Table",',
+'\t\t"Name",',
+'\t\t\tVAR _tid = [TableID]',
+'\t\t\tRETURN MAXX ( FILTER ( _tables, [TID] = _tid ), [TName] ),',
+'\t\t"ResultType", "Table",',
+'\t\t"Code", ' + M_CLEAN('[QueryDefinition]'),
+'\t)',
+'// Queries that aren’t loaded, parameters and functions',
+'VAR _other =',
+'\tSELECTCOLUMNS (',
+'\t\tFILTER ( INFO.EXPRESSIONS (), [Kind] = 0 ),',
+'\t\t"Kind", "Query",',
+'\t\t"Name", [Name],',
+'\t\t"ResultType",',
+'\t\t\tVAR _eid = [ID]',
+'\t\t\tRETURN CONCATENATEX ( FILTER ( _types, [AID] = _eid ), [AValue], ", " ),',
+'\t\t"Code", ' + M_CLEAN('[Expression]'),
+'\t)',
+'RETURN UNION ( _loaded, _other )',
+'ORDER BY [Kind], [Name]'].join('\n');
+
+function mUnquoteCell(s){
+  if (s.length >= 2 && s[0] === '"' && s[s.length - 1] === '"') {
+    const inner = s.slice(1, -1);
+    if (!/(^|[^"])"([^"]|$)/.test(inner.replace(/""/g, ''))) return inner.replace(/""/g, '"');
+  }
+  return s;
+}
+function parseMExport(text){
+  const res = { queries: [], error: null };
+  const raw = (text || '').replace(/\r/g, '');
+  if (!raw.trim()) return res;
+  const lines = raw.split('\n');
+  let h = -1, map = {};
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const cells = lines[i].split('\t').map(c => lc(mUnquoteCell(c.trim())).replace(/^.*\[|\]$/g, ''));
+    if (cells.includes('kind') && cells.includes('name') && cells.includes('code')) { h = i; cells.forEach((c, j) => { map[c] = j; }); break; }
+  }
+  if (h < 0) {
+    res.error = /\bkind\b.*\btable\b.*\bname\b/i.test(lines[0] || '')
+      ? 'This looks like the model export from the other toolkit pages. Run the query from Step 1 on this page instead; it returns the Power Query code.'
+      : 'The header row (Kind, Name, Code) wasn’t found. Use the Copy button above the results grid so the column names come along.';
+    return res;
+  }
+  const seen = new Set();
+  for (let i = h + 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const c = lines[i].split('\t');
+    const get = k => map[k] === undefined ? '' : mUnquoteCell((c[map[k]] || '').trim());
+    const name = get('name'), code = get('code').split(NL_MARK).join('\n');
+    if (!name || !code.trim() || seen.has(lc(name))) continue;
+    seen.add(lc(name));
+    res.queries.push({ name, loaded: lc(get('kind')) === 'table', code, resultType: get('resulttype') });
+  }
+  if (!res.queries.length) res.error = 'No queries were found under the header row.';
+  return res;
+}
+
+function stripMComments(code){
+  const tk = mTokenize(code);
+  return tk.error ? code : tk.toks.filter(t => t.t !== 'comment').map(t => t.v).join('');
+}
+// Does the code (tokens from k, comments and spaces skipped) start with a function: (params) [as type] => or each
+function startsFunction(toks, k){
+  const sig = toks.filter((t, i) => i >= k && t.t !== 'ws' && t.t !== 'comment');
+  if (!sig.length) return false;
+  if (sig[0].t === 'id' && sig[0].v === 'each') return true;
+  if (sig[0].v !== '(') return false;
+  let d = 0, j = 0;
+  for (; j < sig.length; j++) { if (sig[j].v === '(') d++; else if (sig[j].v === ')' && --d === 0) break; }
+  j++;
+  if (sig[j] && sig[j].v === 'as') { j++; if (sig[j] && sig[j].v === 'nullable') j++; j++; }
+  return !!(sig[j] && sig[j].v === '=>');
+}
+// How a query was recognised as a function: 'model' (Power BI's own record), 'code', 'name' or ''
+function functionReason(code, name, resultType){
+  if (/\bfunction\b/i.test(resultType || '')) return 'model';
+  const tk = mTokenize(code);
+  if (!tk.error) {
+    if (startsFunction(tk.toks, 0)) return 'code';
+    const q = parseM(code);
+    if (!q.error && q.resultRefs.length === 1) {
+      const s = q.steps.find(x => x.name === q.resultRefs[0]);
+      const st = s && mTokenize(s.expr);
+      if (st && !st.error && startsFunction(st.toks, 0)) return 'code';
+    }
+  }
+  if (/^f[nx]([A-Z0-9_ .-]|$)/.test(name || '')) return 'name';
+  return '';
+}
+function queryType(code, loaded, name, resultType){
+  if (loaded) return 'table';
+  const s = stripMComments(code).trim();
+  if (/\bIsParameterQuery\s*=\s*true/i.test(s)) return 'parameter';
+  if (functionReason(code, name, resultType)) return 'function';
+  return 'query';
+}
+const TYPE_LABEL = { table: 'Loaded table', query: 'Not loaded', function: 'Function', parameter: 'Parameter' };
+
+// Literal values a query's source step depends on (paths, URLs, servers)
+function sourceLiterals(q){
+  const out = [];
+  q.steps.forEach(s => {
+    if (DB_SOURCES.test(s.fn)) { const p = s.strings.slice(0, 2); if (p.length) out.push({ v: p.join(' / '), parts: p, db: true }); }
+    else if (FILE_FNS.test(s.fn) || /File\.Contents|Web\.Contents|Folder\.Files/.test(s.expr))
+      s.strings.filter(v => /^[A-Za-z]:\\|^\\\\|^https?:\/\/|\.(xlsx|xlsm|xls|csv|txt|json|parquet)$/i.test(v)).forEach(v => out.push({ v, parts: [v], db: false }));
+  });
+  return out;
+}
+
+function analyzeModel(list){
+  const names = new Map(list.map(x => [x.name, x]));
+  const items = list.map(x => {
+    const type = queryType(x.code, x.loaded, x.name, x.resultType);
+    const it = { name: x.name, code: x.code, loaded: x.loaded, type, fnWhy: type === 'function' ? functionReason(x.code, x.name, x.resultType) : '', q: null, error: null, checks: [], deps: [], usedBy: [], literals: [], paramValue: '' };
+    if (type === 'parameter') {
+      const tk = mTokenize(x.code); const s = !tk.error && tk.toks.find(t => t.t === 'str');
+      it.paramValue = s ? s.v.slice(1, -1).replace(/""/g, '"') : '';
+    } else {
+      const q = parseM(x.code);
+      if (q.error && !q.noLet) it.error = q.error;
+      else if (!q.error) { it.q = q; it.checks = healthChecks(q); it.literals = sourceLiterals(q); }
+    }
+    // references to other queries
+    const tk = mTokenize(x.code);
+    if (!tk.error) {
+      const own = new Set(it.q ? it.q.steps.map(s => s.name) : []);
+      const toks = tk.toks;
+      toks.forEach((t, k) => {
+        let nm = null;
+        if (t.t === 'qid') nm = qidName(t.v);
+        else if (t.t === 'id') {
+          let p = k - 1; while (p >= 0 && toks[p].t === 'ws') p--;
+          let n = k + 1; while (n < toks.length && toks[n].t === 'ws') n++;
+          if (toks[p] && toks[p].v === '[' && toks[n] && toks[n].v === ']') return;
+          nm = t.v;
+        }
+        if (nm && nm !== x.name && names.has(nm) && !own.has(nm) && !it.deps.includes(nm)) it.deps.push(nm);
+      });
+    }
+    return it;
+  });
+  const byName = new Map(items.map(i => [i.name, i]));
+  items.forEach(i => i.deps.forEach(d => byName.get(d).usedBy.push(i.name)));
+
+  // model-wide findings
+  const findings = [];
+  const add = (level, title, detail, queries) => findings.push({ level, title, detail, queries: queries || [] });
+  items.filter(i => i.error).forEach(i => add('err', 'Couldn’t read “' + i.name + '”', i.error + ' If the code looks cut off, open this query in the Advanced Editor and use One query mode.', [i.name]));
+  const lits = new Map();
+  items.forEach(i => i.literals.forEach(l => { const k = l.v; if (!lits.has(k)) lits.set(k, { v: k, parts: l.parts, db: l.db, qs: [] }); if (!lits.get(k).qs.includes(i.name)) lits.get(k).qs.push(i.name); }));
+  const params = items.filter(i => i.type === 'parameter');
+  [...lits.values()].filter(l => l.qs.length > 1).forEach(l => {
+    const p = params.find(x => l.parts.includes(x.paramValue));
+    add('warn', (l.db ? 'Same server or database' : 'Same file path or URL') + ' in ' + l.qs.length + ' queries',
+      l.parts.map(x => '“' + x + '”').join(' / ') + ' is typed into each of them: ' + l.qs.join(', ') + '. ' + (p ? 'The parameter “' + p.name + '” already holds ' + (l.db ? 'part of this' : 'this value') + '; use it in these queries.' : 'Parameters would let you repoint them all in one place.'), l.qs);
+  });
+  items.filter(i => i.type === 'query' && !i.usedBy.length && !i.error).forEach(i => add('info', '“' + i.name + '” isn’t loaded or used', 'Nothing loads it and no other query refers to it, so it only adds clutter. Check it isn’t needed, then delete it.', [i.name]));
+  items.filter(i => i.type === 'function' && !i.usedBy.length).forEach(i => add('info', 'Function “' + i.name + '” isn’t used', 'No query calls it.', [i.name]));
+  items.filter(i => i.type === 'parameter' && !i.usedBy.length).forEach(i => add('info', 'Parameter “' + i.name + '” isn’t used', 'No query refers to it.', [i.name]));
+  const order = { table: 0, query: 1, function: 2, parameter: 3 };
+  items.sort((a, b) => order[a.type] - order[b.type] || a.name.localeCompare(b.name));
+  return { items, findings };
+}
+
+/* ---------- whole model: batched explain prompt ---------- */
+// batch: [{ name, type, code, q, steps: [names to comment], summary: bool }]
+function modelExplainPrompt(batch, o){
+  const opts = Object.assign({ audience: 'mixed' }, o || {});
+  const L = [];
+  L.push('You are explaining Power Query (M) queries from one Power BI model. For each query below, write a short comment for each listed step' + (batch.some(b => b.summary) ? ', and a summary where asked' : '') + '.');
+  L.push('');
+  L.push('## How to write the comments');
+  if (opts.audience === 'business') L.push('- Audience: report authors who don’t read M. Say what the step does to the data in plain words, not how the function works.');
+  else L.push('- Audience: people who maintain the queries. Say what the step does and, where it isn’t obvious, why it matters.');
+  L.push('- One sentence per step, at most 120 characters. Start with a verb: "Keeps rows where...", "Renames...".');
+  L.push('- Be specific: name the columns, values and conditions from the code. When a step uses another query, name it.');
+  L.push('- If a step looks wrong, unnecessary or risky, add a NOTE line saying why, briefly. Otherwise leave NOTE out.');
+  L.push('- SUMMARY: 2 to 4 sentences: where the data comes from, the main changes, and what one row of the result is.');
+  L.push('');
+  L.push('## Output format');
+  L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block. Every block starts with the QUERY line, using the query name exactly as given. Use each step name exactly as listed:');
+  L.push('');
+  L.push('@@@ SUMMARY @@@');
+  L.push('QUERY: Query name');
+  L.push('TEXT: Two to four sentences.');
+  L.push('@@@ END @@@');
+  L.push('@@@ STEP @@@');
+  L.push('QUERY: Query name');
+  L.push('NAME: Step name');
+  L.push('COMMENT: One sentence.');
+  L.push('NOTE: Only if the step looks wrong or risky.');
+  L.push('@@@ END @@@');
+  batch.forEach((b, i) => {
+    L.push('');
+    L.push('## Query ' + (i + 1) + ': ' + b.name + ' (' + (TYPE_LABEL[b.type] || 'query').toLowerCase() + ')');
+    L.push(b.summary ? 'Write a SUMMARY for this query.' : 'No summary needed.');
+    L.push('Steps to comment:');
+    b.steps.forEach((n, k) => { const s = b.q.steps.find(x => x.name === n); L.push((k + 1) + '. ' + n + (s && s.fn ? ' (' + s.fn + ')' : '')); });
+    L.push('Code:');
+    L.push(b.code.trim());
+  });
+  L.push('');
+  L.push('=== END OF PROMPT ===');
+  return L.join('\n');
+}
+function parseModelExplain(text){
+  const t = cleanReply(text).replace(/[‘’]/g, "'");
+  const res = { summaries: [], steps: [], error: null };
+  if (!t.trim()) return res;
+  const bs = blocks(t);
+  const L = ['QUERY', 'NAME', 'COMMENT', 'NOTE', 'TEXT'];
+  const qn = b => field(b.body, 'QUERY', L).replace(/^#"(.*)"$/s, '$1').replace(/^"(.*)"$/s, '$1').replace(/""/g, '"').trim();
+  bs.forEach(b => {
+    if (b.kind === 'STEP') {
+      const name = field(b.body, 'NAME', L).replace(/^#"(.*)"$/s, '$1').replace(/^"(.*)"$/s, '$1').replace(/""/g, '"').trim();
+      if (name) res.steps.push({ query: qn(b), name, comment: oneLine(field(b.body, 'COMMENT', L)), note: oneLine(field(b.body, 'NOTE', L)) });
+    } else if (b.kind === 'SUMMARY') {
+      const text = oneLine(field(b.body, 'TEXT', L) || b.body.replace(/(^|\n)[ \t]*QUERY[ \t]*:.*/i, '').replace(/^[ \t]*```[\w-]*[ \t]*$/gm, ''));
+      if (text) res.summaries.push({ query: qn(b), text });
+    }
+  });
+  if (!res.steps.length && !res.summaries.length) res.error = 'No @@@ STEP @@@ blocks were found. Make sure Copilot answered inside one code block, and paste its whole answer.';
+  return res;
+}
+/*MQ-CORE-END*/
+
+
+/* ---------- example data ---------- */
+const EX_NAME = 'Sales';
+const EX_QUERY = [
+ 'let',
+ '    Source = Excel.Workbook(File.Contents("C:\\Users\\jsmith\\Documents\\Sales\\Sales 2025.xlsx"), null, true),',
+ '    Orders_Sheet = Source{[Item="Orders",Kind="Sheet"]}[Data],',
+ '    #"Promoted Headers" = Table.PromoteHeaders(Orders_Sheet, [PromoteAllScalars=true]),',
+ '    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"Order ID", type text}, {"Order Date", type date}, {"Customer", type text}, {"Region", type text}, {"Quantity", Int64.Type}, {"Unit Price", type number}, {"Discount", type number}, {"Notes", type text}}),',
+ '    #"Filtered Rows" = Table.SelectRows(#"Changed Type", each [Order Date] <> null),',
+ '    #"Removed Columns" = Table.RemoveColumns(#"Filtered Rows",{"Notes"}),',
+ '    #"Added Custom" = Table.AddColumn(#"Removed Columns", "Net Amount", each [Quantity] * [Unit Price] * (1 - [Discount])),',
+ '    #"Changed Type1" = Table.TransformColumnTypes(#"Added Custom",{{"Net Amount", type number}}),',
+ '    #"Sorted Rows" = Table.Sort(#"Changed Type1",{{"Order Date", Order.Descending}}),',
+ '    #"Filtered Rows1" = Table.SelectRows(#"Sorted Rows", each [Region] <> "Test"),',
+ '    #"Duplicated Column" = Table.DuplicateColumn(#"Filtered Rows1", "Region", "Region - Copy"),',
+ '    #"Renamed Columns" = Table.RenameColumns(#"Filtered Rows1",{{"Customer", "Customer Name"}})',
+ 'in',
+ '    #"Renamed Columns"'].join('\n');
+const EX_EXPLAIN = '```\n@@@ SUMMARY @@@\nLoads order lines from the Orders sheet of the Sales 2025 workbook. It sets column types, drops undated and test orders, removes the Notes column and adds Net Amount after discount. One row is one order line.\n@@@ END @@@\n'
+ + [['Source', 'Opens the Sales 2025 workbook from a personal Documents folder.', 'The path only works on this computer; a parameter or shared location is safer.'],
+    ['Orders_Sheet', 'Picks the Orders sheet from the workbook.', ''],
+    ['Promoted Headers', 'Uses the first row as column names.', ''],
+    ['Changed Type', 'Sets the type of each column: dates, whole numbers, decimals and text.', ''],
+    ['Filtered Rows', 'Keeps only rows that have an Order Date.', ''],
+    ['Removed Columns', 'Removes the Notes column.', ''],
+    ['Added Custom', 'Adds Net Amount as Quantity times Unit Price, less the Discount.', ''],
+    ['Changed Type1', 'Sets Net Amount to a decimal number.', 'Could be set directly in the Added Custom step instead.'],
+    ['Sorted Rows', 'Sorts orders by Order Date, newest first.', 'The model doesn\'t keep row order, so this sort has no effect on reports.'],
+    ['Filtered Rows1', 'Removes rows where Region is "Test".', ''],
+    ['Duplicated Column', 'Copies Region into a new Region - Copy column.', 'Nothing uses this step, so the copy never reaches the result.'],
+    ['Renamed Columns', 'Renames Customer to Customer Name.', '']]
+   .map(([n, c, x]) => '@@@ STEP @@@\nNAME: ' + n + '\nCOMMENT: ' + c + (x ? '\nNOTE: ' + x : '') + '\n@@@ END @@@').join('\n') + '\n```';
+const EX_CLEAN = '```\n@@@ CODE @@@\n' + [
+ 'let',
+ '    Source = Excel.Workbook(File.Contents(SalesFilePath), null, true),',
+ '    OrdersSheet = Source{[Item="Orders",Kind="Sheet"]}[Data],',
+ '    #"Used First Row As Headers" = Table.PromoteHeaders(OrdersSheet, [PromoteAllScalars=true]),',
+ '    #"Set Column Types" = Table.TransformColumnTypes(#"Used First Row As Headers",{{"Order ID", type text}, {"Order Date", type date}, {"Customer", type text}, {"Region", type text}, {"Quantity", Int64.Type}, {"Unit Price", type number}, {"Discount", type number}, {"Notes", type text}}),',
+ '    #"Kept Dated Non-Test Orders" = Table.SelectRows(#"Set Column Types", each [Order Date] <> null and [Region] <> "Test"),',
+ '    #"Dropped Notes" = Table.RemoveColumns(#"Kept Dated Non-Test Orders",{"Notes"}),',
+ '    #"Added Net Amount" = Table.AddColumn(#"Dropped Notes", "Net Amount", each [Quantity] * [Unit Price] * (1 - [Discount]), type number),',
+ '    #"Renamed Customer" = Table.RenameColumns(#"Added Net Amount",{{"Customer", "Customer Name"}})',
+ 'in',
+ '    #"Renamed Customer"'].join('\n')
+ + '\n@@@ END @@@\n@@@ PARAMETER @@@\nNAME: SalesFilePath\nTYPE: Text\nVALUE: C:\\Users\\jsmith\\Documents\\Sales\\Sales 2025.xlsx\n@@@ END @@@\n'
+ + '@@@ CHANGES @@@\n- Replaced the file path with the SalesFilePath parameter.\n- Renamed default steps to say what they do.\n- Combined the two row filters into one step.\n- Set the Net Amount type inside Table.AddColumn and removed the second type step.\n- Removed the unused Duplicated Column step and the sort, which doesn\'t affect the loaded table.\n- Suggestion (not applied): Table.SelectColumns would keep an explicit column list instead of removing Notes by name.\n@@@ END @@@\n```';
+
+const EX_MODEL_QUERIES = [
+ { name: 'Customers', loaded: true, code: ['let',
+ '    Source = Sql.Database("sql01", "Retail"),',
+ '    dbo_Customer = Source{[Schema="dbo",Item="Customer"]}[Data],',
+ '    #"Removed Other Columns" = Table.SelectColumns(dbo_Customer,{"CustomerKey", "Name", "RegionKey", "Segment"}),',
+ '    #"Merged Queries" = Table.NestedJoin(#"Removed Other Columns", {"RegionKey"}, Regions, {"RegionKey"}, "Regions", JoinKind.LeftOuter),',
+ '    #"Expanded Regions" = Table.ExpandTableColumn(#"Merged Queries", "Regions", {"Region"}, {"Region"}),',
+ '    #"Cleaned Names" = Table.TransformColumns(#"Expanded Regions", {{"Name", fnCleanText, type text}})',
+ 'in',
+ '    #"Cleaned Names"'].join('\n') },
+ { name: 'Returns', loaded: true, code: ['let',
+ '    Source = Excel.Workbook(File.Contents("C:\\Users\\jsmith\\Documents\\Sales\\Sales 2025.xlsx"), null, true),',
+ '    Returns_Sheet = Source{[Item="Returns",Kind="Sheet"]}[Data],',
+ '    #"Promoted Headers" = Table.PromoteHeaders(Returns_Sheet, [PromoteAllScalars=true]),',
+ '    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"Order ID", type text}, {"Return Date", type date}, {"Quantity", Int64.Type}, {"Reason", type text}}),',
+ '    #"Filtered Rows" = Table.SelectRows(#"Changed Type", each [Return Date] >= ReportStartDate)',
+ 'in',
+ '    #"Filtered Rows"'].join('\n') },
+ { name: 'Sales', loaded: true, code: EX_QUERY },
+ { name: 'Regions', loaded: false, code: ['let',
+ '    Source = Sql.Database("sql01", "Retail"),',
+ '    dbo_Region = Source{[Schema="dbo",Item="Region"]}[Data]',
+ 'in',
+ '    dbo_Region'].join('\n') },
+ { name: 'Sales Old Extract', loaded: false, code: ['let',
+ '    Source = Csv.Document(File.Contents("C:\\Users\\jsmith\\Downloads\\sales_old.csv"),[Delimiter=",", Encoding=65001]),',
+ '    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true])',
+ 'in',
+ '    #"Promoted Headers"'].join('\n') },
+ { name: 'fnCleanText', loaded: false, code: ['(txt as nullable text) as nullable text =>',
+ 'let',
+ '    Trimmed = if txt = null then null else Text.Trim(txt),',
+ '    Proper = if Trimmed = null then null else Text.Proper(Trimmed)',
+ 'in',
+ '    Proper'].join('\n') },
+ { name: 'ReportStartDate', loaded: false, code: '#date(2024, 2, 1) meta [IsParameterQuery=true, Type="Date", IsParameterQueryRequired=true]' }
+];
+const EX_MODEL_EXPORT = 'Kind\tName\tCode\n' + EX_MODEL_QUERIES.map(x => [x.loaded ? 'Table' : 'Query', x.name, x.code.split('\n').join('\u21B5')].join('\t')).join('\n');
+const EX_MODEL_REPLY = '```\n'
+ + '@@@ SUMMARY @@@\nQUERY: Customers\nTEXT: Loads customers from the Retail database, keeps four columns, adds each customer\'s region name from the Regions query, and tidies the names. One row is one customer.\n@@@ END @@@\n'
+ + [['Customers', 'Source', 'Connects to the Retail database on server sql01.', ''],
+    ['Customers', 'dbo_Customer', 'Picks the dbo.Customer table.', ''],
+    ['Customers', 'Removed Other Columns', 'Keeps only CustomerKey, Name, RegionKey and Segment.', ''],
+    ['Customers', 'Merged Queries', 'Looks up each customer\'s region in the Regions query by RegionKey.', ''],
+    ['Customers', 'Expanded Regions', 'Adds the Region name from the lookup.', ''],
+    ['Customers', 'Cleaned Names', 'Trims customer names and capitalizes each word using fnCleanText.', '']]
+   .map(([q, n, c, x]) => '@@@ STEP @@@\nQUERY: ' + q + '\nNAME: ' + n + '\nCOMMENT: ' + c + (x ? '\nNOTE: ' + x : '') + '\n@@@ END @@@').join('\n')
+ + '\n@@@ SUMMARY @@@\nQUERY: Returns\nTEXT: Loads returned order lines from the Returns sheet of the Sales 2025 workbook and keeps returns from the report start date on. One row is one returned order line.\n@@@ END @@@\n'
+ + [['Returns', 'Source', 'Opens the Sales 2025 workbook from a personal Documents folder.', 'The same path is typed into the Sales query; a shared parameter is safer.'],
+    ['Returns', 'Returns_Sheet', 'Picks the Returns sheet.', ''],
+    ['Returns', 'Promoted Headers', 'Uses the first row as column names.', ''],
+    ['Returns', 'Changed Type', 'Sets Order ID and Reason to text, Return Date to date and Quantity to whole number.', ''],
+    ['Returns', 'Filtered Rows', 'Keeps returns on or after the ReportStartDate parameter.', '']]
+   .map(([q, n, c, x]) => '@@@ STEP @@@\nQUERY: ' + q + '\nNAME: ' + n + '\nCOMMENT: ' + c + (x ? '\nNOTE: ' + x : '') + '\n@@@ END @@@').join('\n') + '\n```';
+
+/* ---------- state + UI ---------- */
+const $ = id => document.getElementById(id);
+const PREFIX = 'kpq.';
+const store = {
+  get(k){ try { return localStorage.getItem(PREFIX + k); } catch (e) { return null; } },
+  set(k, v){ try { localStorage.setItem(PREFIX + k, v); } catch (e) {} }
+};
+const DEFAULT_OPTS = () => ({ rename: true, merge: true, unused: true, params: true, comments: false });
+const state = {
+  example: false, tab: 'ex', audience: 'mixed', opts: DEFAULT_OPTS(), exNotes: true, exSummary: true,
+  exReply: '', clReply: '', q: null, checks: [],
+  mode: 'one', m: null, mDone: {}, mAsked: {}, mPick: {}, mLastBatch: [], mBatch: '3', mNotes: true, mSummary: true,
+  out: { exPrompt: '', exFollow: '', commented: '', clPrompt: '', clean: '', mExport: '', mPrompt: '', mAll: '' }
+};
+const LONG_PROMPT = 14000;
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+const M_KW = new Set(['let', 'in', 'each', 'if', 'then', 'else', 'and', 'or', 'not', 'type', 'meta', 'true', 'false', 'null', 'try', 'otherwise', 'as', 'is', 'error', 'section', 'shared']);
+function hlM(code){
+  const tk = mTokenize(code);
+  if (tk.error) return esc(code);
+  return tk.toks.map(t => {
+    const h = esc(t.v);
+    if (t.t === 'comment') return '<span class="tok-com">' + h + '</span>';
+    if (t.t === 'str') return '<span class="tok-str">' + h + '</span>';
+    if (t.t === 'qid') return '<span class="tok-qid">' + h + '</span>';
+    if (t.t === 'id' && M_KW.has(t.v)) return '<span class="tok-kw">' + h + '</span>';
+    return h;
+  }).join('');
+}
+function copyText(text, btn){
+  const done = () => { const o = btn.dataset.label || btn.textContent; btn.dataset.label = o; btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(() => { btn.textContent = o; btn.classList.remove('done'); }, 1600); };
+  const fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    if (ok) done(); else { btn.textContent = 'Select and copy manually'; setTimeout(() => { btn.textContent = btn.dataset.label || 'Copy'; }, 2200); }
+  };
+  try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+}
+function msg(level, html){ return '<div class="msg ' + level + '">' + html + '</div>'; }
+function setExample(on){ state.example = on; $('exampleBanner').hidden = !on; }
+function leaveExample(){ if (state.example) { setExample(false); persist(); } }
+function persist(){
+  if (state.example) return;
+  store.set('query', $('qInput').value);
+  store.set('model', $('mInput').value);
+  store.set('state', JSON.stringify({ name: $('qName').value, tab: state.tab, audience: state.audience, opts: state.opts, exNotes: state.exNotes, exSummary: state.exSummary, exReply: state.exReply, clReply: state.clReply,
+    mode: state.mode, mDone: state.mDone, mAsked: state.mAsked, mPick: state.mPick, mLastBatch: state.mLastBatch, mBatch: state.mBatch, mNotes: state.mNotes, mSummary: state.mSummary }));
+}
+function src(){ return $('qInput').value; }
+function optName(){ return $('qName').value.trim(); }
+
+/* ---------- step 1 + 2 ---------- */
+function renderQuery(){
+  const text = src();
+  state.q = null; state.checks = [];
+  const has = !!text.trim();
+  let m = '';
+  if (has) {
+    const q = parseM(text);
+    if (q.error) m = msg('err', '<b>This query can&rsquo;t be read.</b> ' + esc(q.error));
+    else if (!q.steps.length) m = msg('err', 'No steps were found between <code>let</code> and <code>in</code>.');
+    else { state.q = q; state.checks = healthChecks(q); }
+    if (state.q && functionReason(text, optName(), '')) m = msg('info', 'This query is a function. Its steps are explained as usual; the Step 2 findings are written for queries that load data, so some may not apply.');
+  }
+  $('qMsg').innerHTML = m;
+  const ok = !!state.q;
+  $('mapStep').hidden = !ok; $('tabs').hidden = !ok;
+  $('paneEx').hidden = !ok || state.tab !== 'ex'; $('paneCl').hidden = !ok || state.tab !== 'cl';
+  if (!ok) return;
+  const q = state.q, checks = state.checks;
+  const si = sourceInfo(q);
+  const warns = checks.filter(c => c.level === 'warn').length, infos = checks.length - warns;
+  $('qStats').innerHTML = '<span class="stat"><b>' + q.steps.length + '</b> steps</span>'
+    + (si.fn ? '<span class="stat">Source <b>' + esc(si.fn) + '</b></span>' : '')
+    + (si.kind === 'database' ? '<span class="stat remote">Database: query folding matters</span>' : '')
+    + '<span class="stat' + (warns ? ' limited' : '') + '"><b>' + warns + '</b> to fix</span>'
+    + '<span class="stat"><b>' + infos + '</b> to consider</span>';
+  const byStep = {};
+  checks.forEach(c => { (c.step ? c.step.split(', ') : []).forEach(s => { (byStep[s] = byStep[s] || []).push(c); }); });
+  $('mapBody').innerHTML = q.steps.map((s, i) => {
+    const f = byStep[s.name] || [];
+    return '<tr' + (f.some(c => c.level === 'warn') ? ' class="flagged"' : '') + '><td class="n">' + (i + 1) + '</td><td class="nm">' + esc(s.name) + '</td><td class="fmt">' + esc(s.fn || '') + '</td><td class="uses">' + (s.refs.length ? s.refs.map(esc).join(', ') : '<span class="muted">&ndash;</span>') + '</td><td>'
+      + f.map(c => '<span class="pill ' + (c.level === 'warn' ? 'warn' : 'replace') + '">' + esc(c.title) + '</span>').join(' ') + '</td></tr>';
+  }).join('');
+  $('findings').innerHTML = checks.length
+    ? '<h3>Findings</h3><ul class="flist">' + checks.map(c => '<li class="' + c.level + '"><span class="pill ' + (c.level === 'warn' ? 'warn' : 'replace') + '">' + (c.level === 'warn' ? 'Fix' : 'Consider') + '</span><div><b>' + esc(c.title) + '</b>' + (c.step ? ' <span class="mono muted">' + esc(c.step) + '</span>' : '') + '<p>' + esc(c.detail) + '</p></div></li>').join('') + '</ul>'
+    : msg('ok', 'No findings. The steps are named, used and in a sensible order.');
+}
+
+/* ---------- explain ---------- */
+function followUpPrompt(text, q, missing, audience, name){
+  const L = explainPrompt(text, q, { audience, name }).split('\n');
+  const i = L.indexOf('## Steps');
+  const head = L.slice(0, i).filter(l => !/^- SUMMARY:/.test(l)).join('\n')
+    .replace(/Write a short comment for every step and a summary of the whole query\./, 'Some steps are still missing comments. Write a comment for ONLY the steps listed below.')
+    .replace(/@@@ SUMMARY @@@\nTwo to four sentences\.\n@@@ END @@@\n/, '')
+    .replace('One STEP block per step, in the order listed', 'One STEP block for each listed step');
+  return head + '\n## Steps\n' + missing.map((n, k) => (k + 1) + '. ' + n).join('\n') + '\n\n## The query\n' + text.trim() + '\n\n=== END OF PROMPT ===';
+}
+function lenNote(p){ return p.length > LONG_PROMPT ? msg('warn', 'This prompt is long (' + p.length.toLocaleString() + ' characters). If Copilot cuts it off or stops early, the follow-up in Step 4 picks up the missing steps.') : ''; }
+function renderExplain(){
+  if (!state.q) return;
+  const text = src(), q = state.q;
+  state.out.exPrompt = explainPrompt(text, q, { audience: state.audience, name: optName() });
+  $('exPromptView').textContent = state.out.exPrompt;
+  $('exCount').textContent = state.out.exPrompt.length.toLocaleString() + ' characters';
+  $('exLong').innerHTML = lenNote(state.out.exPrompt);
+  const ex = parseExplain(state.exReply);
+  const has = !!state.exReply.trim();
+  $('exOut').hidden = true; $('exMore').hidden = true;
+  if (!has) { $('exMsg').innerHTML = ''; return; }
+  if (ex.error) { $('exMsg').innerHTML = msg('err', esc(ex.error)); return; }
+  const cc = commentedCode(text, q, ex, { notes: state.exNotes, summary: state.exSummary });
+  state.out.commented = cc.code;
+  const m = [];
+  if (!cc.missing.length) m.push(msg('ok', 'Every step has a comment (' + cc.total + ' of ' + cc.total + ').'));
+  else m.push(msg('warn', cc.matched + ' of ' + cc.total + ' steps have a comment. Missing: ' + cc.missing.map(n => '<code>' + esc(n) + '</code>').join(', ') + '. Use the follow-up prompt below.'));
+  if (cc.unknown.length) m.push(msg('info', 'Ignored comments for steps that aren&rsquo;t in this query: ' + cc.unknown.map(n => '<code>' + esc(n) + '</code>').join(', ') + '. If you changed the query after asking Copilot, copy the prompt again.'));
+  $('exMsg').innerHTML = m.join('');
+  if (cc.missing.length) {
+    state.out.exFollow = followUpPrompt(text, q, cc.missing, state.audience, optName());
+    $('exFollowView').textContent = state.out.exFollow; $('exMore').hidden = false;
+  }
+  $('exOut').hidden = false;
+  $('commentedView').innerHTML = hlM(cc.code);
+  $('exSumBox').innerHTML = ex.summary ? '<div class="tip"><b>Summary.</b> ' + esc(ex.summary) + '</div>' : '';
+  const byName = new Map(ex.steps.map(s => [lc(s.name), s]));
+  $('exBody').innerHTML = q.steps.map(s => {
+    const e = byName.get(lc(s.name));
+    return '<tr><td class="nm">' + esc(s.name) + '</td><td>' + (e ? esc(e.comment) + (e.note ? '<div class="snote"><b>Note:</b> ' + esc(e.note) + '</div>' : '') : '<span class="pill skip">No comment yet</span>') + '</td></tr>';
+  }).join('');
+}
+
+/* ---------- clean up ---------- */
+function renderClean(){
+  if (!state.q) return;
+  const text = src(), q = state.q;
+  state.out.clPrompt = cleanupPrompt(text, q, state.checks, Object.assign({ name: optName() }, state.opts));
+  $('clPromptView').textContent = state.out.clPrompt;
+  $('clCount').textContent = state.out.clPrompt.length.toLocaleString() + ' characters';
+  $('clLong').innerHTML = state.out.clPrompt.length > LONG_PROMPT ? msg('warn', 'This prompt is long (' + state.out.clPrompt.length.toLocaleString() + ' characters). If Copilot&rsquo;s cleaned query stops partway, the check in Step 4 will say so; try again with fewer options ticked.') : '';
+  $('clOut').hidden = true;
+  if (!state.clReply.trim()) { $('clMsg').innerHTML = ''; return; }
+  const pc = parseCleanup(state.clReply);
+  if (pc.error) { $('clMsg').innerHTML = msg('err', esc(pc.error)); return; }
+  $('clMsg').innerHTML = '';
+  const cq = parseM(pc.code);
+  state.out.clean = pc.code;
+  const notes = checkCleanup(q, cq, pc.params);
+  if (!cq.error) notes.unshift({ level: 'info', text: q.steps.length + ' steps before, ' + cq.steps.length + ' after.' });
+  const order = { err: 0, warn: 1, ok: 2, info: 3 };
+  $('clChecks').innerHTML = notes.slice().sort((a, b) => order[a.level] - order[b.level]).map(n => msg(n.level, esc(n.text))).join('')
+    + (notes.some(n => n.level === 'err') ? msg('err', '<b>Don&rsquo;t paste this version yet.</b> Paste the problems above back into Copilot and ask it to fix them, then paste its new reply here.') : '');
+  const used = pc.params.filter(p => new RegExp('(^|[^A-Za-z0-9_.])' + p.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^A-Za-z0-9_.]|$)').test(pc.code) || pc.code.includes('#"' + p.name + '"'));
+  state.out.params = {};
+  $('clParams').innerHTML = used.length ? '<div class="params"><h3>Create ' + (used.length > 1 ? 'these parameters' : 'this parameter') + ' first</h3><p class="note">In Power Query, select <b>Home &gt; New Source &gt; Blank Query</b>, open its <b>Advanced Editor</b>, paste the code, then rename the query to the name shown. Or use <b>Home &gt; Manage Parameters &gt; New Parameter</b> with the same name, type and value.</p>'
+    + used.map((p, i) => { const code = paramQuery(p); state.out['param' + i] = code; return '<div class="codebox"><div class="codebox-bar"><span class="t">' + esc(p.name) + ' <span class="muted">' + esc(p.type) + '</span></span><span class="r"><button class="btn" type="button" data-copy="param' + i + '">Copy</button></span></div><pre>' + hlM(code) + '</pre></div>'; }).join('') + '</div>' : '';
+  $('applyParams').hidden = !used.length;
+  $('cleanView').innerHTML = hlM(pc.code);
+  const d = lineDiff(text.trim(), pc.code.trim());
+  if (d) {
+    const adds = d.filter(x => x.t === '+').length, dels = d.filter(x => x.t === '-').length;
+    $('diffStat').textContent = '(' + dels + ' line' + (dels === 1 ? '' : 's') + ' removed, ' + adds + ' added)';
+    $('diffView').innerHTML = d.map(x => '<span class="dl ' + (x.t === '+' ? 'add' : x.t === '-' ? 'del' : 'same') + '"><span class="dm">' + (x.t === ' ' ? ' ' : x.t) + '</span>' + esc(x.v) + '</span>').join('');
+    $('diffBox').hidden = false;
+  } else $('diffBox').hidden = true;
+  $('clChanges').innerHTML = pc.changes.length ? '<h3>What Copilot changed</h3><ul class="changes">' + pc.changes.map(c => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '';
+  $('clOut').hidden = false;
+}
+
+function setTab(t){
+  state.tab = t;
+  $('tabEx').setAttribute('aria-selected', t === 'ex'); $('tabCl').setAttribute('aria-selected', t === 'cl');
+  if (state.q) { $('paneEx').hidden = t !== 'ex'; $('paneCl').hidden = t !== 'cl'; }
+}
+/* ---------- whole model ---------- */
+function codeHash(s){ let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+function mPickable(i){ return !!(i.q && i.q.steps.length); }
+function mPicked(i){ const p = state.mPick[i.name]; return mPickable(i) && (typeof p === 'boolean' ? p : i.type !== 'function'); }
+function mDoneFor(i){
+  const d = state.mDone[i.name];
+  return d && d.h === codeHash(i.code) ? d : null;
+}
+function mStatus(i){
+  const d = mDoneFor(i) || { summary: '', steps: {} };
+  const missing = i.q ? i.q.steps.filter(s => !d.steps[lc(s.name)]).map(s => s.name) : [];
+  const needSummary = !d.summary;
+  const complete = !missing.length && !needSummary;
+  const gaveUp = !complete && (state.mAsked[i.name] || 0) >= 2;
+  return { d, missing, needSummary, complete, gaveUp, started: !!(d.summary || Object.keys(d.steps).length) };
+}
+function mBatchList(){
+  if (!state.m) return [];
+  const queue = state.m.items.filter(i => mPicked(i)).filter(i => { const s = mStatus(i); return !s.complete && !s.gaveUp; });
+  const max = +state.mBatch || 3, out = [];
+  for (const i of queue) {
+    const s = mStatus(i);
+    const b = { name: i.name, type: i.type, code: i.code, q: i.q, steps: s.missing, summary: s.needSummary };
+    if (out.length && (out.length >= max || modelExplainPrompt(out.concat(b), { audience: state.audience }).length > LONG_PROMPT)) break;
+    out.push(b);
+  }
+  return out;
+}
+const FN_WHY = { model: 'Power BI says so', code: 'from its code', name: 'from its name' };
+function renderModel(){
+  const text = $('mInput').value;
+  const ex = parseMExport(text);
+  state.m = null;
+  $('mMsg').innerHTML = ex.error ? msg('err', esc(ex.error)) : '';
+  if (!ex.error && ex.queries.length) state.m = analyzeModel(ex.queries);
+  const ok = !!state.m;
+  $('mCheck').hidden = !ok; $('mStep3').hidden = !ok; $('mStep4').hidden = !ok;
+  if (!ok) return;
+  const m = state.m, it = m.items;
+  const cnt = t => it.filter(i => i.type === t).length;
+  const warns = m.findings.filter(f => f.level !== 'info').length + it.reduce((n, i) => n + i.checks.filter(c => c.level === 'warn').length, 0);
+  $('mStats').innerHTML = '<span class="stat"><b>' + cnt('table') + '</b> loaded tables</span><span class="stat"><b>' + cnt('query') + '</b> not loaded</span>'
+    + (cnt('function') ? '<span class="stat"><b>' + cnt('function') + '</b> function' + (cnt('function') > 1 ? 's' : '') + '</span>' : '')
+    + (cnt('parameter') ? '<span class="stat"><b>' + cnt('parameter') + '</b> parameter' + (cnt('parameter') > 1 ? 's' : '') + '</span>' : '')
+    + '<span class="stat' + (warns ? ' limited' : '') + '"><b>' + warns + '</b> to fix</span>';
+  const lvl = f => f.level === 'err' ? 'err' : f.level === 'warn' ? 'warn' : 'replace';
+  const lbl = f => f.level === 'err' ? 'Error' : f.level === 'warn' ? 'Fix' : 'Consider';
+  $('mFindings').innerHTML = m.findings.length
+    ? '<h3>Across the model</h3><ul class="flist">' + m.findings.map(f => '<li><span class="pill ' + lvl(f) + '">' + lbl(f) + '</span><div><b>' + esc(f.title) + '</b><p>' + esc(f.detail) + '</p></div></li>').join('') + '</ul>'
+    : msg('ok', 'No model-wide findings: no repeated hard-coded sources and no unused queries.');
+  const fns = it.filter(i => i.type === 'function').length;
+  $('mFnNote').innerHTML = fns ? '<p class="note">' + (fns === 1 ? '1 function is' : fns + ' functions are') + ' left out of the explanations automatically. Tick one to include it.</p>' : '';
+  $('mBody').innerHTML = it.map((i, k) => {
+    const w = i.checks.filter(c => c.level === 'warn').length, n = i.checks.length - w;
+    const find = i.error ? '<span class="pill err">Can&rsquo;t read</span>' : (w ? '<span class="pill warn">' + w + ' to fix</span> ' : '') + (n ? '<span class="pill replace">' + n + ' to consider</span>' : '') + (!w && !n && i.q ? '<span class="muted">&ndash;</span>' : '');
+    const st = mPickable(i) ? mStatus(i) : null;
+    return '<tr data-k="' + k + '"><td class="ck">' + (mPickable(i) ? '<input type="checkbox" data-act="pick" aria-label="Explain ' + esc(i.name) + '"' + (mPicked(i) ? ' checked' : '') + '>' : '') + '</td>'
+      + '<td class="nm">' + esc(i.name) + (st && st.complete ? ' <span class="mdesc">commented</span>' : '') + '</td><td class="fmt">' + TYPE_LABEL[i.type] + (i.fnWhy ? '<span class="why">' + FN_WHY[i.fnWhy] + '</span>' : '') + '</td>'
+      + '<td class="num">' + (i.q ? i.q.steps.length : '<span class="muted">&ndash;</span>') + '</td>'
+      + '<td class="uses">' + (i.deps.length ? i.deps.map(esc).join(', ') : '<span class="muted">&ndash;</span>') + '</td>'
+      + '<td class="uses">' + (i.usedBy.length ? i.usedBy.map(esc).join(', ') : '<span class="muted">&ndash;</span>') + '</td>'
+      + '<td>' + find + '</td>'
+      + '<td class="act">' + (i.type !== 'parameter' ? '<button type="button" class="btn" data-act="open">Open</button>' : '') + '</td></tr>';
+  }).join('');
+  renderMQueue(); renderMResults();
+}
+function renderMQueue(){
+  if (!state.m) return;
+  const picked = state.m.items.filter(mPicked);
+  const done = picked.filter(i => mStatus(i).complete).length;
+  const pct = picked.length ? Math.round(done / picked.length * 100) : 0;
+  $('mProgress').innerHTML = '<div class="cov-head"><span class="cov-num">' + done + ' of ' + picked.length + '</span><span class="cov-label">ticked queries fully commented</span></div><div class="cov-bar"><span style="width:' + pct + '%"></span></div>';
+  const batch = mBatchList();
+  state.mLastBatch = batch.map(b => b.name);
+  const gaveUp = picked.filter(i => mStatus(i).gaveUp);
+  const notes = [];
+  if (gaveUp.length) notes.push(msg('warn', 'Copilot was asked twice and still left steps without a comment in ' + gaveUp.map(i => '<code>' + esc(i.name) + '</code>').join(', ') + '. They&rsquo;re out of the queue; use <b>Ask again</b> in Step 4 to retry.'));
+  if (!batch.length) {
+    state.out.mPrompt = '';
+    $('mPromptBox').hidden = true;
+    notes.push(picked.length ? msg('ok', 'Every ticked query has comments. Copy them from Step 4.') : msg('info', 'Tick at least one query in Step 2.'));
+  } else {
+    state.out.mPrompt = modelExplainPrompt(batch, { audience: state.audience });
+    $('mPromptBox').hidden = false;
+    $('mPromptTitle').textContent = 'Prompt for ' + batch.map(b => b.name).join(', ');
+    $('mPromptView').textContent = state.out.mPrompt;
+    $('mCount').textContent = state.out.mPrompt.length.toLocaleString() + ' characters';
+    if (state.out.mPrompt.length > LONG_PROMPT) notes.push(msg('warn', 'This query alone makes a long prompt. If Copilot stops early, paste what it wrote; the missing steps come back in the next prompt.'));
+  }
+  $('mQueueMsg').innerHTML = notes.join('');
+}
+function addMReply(text){
+  const r = parseModelExplain(text);
+  if (r.error) { $('mReplyMsg').innerHTML = msg('err', esc(r.error)); return false; }
+  const byName = new Map(state.m.items.map(i => [lc(i.name), i]));
+  const lone = state.mLastBatch.length === 1 ? state.mLastBatch[0] : '';
+  const unknownQ = new Set(); let added = 0; const touched = new Set();
+  const slot = i => { let d = mDoneFor(i); if (!d) { d = { h: codeHash(i.code), summary: '', steps: {} }; state.mDone[i.name] = d; } return d; };
+  const find = q => byName.get(lc(q || lone));
+  r.summaries.forEach(s => { const i = find(s.query); if (!i || !i.q) { unknownQ.add(s.query || '(no query name)'); return; } slot(i).summary = s.text; touched.add(i.name); });
+  r.steps.forEach(s => {
+    const i = find(s.query); if (!i || !i.q) { unknownQ.add(s.query || '(no query name)'); return; }
+    const st = i.q.steps.find(x => lc(x.name) === lc(s.name)); if (!st || !s.comment) return;
+    slot(i).steps[lc(st.name)] = { name: st.name, comment: s.comment, note: s.note }; added++; touched.add(i.name);
+  });
+  state.mLastBatch.forEach(n => { state.mAsked[n] = (state.mAsked[n] || 0) + 1; });
+  const m = [];
+  if (added || touched.size) m.push(msg('ok', 'Added ' + added + ' step comment' + (added === 1 ? '' : 's') + ' across ' + touched.size + ' quer' + (touched.size === 1 ? 'y' : 'ies') + '.'));
+  else m.push(msg('warn', 'Nothing in this reply matched the queries in this model.'));
+  if (unknownQ.size) m.push(msg('info', 'Skipped blocks for queries that aren&rsquo;t in this model: ' + [...unknownQ].map(n => '<code>' + esc(n) + '</code>').join(', ') + '.'));
+  $('mReplyMsg').innerHTML = m.join('');
+  return true;
+}
+function renderMResults(){
+  if (!state.m) return;
+  const list = state.m.items.filter(i => i.q && mStatus(i).started);
+  $('mResults').hidden = !list.length;
+  const all = [];
+  $('mList').innerHTML = list.map(i => {
+    const s = mStatus(i), k = state.m.items.indexOf(i);
+    const ex = { summary: s.d.summary, steps: Object.values(s.d.steps) };
+    const cc = commentedCode(i.code, i.q, ex, { notes: state.mNotes, summary: state.mSummary });
+    state.out['mq' + k] = cc.code;
+    all.push('// ===== ' + i.name + ' (' + TYPE_LABEL[i.type].toLowerCase() + ') =====\n' + cc.code.trim());
+    const pill = s.complete ? '<span class="pill ok">All ' + cc.total + ' steps</span>'
+      : s.gaveUp ? '<span class="pill warn">' + cc.matched + ' of ' + cc.total + ' steps</span>'
+      : '<span class="pill replace">' + cc.matched + ' of ' + cc.total + ' steps' + (s.needSummary ? ', no summary yet' : '') + '</span>';
+    return '<details class="extra mq" data-k="' + k + '"><summary><span class="mqn">' + esc(i.name) + '</span> ' + pill + '</summary><div class="extra-body">'
+      + (s.d.summary ? '<p class="note"><b>Summary.</b> ' + esc(s.d.summary) + '</p>' : '')
+      + (s.missing.length ? '<p class="note">No comment yet: ' + s.missing.map(n => '<code>' + esc(n) + '</code>').join(', ') + '</p>' : '')
+      + '<div class="codebox"><div class="codebox-bar"><span class="t">Commented query</span><span class="r"><button type="button" class="linkbtn" data-act="again">Ask again</button><button type="button" class="btn" data-act="open">Open</button><button type="button" class="btn primary" data-copy="mq' + k + '">Copy query</button></span></div><pre class="tall">' + hlM(cc.code) + '</pre></div>'
+      + '</div></details>';
+  }).join('');
+  state.out.mAll = all.join('\n\n');
+}
+function openInOne(i){
+  leaveExample();
+  $('qInput').value = i.code; $('qName').value = i.name;
+  state.exReply = ''; state.clReply = ''; $('exAdd').value = '';
+  syncControls(); setMode('one'); renderAll(); persist();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function setMode(m){
+  state.mode = m;
+  $('modeOneBtn').setAttribute('aria-selected', m === 'one'); $('modeModelBtn').setAttribute('aria-selected', m === 'model');
+  $('modeOne').hidden = m !== 'one'; $('modeModel').hidden = m !== 'model';
+}
+
+function renderAll(){ renderQuery(); renderExplain(); renderClean(); }
+function syncControls(){
+  document.querySelectorAll('input[name=aud], input[name=maud]').forEach(r => { r.checked = r.value === state.audience; });
+  document.querySelectorAll('#clOpts [data-opt]').forEach(c => { c.checked = !!state.opts[c.dataset.opt]; });
+  $('exNotes').checked = state.exNotes; $('exSummary').checked = state.exSummary;
+  $('mNotes').checked = state.mNotes; $('mSummary').checked = state.mSummary; $('mBatch').value = state.mBatch;
+  $('exReply').value = state.exReply; $('clReply').value = state.clReply;
+}
+function loadExample(){
+  $('qInput').value = EX_QUERY; $('qName').value = EX_NAME;
+  state.exReply = EX_EXPLAIN; state.clReply = EX_CLEAN;
+  $('mInput').value = EX_MODEL_EXPORT;
+  state.m = analyzeModel(parseMExport(EX_MODEL_EXPORT).queries);
+  state.mLastBatch = ['Customers', 'Returns'];
+  addMReply(EX_MODEL_REPLY); $('mReplyMsg').innerHTML = '';
+  setExample(true);
+}
+// Drop every sample value except the one the person just typed into
+function dropExample(){
+  if (!state.example) return;
+  if ($('qInput').value === EX_QUERY) $('qInput').value = '';
+  if ($('qName').value === EX_NAME) $('qName').value = '';
+  if ($('mInput').value === EX_MODEL_EXPORT) $('mInput').value = '';
+  Object.assign(state, { exReply: '', clReply: '', mDone: {}, mAsked: {}, mPick: {}, mLastBatch: [] });
+  $('mReplyMsg').innerHTML = '';
+  setExample(false); syncControls();
+}
+function resetAll(){
+  Object.assign(state, { tab: 'ex', audience: 'mixed', opts: DEFAULT_OPTS(), exNotes: true, exSummary: true, exReply: '', clReply: '',
+    mDone: {}, mAsked: {}, mPick: {}, mLastBatch: [], mBatch: '3', mNotes: true, mSummary: true });
+  ['qInput', 'qName', 'exAdd', 'mInput', 'mReply'].forEach(id => { $(id).value = ''; });
+  $('mReplyMsg').innerHTML = '';
+  setExample(false); syncControls(); setTab('ex'); renderAll(); renderModel();
+}
+
+function init(){
+  $('mExportView').textContent = M_EXPORT_QUERY;
+  state.out.mExport = M_EXPORT_QUERY;
+  const saved = store.get('query'), savedModel = store.get('model');
+  let st = null; try { st = JSON.parse(store.get('state') || 'null'); } catch (e) {}
+  if ((saved && saved.trim()) || (savedModel && savedModel.trim())) {
+    $('qInput').value = saved || ''; $('mInput').value = savedModel || '';
+    if (st) {
+      $('qName').value = st.name || '';
+      ['tab', 'audience', 'exReply', 'clReply', 'mode', 'mBatch'].forEach(k => { if (typeof st[k] === 'string') state[k] = st[k]; });
+      ['mDone', 'mAsked', 'mPick'].forEach(k => { if (st[k] && typeof st[k] === 'object') state[k] = st[k]; });
+      if (Array.isArray(st.mLastBatch)) state.mLastBatch = st.mLastBatch;
+      if (st.opts) state.opts = Object.assign(DEFAULT_OPTS(), st.opts);
+      ['exNotes', 'exSummary', 'mNotes', 'mSummary'].forEach(k => { if (typeof st[k] === 'boolean') state[k] = st[k]; });
+    }
+    // never carry the sample replies into real work
+    if ((saved || '').trim() !== EX_QUERY) { if (state.exReply === EX_EXPLAIN) state.exReply = ''; if (state.clReply === EX_CLEAN) state.clReply = ''; }
+    if (savedModel !== EX_MODEL_EXPORT) { EX_MODEL_QUERIES.forEach(x => { const d = state.mDone[x.name]; if (d && d.h === codeHash(x.code)) delete state.mDone[x.name]; }); }
+  } else if (store.get('blank') !== '1') loadExample();
+  syncControls(); setTab(state.tab); setMode(state.mode); renderAll(); renderModel();
+
+  const unblank = () => { try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {} };
+  $('qInput').addEventListener('input', () => {
+    dropExample();
+    if (state.exReply === EX_EXPLAIN) state.exReply = '';
+    if (state.clReply === EX_CLEAN) state.clReply = '';
+    syncControls(); unblank(); renderAll(); persist();
+  });
+  $('qName').addEventListener('input', () => { leaveExample(); renderExplain(); renderClean(); persist(); });
+  $('tabEx').addEventListener('click', () => { setTab('ex'); persist(); });
+  $('tabCl').addEventListener('click', () => { setTab('cl'); persist(); });
+  $('tabs').addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const t = state.tab === 'ex' ? 'cl' : 'ex'; setTab(t); $(t === 'ex' ? 'tabEx' : 'tabCl').focus(); persist();
+  });
+  $('modeOneBtn').addEventListener('click', () => { setMode('one'); persist(); });
+  $('modeModelBtn').addEventListener('click', () => { setMode('model'); persist(); });
+  document.querySelector('.modebar').addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const m = state.mode === 'one' ? 'model' : 'one'; setMode(m); $(m === 'one' ? 'modeOneBtn' : 'modeModelBtn').focus(); persist();
+  });
+  document.querySelectorAll('input[name=aud], input[name=maud]').forEach(r => r.addEventListener('change', () => { state.audience = r.value; leaveExample(); syncControls(); renderExplain(); renderMQueue(); persist(); }));
+  document.querySelectorAll('#clOpts [data-opt]').forEach(c => c.addEventListener('change', () => { state.opts[c.dataset.opt] = c.checked; leaveExample(); renderClean(); persist(); }));
+  $('exNotes').addEventListener('change', () => { state.exNotes = $('exNotes').checked; renderExplain(); persist(); });
+  $('exSummary').addEventListener('change', () => { state.exSummary = $('exSummary').checked; renderExplain(); persist(); });
+  $('exReply').addEventListener('input', () => { leaveExample(); state.exReply = $('exReply').value; renderExplain(); persist(); });
+  $('clReply').addEventListener('input', () => { leaveExample(); state.clReply = $('clReply').value; renderClean(); persist(); });
+  const addFollow = () => {
+    const t = $('exAdd').value; if (!t.trim()) return;
+    const p = parseExplain(t); if (p.error || !p.steps.length) { return; }
+    leaveExample();
+    state.exReply = state.exReply.replace(/\s+$/, '') + '\n\n' + t.trim();
+    $('exReply').value = state.exReply; $('exAdd').value = '';
+    renderExplain(); persist();
+  };
+  $('exAdd').addEventListener('paste', () => setTimeout(addFollow, 0));
+  $('exAdd').addEventListener('change', addFollow);
+
+  // whole model
+  $('mInput').addEventListener('input', () => { dropExample(); unblank(); $('mReplyMsg').innerHTML = ''; renderModel(); persist(); });
+  $('mBody').addEventListener('change', e => {
+    const cb = e.target.closest('[data-act=pick]'); if (!cb) return;
+    const i = state.m.items[+cb.closest('tr').dataset.k];
+    leaveExample(); state.mPick[i.name] = cb.checked; renderMQueue(); persist();
+  });
+  const itemFrom = el => state.m.items[+el.closest('[data-k]').dataset.k];
+  $('mBody').addEventListener('click', e => { const b = e.target.closest('[data-act=open]'); if (b) openInOne(itemFrom(b)); });
+  $('mList').addEventListener('click', e => {
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    const i = itemFrom(b);
+    if (b.dataset.act === 'open') openInOne(i);
+    if (b.dataset.act === 'again') { leaveExample(); delete state.mDone[i.name]; state.mAsked[i.name] = 0; state.mPick[i.name] = true; renderModel(); persist(); }
+  });
+  const pickAll = on => { leaveExample(); state.m.items.filter(i => mPickable(i) && i.type !== 'function').forEach(i => { state.mPick[i.name] = on; }); renderModel(); persist(); };
+  $('mAllOn').addEventListener('click', () => pickAll(true));
+  $('mAllOff').addEventListener('click', () => pickAll(false));
+  $('mBatch').addEventListener('change', () => { state.mBatch = $('mBatch').value; renderMQueue(); persist(); });
+  $('mNotes').addEventListener('change', () => { state.mNotes = $('mNotes').checked; renderMResults(); persist(); });
+  $('mSummary').addEventListener('change', () => { state.mSummary = $('mSummary').checked; renderMResults(); persist(); });
+  const submitM = () => {
+    const t = $('mReply').value; if (!t.trim() || !state.m) return;
+    leaveExample();
+    if (addMReply(t)) $('mReply').value = '';
+    renderModel(); persist();
+  };
+  $('mAdd').addEventListener('click', submitM);
+  $('mReply').addEventListener('paste', () => setTimeout(submitM, 0));
+
+  $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-copy]'); if (!b) return;
+    const v = state.out[b.dataset.copy]; if (v) copyText(v, b);
+  });
+}
+init();
+
+/* ---------- Clear entries ---------- */
+(function(){
+  const btn = $('clearEntries'), box = $('clearConfirm'), done = $('clearDone');
+  const show = on => { box.hidden = !on; btn.setAttribute('aria-expanded', on); if (on) { done.hidden = true; $('clearNo').focus(); } };
+  btn.addEventListener('click', () => show(box.hidden));
+  $('clearNo').addEventListener('click', () => { show(false); btn.focus(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !box.hidden) { show(false); btn.focus(); } });
+  $('clearYes').addEventListener('click', () => {
+    try { Object.keys(localStorage).filter(k => k.startsWith(PREFIX)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    resetAll();
+    try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {}
+    persist();
+    show(false); done.hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => { done.hidden = true; }, 6000);
+  });
+})();
+
+/*SUITE-START*/
+/* ---------- SF Power BI Toolkit: one model export shared by every page on the site ---------- */
+(function(){
+  const KEY = 'sfpbi.shared.model';
+  const HOME = 'index.html';
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const S = window.SF_SUITE = window.SF_SUITE || {};
+  S.get = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && v.text ? v : null; } catch (e) { return null; } };
+  S.set = (text, name) => {
+    try {
+      const prev = S.get();
+      localStorage.setItem(KEY, JSON.stringify({ text, name: name !== undefined ? name : (prev ? prev.name || '' : ''), savedAt: Date.now() }));
+      return true;
+    } catch (e) { return false; }
+  };
+  S.clear = () => { try { localStorage.removeItem(KEY); } catch (e) {} };
+  // Header row (Kind, Table, Name) plus at least one row
+  S.looksLikeExport = t => {
+    const lines = (t || '').replace(/\r/g, '').split('\n');
+    const h = lines.slice(0, 15).findIndex(l => { const c = l.toLowerCase().split('\t').map(x => x.replace(/^"|"$/g, '').replace(/^.*\[|\]$/g, '').trim()); return c.includes('kind') && c.includes('table') && c.includes('name'); });
+    return h >= 0 && lines.slice(h + 1).some(l => l.trim());
+  };
+  S.counts = t => {
+    const lines = (t || '').replace(/\r/g, '').split('\n');
+    const out = { table: 0, column: 0, measure: 0, relationship: 0 };
+    let ki = -1;
+    for (const l of lines) {
+      const c = l.split('\t').map(x => x.replace(/^"|"$/g, '').trim());
+      if (ki < 0) { const i = c.map(x => x.toLowerCase().replace(/^.*\[|\]$/g, '')).indexOf('kind'); if (i >= 0 && c.map(x => x.toLowerCase()).some(x => /table/.test(x))) ki = i; continue; }
+      const k = (c[ki] || '').toLowerCase(); if (k in out) out[k]++;
+    }
+    return out;
+  };
+  S.describe = v => {
+    const c = S.counts(v.text), d = new Date(v.savedAt || Date.now());
+    const when = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    return (v.name ? '<b>' + esc(v.name) + '</b> &middot; ' : '') + c.table + ' tables, ' + c.measure + ' measures &middot; saved ' + esc(when);
+  };
+  // Date columns from the export, in the Date Table Generator's "Table, Column, Type, Hidden" layout
+  S.dateColumns = t => {
+    const lines = (t || '').replace(/\r/g, '').split('\n'); let idx = null; const rows = [];
+    for (const l of lines) {
+      const c = l.split('\t').map(x => x.replace(/^"(.*)"$/, '$1').replace(/""/g, '"').trim());
+      if (!idx) { const low = c.map(x => x.toLowerCase().replace(/^.*\[|\]$/g, '')); if (low.includes('kind') && low.includes('table')) idx = { kind: low.indexOf('kind'), table: low.indexOf('table'), name: low.indexOf('name'), type: low.indexOf('type'), flags: low.indexOf('flags') }; continue; }
+      if ((c[idx.kind] || '').toLowerCase() !== 'column') continue;
+      if (!/date/i.test(c[idx.type] || '') || /^(LocalDateTable_|DateTableTemplate_)/i.test(c[idx.table] || '')) continue;
+      rows.push([c[idx.table], c[idx.name], c[idx.type], /hidden/i.test(c[idx.flags] || '') ? 'True' : 'False'].join('\t'));
+    }
+    return rows.length ? 'Table\tColumn\tType\tHidden\n' + rows.join('\n') : '';
+  };
+
+  if (!document.getElementById('suiteCss')) {
+    const st = document.createElement('style'); st.id = 'suiteCss';
+    st.textContent = '.suite-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;font-size:13.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px}.suite-bar[hidden]{display:none!important}.suite-bar .ok{color:var(--ok)}.suite-bar .btn{padding:4px 10px}.brandbar .eyebrow a.home-link{color:inherit;text-decoration:none}.brandbar .eyebrow a.home-link:hover{text-decoration:underline}';
+    document.head.appendChild(st);
+  }
+  // Link the eyebrow back to the home page
+  const eb = document.querySelector('.brandbar .eyebrow');
+  if (eb && !eb.querySelector('a') && !document.body.dataset.home) eb.innerHTML = '<a href="' + HOME + '" class="home-link">' + eb.innerHTML + ' &middot; all tools</a>';
+
+  // cfg: { input: textarea id, prefix: this page's storage prefix, mode: 'export' | 'dates', open: details id to open }
+  S.hook = cfg => {
+    const ta = document.getElementById(cfg.input); if (!ta) return;
+    const mode = cfg.mode || 'export';
+    const bar = document.createElement('div'); bar.className = 'suite-bar'; bar.setAttribute('role', 'status');
+    ta.insertAdjacentElement('beforebegin', bar);
+    const valueFor = v => mode === 'dates' ? S.dateColumns(v.text) : v.text;
+    const exampleShowing = () => { const b = document.getElementById('exampleBanner'); return !!(b && !b.hidden); };
+    let note = '';
+    const hash = t => { let h = 5381; const x = (t || '').trim(); for (let i = 0; i < x.length; i++) h = ((h << 5) + h + x.charCodeAt(i)) | 0; return String(h >>> 0); };
+    const followKey = cfg.prefix + 'suiteFollow';
+    const remember = () => { try { localStorage.setItem(followKey, hash(ta.value)); } catch (e) {} };
+    const following = () => { try { return localStorage.getItem(followKey) === hash(ta.value); } catch (e) { return false; } };
+    const render = () => {
+      const v = S.get();
+      if (!v) { bar.innerHTML = mode === 'dates' ? '' : '<span>Tip: save your model export once on the <a href="' + HOME + '">toolkit home page</a> and every tool picks it up. Pasting one here saves it too.</span>'; bar.hidden = mode === 'dates'; return; }
+      bar.hidden = false;
+      const same = ta.value.trim() === valueFor(v).trim();
+      if (mode === 'dates' && !valueFor(v)) { bar.innerHTML = '<span>The saved model export has no date columns.</span>'; return; }
+      bar.innerHTML = same
+        ? '<span class="ok">&#10003; ' + (mode === 'dates' ? 'Date columns from the saved model export: ' : 'Using the saved model export: ') + S.describe(v) + (note ? ' &middot; ' + note : '') + '</span>'
+        : '<span>' + (mode === 'dates' ? 'Fill this list from the saved model export? ' : 'The toolkit has a saved model export: ') + S.describe(v) + '</span><button type="button" class="btn" data-suite="use">' + (mode === 'dates' ? 'Fill from saved export' : 'Use it') + '</button>';
+    };
+    const use = () => {
+      const v = S.get(); if (!v) return;
+      if (exampleShowing()) { const c = document.getElementById('clearAll'); if (c) c.click(); }
+      ta.value = valueFor(v);
+      if (cfg.open) { const d = document.getElementById(cfg.open); if (d) d.open = true; }
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      try { localStorage.removeItem(cfg.prefix + 'blank'); } catch (e) {}
+      remember(); note = ''; render();
+    };
+    bar.addEventListener('click', e => { if (e.target.closest('[data-suite=use]')) use(); });
+    // Pasting an export here saves it for every tool
+    ta.addEventListener('input', e => {
+      if (e.isTrusted && mode === 'export' && S.looksLikeExport(ta.value)) {
+        const prev = S.get();
+        if (!prev || prev.text !== ta.value) { const ok = S.set(ta.value, ''); note = ok ? 'saved for the other tools too' : 'too large to share with the other tools (browser storage limit)'; if (ok) remember(); }
+      }
+      render();
+    });
+    // On opening: load the saved export when this page shows its example or is empty (and wasn't cleared on purpose)
+    const v = S.get();
+    let blank = false; try { blank = localStorage.getItem(cfg.prefix + 'blank') === '1'; } catch (e) {}
+    // ...or when this page is still on an older saved export it took from the toolkit
+    if (v && valueFor(v) && ta.value.trim() !== valueFor(v).trim() && (exampleShowing() || (!ta.value.trim() && !blank) || (ta.value.trim() && following()))) use();
+    else render();
+    window.addEventListener('storage', e => { if (e.key === KEY) render(); });
+  };
+})();
+/*SUITE-END*/
+</script>
+
+</body>
+</html>
