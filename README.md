@@ -1,33 +1,71 @@
 # SF Power BI Toolkit
 
-Browser-based tools for building and checking Power BI models, with or without Copilot. Every page runs entirely in the browser: nothing is uploaded, and prompts only reach Copilot when you paste them yourself.
+Browser-based tools for building, documenting and checking Power BI semantic models, with or without Copilot.
 
-Start at `index.html`: export your model once, paste it, and every tool that needs it loads it automatically.
+**Open the toolkit:** https://fosterbiservices.github.io/Power-BI-Toolkit/
 
-| Page | What it does |
-| --- | --- |
-| `index.html` | Home: the shared model export and links to every tool |
-| `kpi-measure-builder.html` | Measures from plain-English requests, output as TMDL |
-| `measure-describer.html` | Descriptions for existing measures |
-| `prep-for-ai-writer.html` | AI instructions, synonyms and table/column descriptions |
-| `dax-reviewer.html` | Measure review against your own checklist, with a tested rewrite |
-| `validation-query-builder.html` | DAX queries that validate measures, totals, relationships and tables |
-| `power-query-explainer.html` | Comments or a cleaned-up version of Power Query (M) queries |
-| `date-table-generator.html` | Date table as DAX, Power Query or TMDL |
+Every page is a single HTML file that runs entirely in your browser. There is nothing to install, no sign-in, and no server: your model details are never uploaded. When a tool uses Copilot, it writes a prompt that you paste into Copilot yourself, then it checks the reply you paste back.
 
-## Publish on GitHub Pages
+## The tools
 
-1. Create a repository on GitHub (for example `powerbi-toolkit`).
-2. Upload every file in this folder to the root of the repository, including the empty `.nojekyll` file.
-3. In the repository, go to **Settings > Pages**. Under **Build and deployment**, set **Source** to **Deploy from a branch**, choose the `main` branch and the `/ (root)` folder, then **Save**.
-4. After a minute or two the site is at `https://<your-user-name>.github.io/<repository-name>/`.
+| Tool | What it does | Uses your model export | Copilot |
+| --- | --- | :---: | :---: |
+| [KPI Measure Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/kpi-measure-builder.html) | Describe measures in plain English. Copilot writes the DAX; the page checks every table, column and measure name and outputs tab-indented TMDL for your measures folder. | ✓ | ✓ |
+| [Measure Describer](https://fosterbiservices.github.io/Power-BI-Toolkit/measure-describer.html) | Copilot writes descriptions for your measures in batches; you review them and save them to the model from DAX query view. | ✓ | ✓ |
+| [Prep for AI Writer](https://fosterbiservices.github.io/Power-BI-Toolkit/prep-for-ai-writer.html) | AI instructions, synonyms, and table and column descriptions that help Copilot in Power BI answer questions about your model. | ✓ | ✓ |
+| [DAX Reviewer](https://fosterbiservices.github.io/Power-BI-Toolkit/dax-reviewer.html) | Reviews a measure against a checklist you control (DIVIDE vs /, FILTER over whole tables, variables, context transition and more). Instant checks on every measure, a Copilot review, and a rewrite tested against the original. | ✓ | ✓ |
+| [Validation Query Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/validation-query-builder.html) | DAX queries that check measure results, totals, reconciliation with source columns, relationship keys and table profiles. Several measures at once. | ✓ | — |
+| [Power Query Explainer](https://fosterbiservices.github.io/Power-BI-Toolkit/power-query-explainer.html) | Comments every step of a Power Query (M) query, or produces a cleaner version checked against the original. One query or the whole model; custom functions are excluded automatically. | Own export | ✓ |
+| [Date Table Generator](https://fosterbiservices.github.io/Power-BI-Toolkit/date-table-generator.html) | A date table with your fiscal year, weeks, month sort and filter columns, and rule-based holidays, as DAX, Power Query or a TMDL script. Can start and end with the dates in your data. | Date columns | — |
 
-To update a tool later, upload the new file over the old one with the same name.
+## Getting started
 
-## How the shared export works
+1. Open the [home page](https://fosterbiservices.github.io/Power-BI-Toolkit/).
+2. **Export your model.** Copy the DAX query from Step 1, run it in **DAX query view** in Power BI Desktop, and select **Copy** above the results. The query reads the model's definition (tables, columns, measures, relationships), not your data.
+3. **Paste it once** in Step 2. It's saved in your browser and every tool picks it up as it opens.
+4. Choose a tool. Each one walks you through its own numbered steps.
 
-The saved model export lives in the browser's local storage for the site's address, so it is shared by every page on the site in that browser. It isn't shared across browsers or computers, and it stays on the device. The storage limit is about 5 MB; very large exports can still be pasted into each tool.
+Tip: rename the query tab in DAX query view (for example *Toolkit export*) and keep it. It's saved with the report, so refreshing the export later is just **Run** and **Copy**.
 
-Pages opened straight from a downloaded folder (file://) also work, but some browsers don't share storage between local files, so the shared export works best from the hosted site.
+## Good to know
 
-Note: a public GitHub Pages site can be opened by anyone with the link. The pages contain no model data, only the tools; each visitor's export stays in their own browser.
+- **Your data stays with you.** The pages make no network requests with your content. The saved export lives in your browser's local storage for this site only, so it isn't shared with other browsers, other computers or other people.
+- **One export at a time.** Pasting a model export into any tool also replaces the saved one, so every tool stays on the same model. Remove it any time from the home page.
+- **Each tool keeps its own work** (requests, replies, settings) in your browser. **Clear entries** on a tool empties that tool only.
+- **Examples.** Every tool opens with customer and sales sample content so you can see how it works. Your own paste replaces it.
+- **Size limit.** Browsers allow about 5 MB of saved data per site. A very large model export may not fit; in that case paste it into each tool directly.
+- **Always test before you change a model.** Generated DAX, M and TMDL are checked by the pages where possible, but run them against a copy or use the comparison and validation queries the tools provide before updating a production model.
+
+## Requirements
+
+- Power BI Desktop with **DAX query view** (and **TMDL view** for the TMDL outputs).
+- A modern browser (Edge, Chrome or Firefox).
+- Copilot is optional. The tools marked Copilot above work with any Copilot chat you have access to (Microsoft 365 Copilot or Copilot in Power BI).
+
+## Repository layout
+
+```
+index.html                     Home page: shared model export and links to every tool
+kpi-measure-builder.html
+measure-describer.html
+prep-for-ai-writer.html
+dax-reviewer.html
+validation-query-builder.html
+power-query-explainer.html
+date-table-generator.html
+.nojekyll                      Tells GitHub Pages to serve the files as they are
+```
+
+Each page is self-contained: styles, scripts and the shared-export code are inside the HTML file, so any single page can also be downloaded and opened on its own. Opened from a local folder, some browsers won't share the saved export between pages; the hosted site doesn't have that limitation.
+
+## Updating the site
+
+Replace the changed HTML file(s) with the new version (same file name), then commit and push:
+
+```powershell
+git add .
+git commit -m "Update tools"
+git push
+```
+
+GitHub Pages republishes automatically within a minute or two. The site is served from the `main` branch, root folder (**Settings → Pages → Deploy from a branch**).
