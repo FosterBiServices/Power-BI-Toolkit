@@ -15,6 +15,7 @@ Every page is a single HTML file that runs entirely in your browser. There is no
 | [Prep for AI Writer](https://fosterbiservices.github.io/Power-BI-Toolkit/prep-for-ai-writer.html) | AI instructions, synonyms, and table and column descriptions that help Copilot in Power BI answer questions about your model. | ✓ | ✓ |
 | [DAX Reviewer](https://fosterbiservices.github.io/Power-BI-Toolkit/dax-reviewer.html) | Reviews a measure against a checklist you control (DIVIDE vs /, FILTER over whole tables, variables, context transition and more). Instant checks on every measure, a Copilot review, and a rewrite tested against the original. | ✓ | ✓ |
 | [Validation Query Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/validation-query-builder.html) | DAX queries that check measure results, totals, reconciliation with source columns, relationship keys and table profiles. Several measures at once. | ✓ | — |
+| [Field Parameter Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/field-parameter-builder.html) | Pick and order measures or columns and get the TMDL for a measure switcher: a Power BI field parameter, or a SWITCH measure with a selector table and dynamic format string. Includes a test query. | ✓ | — |
 | [Model Documenter](https://fosterbiservices.github.io/Power-BI-Toolkit/model-documenter.html) | One HTML document for the whole model: tables, measures, lineage, relationships, data sources, model checks and report pages. Reads a PBIP project folder in the browser, or works from your model export. | ✓ | — |
 | [Power Query Explainer](https://fosterbiservices.github.io/Power-BI-Toolkit/power-query-explainer.html) | Comments every step of a Power Query (M) query, or produces a cleaner version checked against the original. One query or the whole model; custom functions are excluded automatically. | Own export | ✓ |
 | [Date Table Generator](https://fosterbiservices.github.io/Power-BI-Toolkit/date-table-generator.html) | A date table with your fiscal year, weeks, month sort and filter columns, and rule-based holidays, as DAX, Power Query or a TMDL script. Can start and end with the dates in your data. | Date columns | — |
@@ -55,6 +56,7 @@ dax-reviewer.html
 validation-query-builder.html
 power-query-explainer.html
 date-table-generator.html
+field-parameter-builder.html
 model-documenter.html
 .nojekyll                      Tells GitHub Pages to serve the files as they are
 ```
