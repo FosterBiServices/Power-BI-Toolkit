@@ -310,6 +310,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       <li><b>One export at a time.</b> Pasting a model export into any tool also replaces the saved one, so every tool stays on the same model.</li>
       <li><b>Each tool keeps its own work</b> (requests, replies, settings). Its <b>Clear entries</b> button empties that tool only; the saved export stays until you remove it here.</li>
       <li><b>The Power Query Explainer</b> reads Power Query code, so its whole-model mode has its own export query. The <b>Date Table Generator</b> fills its date-column list from the saved export.</li>
+      <li><b>The Model Documenter</b> uses the saved export for a quick document, or reads a PBIP project folder in the browser for the full one (Power Query, sources and report pages). The folder&rsquo;s files are read on the page and never uploaded.</li>
     </ul>
   </section>
 
@@ -1359,6 +1360,7 @@ function testQuery(measures){
     ['prep-for-ai-writer.html', 'Prep for AI Writer'],
     ['dax-reviewer.html', 'DAX Reviewer'],
     ['validation-query-builder.html', 'Validation Query Builder'],
+    ['model-documenter.html', 'Model Documenter'],
     ['power-query-explainer.html', 'Power Query Explainer'],
     ['date-table-generator.html', 'Date Table Generator']
   ];
@@ -1436,10 +1438,11 @@ const TOOLS = [
   { file: 'prep-for-ai-writer.html', name: 'Prep for AI Writer', desc: 'AI instructions, synonyms and table and column descriptions that help Copilot in Power BI answer questions about your model.', tags: ['exp', 'ai'] },
   { file: 'dax-reviewer.html', name: 'DAX Reviewer', desc: 'Review a measure against your own checklist. Instant checks on every measure, a Copilot review, and a rewrite tested against the original.', tags: ['exp', 'ai'] },
   { file: 'validation-query-builder.html', name: 'Validation Query Builder', desc: 'DAX queries that check measure results, totals, reconciliation with source columns, relationship keys and table profiles.', tags: ['exp', 'noai'] },
+  { file: 'model-documenter.html', name: 'Model Documenter', desc: 'One HTML document for the whole model: tables, measures, lineage, relationships, sources, model checks and report pages. Reads your PBIP folder in the browser.', tags: ['pbip', 'noai'] },
   { file: 'power-query-explainer.html', name: 'Power Query Explainer', desc: 'Comment every step of a Power Query query, or get a cleaner version checked against the original. One query or the whole model.', tags: ['ai'] },
   { file: 'date-table-generator.html', name: 'Date Table Generator', desc: 'A date table with your fiscal year, weeks and holidays, as DAX, Power Query or a TMDL script. Can start and end with your data.', tags: ['dates', 'noai'] }
 ];
-const TAG = { exp: '<span class="tag exp">Uses your export</span>', dates: '<span class="tag exp">Date columns from your export</span>', ai: '<span class="tag ai">Copilot</span>', noai: '<span class="tag noai">No AI</span>' };
+const TAG = { pbip: '<span class="tag exp">PBIP folder or your export</span>', exp: '<span class="tag exp">Uses your export</span>', dates: '<span class="tag exp">Date columns from your export</span>', ai: '<span class="tag ai">Copilot</span>', noai: '<span class="tag noai">No AI</span>' };
 const $ = id => document.getElementById(id);
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function msg(level, html){ return '<div class="msg ' + level + '">' + html + '</div>'; }
