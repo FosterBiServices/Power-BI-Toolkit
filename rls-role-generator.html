@@ -1879,6 +1879,7 @@ init();
     ['rls-role-generator.html', 'RLS Role Generator'],
     ['model-linter.html', 'Model Linter'],
     ['model-documenter.html', 'Model Documenter'],
+    ['about-this-report.html', 'About This Report'],
     ['power-query-explainer.html', 'Power Query Explainer'],
     ['date-table-generator.html', 'Date Table Generator'],
     ['theme-builder.html', 'Theme Builder'],
@@ -1899,7 +1900,7 @@ init();
   }
 
   // Disclaimer: a short notice in every tool's footer, and an AI warning on the Copilot tools
-  const AI_TOOLS = ['kpi-measure-builder.html', 'measure-describer.html', 'prep-for-ai-writer.html', 'dax-reviewer.html', 'power-query-explainer.html'];
+  const AI_TOOLS = ['kpi-measure-builder.html', 'measure-describer.html', 'prep-for-ai-writer.html', 'dax-reviewer.html', 'power-query-explainer.html', 'about-this-report.html'];
   if (!document.body.dataset.home && !document.getElementById('suiteDisc')) {
     const f = document.querySelector('footer');
     if (f) { const d = document.createElement('span'); d.id = 'suiteDisc'; d.className = 'suite-disc'; d.innerHTML = 'Generated output can be wrong. Check all of it, and test changes on a copy of your model first. Provided as is, without warranty; you use it at your own discretion and risk. <a href="' + HOME + '#disclaimer">Full disclaimer</a>'; f.appendChild(d); }
