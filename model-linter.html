@@ -285,6 +285,14 @@ ul.fl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .rep-head h3{margin:0}
 .rep-head .btns{display:flex;gap:8px;flex-wrap:wrap}
 .repbox .note{margin:0;max-width:85ch}
+.reppick{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.reppick p{margin:0}
+.reprow{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer;font-size:14px}
+.reprow:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.reprow input{margin-top:3px;accent-color:var(--accent)}
+.fit{font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--info-soft);color:var(--info);white-space:nowrap}
+.fit.ok{background:var(--accent-soft);color:var(--accent)}
+.fit.off{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
 .drop{border:1px dashed var(--line);border-radius:8px;padding:10px;text-align:center;font-size:13px;color:var(--muted)}
 .drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
 @media (max-width:520px){.grp-act{margin-left:0;width:100%}.f{grid-template-columns:auto minmax(0,1fr)}.f .btn{grid-column:2;justify-self:start}}
@@ -342,7 +350,7 @@ ul.fl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
       <div class="repbox" id="repBox">
         <div class="rep-head"><h3>Report pages <span class="muted">(optional)</span></h3>
           <span class="btns"><button type="button" class="btn" id="pickReport">Choose a PBIP folder</button><button type="button" class="btn" id="clearReport" hidden>Remove report pages</button></span></div>
-        <p class="note small" id="repIntro">Choose the project folder (or its <b>.Report</b> folder) of a report saved as a Power BI Project. Visible columns and every measure are then checked against each visual, filter, formatting rule and bookmark in it, and the report checks run: alt text, titles, hidden visuals, unused bookmarks, empty and crowded pages. If the folder also holds the semantic model, its field parameters are read so measures used only there count as used. Choose a parent folder to include several reports on the same model. Files are read on this page; nothing is uploaded.</p>
+        <p class="note small" id="repIntro">Choose the project folder (or its <b>.Report</b> folder) of a report saved as a Power BI Project. Visible columns and every measure are then checked against each visual, filter, formatting rule and bookmark in it, and the report checks run: alt text, titles, hidden visuals, unused bookmarks, empty and crowded pages. If the folder also holds the semantic model, its field parameters are read so measures used only there count as used. If the folder holds several projects, you pick which reports to check, and each is read with its own semantic model. Files are read on this page; nothing is uploaded.</p>
         <div class="drop" id="repDrop">or drop the folder here</div>
         <input type="file" id="repInput" webkitdirectory multiple hidden>
         <div id="repMsg"></div>
@@ -1722,7 +1730,43 @@ const ML = (() => {
     return { reports: [...reports].sort(), pages: pages.size, visuals, files: readable, refs: [...refs.values()], exprs, modelExprs, legacy: legacy && !pg.size, detail };
   }
 
-  return { parse, lint, refs, usage, measureUsage, reportUsage, RULES, numeric, typeName };
+  /* A folder can hold several projects: one entry per .Report folder, each with the semantic model its
+     definition.pbir points to (byPath), so each report can be checked on its own. */
+  function reportList(files){
+    const roots = new Set();
+    for (const p of files.keys()) { const m = p.match(/^(.*?[^\/]+\.Report)\//i); if (m) roots.add(m[1]); }
+    const names = [...roots].map(r => r.split('/').pop().replace(/\.Report$/i, ''));
+    return [...roots].sort().map(root => {
+      const name = root.split('/').pop().replace(/\.Report$/i, ''), parent = root.split('/').slice(0, -1).join('/');
+      let model = '';
+      const pbir = files.get(root + '/definition.pbir');
+      if (pbir) { try { const d = JSON.parse(pbir.replace(/^\uFEFF/, '')); const bp = d && d.datasetReference && d.datasetReference.byPath && d.datasetReference.byPath.path; if (bp) { const parts = (parent ? parent.split('/') : []); bp.replace(/\\/g, '/').split('/').forEach(s => { if (s === '..') parts.pop(); else if (s && s !== '.') parts.push(s); }); model = parts.join('/'); } } catch (e) {} }
+      const sub = new Map();
+      for (const [p, t] of files) if (p.startsWith(root + '/') || (model && p.startsWith(model + '/'))) sub.set(p, t);
+      const u = reportUsage(sub);
+      return Object.assign(u, { id: root, name, label: name + (names.filter(n => n === name).length > 1 ? ' (' + (parent.split('/').pop() || parent) + ')' : ''), model: model ? model.split('/').pop() : '', live: !pbir || !model });
+    }).filter(r => r.files);
+  }
+  // several reports checked together, as one
+  function mergeReports(list){
+    if (!list.length) return null;
+    if (list.length === 1) return list[0];
+    const refs = new Map(); list.forEach(r => r.refs.forEach(x => refs.set(low(x[0]) + '\u0001' + low(x[1]), x)));
+    const me = new Map(); list.forEach(r => (r.modelExprs || []).forEach(x => me.set(low(x.table), x)));
+    const details = list.filter(r => r.detail);
+    return { reports: list.map(r => r.label || r.reports.join(', ')), pages: list.reduce((a, r) => a + r.pages, 0), visuals: list.reduce((a, r) => a + r.visuals, 0), files: list.reduce((a, r) => a + r.files, 0),
+      refs: [...refs.values()], exprs: [].concat(...list.map(r => r.exprs || [])), modelExprs: [...me.values()], legacy: list.every(r => r.legacy),
+      detail: details.length ? { pages: [].concat(...details.map(r => r.detail.pages)), bookmarks: [].concat(...details.map(r => r.detail.bookmarks)) } : null };
+  }
+  // share of a report's fields that are in this model export (to spot a report built on another model)
+  function matchScore(m, r){
+    if (!m || !r || !r.refs.length) return null;
+    const objs = new Set(m.columns.map(c => key(c.table, c.name)).concat(m.measures.map(x => key(x.table, x.name))));
+    const mn = new Set(m.measures.map(x => low(x.name)));
+    return r.refs.filter(x => objs.has(key(x[0], x[1])) || mn.has(low(x[1]))).length / r.refs.length;
+  }
+
+  return { parse, lint, refs, usage, measureUsage, reportUsage, reportList, mergeReports, matchScore, RULES, numeric, typeName };
 })();
 
 
@@ -1744,13 +1788,13 @@ function copyText(text, btn){
 }
 
 const blankCfg = () => ({ off: {}, visibleUnused: false, ignored: {}, showIgnored: false, collapsed: {}, crowded: 12 });
-const state = { example: false, model: null, cfg: blankCfg(), result: null, report: null };
+const state = { example: false, model: null, cfg: blankCfg(), result: null, report: null, reps: [], repSel: [], repRoot: '' };
 
 /* ---------- report pages from a PBIP folder (only .Report files are read) ---------- */
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.pbi', '.vs', 'StaticResources', 'RegisteredResources']);
 const skipDir = n => SKIP_DIRS.has(n) || /\.Dataset$/i.test(n);
 // report files, plus the semantic model's table files (for field parameters and other calculated tables)
-const wanted = p => /\.Report\/.*\.json$/i.test(p) || /\.SemanticModel\/definition\/tables\/[^\/]+\.tmdl$/i.test(p);
+const wanted = p => /\.Report\/.*\.json$/i.test(p) || /\.Report\/definition\.pbir$/i.test(p) || /\.SemanticModel\/definition\/tables\/[^\/]+\.tmdl$/i.test(p);
 async function decode(file){
   const buf = await file.arrayBuffer();
   let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { t = new TextDecoder('windows-1252').decode(buf); }
@@ -1759,12 +1803,12 @@ async function decode(file){
 async function walkHandle(dir, prefix, out){
   for await (const [name, h] of dir.entries()) {
     if (h.kind === 'directory') { if (!skipDir(name)) await walkHandle(h, prefix + '/' + name, out); }
-    else if (/\.(json|tmdl)$/i.test(name)) out.push({ path: prefix + '/' + name, file: await h.getFile() });
+    else if (/\.(json|tmdl|pbir)$/i.test(name)) out.push({ path: prefix + '/' + name, file: await h.getFile() });
   }
 }
 function walkEntry(entry, prefix, out){
   return new Promise(resolve => {
-    if (entry.isFile) { if (/\.(json|tmdl)$/i.test(entry.name)) entry.file(f => { out.push({ path: prefix + '/' + entry.name, file: f }); resolve(); }, () => resolve()); else resolve(); return; }
+    if (entry.isFile) { if (/\.(json|tmdl|pbir)$/i.test(entry.name)) entry.file(f => { out.push({ path: prefix + '/' + entry.name, file: f }); resolve(); }, () => resolve()); else resolve(); return; }
     if (skipDir(entry.name)) { resolve(); return; }
     const reader = entry.createReader(); const all = [];
     const next = () => reader.readEntries(batch => { if (!batch.length) { Promise.all(all.map(e => walkEntry(e, prefix + '/' + entry.name, out))).then(resolve); return; } all.push(...batch); next(); }, () => resolve());
@@ -1780,22 +1824,38 @@ async function loadReport(root, list){
     const p = norm(path); if (!wanted(p) || file.size > 30 * 1024 * 1024) continue;
     try { files.set(p, await decode(file)); } catch (e) {}
   }
-  const r = ML.reportUsage(files);
-  if (!r.files || !r.pages) {
+  const reps = ML.reportList(files).filter(r => r.pages);
+  if (!reps.length) {
     $('repMsg').innerHTML = '<div class="msg warn">No report pages were found in &ldquo;' + esc(root) + '&rdquo;. Choose a folder that holds a <b>.Report</b> folder, from a report saved as a Power BI Project (<b>File &gt; Save as &gt; Power BI project files</b>).</div>';
     return;
   }
-  r.root = root; r.at = Date.now();
-  state.report = r; store.set('report', JSON.stringify(r));
+  state.reps = reps; state.repRoot = root;
+  // several reports: start with the one that best matches this model export; tick others to add them
+  let pick = reps[0];
+  if (reps.length > 1 && state.model) pick = reps.reduce((a, b) => (ML.matchScore(state.model, b) || 0) > (ML.matchScore(state.model, a) || 0) ? b : a);
+  state.repSel = [pick.id];
+  applyReports();
   leaveExample(); run(); renderReport(); renderRules(); renderResults(); persist();
 }
+function applyReports(){
+  const sel = (state.reps || []).filter(r => state.repSel.includes(r.id));
+  state.report = ML.mergeReports(sel);
+  if (state.report) { state.report.root = state.repRoot; }
+  store.set('reports', JSON.stringify({ root: state.repRoot, reps: state.reps || [], sel: state.repSel || [] }));
+  try { localStorage.removeItem(PREFIX + 'report'); } catch (e) {}
+}
 function renderReport(){
-  const r = state.report;
-  $('clearReport').hidden = !r; $('pickReport').textContent = r ? 'Choose a different folder' : 'Choose a PBIP folder';
-  if (!r) { if (!/Reading/.test($('repMsg').textContent) && !/No report pages/.test($('repMsg').textContent)) $('repMsg').innerHTML = ''; return; }
+  const r = state.report, reps = state.reps || [];
+  $('clearReport').hidden = !reps.length; $('pickReport').textContent = reps.length ? 'Choose a different folder' : 'Choose a PBIP folder';
+  const pick = reps.length > 1 ? '<div class="reppick"><p class="small"><b>' + reps.length + ' reports in &ldquo;' + esc(state.repRoot || '') + '&rdquo;.</b> Tick the ones to check against this model; each is read with its own semantic model.</p>' + reps.map(x => {
+      const sc = state.model ? ML.matchScore(state.model, x) : null;
+      const fit = sc == null ? '' : sc >= 0.8 ? '<span class="fit ok">built on this model</span>' : sc >= 0.5 ? '<span class="fit">partly matches this model</span>' : '<span class="fit off">likely a different model</span>';
+      return '<label class="reprow"><input type="checkbox" data-rep="' + esc(x.id) + '"' + (state.repSel.includes(x.id) ? ' checked' : '') + '><span><b>' + esc(x.label) + '</b> <span class="muted small">' + x.pages + ' page' + (x.pages === 1 ? '' : 's') + ', ' + x.visuals + ' visuals' + (x.model ? ' &middot; model: ' + esc(x.model.replace(/\.SemanticModel$/i, '')) : x.live ? ' &middot; connected to a published model' : '') + '</span> ' + fit + '</span></label>';
+    }).join('') + '</div>' : '';
+  if (!r) { if (reps.length) { $('repMsg').innerHTML = pick + '<div class="msg info">No report is ticked, so the checks that need report pages are waiting.</div>'; return; } if (!/Reading/.test($('repMsg').textContent) && !/No report pages/.test($('repMsg').textContent)) $('repMsg').innerHTML = ''; return; }
   const cols = state.model ? r.refs.filter(x => state.model.columns.some(c => lc(c.table) === lc(x[0]) && lc(c.name) === lc(x[1]))).length : 0;
   const bm = r.detail ? r.detail.bookmarks.length : 0;
-  $('repMsg').innerHTML = '<div class="msg ok">&#10003; <b>' + esc(r.reports.join(', ')) + '</b>: ' + r.pages + ' page' + (r.pages === 1 ? '' : 's') + ', ' + r.visuals + ' visual' + (r.visuals === 1 ? '' : 's') + (bm ? ', ' + bm + ' bookmark' + (bm === 1 ? '' : 's') : '') + ', ' + r.refs.length + ' fields' + (state.model ? ' (' + cols + ' columns of this model)' : '') + '.' + ((r.modelExprs || []).length ? ' The semantic model&rsquo;s field parameters and calculated tables were read too.' : '') + ' Unused columns and measures, and the report checks, now use these pages.</div>';
+  $('repMsg').innerHTML = pick + '<div class="msg ok">&#10003; <b>' + esc(r.reports.join(', ')) + '</b>: ' + r.pages + ' page' + (r.pages === 1 ? '' : 's') + ', ' + r.visuals + ' visual' + (r.visuals === 1 ? '' : 's') + (bm ? ', ' + bm + ' bookmark' + (bm === 1 ? '' : 's') : '') + ', ' + r.refs.length + ' fields' + (state.model ? ' (' + cols + ' columns of this model)' : '') + '.' + ((r.modelExprs || []).length ? ' The semantic model&rsquo;s field parameters and calculated tables were read too.' : '') + ' Unused columns and measures, and the report checks, now use these pages.</div>';
 }
 
 function persist(){
@@ -1889,12 +1949,16 @@ function tsv(list){
 function renderAll(){ renderModel(); run(); renderReport(); renderRules(); renderResults(); }
 
 /* ---------- init ---------- */
-function resetAll(){ $('modelInput').value = ''; state.report = null; $('repMsg').innerHTML = ''; state.cfg = blankCfg(); setExample(false); $('modelBox').open = false; renderAll(); }
+function resetAll(){ $('modelInput').value = ''; state.report = null; state.reps = []; state.repSel = []; $('repMsg').innerHTML = ''; state.cfg = blankCfg(); setExample(false); $('modelBox').open = false; renderAll(); }
 function init(){
   $('exportView').textContent = DAX_QUERY;
   const saved = store.get('model');
   let cfg = null; try { cfg = JSON.parse(store.get('cfg') || 'null'); } catch (e) {}
-  try { state.report = JSON.parse(store.get('report') || 'null'); } catch (e) { state.report = null; }
+  try {
+    const saved = JSON.parse(store.get('reports') || 'null'), old = JSON.parse(store.get('report') || 'null');
+    if (saved && saved.reps && saved.reps.length) { state.reps = saved.reps; state.repSel = saved.sel || []; state.repRoot = saved.root; state.report = ML.mergeReports(state.reps.filter(r => state.repSel.includes(r.id))); }
+    else if (old) { old.id = old.id || 'saved'; old.label = old.label || old.reports.join(', '); state.reps = [old]; state.repSel = [old.id]; state.repRoot = old.root; state.report = old; }
+  } catch (e) { state.report = null; state.reps = []; state.repSel = []; }
   if (saved && saved.trim()) { $('modelInput').value = saved; if (cfg) state.cfg = Object.assign(blankCfg(), cfg); }
   else if (store.get('blank') !== '1') { $('modelInput').value = ML_EX_MODEL; setExample(true); }
   else if (cfg) state.cfg = Object.assign(blankCfg(), cfg);
@@ -1931,7 +1995,7 @@ function init(){
   $('repInput').addEventListener('change', async e => {
     const fl = [...e.target.files]; if (!fl.length) return;
     const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
-    const list = fl.filter(f => /\.(json|tmdl)$/i.test(f.name) && !(f.webkitRelativePath || '').split('/').some(skipDir)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }));
+    const list = fl.filter(f => /\.(json|tmdl|pbir)$/i.test(f.name) && !(f.webkitRelativePath || '').split('/').some(skipDir)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }));
     try { await loadReport(root, list); } catch (err) { $('repMsg').innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(err.message || err) + '</div>'; }
     e.target.value = '';
   });
@@ -1945,7 +2009,8 @@ function init(){
     const list = []; await walkEntry(item, '', list);
     try { await loadReport(item.name, list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file }))); } catch (err) { $('repMsg').innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(err.message || err) + '</div>'; }
   });
-  $('clearReport').addEventListener('click', () => { state.report = null; try { localStorage.removeItem(PREFIX + 'report'); } catch (e) {} $('repMsg').innerHTML = ''; run(); renderReport(); renderRules(); renderResults(); });
+  $('repMsg').addEventListener('change', e => { const id = e.target.dataset && e.target.dataset.rep; if (id == null) return; state.repSel = e.target.checked ? state.repSel.concat([id]) : state.repSel.filter(x => x !== id); applyReports(); run(); renderReport(); renderRules(); renderResults(); });
+  $('clearReport').addEventListener('click', () => { state.report = null; state.reps = []; state.repSel = []; try { localStorage.removeItem(PREFIX + 'report'); localStorage.removeItem(PREFIX + 'reports'); } catch (e) {} $('repMsg').innerHTML = ''; run(); renderReport(); renderRules(); renderResults(); });
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); $('modelInput').focus(); });
 }
 init();
