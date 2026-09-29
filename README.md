@@ -17,6 +17,7 @@ Every page is a single HTML file that runs entirely in your browser. There is no
 | [Validation Query Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/validation-query-builder.html) | DAX queries that check measure results, totals, reconciliation with source columns, relationship keys and table profiles. Several measures at once. | ✓ | — |
 | [Time Intelligence Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/time-intelligence-builder.html) | Year to date, quarter and month to date, last year, growth, rolling 12 months and more, with your fiscal year, as TMDL: measures for the measures you pick, or one calculation group. Includes a test query. | ✓ | — |
 | [Field Parameter Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/field-parameter-builder.html) | Pick and order measures or columns and get the TMDL for a measure switcher: a Power BI field parameter, or a SWITCH measure with a selector table and dynamic format string. Includes a test query. | ✓ | — |
+| [RLS Role Generator](https://fosterbiservices.github.io/Power-BI-Toolkit/rls-role-generator.html) | Row-level security roles from fixed values, each user's own rows (USERPRINCIPALNAME) or an access table, as a TMDL script. Shows which tables each role restricts through your relationships, warns about tables left open, and writes a test query. | ✓ | — |
 | [Model Linter](https://fosterbiservices.github.io/Power-BI-Toolkit/model-linter.html) | Best Practice Analyzer-style checks on the model export: measures without a display folder or format string, visible key columns, bidirectional relationships, implicit measures and unused columns. Each finding explains why it matters and how to fix it; ignore what's intended and copy the rest to Excel. | ✓ | — |
 | [Model Documenter](https://fosterbiservices.github.io/Power-BI-Toolkit/model-documenter.html) | One HTML document for the whole model: tables, measures, lineage, relationships, data sources, model checks and report pages. Reads a PBIP project folder in the browser, or works from your model export. | ✓ | — |
 | [Power Query Explainer](https://fosterbiservices.github.io/Power-BI-Toolkit/power-query-explainer.html) | Comments every step of a Power Query (M) query, or produces a cleaner version checked against the original. One query or the whole model; custom functions are excluded automatically. | Own export | ✓ |
@@ -41,6 +42,16 @@ Tip: rename the query tab in DAX query view (for example *Toolkit export*) and k
 - **Size limit.** Browsers allow about 5 MB of saved data per site. A very large model export may not fit; in that case paste it into each tool directly.
 - **Always test before you change a model.** Generated DAX, M and TMDL are checked by the pages where possible, but run them against a copy or use the comparison and validation queries the tools provide before updating a production model.
 
+## Disclaimer
+
+- **AI can make mistakes.** Copilot replies can be wrong, incomplete or refer to objects that don't exist. The pages check what they can, but not every error in logic or meaning.
+- **Check all of the work.** Everything the toolkit produces (DAX, Power Query, TMDL scripts, descriptions, themes, documents and lint findings), with or without AI, is a starting point to review. Confirm results against figures you trust.
+- **Test on a copy first.** Back up your report or keep it under version control (PBIP and Git), and apply scripts to a copy before a production model.
+- **No warranty, no liability.** The toolkit is provided free and "as is", without warranty of any kind, express or implied. Foster BI Services accepts no liability for incorrect information, errors, data loss, downtime, or any other loss or damage arising from its use or from relying on its output. Use it at your own discretion and risk.
+- **Follow your organization's policies.** Only paste prompts into AI tools your organization approves. Model exports contain no data rows, but names, formulas and descriptions may still be confidential.
+- **Shared computers.** Work is saved in the browser. On a shared computer, use **Clear entries** on each tool and remove the saved export from the home page when you finish.
+- **Not a Microsoft product.** This toolkit isn't affiliated with or endorsed by Microsoft. Power BI and Copilot are trademarks of Microsoft Corporation.
+
 ## Requirements
 
 - Power BI Desktop with **DAX query view** (and **TMDL view** for the TMDL outputs).
@@ -64,6 +75,7 @@ time-intelligence-builder.html
 field-parameter-builder.html
 model-documenter.html
 model-linter.html
+rls-role-generator.html
 .nojekyll                      Tells GitHub Pages to serve the files as they are
 ```
 

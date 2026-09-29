@@ -1460,7 +1460,9 @@ init();
       + '.suite-nav a.home:focus-visible,.suite-nav select:focus-visible,.brandbar a.logo-link:focus-visible{outline:2px solid var(--gold);outline-offset:2px}'
       + '.suite-nav .switch{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}'
       + '.suite-nav select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 8px;max-width:60vw}'
-      + '.brandbar a.logo-link{display:flex;flex:none;border-radius:6px}';
+      + '.brandbar a.logo-link{display:flex;flex:none;border-radius:6px}'
+      + '.suite-disc{display:block;margin-top:6px;max-width:90ch;margin-left:auto;margin-right:auto;line-height:1.5}.suite-disc a{color:inherit}'
+      + '.suite-ai{font-size:13.5px}';
     document.head.appendChild(st);
   }
   // Navigation back to the home page and across tools
@@ -1472,6 +1474,7 @@ init();
     ['validation-query-builder.html', 'Validation Query Builder'],
     ['time-intelligence-builder.html', 'Time Intelligence Builder'],
     ['field-parameter-builder.html', 'Field Parameter Builder'],
+    ['rls-role-generator.html', 'RLS Role Generator'],
     ['model-linter.html', 'Model Linter'],
     ['model-documenter.html', 'Model Documenter'],
     ['power-query-explainer.html', 'Power Query Explainer'],
@@ -1490,6 +1493,16 @@ init();
     nav.querySelector('select').addEventListener('change', e => { location.href = e.target.value; });
     const img = top.querySelector('.brandbar img');
     if (img && !img.closest('a')) { const a = document.createElement('a'); a.href = HOME; a.className = 'logo-link'; a.title = 'Toolkit home'; a.setAttribute('aria-label', 'Toolkit home'); img.replaceWith(a); a.appendChild(img); }
+  }
+
+  // Disclaimer: a short notice in every tool's footer, and an AI warning on the Copilot tools
+  const AI_TOOLS = ['kpi-measure-builder.html', 'measure-describer.html', 'prep-for-ai-writer.html', 'dax-reviewer.html', 'power-query-explainer.html'];
+  if (!document.body.dataset.home && !document.getElementById('suiteDisc')) {
+    const f = document.querySelector('footer');
+    if (f) { const d = document.createElement('span'); d.id = 'suiteDisc'; d.className = 'suite-disc'; d.innerHTML = 'Generated output can be wrong. Check all of it, and test changes on a copy of your model first. Provided as is, without warranty; you use it at your own discretion and risk. <a href="' + HOME + '#disclaimer">Full disclaimer</a>'; f.appendChild(d); }
+    const here2 = (location.pathname.split('/').pop() || '').toLowerCase();
+    const hdr = document.querySelector('header.top');
+    if (hdr && AI_TOOLS.includes(here2)) { const n = document.createElement('div'); n.className = 'msg warn suite-ai'; n.setAttribute('role', 'note'); n.innerHTML = '<b>AI can make mistakes.</b> This page checks Copilot&rsquo;s reply where it can, but not every error in logic or meaning. Review everything before you use it, only use AI tools your organization approves, and test on a copy of your model first. <a href="' + HOME + '#disclaimer">Disclaimer</a>'; hdr.insertAdjacentElement('afterend', n); }
   }
 
   // cfg: { input: textarea id, prefix: this page's storage prefix, mode: 'export' | 'dates', open: details id to open }
