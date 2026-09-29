@@ -325,6 +325,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       <div class="saved" id="saved" hidden>
         <div class="saved-head"><span class="saved-title">&#10003; Saved model export</span><span id="savedWhen" class="muted"></span></div>
         <div class="stats" id="savedStats"></div>
+        <p class="note small" id="savedHist" hidden></p>
         <div class="reply-actions"><button type="button" class="btn" id="clearSaved">Remove the saved export</button></div>
       </div>
     </div>
@@ -1388,9 +1389,19 @@ function testQuery(measures){
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const S = window.SF_SUITE = window.SF_SUITE || {};
   S.get = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && v.text ? v : null; } catch (e) { return null; } };
+  // Earlier exports, newest first, kept for Model Compare (up to 5, and only while there's room)
+  const HKEY = KEY + '.history';
+  S.history = () => { try { const h = JSON.parse(localStorage.getItem(HKEY) || '[]'); return Array.isArray(h) ? h.filter(x => x && x.text) : []; } catch (e) { return []; } };
+  const keep = v => {
+    let h = [v].concat(S.history().filter(x => x.text !== v.text)).slice(0, 5);
+    while (h.length) { try { localStorage.setItem(HKEY, JSON.stringify(h)); return; } catch (e) { h = h.slice(0, -1); } }
+    try { localStorage.removeItem(HKEY); } catch (e) {}
+  };
+  S.clearHistory = () => { try { localStorage.removeItem(HKEY); } catch (e) {} };
   S.set = (text, name) => {
     try {
       const prev = S.get();
+      if (prev && prev.text && prev.text.trim() !== (text || '').trim()) keep(prev);
       localStorage.setItem(KEY, JSON.stringify({ text, name: name !== undefined ? name : (prev ? prev.name || '' : ''), savedAt: Date.now() }));
       return true;
     } catch (e) { return false; }
@@ -1456,6 +1467,7 @@ function testQuery(measures){
     ['field-parameter-builder.html', 'Field Parameter Builder'],
     ['rls-role-generator.html', 'RLS Role Generator'],
     ['model-linter.html', 'Model Linter'],
+    ['model-compare.html', 'Model Compare'],
     ['model-documenter.html', 'Model Documenter'],
     ['about-this-report.html', 'About This Report'],
     ['power-query-explainer.html', 'Power Query Explainer'],
@@ -1552,6 +1564,7 @@ const TOOLS = [
   { file: 'rls-role-generator.html', name: 'RLS Role Generator', desc: 'Row-level security roles from fixed values, each user\u2019s own rows or an access table, as a TMDL script with a test query and a check of which tables each role really restricts.', tags: ['exp', 'noai'] },
   { file: 'model-linter.html', name: 'Model Linter', desc: 'Best-practice checks on your model: measures without a folder or format string, visible key columns, bidirectional relationships, implicit measures and unused columns, each with how to fix it.', tags: ['exp', 'noai'] },
   { file: 'about-this-report.html', name: 'About This Report', desc: 'What to put on a report\u2019s About page and why: a summary, who it\u2019s for, questions it answers, key measures in plain words, data sources, freshness and owner, drafted from your model. Optional HTML measure.', tags: ['exp', 'aiopt'] },
+  { file: 'model-compare.html', name: 'Model Compare', desc: 'What changed between two model exports: tables, columns, measures and relationships added, removed, renamed or changed, with DAX differences side by side and release notes to copy.', tags: ['exp', 'noai'] },
   { file: 'model-documenter.html', name: 'Model Documenter', desc: 'One HTML document for the whole model: tables, measures, lineage, relationships, sources, model checks and report pages. Reads your PBIP folder in the browser.', tags: ['pbip', 'noai'] },
   { free: true, file: 'power-query-explainer.html', name: 'Power Query Explainer', desc: 'Comment every step of a Power Query query, or get a cleaner version checked against the original. One query or the whole model.', tags: ['ai'] },
   { free: true, file: 'date-table-generator.html', name: 'Date Table Generator', desc: 'A date table with your fiscal year, weeks and holidays, as DAX, Power Query or a TMDL script. Can start and end with your data.', tags: ['dates', 'noai'] },
@@ -1576,6 +1589,9 @@ function renderSaved(){
   $('savedWhen').textContent = (v.name ? v.name + ' · ' : '') + 'saved ' + d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   $('savedStats').innerHTML = '<span class="stat"><b>' + m.tables.length + '</b> tables</span><span class="stat"><b>' + m.columns.length + '</b> columns</span><span class="stat"><b>' + m.measures.length + '</b> measures</span><span class="stat"><b>' + m.rels.length + '</b> relationships</span>' + (m.composite ? '<span class="stat remote">Composite model</span>' : '');
   if (!$('modelName').value) $('modelName').value = v.name || '';
+  const h = SF_SUITE.history ? SF_SUITE.history().length : 0;
+  $('savedHist').hidden = !h;
+  $('savedHist').innerHTML = h ? h + ' earlier export' + (h === 1 ? ' is' : 's are') + ' kept too, so <a href="model-compare.html">Model Compare</a> can show what changed. Saving a new export keeps the one it replaces.' : '';
 }
 function renderTools(){
   const card = t => '<a class="tool" href="' + t.file + '"><span class="tn">' + esc(t.name) + '</span><span class="td">' + esc(t.desc) + '</span><span class="tags">' + (t.free ? t.tags.map(x => x === 'exp' || x === 'dates' ? 'opt' : x) : t.tags.filter(x => x !== 'exp')).map(x => TAG[x]).join('') + '</span></a>';

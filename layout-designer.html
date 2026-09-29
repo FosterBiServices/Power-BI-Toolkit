@@ -1796,9 +1796,19 @@ init();
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const S = window.SF_SUITE = window.SF_SUITE || {};
   S.get = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && v.text ? v : null; } catch (e) { return null; } };
+  // Earlier exports, newest first, kept for Model Compare (up to 5, and only while there's room)
+  const HKEY = KEY + '.history';
+  S.history = () => { try { const h = JSON.parse(localStorage.getItem(HKEY) || '[]'); return Array.isArray(h) ? h.filter(x => x && x.text) : []; } catch (e) { return []; } };
+  const keep = v => {
+    let h = [v].concat(S.history().filter(x => x.text !== v.text)).slice(0, 5);
+    while (h.length) { try { localStorage.setItem(HKEY, JSON.stringify(h)); return; } catch (e) { h = h.slice(0, -1); } }
+    try { localStorage.removeItem(HKEY); } catch (e) {}
+  };
+  S.clearHistory = () => { try { localStorage.removeItem(HKEY); } catch (e) {} };
   S.set = (text, name) => {
     try {
       const prev = S.get();
+      if (prev && prev.text && prev.text.trim() !== (text || '').trim()) keep(prev);
       localStorage.setItem(KEY, JSON.stringify({ text, name: name !== undefined ? name : (prev ? prev.name || '' : ''), savedAt: Date.now() }));
       return true;
     } catch (e) { return false; }
@@ -1864,6 +1874,7 @@ init();
     ['field-parameter-builder.html', 'Field Parameter Builder'],
     ['rls-role-generator.html', 'RLS Role Generator'],
     ['model-linter.html', 'Model Linter'],
+    ['model-compare.html', 'Model Compare'],
     ['model-documenter.html', 'Model Documenter'],
     ['about-this-report.html', 'About This Report'],
     ['power-query-explainer.html', 'Power Query Explainer'],
