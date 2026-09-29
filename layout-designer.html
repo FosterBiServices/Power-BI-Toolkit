@@ -241,10 +241,34 @@ input[type=number]{font-family:var(--sans)}
 .chk{display:flex;gap:8px;align-items:center;font-size:14px}
 .chk.inline{padding-bottom:8px}
 .chk input{accent-color:var(--accent);width:16px;height:16px;margin:0}
-.regions{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
-.region{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
-.region input[type=text]{width:100%}
-.region .cfg[hidden]{display:none}
+.sub{margin:4px 0 0;font-size:15px}
+.areas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.areas{grid-template-columns:1fr}}
+.area{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.area select{width:100%}
+.pair{display:flex;gap:12px;flex-wrap:wrap}
+.pair[hidden]{display:none}
+.hdrbox{border:1px solid var(--line);border-radius:12px;background:var(--surface-2);padding:14px;display:flex;flex-direction:column;gap:12px}
+.hdrbox[hidden]{display:none}
+.hdrbox .sub{margin:0}
+.hdrbox .note{margin:0}
+.hgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:1000px){.hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.hgrid{grid-template-columns:1fr}}
+.hcol{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.hcol h4{margin:0;font-size:14px;font-weight:700}
+.hcol h4 .chk{font-weight:700}
+.hcol input[type=text]{width:100%;font-family:var(--sans)}
+.hcol.off>*:not(h4){opacity:.45;pointer-events:none}
+.logo-more{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.logo-more[hidden]{display:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.filebtn{cursor:pointer}
+input:focus-visible + .filebtn,.filebtn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.chk.small{font-size:13px}
+.lim{margin:0}
+.lim:empty{display:none}
+.lim.hit{color:var(--warn);font-weight:600}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .designer{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:14px;align-items:start}
 @media (max-width:900px){.designer{grid-template-columns:1fr}}
@@ -298,6 +322,7 @@ table.pos th,table.pos td{padding:6px 10px;border-bottom:1px solid var(--line);t
 table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12.5px}
 .apply code{font-family:var(--mono);font-size:12.5px}
 
+
 </style>
 </head>
 <body>
@@ -343,19 +368,55 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
         <div class="field sm"><label for="gap">Gap <span class="muted">(px)</span></label><input type="number" id="gap" min="0" max="100"></div>
         <div class="field"><label for="rounding">Sizes</label><select id="rounding"><option value="fit">Whole pixels that fill the page exactly</option><option value="roundup">Rounded up (like the Alignment page)</option><option value="exact">Exact decimals</option></select></div>
       </div>
-      <div class="regions">
-        <div class="region">
+
+      <h3 class="sub">Page areas</h3>
+      <div class="areas">
+        <div class="area">
           <label class="chk"><input type="checkbox" id="hdrOn"> <b>Header</b></label>
-          <div class="cfg"><div class="field sm"><label for="hdrH">Height</label><input type="number" id="hdrH" min="20" max="300"></div><div class="field"><label for="hdrTitle">Title</label><input type="text" id="hdrTitle" autocomplete="off"></div></div>
+          <div class="field sm"><label for="hdrH">Height <span class="muted">(px)</span></label><input type="number" id="hdrH" min="20" max="300"></div>
         </div>
-        <div class="region">
-          <div class="field"><label for="sidePos"><b>Side panel</b> <span class="muted">(slicers, navigation)</span></label><select id="sidePos"><option value="none">None</option><option value="left">Left</option><option value="right">Right</option></select></div>
-          <div class="cfg" id="sideCfg"><div class="field sm"><label for="sideW">Width</label><input type="number" id="sideW" min="60" max="800"></div><div class="field sm"><label for="sideItemH">Item height</label><input type="number" id="sideItemH" min="20" max="400"></div></div>
+        <div class="area">
+          <div class="field"><label for="sidePos"><b>Side panel</b></label><select id="sidePos"><option value="none">None</option><option value="left">On the left</option><option value="right">On the right</option></select></div>
+          <div class="pair" id="sideCfg"><div class="field sm"><label for="sideW">Width</label><input type="number" id="sideW" min="60" max="800"></div><div class="field sm"><label for="sideItemH">Item height</label><input type="number" id="sideItemH" min="20" max="400"></div></div>
         </div>
-        <div class="region">
-          <label class="chk"><input type="checkbox" id="stripOn"> <b>Card strip</b> <span class="muted">(a row of KPI cards)</span></label>
-          <div class="cfg"><div class="field sm"><label for="stripH">Height</label><input type="number" id="stripH" min="30" max="400"></div></div>
+        <div class="area">
+          <label class="chk"><input type="checkbox" id="stripOn"> <b>Card strip</b> <span class="muted">(KPI cards)</span></label>
+          <div class="field sm"><label for="stripH">Height <span class="muted">(px)</span></label><input type="number" id="stripH" min="30" max="400"></div>
         </div>
+      </div>
+
+      <div class="hdrbox" id="hdrBox">
+        <h3 class="sub">Header contents</h3>
+        <div class="hgrid">
+          <div class="hcol">
+            <h4>Title</h4>
+            <div class="field"><label for="hdrTitle">Text</label><input type="text" id="hdrTitle" autocomplete="off"></div>
+          </div>
+          <div class="hcol">
+            <h4><label class="chk"><input type="checkbox" id="logoOn"> Logo</label></h4>
+            <div class="pair" id="logoCfg"><div class="field sm"><label for="logoW">Width</label><input type="number" id="logoW" min="8" max="800"></div><div class="field sm"><label for="logoH">Height</label><input type="number" id="logoH" min="8" max="300"></div></div>
+            <p class="lim small muted" id="logoLim"></p>
+            <div id="logoCfg2" class="logo-more">
+              <input type="file" id="logoFile" class="sr" accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp"><label class="filebtn btn small" for="logoFile" id="logoFileLbl">Add the logo image</label>
+              <span id="logoInfo" class="small muted"></span>
+              <button type="button" class="linkbtn" id="logoClear" hidden>Remove the image</button>
+              <label class="chk small" id="logoInBgWrap" hidden><input type="checkbox" id="logoInBg"> Also put it in the background image</label>
+            </div>
+          </div>
+          <div class="hcol">
+            <h4>Cards</h4>
+            <div class="field sm"><label for="hCardN">How many</label><input type="number" id="hCardN" min="0" max="8"></div>
+            <div class="pair"><div class="field sm"><label for="hCardW">Width</label><input type="number" id="hCardW" min="40" max="600"></div><div class="field sm"><label for="hCardH">Height</label><input type="number" id="hCardH" min="16" max="200"></div></div>
+            <p class="lim small muted" id="cardLim"></p>
+          </div>
+          <div class="hcol">
+            <h4>Slicers</h4>
+            <div class="field sm"><label for="hSlicerN">How many</label><input type="number" id="hSlicerN" min="0" max="8"></div>
+            <div class="pair"><div class="field sm"><label for="hSlicerW">Width</label><input type="number" id="hSlicerW" min="40" max="600"></div><div class="field sm"><label for="hSlicerH">Height</label><input type="number" id="hSlicerH" min="16" max="200"></div></div>
+            <p class="lim small muted" id="slicerLim"></p>
+          </div>
+        </div>
+        <p class="note small">Sizes are capped so everything fits: the title keeps the room it needs, and the logo, cards and slicers share the rest. The logo sits on the left with the title after it. Cards, then slicers, line up on the right. Everything is centered top to bottom in the header. Click a header card or slicer in Step 2 to name it.</p>
       </div>
     </div>
   </section>
@@ -645,7 +706,7 @@ const LO = (() => {
       items: [it('clusteredColumnChart', 'Sales by month', 0, 0, 2), it('donutChart', 'Sales by channel', 2, 0), it('tableEx', 'Top customers', 0, 1, 3)] } },
     { id: 'panel', name: 'Slicer panel on the left', cfg: { side: { pos: 'left', w: 220, itemH: 64, items: [['slicer', 'Year'], ['slicer', 'Region'], ['slicer', 'Segment'], ['slicer', 'Category']] }, strip: { on: true, h: 100, items: [['card', 'Sales'], ['card', 'Orders'], ['card', 'Avg order value']] }, grid: { cols: 2, rows: 2 },
       items: [it('lineChart', 'Sales trend', 0, 0, 2), it('clusteredBarChart', 'Sales by category', 0, 1), it('tableEx', 'Customer detail', 1, 1)] } },
-    { id: 'exec', name: 'Executive summary', cfg: { side: { pos: 'none' }, strip: { on: true, h: 110, items: [['kpi', 'Sales vs target'], ['card', 'Orders'], ['card', 'Customers'], ['card', 'Margin %'], ['card', 'Returns']] }, grid: { cols: 3, rows: 1 },
+    { id: 'exec', name: 'Executive summary', cfg: { header: { h: 60, items: [['slicer', 'Year'], ['slicer', 'Region']] }, side: { pos: 'none' }, strip: { on: true, h: 110, items: [['kpi', 'Sales vs target'], ['card', 'Orders'], ['card', 'Customers'], ['card', 'Margin %'], ['card', 'Returns']] }, grid: { cols: 3, rows: 1 },
       items: [it('lineChart', 'Sales this year and last year', 0, 0, 2), it('clusteredBarChart', 'Sales by region', 2, 0)] } },
     { id: 'map', name: 'Map with details', cfg: { side: { pos: 'none' }, strip: { on: true, h: 100, items: [['card', 'Sales'], ['card', 'Customers'], ['card', 'Stores']] }, grid: { cols: 3, rows: 2 },
       items: [it('map', 'Sales by city', 0, 0, 2, 2), it('clusteredBarChart', 'Top regions', 2, 0), it('tableEx', 'Store detail', 2, 1)] } },
@@ -658,7 +719,7 @@ const LO = (() => {
 
   function base(){
     return { name: 'Sales overview', w: 1280, h: 720, margin: 10, gap: 10, rounding: 'fit',
-      header: { on: true, h: 50, title: 'Sales overview' },
+      header: { on: true, h: 50, title: 'Sales overview', slicerW: 180, slicerH: 32, cardW: 150, cardH: 40, items: [], logo: { on: false, w: 120, h: 32, src: '', inBg: false } },
       side: { pos: 'none', w: 220, itemH: 64, items: [] },
       strip: { on: true, h: 100, items: [] },
       grid: { cols: 3, rows: 2 }, items: [] };
@@ -666,14 +727,15 @@ const LO = (() => {
   function fromTemplate(id, keep){
     const t = TEMPLATES.find(x => x.id === id) || TEMPLATES[0];
     const c = base();
-    if (keep) ['name', 'w', 'h', 'margin', 'gap', 'rounding'].forEach(k => { c[k] = keep[k]; }), c.header = JSON.parse(JSON.stringify(keep.header));
+    if (keep) ['name', 'w', 'h', 'margin', 'gap', 'rounding'].forEach(k => { c[k] = keep[k]; }), c.header = Object.assign({ slicerW: 180, slicerH: 32, cardW: 150, cardH: 40, items: [], logo: { on: false, w: 120, h: 32, src: '', inBg: false } }, JSON.parse(JSON.stringify(keep.header)));
+    if (t.cfg.header) Object.assign(c.header, { on: true }, JSON.parse(JSON.stringify(t.cfg.header)), { items: (t.cfg.header.items || []).map(([type, title]) => ({ type, title })) });
     const s = t.cfg;
     c.side = Object.assign({ pos: 'none', w: 220, itemH: 64, items: [] }, JSON.parse(JSON.stringify(s.side)));
     c.side.items = (s.side.items || []).map(([type, title]) => ({ type, title }));
     c.strip = { on: s.strip.on, h: s.strip.h, items: (s.strip.items || []).map(([type, title]) => ({ type, title })) };
     c.grid = Object.assign({}, s.grid);
     c.items = s.items.map(x => Object.assign({}, x));
-    return c;
+    return upgrade(c);
   }
 
   /* n sizes filling `total` with `gap` between them.
@@ -699,7 +761,44 @@ const LO = (() => {
     const left = m + (c.side.pos === 'left' ? side + g : 0);
     const right = W - m - (c.side.pos === 'right' ? side + g : 0);
     const cw = right - left;
-    if (hdr) out.push({ id: 'header', region: 'header', type: 'textbox', title: c.header.title || '', x: m, y: m, w: W - 2 * m, h: hdr, band: true });
+    let limits = null;
+    if (hdr) {
+      out.push({ id: 'header', region: 'header', type: 'textbox', title: c.header.title || '', x: m, y: m, w: W - 2 * m, h: hdr, band: true });
+      /* Header, left to right: [inset] logo [logo gap] title ... [inset] cards, slicers [pad].
+         The title keeps the width it needs; logo and items share what's left, so nothing overlaps. */
+      const inset = 12, logoGap = 24, pad = Math.max(4, Math.min(10, g)), maxH = Math.max(8, hdr - 8);
+      const fs = Math.max(14, Math.min(24, hdr * 0.42));
+      const titleNeed = c.header.title ? Math.ceil(measure(c.header.title, fs)) : 0;
+      const lg = c.header.logo || {}, hi = c.header.items || [];
+      const nC = hi.filter(x => x.type === 'card').length, nS = hi.length - nC;
+      const reqC = [Math.max(40, +c.header.cardW || 150), Math.min(Math.max(16, +c.header.cardH || 40), maxH)];
+      const reqS = [Math.max(40, +c.header.slicerW || 180), Math.min(Math.max(16, +c.header.slicerH || 32), maxH)];
+      // logo size at the clamped height, keeping its proportions
+      let lh = 0, lw = 0;
+      if (lg.on) { const wantH = Math.max(8, +lg.h || 32), wantW = Math.max(8, +lg.w || 120); lh = Math.min(wantH, maxH); lw = wantW * lh / wantH; }
+      const room = (W - 2 * m) - inset - (titleNeed ? titleNeed + inset : 0) - (lg.on ? logoGap : 0) - pad - (hi.length ? inset : 0) - Math.max(0, hi.length - 1) * g;
+      const cardMaxW = nC ? Math.floor((room - lw - nS * reqS[0]) / nC) : null;
+      const cW = nC ? Math.max(40, Math.min(reqC[0], cardMaxW)) : 0;
+      const slicerMaxW = nS ? Math.floor((room - lw - nC * cW) / nS) : null;
+      const sW = nS ? Math.max(40, Math.min(reqS[0], slicerMaxW)) : 0;
+      const logoMaxW = lg.on ? Math.floor(room - nC * cW - nS * sW) : null;
+      if (lg.on && lw > logoMaxW) { const k = Math.max(8, logoMaxW) / lw; lw *= k; lh *= k; }
+      limits = { itemMaxH: maxH, logoMaxH: maxH, cardMaxW, slicerMaxW, logoMaxW, titleNeed };
+      if ((nC && cardMaxW < 40) || (nS && slicerMaxW < 40)) probs.push({ level: 'warn', text: 'There isn’t room in the header for ' + (nC ? nC + ' card' + (nC === 1 ? '' : 's') : '') + (nC && nS ? ' and ' : '') + (nS ? nS + ' slicer' + (nS === 1 ? '' : 's') : '') + ' beside the ' + (lg.on ? 'logo and ' : '') + 'title. Use fewer, a shorter title, or a wider page.' });
+      let titleX = m + inset;
+      if (lg.on) {
+        out.push({ id: 'logo', region: 'header', type: 'image', title: 'Logo', x: m + inset, y: m + (hdr - lh) / 2, w: lw, h: lh, src: lg.src || '', logo: true });
+        titleX = m + inset + lw + logoGap;
+      }
+      const titleAt = out.length;
+      let right = W - m - inset;
+      if (hi.length) {
+        const total = nC * cW + nS * sW + (hi.length - 1) * g; let x = W - m - pad - total;
+        right = x - inset;
+        hi.forEach((it, i) => { const [iw, ih] = it.type === 'card' ? [cW, reqC[1]] : [sW, reqS[1]]; out.push({ id: 'h' + i, region: 'header', idx: i, type: it.type, title: it.title, x, y: m + (hdr - ih) / 2, w: iw, h: ih, tile: true }); x += iw + g; });
+      }
+      if (c.header.title) out.splice(titleAt, 0, { id: 'title', region: 'header', type: 'textbox', title: c.header.title, x: titleX, y: m, w: Math.max(0, right - titleX), h: hdr, band: true, fontSize: fs });
+    }
     if (side) {
       const sx = c.side.pos === 'left' ? m : W - m - side, sh = H - m - top;
       out.push({ id: 'side', region: 'side', type: '', title: 'Side panel', x: sx, y: top, w: side, h: sh, band: true });
@@ -732,15 +831,33 @@ const LO = (() => {
     const over = out.filter(o => !o.band && (o.x + o.w > W + 0.01 || o.y + o.h > H + 0.01));
     if (over.length) probs.push({ level: 'info', text: 'Rounding up puts ' + over.length + ' visual' + (over.length === 1 ? '' : 's') + ' up to ' + Math.ceil(Math.max(...over.map(o => Math.max(o.x + o.w - W, o.y + o.h - H)))) + ' px past the page edge. Choose “Fill exactly” to keep everything inside.' });
     const empty = []; for (let a = 0; a < cols; a++) for (let b = 0; b < rows; b++) if (taken[a + ',' + b] === undefined) empty.push([a, b]);
-    return { items: out, grid, probs, empty };
+    return { items: out, grid, probs, empty, limits };
   }
 
+  let measure = (text, size) => String(text).length * size * 0.56;
+  const setMeasure = fn => { measure = fn; };
   const r2 = v => Math.round(v * 100) / 100;
   function positionsTsv(L){
-    return ['Visual\tType\tX\tY\tWidth\tHeight'].concat(L.items.filter(o => !o.band || o.id === 'header').map(o => [o.title || typeOf(o.type).label, o.id === 'header' ? 'Header' : typeOf(o.type).label, r2(o.x), r2(o.y), r2(o.w), r2(o.h)].join('\t'))).join('\n');
+    return ['Visual\tType\tX\tY\tWidth\tHeight'].concat(L.items.filter(o => !o.band || o.id === 'header' || o.id === 'title').map(o => [o.id === 'header' ? 'Header band' : o.title || typeOf(o.type).label, o.id === 'header' ? 'Shape / background' : o.id === 'title' ? 'Text box (title)' : o.logo ? 'Image (logo)' : typeOf(o.type).label, r2(o.x), r2(o.y), r2(o.w), r2(o.h)].join('\t'))).join('\n');
   }
 
-  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, layout, positionsTsv };
+  // Header holds only cards and slicers: set how many of each (cards first), keeping their names
+  const HDR_NAMES = { card: ['Sales', 'Orders', 'Customers', 'Margin %', 'Returns', 'Stores', 'Units', 'Avg order'], slicer: ['Year', 'Region', 'Segment', 'Category', 'Channel', 'Month', 'Product', 'Customer'] };
+  function setHeaderCounts(h, cards, slicers){
+    const now = t => (h.items || []).filter(x => x.type === t);
+    const fill = (t, n) => { const cur = now(t).slice(0, n); for (let i = cur.length; i < n; i++) cur.push({ type: t, title: HDR_NAMES[t][i % 8] }); return cur; };
+    h.items = fill('card', Math.max(0, Math.min(8, cards | 0))).concat(fill('slicer', Math.max(0, Math.min(8, slicers | 0))));
+  }
+  function upgrade(c){
+    const h = c.header = Object.assign({ slicerW: 180, slicerH: 32, cardW: 150, cardH: 40, items: [], logo: { on: false, w: 120, h: 32, src: '', inBg: false } }, c.header || {});
+    if (h.itemW && !c.header._m) { h.slicerW = h.itemW; h.slicerH = h.itemH || 32; }
+    delete h.itemW; delete h.itemH;
+    h.items = (h.items || []).map(x => ({ type: x.type === 'card' || x.type === 'cardVisual' || x.type === 'kpi' ? 'card' : 'slicer', title: x.title }));
+    setHeaderCounts(h, h.items.filter(x => x.type === 'card').length, h.items.filter(x => x.type === 'slicer').length);
+    return c;
+  }
+
+  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, layout, positionsTsv, setHeaderCounts, upgrade, setMeasure };
 })();
 
 
@@ -759,6 +876,7 @@ const LR = (() => {
     const defs = st.shadow ? '<defs><filter id="lo-shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="2" stdDeviation="' + (st.shadow === 'strong' ? 5 : 3) + '" flood-color="#000" flood-opacity="' + (st.shadow === 'strong' ? 0.18 : 0.1) + '"/></filter></defs>' : '';
     const rect = (id, x, y, w, h, fill, extra) => '<rect id="' + id + '" x="' + f(x) + '" y="' + f(y) + '" width="' + f(w) + '" height="' + f(h) + '"' + (r && !(extra || '').includes('rx=') ? ' rx="' + r + '"' : '') + ' fill="' + fill + '"' + (extra || '') + '/>';
     out.push('<rect id="Page" x="0" y="0" width="' + W + '" height="' + H + '" fill="' + col.page + '"/>');
+    if (opts.afterPage) out.push(opts.afterPage);
     const border = st.border ? ' stroke="' + col.border + '" stroke-width="1"' : '';
     const sh = st.shadow ? ' filter="url(#lo-shadow)"' : '';
     const hdr = L.items.find(o => o.id === 'header');
@@ -767,11 +885,13 @@ const LR = (() => {
       else if (st.header === 'line') out.push(rect('Header-line', hdr.x, hdr.y + hdr.h - 3, hdr.w, 3, col.accent, ' rx="1.5"'));
       else out.push(rect('Header', hdr.x, hdr.y, hdr.w, hdr.h, col.header, sh));
     }
+    const logo = L.items.find(o => o.id === 'logo');
+    if (logo && logo.src && c.header.logo && c.header.logo.inBg) out.push('<image id="Logo" href="' + logo.src + '" x="' + f(logo.x) + '" y="' + f(logo.y) + '" width="' + f(logo.w) + '" height="' + f(logo.h) + '" preserveAspectRatio="xMidYMid meet"/>');
     const side = L.items.find(o => o.id === 'side');
     if (side && st.side !== 'none') out.push(rect('Side-panel', side.x, side.y, side.w, side.h, col.sidePanel, sh + border));
     if (st.cards !== 'none') {
       const g = ['<g id="Visual-cards">'];
-      L.items.filter(o => !o.band && (o.region !== 'side' || st.side === 'none')).forEach(o => g.push(rect('Card-' + idName(o.title || LO.typeOf(o.type).label), o.x, o.y, o.w, o.h, col.card, sh + border)));
+      L.items.filter(o => !o.band && (o.region !== 'header' || o.type === 'card') && (o.region !== 'side' || st.side === 'none')).forEach(o => g.push(rect('Card-' + idName(o.title || LO.typeOf(o.type).label), o.x, o.y, o.w, o.h, col.card, sh + border)));
       g.push('</g>'); out.push(g.join(''));
     }
     if (opts.inner) return defs + out.join('');
@@ -787,7 +907,12 @@ const LR = (() => {
     if (titleH) s.push(t(o.x + pad, o.y + pad + 13, o.title, 12, col.text, '', 600));
     const kind = LO.typeOf(o.type).kind;
     const axis = () => s.push('<line x1="' + f(x) + '" x2="' + f(x + w) + '" y1="' + f(y + h) + '" y2="' + f(y + h) + '" stroke="' + col.muted + '" stroke-width="1" opacity=".5"/>');
-    if (kind === 'card') {
+    if (kind === 'card' && o.h < 56) {
+      // compact card (header): label on the left, value on the right, on its own tile
+      s.push('<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="' + Math.min(6, o.h / 3) + '" fill="' + col.card + '"/>');
+      const vs = Math.min(18, Math.max(10, o.h * 0.5));
+      s.push(t(o.x + 10, o.y + o.h / 2 + 4, o.title || 'Measure', Math.min(11, o.h * 0.34), col.muted), t(o.x + o.w - 10, o.y + o.h / 2 + vs * 0.35, ['$4.2M', '18.9K', '38.2%', '2,418', '$221', '94.1%'][(o.idx || 0) % 6], vs, d[0], 'end', 700));
+    } else if (kind === 'card') {
       const big = Math.max(12, Math.min(34, h * 0.42, w / 5));
       s.push(t(o.x + o.w / 2, o.y + o.h / 2 + big * 0.2, ['$4.2M', '18.9K', '38.2%', '2,418', '$221', '94.1%'][((o.idx || 0) + (o.region === 'strip' ? 0 : 3)) % 6], big, d[0], 'middle', 700));
       s.push(t(o.x + o.w / 2, o.y + o.h / 2 + big * 0.2 + 18, o.title || 'Measure', 11, col.muted, 'middle'));
@@ -854,6 +979,10 @@ const LR = (() => {
         if (kind === 'matrix' && i % 4 === 0) s.push('<rect x="' + f(x) + '" y="' + f(yy) + '" width="' + f(w) + '" height="' + rh + '" fill="' + d[0] + '" opacity=".08"/>');
         s.push('<line x1="' + f(x) + '" x2="' + f(x + w) + '" y1="' + f(yy + rh) + '" y2="' + f(yy + rh) + '" stroke="' + col.muted + '" stroke-width=".6" opacity=".35"/>');
         for (let j = 0; j < cols; j++) s.push('<rect x="' + f(x + j * w / cols + 6 + (kind === 'matrix' && j === 0 && i % 4 ? 8 : 0)) + '" y="' + f(yy + 7) + '" width="' + f(w / cols * (0.3 + R() * 0.35)) + '" height="6" rx="3" fill="' + col.text + '" opacity=".28"/>'); }
+    } else if (kind === 'slicer' && o.h < 52) {
+      // compact dropdown: the field name inside the box
+      s.push('<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="' + Math.min(6, o.h / 3) + '" fill="' + col.card + '" stroke="' + col.muted + '" stroke-opacity=".5"/>');
+      s.push(t(o.x + 10, o.y + o.h / 2 + 4, (o.title || 'Slicer') + ': All', Math.min(12, Math.max(9, o.h * 0.36)), col.text), '<path d="M' + f(o.x + o.w - 18) + ' ' + f(o.y + o.h / 2 - 2) + ' l5 5 l5 -5" fill="none" stroke="' + col.muted + '" stroke-width="1.5"/>');
     } else if (kind === 'slicer') {
       s.push(t(o.x + pad, o.y + pad + 12, o.title || 'Slicer', 11, col.muted));
       const bh = Math.min(28, o.h - pad * 2 - 18);
@@ -863,6 +992,9 @@ const LR = (() => {
       s.push(t(o.x + pad, o.y + o.h / 2 + 6, o.title || 'Text', Math.max(12, Math.min(22, o.h * 0.4)), col.headerText || col.text, '', 700));
     } else if (kind === 'button') {
       s.push('<rect x="' + f(o.x + pad) + '" y="' + f(o.y + pad) + '" width="' + f(o.w - 2 * pad) + '" height="' + f(o.h - 2 * pad) + '" rx="6" fill="' + d[0] + '"/>', t(o.x + o.w / 2, o.y + o.h / 2 + 4, o.title || 'Button', 12, col.card, 'middle', 600));
+    } else if (kind === 'image' && o.logo) {
+      if (o.src) s.push('<image href="' + o.src + '" x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" preserveAspectRatio="xMidYMid meet"/>');
+      else s.push('<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="4" fill="' + col.card + '" fill-opacity=".25" stroke="' + col.headerText + '" stroke-opacity=".6" stroke-dasharray="4 3"/>', t(o.x + o.w / 2, o.y + o.h / 2 + 4, 'LOGO', Math.min(12, o.h * 0.4), col.headerText, 'middle', 700));
     } else if (kind === 'image') {
       s.push('<rect x="' + f(x) + '" y="' + f(y) + '" width="' + f(w) + '" height="' + f(h) + '" fill="' + col.muted + '" opacity=".15" rx="2"/><path d="M' + f(x) + ' ' + f(y) + ' L' + f(x + w) + ' ' + f(y + h) + ' M' + f(x + w) + ' ' + f(y) + ' L' + f(x) + ' ' + f(y + h) + '" stroke="' + col.muted + '" stroke-opacity=".4"/>');
     } else if (kind === 'decomp') {
@@ -878,24 +1010,27 @@ const LR = (() => {
     opts = opts || {};
     const font = "'" + (opts.font || 'Segoe UI').replace(/'/g, '') + "', 'Segoe UI', Arial, sans-serif";
     const W = c.w, H = c.h, out = [];
-    out.push(background(L, c, col, st, { inner: true }));
+    let guides = '';
     if (opts.grid) {
       const g = L.grid, gl = [];
       g.x.forEach((x, i) => gl.push('<rect x="' + f(x) + '" y="' + f(g.top) + '" width="' + f(g.w[i]) + '" height="' + f(g.bottom - g.top) + '" fill="' + col.accent + '" opacity=".05"/>'));
       g.y.forEach((y, i) => gl.push('<rect x="' + f(g.left) + '" y="' + f(y) + '" width="' + f(g.right - g.left) + '" height="' + f(g.h[i]) + '" fill="' + col.accent + '" opacity=".04"/>'));
-      out.push('<g id="Grid">' + gl.join('') + '</g>');
+      guides = '<g id="Grid">' + gl.join('') + '</g>';
     }
+    // grid guides sit on the page, under the visual cards, so they never tint a visual
+    out.push(background(L, c, col, st, { inner: true, afterPage: guides }));
     if (opts.empty) L.empty.forEach(([a, b]) => { const g = L.grid; out.push('<g class="cell" data-cell="' + a + ',' + b + '" tabindex="0" role="button" aria-label="Add a visual in column ' + (a + 1) + ', row ' + (b + 1) + '"><rect x="' + f(g.x[a] + 2) + '" y="' + f(g.y[b] + 2) + '" width="' + f(g.w[a] - 4) + '" height="' + f(g.h[b] - 4) + '" rx="6" fill="' + col.accent + '" fill-opacity=".04" stroke="' + col.accent + '" stroke-opacity=".45" stroke-dasharray="6 5"/><text x="' + f(g.x[a] + g.w[a] / 2) + '" y="' + f(g.y[b] + g.h[b] / 2 + 5) + '" text-anchor="middle" font-size="14" fill="' + col.accent + '" font-family="' + font + '">+ Add a visual</text></g>'); });
     const hdr = L.items.find(o => o.id === 'header');
-    if (hdr && hdr.title) {
+    const ttl = L.items.find(o => o.id === 'title');
+    if (hdr && ttl) {
       const onBand = st.header === 'band' || st.header === 'bleed';
-      out.push('<text id="Header-title" x="' + f(hdr.x + (onBand ? 16 : 2)) + '" y="' + f(hdr.y + hdr.h / 2 + 7) + '" font-size="' + Math.max(14, Math.min(24, hdr.h * 0.42)) + '" font-weight="700" fill="' + (onBand ? col.headerText : col.text) + '" font-family="' + font + '">' + esc(hdr.title) + '</text>');
+      out.push('<text id="Header-title" x="' + f(ttl.x) + '" y="' + f(hdr.y + hdr.h / 2 + ttl.fontSize * 0.34) + '" font-size="' + ttl.fontSize + '" font-weight="700" fill="' + (onBand ? col.headerText : col.text) + '" font-family="' + font + '">' + esc(ttl.title) + '</text>');
     }
     L.items.filter(o => !o.band).forEach(o => {
       const sel = opts.selected === o.id;
-      out.push('<g class="vis" data-id="' + o.id + '"' + (opts.hit ? ' tabindex="0" role="button" aria-label="' + esc((o.title || LO.typeOf(o.type).label) + ', ' + LO.typeOf(o.type).label) + '"' : '') + ' id="' + (opts.ids === false ? '' : 'Visual-' + idName(o.title || LO.typeOf(o.type).label)) + '">' + sketch(o, col, font)
+      out.push('<g class="vis" data-id="' + o.id + '"' + (opts.hit ? ' tabindex="0" role="button" aria-label="' + esc((o.title || LO.typeOf(o.type).label) + ', ' + LO.typeOf(o.type).label) + '"' : '') + ' id="' + (opts.ids === false ? '' : 'Visual-' + idName(o.title || LO.typeOf(o.type).label)) + '">' + (o.tile ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="' + Math.min(+st.radius || 0, 8, o.h / 3) + '" fill="' + col.card + '"/>' : '') + sketch(o, col, font)
         + (opts.hit ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" fill="transparent"' + (sel ? ' stroke="' + col.select + '" stroke-width="3"' : '') + (st.radius ? ' rx="' + st.radius + '"' : '') + '/>' : '') + '</g>');
-      if (opts.dims) out.push('<text x="' + f(o.x + o.w - 6) + '" y="' + f(o.y + o.h - 6) + '" font-size="10" text-anchor="end" fill="' + col.muted + '" font-family="Consolas, monospace">' + Math.round(o.w) + '×' + Math.round(o.h) + ' @ ' + Math.round(o.x) + ',' + Math.round(o.y) + '</text>');
+      if (opts.dims && o.h >= 44) out.push('<text x="' + f(o.x + o.w - 6) + '" y="' + f(o.y + o.h - 6) + '" font-size="10" text-anchor="end" fill="' + col.muted + '" font-family="Consolas, monospace">' + Math.round(o.w) + '×' + Math.round(o.h) + ' @ ' + Math.round(o.x) + ',' + Math.round(o.y) + '</text>');
     });
     const defs = st.shadow ? '' : '';
     return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"' + (opts.cls ? ' class="' + opts.cls + '"' : '') + '>' + defs + out.join('') + '</svg>';
@@ -1026,11 +1161,30 @@ function renderPage(){
   $('customWrap').hidden = $('customWrap2').hidden = i >= 0;
   const set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
   set('pName', c.name); set('pW', c.w); set('pH', c.h); set('margin', c.margin); set('gap', c.gap); $('rounding').value = c.rounding;
-  $('hdrOn').checked = c.header.on; set('hdrH', c.header.h); set('hdrTitle', c.header.title);
+  const h = c.header, lg = h.logo || (h.logo = { on: false, w: 120, h: 32, src: '', inBg: false });
+  $('hdrOn').checked = h.on; set('hdrH', h.h); $('hdrH').disabled = !h.on; $('hdrBox').hidden = !h.on;
+  set('hdrTitle', h.title);
+  $('logoOn').checked = !!lg.on; set('logoW', Math.round(lg.w)); set('logoH', Math.round(lg.h));
+  $('logoOn').closest('.hcol').classList.toggle('off', !lg.on);
+  $('logoClear').hidden = $('logoInBgWrap').hidden = !lg.src; $('logoInBg').checked = !!lg.inBg;
+  $('logoFileLbl').textContent = lg.src ? 'Replace the image' : 'Add the logo image';
+  $('logoInfo').textContent = lg.src ? 'Width and height keep the image\u2019s proportions.' : 'Optional: shows your logo in the drawings.';
+  const n = t => (h.items || []).filter(x => x.type === t).length;
+  set('hCardN', n('card')); set('hSlicerN', n('slicer'));
+  set('hCardW', h.cardW); set('hCardH', h.cardH); set('hSlicerW', h.slicerW); set('hSlicerH', h.slicerH);
+  // what fits, from the layout: shown under each column and used as the inputs' maximum
+  const lim = (state.L && state.L.limits) || {};
+  const limTxt = (id, w, hMax, reqW, reqH, on) => { const el = $(id); if (!on || w == null) { el.textContent = ''; el.classList.remove('hit'); return; }
+    const W = Math.max(40, w); el.textContent = 'Up to ' + W + ' \u00d7 ' + hMax + ' px with this header.'; el.classList.toggle('hit', reqW > W || reqH > hMax); };
+  limTxt('cardLim', lim.cardMaxW, lim.itemMaxH, h.cardW, h.cardH, n('card') > 0);
+  limTxt('slicerLim', lim.slicerMaxW, lim.itemMaxH, h.slicerW, h.slicerH, n('slicer') > 0);
+  limTxt('logoLim', lim.logoMaxW, lim.logoMaxH, lg.w, lg.h, lg.on);
+  [['hCardW', lim.cardMaxW], ['hSlicerW', lim.slicerMaxW], ['logoW', lim.logoMaxW]].forEach(([id, v]) => { if (v != null) $(id).max = Math.max(40, v); });
+  ['hCardH', 'hSlicerH', 'logoH'].forEach(id => { if (lim.itemMaxH) $(id).max = lim.itemMaxH; });
   $('sidePos').value = c.side.pos; set('sideW', c.side.w); set('sideItemH', c.side.itemH); $('sideCfg').hidden = c.side.pos === 'none';
   $('stripOn').checked = c.strip.on; set('stripH', c.strip.h);
   set('cols', c.grid.cols); set('rows', c.grid.rows);
-  $('hdrH').disabled = $('hdrTitle').disabled = !c.header.on; $('stripH').disabled = !c.strip.on;
+  $('stripH').disabled = !c.strip.on;
 }
 
 /* ---------- step 2: canvas + editor ---------- */
@@ -1047,7 +1201,7 @@ function typeSelect(id, cur, only){
 function selItem(){
   const s = state.sel, c = state.cfg; if (!s) return null;
   if (s === 'header') return c.header.on ? { region: 'header', item: c.header } : null;
-  const i = +s.slice(1), arr = s[0] === 'g' ? c.items : s[0] === 't' ? c.strip.items : s[0] === 's' ? c.side.items : null;
+  const i = +s.slice(1), arr = s[0] === 'g' ? c.items : s[0] === 't' ? c.strip.items : s[0] === 's' ? c.side.items : s[0] === 'h' ? (c.header.items = c.header.items || []) : null;
   return arr && arr[i] ? { region: s[0], i, item: arr[i], arr } : null;
 }
 function renderEditor(){
@@ -1055,9 +1209,9 @@ function renderEditor(){
   const quick = '<div class="quick">' + (c.strip.on ? '<button type="button" class="btn small" data-act="addStrip">+ Card in the strip</button>' : '') + (c.side.pos !== 'none' ? '<button type="button" class="btn small" data-act="addSide">+ Item in the side panel</button>' : '') + '</div>';
   if (!s) { state.sel = null; $('editor').innerHTML = '<h3>Edit</h3><p class="note small">Click a visual on the page to change its type, title or span, or click an empty cell to add a visual there.</p>' + quick; return; }
   if (s.region === 'header') { $('editor').innerHTML = '<h3>Header</h3><div class="field"><label for="edTitle">Title</label><input type="text" id="edTitle" value="' + esc(c.header.title || '') + '" autocomplete="off"></div><p class="note small">Its height is in Step 1.</p>' + quick; return; }
-  const it = s.item, where = s.region === 'g' ? 'Grid' : s.region === 't' ? 'Card strip' : 'Side panel';
-  let h = '<h3>' + where + ' visual</h3>'
-    + '<div class="field"><label for="edType">Visual</label>' + typeSelect('edType', it.type) + '</div>'
+  const it = s.item, where = s.region === 'g' ? 'Grid' : s.region === 't' ? 'Card strip' : s.region === 'h' ? 'Header' : 'Side panel';
+  let h = '<h3>' + (s.region === 'h' ? 'Header ' + (it.type === 'card' ? 'card' : 'slicer') : where + ' visual') + '</h3>'
+    + (s.region === 'h' ? '<p class="note small">Header items are cards or slicers. Change how many of each in Step 1.</p>' : '<div class="field"><label for="edType">Visual</label>' + typeSelect('edType', it.type) + '</div>')
     + '<div class="field"><label for="edTitle">Title</label><input type="text" id="edTitle" value="' + esc(it.title || '') + '" autocomplete="off"></div>';
   if (s.region === 'g') {
     const g = c.grid;
@@ -1109,6 +1263,8 @@ function renderOut(){
   $('posTable').innerHTML = '<thead><tr>' + rows[0].map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + rows.slice(1).map(r => '<tr>' + r.map((v, i) => '<td' + (i > 1 ? ' class="num"' : '') + '>' + esc(v) + '</td>').join('') + '</tr>').join('') + '</tbody>';
 }
 
+const _mctx = document.createElement('canvas').getContext('2d');
+LO.setMeasure((text, size) => { _mctx.font = '700 ' + size + 'px "' + (state.look.font || 'Segoe UI') + '", "Segoe UI", Arial, sans-serif'; return _mctx.measureText(String(text)).width + 4; });
 function compute(){ state.col = colors(); state.L = LO.layout(state.cfg); }
 function renderAll(){ compute(); renderPage(); renderCanvas(); renderEditor(); renderLook(); renderOut(); }
 function refresh(opts){ compute(); renderPage(); renderCanvas(); if (opts && opts.editor) renderEditor(); if (opts && opts.look) renderLook(); else renderColors(); renderOut(); persist(); }
@@ -1119,7 +1275,7 @@ function init(){
   renderTemplates();
   let cfg = null, look = null; try { cfg = JSON.parse(store.get('cfg') || 'null'); look = JSON.parse(store.get('look') || 'null'); } catch (e) {}
   state.figma = store.get('figma') === '1';
-  if (cfg) { state.cfg = Object.assign(LO.base(), cfg); if (look) state.look = Object.assign(blankLook(), look); }
+  if (cfg) { state.cfg = LO.upgrade(Object.assign(LO.base(), cfg)); if (look) state.look = Object.assign(blankLook(), look); }
   else if (store.get('blank') !== '1') { state.cfg = EX_CFG(); setExample(true); }
   if (!cfg && look) state.look = Object.assign(blankLook(), look);
   renderAll();
@@ -1134,6 +1290,33 @@ function init(){
   $('hdrOn').addEventListener('change', () => { state.cfg.header.on = $('hdrOn').checked; edited({ editor: true }); });
   $('hdrH').addEventListener('input', () => { state.cfg.header.h = Math.max(10, num($('hdrH').value, 50)); edited(); });
   $('hdrTitle').addEventListener('input', () => { state.cfg.header.title = $('hdrTitle').value; edited(); });
+  $('hCardN').addEventListener('input', () => { LO.setHeaderCounts(state.cfg.header, num($('hCardN').value, 0), (state.cfg.header.items || []).filter(x => x.type === 'slicer').length); state.sel = null; edited({ editor: true }); });
+  $('hSlicerN').addEventListener('input', () => { LO.setHeaderCounts(state.cfg.header, (state.cfg.header.items || []).filter(x => x.type === 'card').length, num($('hSlicerN').value, 0)); state.sel = null; edited({ editor: true }); });
+  [['hCardW', 'cardW', 150, 40], ['hCardH', 'cardH', 40, 16], ['hSlicerW', 'slicerW', 180, 40], ['hSlicerH', 'slicerH', 32, 16]].forEach(([id, k, d, min]) => $(id).addEventListener('input', () => { state.cfg.header[k] = Math.max(min, num($(id).value, d)); edited(); }));
+  const clampTo = (id, k, obj) => $(id).addEventListener('change', () => { const mx = +$(id).max; const o = obj(); if (mx && o[k] > mx) { o[k] = mx; edited(); } });
+  clampTo('hCardW', 'cardW', () => state.cfg.header); clampTo('hCardH', 'cardH', () => state.cfg.header);
+  clampTo('hSlicerW', 'slicerW', () => state.cfg.header); clampTo('hSlicerH', 'slicerH', () => state.cfg.header);
+  $('logoW').addEventListener('change', () => { const lg = state.cfg.header.logo, mx = +$('logoW').max; if (mx && lg.w > mx) { const k = mx / lg.w; lg.w = mx; lg.h = Math.round(lg.h * k); edited(); } });
+  $('logoH').addEventListener('change', () => { const lg = state.cfg.header.logo, mx = +$('logoH').max; if (mx && lg.h > mx) { const k = mx / lg.h; lg.h = mx; lg.w = Math.round(lg.w * k); edited(); } });
+  $('logoOn').addEventListener('change', () => { state.cfg.header.logo.on = $('logoOn').checked; edited(); });
+  // with an image, width and height keep its proportions
+  $('logoW').addEventListener('input', () => { const lg = state.cfg.header.logo; lg.w = Math.max(8, num($('logoW').value, 120)); if (lg.src && lg.ratio) { lg.h = Math.max(8, Math.round(lg.w / lg.ratio)); $('logoH').value = lg.h; } edited(); });
+  $('logoH').addEventListener('input', () => { const lg = state.cfg.header.logo; lg.h = Math.max(8, num($('logoH').value, 32)); if (lg.src && lg.ratio) { lg.w = Math.max(8, Math.round(lg.h * lg.ratio)); $('logoW').value = lg.w; } edited(); });
+  $('logoInBg').addEventListener('change', () => { state.cfg.header.logo.inBg = $('logoInBg').checked; edited(); });
+  $('logoClear').addEventListener('click', () => { state.cfg.header.logo.src = ''; state.cfg.header.logo.ratio = 0; state.cfg.header.logo.inBg = false; $('logoFile').value = ''; edited(); });
+  $('logoFile').addEventListener('change', () => {
+    const file = $('logoFile').files[0]; if (!file) return;
+    if (file.size > 1024 * 1024) { $('logoInfo').textContent = 'That image is over 1 MB. Use a smaller PNG or an SVG.'; $('logoFile').value = ''; return; }
+    const rd = new FileReader();
+    rd.onload = () => {
+      const src = rd.result, img = new Image();
+      // keep the height, set the width from the image's proportions
+      img.onload = () => { const lg = state.cfg.header.logo; lg.src = src; if (img.naturalWidth && img.naturalHeight) { lg.ratio = img.naturalWidth / img.naturalHeight; lg.w = Math.round(lg.h * lg.ratio); } edited(); };
+      img.onerror = () => { $('logoInfo').textContent = 'That file couldn’t be read as an image.'; };
+      img.src = src;
+    };
+    rd.readAsDataURL(file);
+  });
   $('sidePos').addEventListener('change', () => { state.cfg.side.pos = $('sidePos').value; if (state.cfg.side.pos !== 'none' && !state.cfg.side.items.length) state.cfg.side.items = [{ type: 'slicer', title: 'Year' }, { type: 'slicer', title: 'Region' }]; edited({ editor: true }); });
   $('sideW').addEventListener('input', () => { state.cfg.side.w = Math.max(40, num($('sideW').value, 220)); edited(); });
   $('sideItemH').addEventListener('input', () => { state.cfg.side.itemH = Math.max(16, num($('sideItemH').value, 64)); edited(); });
@@ -1146,6 +1329,7 @@ function init(){
   $('showDims').addEventListener('change', () => { state.dims = $('showDims').checked; renderCanvas(); });
   const pick = el => {
     const v = el.closest('[data-id]'), cell = el.closest('[data-cell]');
+    if (v && v.dataset.id === 'logo') { $('logoW').focus(); return true; }
     if (v) { state.sel = v.dataset.id === state.sel ? null : v.dataset.id; renderCanvas(); renderEditor(); const t = $('edType') || $('edTitle'); if (t && state.sel) t.focus(); return true; }
     if (cell) { const [a, b] = cell.dataset.cell.split(',').map(Number); state.cfg.items.push({ type: 'clusteredColumnChart', title: 'New visual', c: a, r: b, cs: 1, rs: 1 }); state.sel = 'g' + (state.cfg.items.length - 1); edited({ editor: true }); const t = $('edType'); if (t) t.focus(); return true; }
     return false;
@@ -1165,6 +1349,7 @@ function init(){
     else if (s && a === 'del') { s.arr.splice(s.i, 1); state.sel = null; }
     else if (s && (a === 'left' || a === 'right')) { const j = s.i + (a === 'left' ? -1 : 1); if (j >= 0 && j < s.arr.length) { [s.arr[j], s.arr[s.i]] = [s.arr[s.i], s.arr[j]]; state.sel = state.sel[0] + j; } }
     edited({ editor: true });
+    if (/^add/.test(a) && $('edTitle')) { $('edTitle').focus(); $('edTitle').select(); }
   });
   // step 3
   $('colorSrc').addEventListener('change', () => { state.look.src = $('colorSrc').value; state.look.overrides = {}; edited({ look: true }); });
