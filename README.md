@@ -17,6 +17,7 @@ Every page is a single HTML file that runs entirely in your browser. There is no
 | [Validation Query Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/validation-query-builder.html) | DAX queries that check measure results, totals, reconciliation with source columns, relationship keys and table profiles. Several measures at once. | ✓ | — |
 | [Time Intelligence Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/time-intelligence-builder.html) | Year to date, quarter and month to date, last year, growth, rolling 12 months and more, with your fiscal year, as TMDL: measures for the measures you pick, or one calculation group. Includes a test query. | ✓ | — |
 | [Field Parameter Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/field-parameter-builder.html) | Pick and order measures or columns and get the TMDL for a measure switcher: a Power BI field parameter, or a SWITCH measure with a selector table and dynamic format string. Includes a test query. | ✓ | — |
+| [Model Linter](https://fosterbiservices.github.io/Power-BI-Toolkit/model-linter.html) | Best Practice Analyzer-style checks on the model export: measures without a display folder or format string, visible key columns, bidirectional relationships, implicit measures and unused columns. Each finding explains why it matters and how to fix it; ignore what's intended and copy the rest to Excel. | ✓ | — |
 | [Model Documenter](https://fosterbiservices.github.io/Power-BI-Toolkit/model-documenter.html) | One HTML document for the whole model: tables, measures, lineage, relationships, data sources, model checks and report pages. Reads a PBIP project folder in the browser, or works from your model export. | ✓ | — |
 | [Power Query Explainer](https://fosterbiservices.github.io/Power-BI-Toolkit/power-query-explainer.html) | Comments every step of a Power Query (M) query, or produces a cleaner version checked against the original. One query or the whole model; custom functions are excluded automatically. | Own export | ✓ |
 | [Date Table Generator](https://fosterbiservices.github.io/Power-BI-Toolkit/date-table-generator.html) | A date table with your fiscal year, weeks, month sort and filter columns, and rule-based holidays, as DAX, Power Query or a TMDL script. Can start and end with the dates in your data. | Date columns | — |
@@ -62,6 +63,7 @@ theme-builder.html
 time-intelligence-builder.html
 field-parameter-builder.html
 model-documenter.html
+model-linter.html
 .nojekyll                      Tells GitHub Pages to serve the files as they are
 ```
 
