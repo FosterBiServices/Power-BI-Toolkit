@@ -1425,7 +1425,8 @@ function testQuery(measures){
     ['model-documenter.html', 'Model Documenter'],
     ['power-query-explainer.html', 'Power Query Explainer'],
     ['date-table-generator.html', 'Date Table Generator'],
-    ['theme-builder.html', 'Theme Builder']
+    ['theme-builder.html', 'Theme Builder'],
+    ['layout-designer.html', 'Layout Designer']
   ];
   const top = document.querySelector('header.top');
   if (top && !document.body.dataset.home && !document.getElementById('suiteNav')) {
@@ -1518,6 +1519,7 @@ const TOOLS = [
   { file: 'model-documenter.html', name: 'Model Documenter', desc: 'One HTML document for the whole model: tables, measures, lineage, relationships, sources, model checks and report pages. Reads your PBIP folder in the browser.', tags: ['pbip', 'noai'] },
   { file: 'power-query-explainer.html', name: 'Power Query Explainer', desc: 'Comment every step of a Power Query query, or get a cleaner version checked against the original. One query or the whole model.', tags: ['ai'] },
   { file: 'date-table-generator.html', name: 'Date Table Generator', desc: 'A date table with your fiscal year, weeks and holidays, as DAX, Power Query or a TMDL script. Can start and end with your data.', tags: ['dates', 'noai'] },
+  { file: 'layout-designer.html', name: 'Layout Designer', desc: 'Plan a page on an even grid: pick a layout, place visuals, and get a wireframe with sample visuals, exact positions, and a designed background image (Figma-ready).', tags: ['noai'] },
   { file: 'theme-builder.html', name: 'Theme Builder', desc: 'A full report theme from one brand color: data palette, text, background, good and bad colors, font and styles for every common visual, checked for readability and color blindness.', tags: ['noai'] },
 ];
 const TAG = { pbip: '<span class="tag exp">PBIP folder or your export</span>', exp: '<span class="tag exp">Uses your export</span>', dates: '<span class="tag exp">Date columns from your export</span>', ai: '<span class="tag ai">Copilot</span>', noai: '<span class="tag noai">No AI</span>' };

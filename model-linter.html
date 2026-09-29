@@ -277,6 +277,13 @@ ul.fl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .f-obj .mono{font-family:var(--mono);font-size:13px;overflow-wrap:anywhere}
 .f-det{font-size:13px;color:var(--muted);line-height:1.45}
 .kindtag{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.repbox{border:1px dashed var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}
+.rep-head{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+.rep-head h3{margin:0}
+.rep-head .btns{display:flex;gap:8px;flex-wrap:wrap}
+.repbox .note{margin:0;max-width:85ch}
+.drop{border:1px dashed var(--line);border-radius:8px;padding:10px;text-align:center;font-size:13px;color:var(--muted)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
 @media (max-width:520px){.grp-act{margin-left:0;width:100%}.f{grid-template-columns:auto minmax(0,1fr)}.f .btn{grid-column:2;justify-self:start}}
 
 </style>
@@ -329,6 +336,14 @@ ul.fl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
       <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
       <div class="stats" id="modelStats"></div>
       <div id="modelMsg"></div>
+      <div class="repbox" id="repBox">
+        <div class="rep-head"><h3>Report pages <span class="muted">(optional)</span></h3>
+          <span class="btns"><button type="button" class="btn" id="pickReport">Choose a PBIP folder</button><button type="button" class="btn" id="clearReport" hidden>Remove report pages</button></span></div>
+        <p class="note small" id="repIntro">The export can&rsquo;t see which columns are on report pages. Choose the project folder (or its <b>.Report</b> folder) of a report saved as a Power BI Project, and visible columns are checked against every visual, filter and bookmark in it. Choose a parent folder to include several reports on the same model. Only the report files are read, on this page; nothing is uploaded.</p>
+        <div class="drop" id="repDrop">or drop the folder here</div>
+        <input type="file" id="repInput" webkitdirectory multiple hidden>
+        <div id="repMsg"></div>
+      </div>
     </div>
   </section>
 
@@ -1458,7 +1473,7 @@ const ML = (() => {
       fix: 'Turn on <b>Discourage implicit measures</b>: in Model view, select the model in the Data pane’s <b>Model</b> tab and switch it on in Properties. For single columns, set <b>Summarize by</b> to <b>None</b> in the Properties pane (you can select several at once).' },
     { id: 'unused', title: 'Unused columns', short: 'Unused column',
       why: 'Every column is loaded and compressed whether anyone uses it or not. Removing unused ones makes the model smaller and faster to refresh.',
-      fix: 'Remove the column in Power Query (Choose columns or Remove columns), not just in the model, so it isn’t loaded at all. The export can’t see report pages, so check that visible columns aren’t on a report before removing them.' }
+      fix: 'Remove the column in Power Query (Choose columns or Remove columns), not just in the model, so it isn’t loaded at all. Add report pages in Step 1 to check visible columns against them, and check any other reports on the model before removing a column.' }
   ];
 
   const numeric = t => NUMERIC.test((t || '').trim());
@@ -1512,22 +1527,74 @@ const ML = (() => {
     }
     if (on('unused')) {
       const used = usage(m);
+      const rep = cfg.report && cfg.report.refs ? cfg.report : null;
+      const inReport = new Set(); if (rep) rep.refs.forEach(r => inReport.add(key(r[0], r[1])));
       // Field parameter tables are used through the report: 'X', 'X Fields', 'X Order'
       const names = new Set(m.columns.map(c => key(c.table, c.name)));
       const fieldParam = new Set(m.columns.filter(c => names.has(key(c.table, c.name + ' Fields')) && names.has(key(c.table, c.name + ' Order'))).map(c => low(c.table)));
-      let visibleUnused = 0;
+      const where = 'measure, calculated column, relationship' + (m.has.sortBy ? ', sort order' : '') + (m.has.hierarchies ? ' or hierarchy' : '');
+      const pagesTxt = rep ? rep.pages + ' report page' + (rep.pages === 1 ? '' : 's') : '';
+      let visibleUnused = 0, savedByReport = 0;
       m.columns.filter(c => !used.has(key(c.table, c.name)) && !fieldParam.has(low(c.table))).forEach(c => {
-        if (!visible(c)) add('unused', 'warn', 'Column', c.table, c.name, 'Hidden and not used anywhere in the model. Likely safe to remove.');
-        else if (cfg.visibleUnused) add('unused', 'info', 'Column', c.table, c.name, 'Visible and not used by any measure, calculated column, relationship' + (m.has.sortBy ? ', sort order' : '') + (m.has.hierarchies ? ' or hierarchy' : '') + '. Check report pages before removing it.');
+        if (rep && inReport.has(key(c.table, c.name))) { savedByReport++; return; }
+        if (!visible(c)) add('unused', 'warn', 'Column', c.table, c.name, 'Hidden and not used anywhere in the model' + (rep ? ' or on the ' + pagesTxt + ' checked' : '') + '. Likely safe to remove.');
+        else if (rep) add('unused', 'warn', 'Column', c.table, c.name, 'Visible, but not used by any ' + where + ', or on the ' + pagesTxt + ' checked.');
+        else if (cfg.visibleUnused) add('unused', 'info', 'Column', c.table, c.name, 'Visible and not used by any ' + where + '. Check report pages before removing it.');
         else visibleUnused++;
       });
-      notes.visibleUnused = visibleUnused;
-      if (!m.has.sortBy) notes.unused = 'This export doesn’t list sort-by columns or hierarchies, so a hidden column that only sorts another (Month Number, say) shows as unused. Run the updated export query to rule those out.';
+      notes.visibleUnused = rep ? 0 : visibleUnused;
+      const extra = [];
+      if (!m.has.sortBy) extra.push('This export doesn’t list sort-by columns or hierarchies, so a hidden column that only sorts another (Month Number, say) shows as unused. Run the updated export query to rule those out.');
+      if (rep) {
+        extra.push('Checked against ' + pagesTxt + ' in ' + rep.reports.join(', ') + (savedByReport ? '; ' + savedByReport + ' column' + (savedByReport === 1 ? ' is' : 's are') + ' used only there' : '') + '. Other reports on the published model, Excel workbooks and dashboards can’t be seen, so check with their owners before removing a column.');
+        const objs = new Set(m.columns.map(c => key(c.table, c.name)).concat(m.measures.map(x => key(x.table, x.name))));
+        const tabs = new Set(m.tables.map(t => low(t.name)));
+        const known = rep.refs.filter(r => objs.has(key(r[0], r[1])) || (r[2] && tabs.has(low(r[0]))));
+        if (rep.refs.length >= 5 && known.length < rep.refs.length / 2) extra.push('⚠ Only ' + known.length + ' of the ' + rep.refs.length + ' fields on these report pages are in this model export. The report may be built on a different model.');
+        else {
+          const missing = rep.refs.filter(r => !r[2] && tabs.has(low(r[0])) && !objs.has(key(r[0], r[1])));
+          if (missing.length) extra.push('The report uses ' + missing.length + ' field' + (missing.length === 1 ? '' : 's') + ' this export doesn’t have (' + missing.slice(0, 6).map(r => qName(r[0]) + bracket(r[1])).join(', ') + (missing.length > 6 ? ', …' : '') + '): report-level measures, or visuals that are already broken.');
+        }
+      }
+      if (extra.length) notes.unused = extra.join(' ');
     }
     return { findings: out, notes };
   }
 
-  return { parse, lint, refs, usage, RULES, numeric };
+  /* Fields used on report pages, from the report files of a PBIP folder (PBIR or the older report.json).
+     files: Map path -> text. Returns { reports, pages, visuals, refs: [[table, name, isLevel]] } */
+  function reportUsage(files){
+    const refs = new Map(), reports = new Set(), pages = new Set(); let visuals = 0, readable = 0;
+    const isObj = n => n && typeof n === 'object' && !Array.isArray(n);
+    const addRef = (t, n, lvl) => { if (t && n) refs.set(key(t, n), [t, n, lvl ? 1 : 0]); };
+    const doc = data => {
+      const aliases = {};
+      const collect = n => { if (isObj(n)) { for (const it of Array.isArray(n.From) ? n.From : []) if (isObj(it) && it.Name && it.Entity) aliases[it.Name] = it.Entity; Object.values(n).forEach(collect); } else if (Array.isArray(n)) n.forEach(collect); };
+      collect(data);
+      const ent = ex => { const s = isObj(ex) && ex.SourceRef; return isObj(s) ? (s.Entity || aliases[s.Source || ''] || '') : ''; };
+      const walk = n => {
+        if (typeof n === 'string') { const t = n.trim(); if ((t[0] === '{' || t[0] === '[') && t.length > 20 && /"(Property|Entity)"/.test(t)) { try { doc(JSON.parse(t)); } catch (e) {} } return; }
+        if (isObj(n)) {
+          if ('Property' in n && typeof n.Property === 'string') addRef(ent(n.Expression), n.Property);
+          if ('Level' in n && isObj(n.Expression) && isObj(n.Expression.Hierarchy)) addRef(ent(n.Expression.Hierarchy.Expression), n.Level, true);
+          Object.values(n).forEach(walk);
+        } else if (Array.isArray(n)) n.forEach(walk);
+      };
+      walk(data);
+    };
+    for (const [path, text] of files) {
+      const m = path.match(/(?:^|\/)([^\/]+)\.Report\//i); if (!m || !/\.json$/i.test(path)) continue;
+      let data; try { data = JSON.parse(text.replace(/^﻿/, '')); } catch (e) { continue; }
+      readable++; reports.add(m[1]);
+      if (/\/pages\/[^\/]+\/page\.json$/i.test(path)) pages.add(path);
+      if (/\/visuals\/[^\/]+\/visual\.json$/i.test(path)) visuals++;
+      if (/\.Report\/report\.json$/i.test(path) && Array.isArray(data.sections)) data.sections.forEach((sec, i) => { pages.add(path + '#' + i); visuals += (sec.visualContainers || []).length; });
+      doc(data);
+    }
+    return { reports: [...reports].sort(), pages: pages.size, visuals, files: readable, refs: [...refs.values()] };
+  }
+
+  return { parse, lint, refs, usage, reportUsage, RULES, numeric };
 })();
 
 
@@ -1549,7 +1616,56 @@ function copyText(text, btn){
 }
 
 const blankCfg = () => ({ off: {}, visibleUnused: false, ignored: {}, showIgnored: false, collapsed: {} });
-const state = { example: false, model: null, cfg: blankCfg(), result: null };
+const state = { example: false, model: null, cfg: blankCfg(), result: null, report: null };
+
+/* ---------- report pages from a PBIP folder (only .Report files are read) ---------- */
+const SKIP_DIRS = new Set(['.git', 'node_modules', '.pbi', '.vs', 'StaticResources', 'RegisteredResources']);
+const skipDir = n => SKIP_DIRS.has(n) || /\.SemanticModel$/i.test(n) || /\.Dataset$/i.test(n);
+async function decode(file){
+  const buf = await file.arrayBuffer();
+  let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { t = new TextDecoder('windows-1252').decode(buf); }
+  return t.replace(/^\uFEFF/, '');
+}
+async function walkHandle(dir, prefix, out){
+  for await (const [name, h] of dir.entries()) {
+    if (h.kind === 'directory') { if (!skipDir(name)) await walkHandle(h, prefix + '/' + name, out); }
+    else if (/\.json$/i.test(name)) out.push({ path: prefix + '/' + name, file: await h.getFile() });
+  }
+}
+function walkEntry(entry, prefix, out){
+  return new Promise(resolve => {
+    if (entry.isFile) { if (/\.json$/i.test(entry.name)) entry.file(f => { out.push({ path: prefix + '/' + entry.name, file: f }); resolve(); }, () => resolve()); else resolve(); return; }
+    if (skipDir(entry.name)) { resolve(); return; }
+    const reader = entry.createReader(); const all = [];
+    const next = () => reader.readEntries(batch => { if (!batch.length) { Promise.all(all.map(e => walkEntry(e, prefix + '/' + entry.name, out))).then(resolve); return; } all.push(...batch); next(); }, () => resolve());
+    next();
+  });
+}
+async function loadReport(root, list){
+  $('repMsg').innerHTML = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>';
+  // a chosen .Report folder itself: its files have no ".Report/" above them, so add it back
+  const norm = p => (/\.Report$/i.test(root) && !/\.Report\//i.test(p)) ? root + '/' + p.split('/').slice(1).join('/') : p;
+  const files = new Map();
+  for (const { path, file } of list) {
+    const p = norm(path); if (!/\.Report\//i.test(p) || file.size > 30 * 1024 * 1024) continue;
+    try { files.set(p, await decode(file)); } catch (e) {}
+  }
+  const r = ML.reportUsage(files);
+  if (!r.files || !r.pages) {
+    $('repMsg').innerHTML = '<div class="msg warn">No report pages were found in &ldquo;' + esc(root) + '&rdquo;. Choose a folder that holds a <b>.Report</b> folder, from a report saved as a Power BI Project (<b>File &gt; Save as &gt; Power BI project files</b>).</div>';
+    return;
+  }
+  r.root = root; r.at = Date.now();
+  state.report = r; store.set('report', JSON.stringify(r));
+  leaveExample(); run(); renderReport(); renderRules(); renderResults(); persist();
+}
+function renderReport(){
+  const r = state.report;
+  $('clearReport').hidden = !r; $('pickReport').textContent = r ? 'Choose a different folder' : 'Choose a PBIP folder';
+  if (!r) { if (!/Reading/.test($('repMsg').textContent) && !/No report pages/.test($('repMsg').textContent)) $('repMsg').innerHTML = ''; return; }
+  const cols = state.model ? r.refs.filter(x => state.model.columns.some(c => lc(c.table) === lc(x[0]) && lc(c.name) === lc(x[1]))).length : 0;
+  $('repMsg').innerHTML = '<div class="msg ok">&#10003; <b>' + esc(r.reports.join(', ')) + '</b>: ' + r.pages + ' page' + (r.pages === 1 ? '' : 's') + ', ' + r.visuals + ' visual' + (r.visuals === 1 ? '' : 's') + ', ' + r.refs.length + ' fields' + (state.model ? ' (' + cols + ' columns of this model)' : '') + '. Unused columns are now checked against these pages.</div>';
+}
 
 function persist(){
   store.set('model', state.example ? '' : $('modelInput').value);
@@ -1576,7 +1692,7 @@ function renderModel(){
 }
 
 function run(){
-  state.result = state.model ? ML.lint(state.model, state.cfg) : null;
+  state.result = state.model ? ML.lint(state.model, Object.assign({}, state.cfg, { report: state.report })) : null;
 }
 
 function renderRules(){
@@ -1585,7 +1701,7 @@ function renderRules(){
     const on = !c.off[rule.id];
     const n = r ? r.findings.filter(f => f.rule === rule.id && !c.ignored[f.id]).length : 0;
     const badge = !r ? '' : !on ? '<span class="cnt off">off</span>' : n ? '<span class="cnt bad">' + n + '</span>' : '<span class="cnt ok">&#10003;</span>';
-    const extra = rule.id === 'unused' ? '<label class="subopt"><input type="checkbox" id="visibleUnused"' + (c.visibleUnused ? ' checked' : '') + (on ? '' : ' disabled') + '> Also list visible columns <span class="muted">(the export can&rsquo;t see report pages, so these need checking by hand)</span></label>' : '';
+    const extra = rule.id === 'unused' && state.report ? '<p class="subopt muted">Visible columns are checked against the report pages added in Step 1.</p>' : rule.id === 'unused' ? '<label class="subopt"><input type="checkbox" id="visibleUnused"' + (c.visibleUnused ? ' checked' : '') + (on ? '' : ' disabled') + '> Also list visible columns <span class="muted">(the export can&rsquo;t see report pages, so these need checking by hand)</span></label>' : '';
     return '<div class="rule' + (on ? '' : ' is-off') + '"><label class="rule-main"><input type="checkbox" data-rule="' + rule.id + '"' + (on ? ' checked' : '') + '><span class="rule-t">' + esc(rule.title) + '</span>' + badge + '</label><p class="rule-why">' + esc(rule.why) + '</p>' + extra + '</div>';
   }).join('');
 }
@@ -1624,14 +1740,15 @@ function tsv(list){
   return ['Check\tSeverity\tObject type\tTable\tName\tDetail'].concat(list.map(f => [title(f.rule), f.sev === 'warn' ? 'Fix' : 'Worth a look', f.kind, f.table, f.name, f.detail].map(cell).join('\t'))).join('\n');
 }
 
-function renderAll(){ renderModel(); run(); renderRules(); renderResults(); }
+function renderAll(){ renderModel(); run(); renderReport(); renderRules(); renderResults(); }
 
 /* ---------- init ---------- */
-function resetAll(){ $('modelInput').value = ''; state.cfg = blankCfg(); setExample(false); $('modelBox').open = false; renderAll(); }
+function resetAll(){ $('modelInput').value = ''; state.report = null; $('repMsg').innerHTML = ''; state.cfg = blankCfg(); setExample(false); $('modelBox').open = false; renderAll(); }
 function init(){
   $('exportView').textContent = DAX_QUERY;
   const saved = store.get('model');
   let cfg = null; try { cfg = JSON.parse(store.get('cfg') || 'null'); } catch (e) {}
+  try { state.report = JSON.parse(store.get('report') || 'null'); } catch (e) { state.report = null; }
   if (saved && saved.trim()) { $('modelInput').value = saved; if (cfg) state.cfg = Object.assign(blankCfg(), cfg); }
   else if (store.get('blank') !== '1') { $('modelInput').value = ML_EX_MODEL; setExample(true); }
   else if (cfg) state.cfg = Object.assign(blankCfg(), cfg);
@@ -1658,6 +1775,30 @@ function init(){
     if (b.id === 'copyAll') { copyText(tsv(state.result.findings.filter(f => !state.cfg.ignored[f.id])), b); return; }
     if (b.id === 'toggleIgn') { state.cfg.showIgnored = !state.cfg.showIgnored; renderResults(); persist(); }
   });
+  $('pickReport').addEventListener('click', async () => {
+    if (window.showDirectoryPicker) {
+      let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-model-linter', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; $('repInput').click(); return; }
+      const list = []; try { await walkHandle(dir, dir.name, list); await loadReport(dir.name, list); } catch (e) { $('repMsg').innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(e.message || e) + '</div>'; }
+    } else $('repInput').click();
+  });
+  $('repInput').addEventListener('change', async e => {
+    const fl = [...e.target.files]; if (!fl.length) return;
+    const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
+    const list = fl.filter(f => /\.json$/i.test(f.name) && !(f.webkitRelativePath || '').split('/').some(skipDir)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }));
+    try { await loadReport(root, list); } catch (err) { $('repMsg').innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(err.message || err) + '</div>'; }
+    e.target.value = '';
+  });
+  const drop = $('repDrop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
+  drop.addEventListener('drop', async e => {
+    e.preventDefault();
+    const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
+    if (!item || !item.isDirectory) { $('repMsg').innerHTML = '<div class="msg warn">Drop the project <b>folder</b>, not a file inside it.</div>'; return; }
+    const list = []; await walkEntry(item, '', list);
+    try { await loadReport(item.name, list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file }))); } catch (err) { $('repMsg').innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(err.message || err) + '</div>'; }
+  });
+  $('clearReport').addEventListener('click', () => { state.report = null; try { localStorage.removeItem(PREFIX + 'report'); } catch (e) {} $('repMsg').innerHTML = ''; run(); renderReport(); renderRules(); renderResults(); });
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); $('modelInput').focus(); });
 }
 init();
@@ -1759,7 +1900,8 @@ init();
     ['model-documenter.html', 'Model Documenter'],
     ['power-query-explainer.html', 'Power Query Explainer'],
     ['date-table-generator.html', 'Date Table Generator'],
-    ['theme-builder.html', 'Theme Builder']
+    ['theme-builder.html', 'Theme Builder'],
+    ['layout-designer.html', 'Layout Designer']
   ];
   const top = document.querySelector('header.top');
   if (top && !document.body.dataset.home && !document.getElementById('suiteNav')) {
