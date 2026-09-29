@@ -267,6 +267,10 @@ input[type=number]{font-family:var(--sans)}
 input:focus-visible + .filebtn,.filebtn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 .chk.small{font-size:13px}
 .lim{margin:0}
+.shadowbox{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.shadowbox .cfg[hidden]{display:none}
+.crow-in{display:flex;gap:8px;align-items:center}
+.cpick.sm{width:30px;height:30px}
 .lim:empty{display:none}
 .lim.hit{color:var(--warn);font-weight:600}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -373,7 +377,8 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
       <div class="areas">
         <div class="area">
           <label class="chk"><input type="checkbox" id="hdrOn"> <b>Header</b></label>
-          <div class="field sm"><label for="hdrH">Height <span class="muted">(px)</span></label><input type="number" id="hdrH" min="20" max="300"></div>
+          <div class="pair"><div class="field sm"><label for="hdrH">Height <span class="muted">(px)</span></label><input type="number" id="hdrH" min="20" max="300"></div>
+          <div class="field"><label for="hdrStyle">Style</label><select id="hdrStyle"><option value="band">Colored band</option><option value="bleed">Full-width bar</option><option value="line">No background, accent underline</option><option value="none">No background</option></select></div></div>
         </div>
         <div class="area">
           <div class="field"><label for="sidePos"><b>Side panel</b></label><select id="sidePos"><option value="none">None</option><option value="left">On the left</option><option value="right">On the right</option></select></div>
@@ -459,10 +464,20 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
       <div class="colors" id="colors"></div>
       <div class="cfg">
         <div class="field sm"><label for="radius">Corners <span class="muted">(px)</span></label><input type="number" id="radius" min="0" max="40"></div>
-        <div class="field"><label for="shadow">Shadow</label><select id="shadow"><option value="">None</option><option value="soft">Soft</option><option value="strong">Stronger</option></select></div>
-        <div class="field"><label for="hdrStyle">Header</label><select id="hdrStyle"><option value="band">Colored band</option><option value="bleed">Full-width bar</option><option value="line">Title with an accent line</option><option value="none">Title only</option></select></div>
         <div class="field"><label for="cards">Visual cards</label><select id="cards"><option value="all">A card behind every visual</option><option value="none">No cards</option></select></div>
         <label class="chk inline"><input type="checkbox" id="border"> Border</label>
+      </div>
+      <div class="shadowbox">
+        <label class="chk"><input type="checkbox" id="shOn"> <b>Shadow</b> <span class="muted">(on every container: header, side panel and visual cards)</span></label>
+        <div class="cfg" id="shCfg">
+          <div class="field sm"><label for="shX">X</label><input type="number" id="shX" min="-50" max="50"></div>
+          <div class="field sm"><label for="shY">Y</label><input type="number" id="shY" min="-50" max="50"></div>
+          <div class="field sm"><label for="shBlur">Blur</label><input type="number" id="shBlur" min="0" max="100"></div>
+          <div class="field sm"><label for="shSpread">Spread</label><input type="number" id="shSpread" min="0" max="50"></div>
+          <div class="field"><label for="shColor">Color</label><span class="crow-in"><label class="cpick sm"><input type="color" id="shColorPick" aria-label="Shadow color"></label><input type="text" class="hex" id="shColor" spellcheck="false"></span></div>
+          <div class="field sm"><label for="shOp">Opacity <span class="muted">(%)</span></label><input type="number" id="shOp" min="0" max="100"></div>
+          <button type="button" class="linkbtn" id="shReset">Default (0, 4, 16, 0, #1F3A5F, 35%)</button>
+        </div>
       </div>
       <label class="chk figma"><input type="checkbox" id="figmaOn"> <span><b>I use Figma</b> <span class="muted">(adds Figma-ready copies of the drawings, with named layers)</span></span></label>
     </div>
@@ -493,7 +508,7 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
         <h3>Into Figma</h3>
         <ol class="how">
           <li><b>Copy for Figma</b>, then in Figma select a page and press <b>Ctrl+V</b>. The drawing arrives as one frame of editable shapes, with layers named Page, Header, Side-panel and Card-&lt;visual&gt;.</li>
-          <li>Refine it there (shapes, icons, gradients). Hide the sample visuals layer before exporting the background.</li>
+          <li>Refine it there (shapes, icons, gradients). Shadows come through as SVG filters; if one doesn’t, add a Drop shadow effect with the same X, Y, Blur, Spread, color and opacity as in Step 3. Hide the sample visuals layer before exporting the background.</li>
           <li>Export the background frame as PNG at 2&times; and set it as the canvas background in Power BI Desktop, as above.</li>
         </ol>
       </div>
@@ -869,11 +884,25 @@ const LR = (() => {
   // a small seeded random so sketches don't change on every redraw
   const rnd = seed => { let s = 0; for (const ch of String(seed)) s = (s * 31 + ch.charCodeAt(0)) >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return (s >>> 8) / 16777216; }; };
 
+  /* Drop shadow like Figma's: x, y, blur, spread, color, opacity (%) */
+  const SH_DEFAULT = { x: 0, y: 4, blur: 16, spread: 0, color: '#1F3A5F', opacity: 35 };
+  function shadowOf(st){ return Object.assign({}, SH_DEFAULT, st.sh || {}); }
+  function shadowDefs(st){
+    if (!st.shadow) return '';
+    const s = shadowOf(st), sp = Math.max(0, +s.spread || 0);
+    return '<defs><filter id="lo-shadow" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">'
+      + (sp ? '<feMorphology in="SourceAlpha" operator="dilate" radius="' + sp + '" result="sp"/>' : '')
+      + '<feOffset in="' + (sp ? 'sp' : 'SourceAlpha') + '" dx="' + (+s.x || 0) + '" dy="' + (+s.y || 0) + '" result="off"/>'
+      + '<feGaussianBlur in="off" stdDeviation="' + Math.max(0, (+s.blur || 0) / 2) + '" result="blur"/>'
+      + '<feFlood flood-color="' + (s.color || '#000000') + '" flood-opacity="' + Math.max(0, Math.min(100, +s.opacity || 0)) / 100 + '"/>'
+      + '<feComposite in2="blur" operator="in" result="shadow"/><feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+  }
+
   /* ----- the page background: page fill, header, side panel, a card behind each visual ----- */
   function background(L, c, col, st, opts){
     opts = opts || {};
     const W = c.w, H = c.h, r = +st.radius || 0, out = [];
-    const defs = st.shadow ? '<defs><filter id="lo-shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="2" stdDeviation="' + (st.shadow === 'strong' ? 5 : 3) + '" flood-color="#000" flood-opacity="' + (st.shadow === 'strong' ? 0.18 : 0.1) + '"/></filter></defs>' : '';
+    const defs = shadowDefs(st);
     const rect = (id, x, y, w, h, fill, extra) => '<rect id="' + id + '" x="' + f(x) + '" y="' + f(y) + '" width="' + f(w) + '" height="' + f(h) + '"' + (r && !(extra || '').includes('rx=') ? ' rx="' + r + '"' : '') + ' fill="' + fill + '"' + (extra || '') + '/>';
     out.push('<rect id="Page" x="0" y="0" width="' + W + '" height="' + H + '" fill="' + col.page + '"/>');
     if (opts.afterPage) out.push(opts.afterPage);
@@ -892,6 +921,8 @@ const LR = (() => {
     if (st.cards !== 'none') {
       const g = ['<g id="Visual-cards">'];
       L.items.filter(o => !o.band && (o.region !== 'header' || o.type === 'card') && (o.region !== 'side' || st.side === 'none')).forEach(o => g.push(rect('Card-' + idName(o.title || LO.typeOf(o.type).label), o.x, o.y, o.w, o.h, col.card, sh + border)));
+      // cells with no visual still get a (blank) container, so the page keeps its rhythm
+      (L.empty || []).forEach(([a, b]) => { const G = L.grid; g.push(rect('Card-empty-' + (a + 1) + '-' + (b + 1), G.x[a], G.y[b], G.w[a], G.h[b], col.card, sh + border)); });
       g.push('</g>'); out.push(g.join(''));
     }
     if (opts.inner) return defs + out.join('');
@@ -1028,7 +1059,7 @@ const LR = (() => {
     }
     L.items.filter(o => !o.band).forEach(o => {
       const sel = opts.selected === o.id;
-      out.push('<g class="vis" data-id="' + o.id + '"' + (opts.hit ? ' tabindex="0" role="button" aria-label="' + esc((o.title || LO.typeOf(o.type).label) + ', ' + LO.typeOf(o.type).label) + '"' : '') + ' id="' + (opts.ids === false ? '' : 'Visual-' + idName(o.title || LO.typeOf(o.type).label)) + '">' + (o.tile ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="' + Math.min(+st.radius || 0, 8, o.h / 3) + '" fill="' + col.card + '"/>' : '') + sketch(o, col, font)
+      out.push('<g class="vis" data-id="' + o.id + '"' + (opts.hit ? ' tabindex="0" role="button" aria-label="' + esc((o.title || LO.typeOf(o.type).label) + ', ' + LO.typeOf(o.type).label) + '"' : '') + ' id="' + (opts.ids === false ? '' : 'Visual-' + idName(o.title || LO.typeOf(o.type).label)) + '">' + (o.tile ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="' + Math.min(+st.radius || 0, 8, o.h / 3) + '" fill="' + col.card + '"' + (st.shadow ? ' filter="url(#lo-shadow)"' : '') + '/>' : '') + sketch(o, o.logo && !(st.header === 'band' || st.header === 'bleed') ? Object.assign({}, col, { headerText: col.text }) : col, font)
         + (opts.hit ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" fill="transparent"' + (sel ? ' stroke="' + col.select + '" stroke-width="3"' : '') + (st.radius ? ' rx="' + st.radius + '"' : '') + '/>' : '') + '</g>');
       if (opts.dims && o.h >= 44) out.push('<text x="' + f(o.x + o.w - 6) + '" y="' + f(o.y + o.h - 6) + '" font-size="10" text-anchor="end" fill="' + col.muted + '" font-family="Consolas, monospace">' + Math.round(o.w) + '×' + Math.round(o.h) + ' @ ' + Math.round(o.x) + ',' + Math.round(o.y) + '</text>');
     });
@@ -1036,7 +1067,7 @@ const LR = (() => {
     return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"' + (opts.cls ? ' class="' + opts.cls + '"' : '') + '>' + defs + out.join('') + '</svg>';
   }
 
-  return { background, wireframe, sketch, idName };
+  return { background, wireframe, sketch, idName, shadowOf, SH_DEFAULT };
 })();
 
 
@@ -1123,7 +1154,7 @@ function download(blob, name){ const url = URL.createObjectURL(blob); const a = 
 const slug = s => (String(s || 'page').trim() || 'page').replace(/[<>:"\/\\|?*\x00-\x1f]+/g, '-').replace(/\s+/g, ' ');
 
 const COLOR_KEYS = [['page', 'Page'], ['card', 'Cards'], ['header', 'Header'], ['headerText', 'Header text'], ['sidePanel', 'Side panel'], ['text', 'Text'], ['accent', 'Accent']];
-const blankLook = () => ({ src: 'tb', themeText: '', pickAccent: '#1F6FB2', overrides: {}, style: { radius: 8, shadow: 'soft', header: 'band', cards: 'all', border: false }, font: 'Segoe UI' });
+const blankLook = () => ({ src: 'tb', themeText: '', pickAccent: '#1F6FB2', overrides: {}, style: { radius: 8, shadow: true, sh: { x: 0, y: 4, blur: 16, spread: 0, color: '#1F3A5F', opacity: 35 }, header: 'band', cards: 'all', border: false }, font: 'Segoe UI' });
 const blankCfg = () => LO.fromTemplate('blank');
 const EX_CFG = () => LO.fromTemplate('panel');
 const state = { example: false, cfg: blankCfg(), look: blankLook(), figma: false, sel: null, dims: true, src: null, out: {} };
@@ -1236,7 +1267,10 @@ function renderLook(){
   if (document.activeElement && document.activeElement.id === 'themeText') { const m = $('srcBox').querySelector('.msg'); const n = document.createElement('div'); n.innerHTML = s.msg ? '<div class="msg ' + (s.err ? 'err' : 'info') + '">' + s.msg + '</div>' : (s.name ? '<div class="msg ok">&#10003; Colors from <b>' + esc(s.name) + '</b>.</div>' : ''); if (m) m.replaceWith(...n.childNodes); else $('srcBox').append(...n.childNodes); }
   else $('srcBox').innerHTML = box;
   renderColors();
-  const st = l.style; $('radius').value = st.radius; $('shadow').value = st.shadow || ''; $('hdrStyle').value = st.header; $('cards').value = st.cards; $('border').checked = !!st.border;
+  const st = l.style; $('radius').value = st.radius; $('hdrStyle').value = st.header; $('cards').value = st.cards; $('border').checked = !!st.border;
+  const sh = LR.shadowOf(st); $('shOn').checked = !!st.shadow; $('shCfg').hidden = !st.shadow;
+  const setv = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
+  setv('shX', sh.x); setv('shY', sh.y); setv('shBlur', sh.blur); setv('shSpread', sh.spread); setv('shColor', sh.color); $('shColorPick').value = TB.norm(sh.color) || '#1F3A5F'; setv('shOp', sh.opacity);
   $('figmaOn').checked = state.figma; document.body.classList.toggle('figma', state.figma);
 }
 function renderColors(){
@@ -1276,6 +1310,7 @@ function init(){
   let cfg = null, look = null; try { cfg = JSON.parse(store.get('cfg') || 'null'); look = JSON.parse(store.get('look') || 'null'); } catch (e) {}
   state.figma = store.get('figma') === '1';
   if (cfg) { state.cfg = LO.upgrade(Object.assign(LO.base(), cfg)); if (look) state.look = Object.assign(blankLook(), look); }
+  if (typeof state.look.style.shadow === 'string') { state.look.style.shadow = !!state.look.style.shadow; state.look.style.sh = state.look.style.sh || Object.assign({}, LR.SH_DEFAULT); }
   else if (store.get('blank') !== '1') { state.cfg = EX_CFG(); setExample(true); }
   if (!cfg && look) state.look = Object.assign(blankLook(), look);
   renderAll();
@@ -1363,7 +1398,13 @@ function init(){
     edited();
   });
   $('colors').addEventListener('click', e => { if (e.target.id === 'resetColors') { state.look.overrides = {}; edited({ look: true }); } });
-  [['radius', 'radius'], ['shadow', 'shadow'], ['hdrStyle', 'header'], ['cards', 'cards']].forEach(([id, k]) => $(id).addEventListener(id === 'radius' ? 'input' : 'change', () => { state.look.style[k] = id === 'radius' ? Math.max(0, num($(id).value, 0)) : $(id).value; edited(); }));
+  $('shOn').addEventListener('change', () => { state.look.style.shadow = $('shOn').checked; edited({ look: true }); });
+  const shSet = (k, v) => { const st = state.look.style; st.sh = Object.assign(LR.shadowOf(st), { [k]: v }); edited(); };
+  [['shX', 'x', 0], ['shY', 'y', 4], ['shBlur', 'blur', 16], ['shSpread', 'spread', 0], ['shOp', 'opacity', 35]].forEach(([id, k, d]) => $(id).addEventListener('input', () => shSet(k, num($(id).value, d))));
+  $('shColor').addEventListener('input', () => { const v = TB.norm($('shColor').value); $('shColor').classList.toggle('bad', !v); if (v) { $('shColorPick').value = v; shSet('color', v); } });
+  $('shColorPick').addEventListener('input', () => { $('shColor').value = $('shColorPick').value.toUpperCase(); shSet('color', $('shColorPick').value.toUpperCase()); });
+  $('shReset').addEventListener('click', () => { state.look.style.sh = Object.assign({}, LR.SH_DEFAULT); edited({ look: true }); });
+  [['radius', 'radius'], ['hdrStyle', 'header'], ['cards', 'cards']].forEach(([id, k]) => $(id).addEventListener(id === 'radius' ? 'input' : 'change', () => { state.look.style[k] = id === 'radius' ? Math.max(0, num($(id).value, 0)) : $(id).value; edited(); }));
   $('border').addEventListener('change', () => { state.look.style.border = $('border').checked; edited(); });
   $('figmaOn').addEventListener('change', () => { state.figma = $('figmaOn').checked; document.body.classList.toggle('figma', state.figma); persist(); });
   // step 4
