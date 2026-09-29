@@ -240,6 +240,18 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 .tag.exp{background:var(--accent-soft);color:var(--accent)}
 .tag.ai{background:var(--info-soft);color:var(--info)}
 .tag.noai{background:var(--ok-soft);color:var(--ok)}
+.tag.opt{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.paths{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.paths{grid-template-columns:1fr}}
+.path{display:flex;flex-direction:column;gap:4px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 16px}
+.path:hover{border-color:var(--accent);background:var(--accent-soft)}
+.path:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.path .pn{font-family:var(--cond);font-weight:600;font-size:18px;color:var(--accent)}
+.path .pd{font-size:14px;color:var(--muted);line-height:1.45}
+.group-head{display:flex;flex-direction:column;gap:6px;border-top:2px solid var(--line);padding-top:22px;scroll-margin-top:16px}
+.group-head h2{margin:0}
+.group-head p{margin:0;max-width:75ch}
+#freeH{scroll-margin-top:16px}
 .about ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;max-width:80ch}
 .disclaimer{border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);background:var(--warn-soft);border-radius:12px;padding:16px 20px;scroll-margin-top:16px}
 .disclaimer h2{margin:0}
@@ -257,10 +269,28 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>SF Power BI Toolkit</h1>
-        <p class="lede">Tools for building and checking Power BI models, with or without Copilot. Export your model once below and every tool that needs it picks it up.</p>
+        <p class="lede">Tools for designing, building and checking Power BI reports and models, with or without Copilot. Some work on their own; the rest read your model once you export it below.</p>
       </div>
     </div>
   </header>
+
+  <nav class="paths" aria-label="Two ways to start">
+    <a class="path" href="#freeH"><span class="pn">No model needed</span><span class="pd">Themes, layouts, date tables, Power Query and DAX reviews. Open and start.</span></a>
+    <a class="path" href="#modelH"><span class="pn">Uses your model</span><span class="pd">Export your model once in two steps, then every tool below picks it up.</span></a>
+  </nav>
+
+  <div class="msg warn disc-top" role="note"><b>Check everything before you use it.</b> AI can make mistakes, and generated output can be wrong. The toolkit is provided as is, without warranty, and you use it at your own risk. <a href="#disclaimer">Read the full disclaimer</a>.</div>
+
+  <section class="tools-sec" aria-labelledby="freeH">
+    <h2 id="freeH">Start right away: no model needed</h2>
+    <p class="muted">These tools work on their own. Tools marked <span class="tag opt">Export optional</span> also use your saved model export if there is one.</p>
+    <div class="tools" id="toolsFree"></div>
+  </section>
+
+  <div class="group-head" id="modelH">
+    <h2>Tools that use your model</h2>
+    <p class="muted">Export your model once from Power BI Desktop and paste it here. It&rsquo;s saved in this browser, and each of these tools loads it as it opens.</p>
+  </div>
 
   <section class="step" aria-labelledby="h1s">
     <div class="step-num">Step<b>1</b></div>
@@ -300,13 +330,17 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
     </div>
   </section>
 
-  <div class="msg warn disc-top" role="note"><b>Check everything before you use it.</b> AI can make mistakes, and generated output can be wrong. The toolkit is provided as is, without warranty, and you use it at your own risk. <a href="#disclaimer">Read the full disclaimer</a>.</div>
-
-  <section class="tools-sec" aria-labelledby="toolsH">
-    <h2 id="toolsH">The tools</h2>
-    <p class="muted">Tools marked <span class="tag exp">Uses your export</span> load the saved export as they open. Tools marked <span class="tag ai">Copilot</span> write a prompt you paste into Copilot, then check its reply.</p>
-    <div class="tools" id="tools"></div>
+  <section class="step" aria-labelledby="h3s">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="h3s">Choose a tool</h2>
+        <p>Each one reads the export you saved in Step 2. Tools marked <span class="tag ai">Copilot</span> write a prompt you paste into Copilot, then check its reply.</p>
+      </div>
+      <div class="tools" id="tools"></div>
+    </div>
   </section>
+
 
   <section class="about">
     <h2>Good to know</h2>
@@ -1510,19 +1544,19 @@ const TOOLS = [
   { file: 'kpi-measure-builder.html', name: 'KPI Measure Builder', desc: 'Describe measures in plain English. Copilot writes the DAX; the page checks every name and outputs tab-indented TMDL into your measures folder.', tags: ['exp', 'ai'] },
   { file: 'measure-describer.html', name: 'Measure Describer', desc: 'Copilot writes descriptions for your measures in batches; you review them and save them to the model from DAX query view.', tags: ['exp', 'ai'] },
   { file: 'prep-for-ai-writer.html', name: 'Prep for AI Writer', desc: 'AI instructions, synonyms and table and column descriptions that help Copilot in Power BI answer questions about your model.', tags: ['exp', 'ai'] },
-  { file: 'dax-reviewer.html', name: 'DAX Reviewer', desc: 'Review a measure against your own checklist. Instant checks on every measure, a Copilot review, and a rewrite tested against the original.', tags: ['exp', 'ai'] },
+  { free: true, file: 'dax-reviewer.html', name: 'DAX Reviewer', desc: 'Paste a measure and review it against your own checklist. Instant checks on every measure, a Copilot review, and a rewrite tested against the original.', tags: ['exp', 'ai'] },
   { file: 'validation-query-builder.html', name: 'Validation Query Builder', desc: 'DAX queries that check measure results, totals, reconciliation with source columns, relationship keys and table profiles.', tags: ['exp', 'noai'] },
   { file: 'time-intelligence-builder.html', name: 'Time Intelligence Builder', desc: 'Year to date, last year, growth, rolling 12 months and more, with your fiscal year: as measures for the measures you pick, or one calculation group. Tested with a DAX query first.', tags: ['exp', 'noai'] },
   { file: 'field-parameter-builder.html', name: 'Field Parameter Builder', desc: 'Pick measures or columns, label and order them, and get the TMDL for a measure switcher: a field parameter, or a SWITCH measure that keeps each measure\u2019s format.', tags: ['exp', 'noai'] },
   { file: 'rls-role-generator.html', name: 'RLS Role Generator', desc: 'Row-level security roles from fixed values, each user\u2019s own rows or an access table, as a TMDL script with a test query and a check of which tables each role really restricts.', tags: ['exp', 'noai'] },
   { file: 'model-linter.html', name: 'Model Linter', desc: 'Best-practice checks on your model: measures without a folder or format string, visible key columns, bidirectional relationships, implicit measures and unused columns, each with how to fix it.', tags: ['exp', 'noai'] },
   { file: 'model-documenter.html', name: 'Model Documenter', desc: 'One HTML document for the whole model: tables, measures, lineage, relationships, sources, model checks and report pages. Reads your PBIP folder in the browser.', tags: ['pbip', 'noai'] },
-  { file: 'power-query-explainer.html', name: 'Power Query Explainer', desc: 'Comment every step of a Power Query query, or get a cleaner version checked against the original. One query or the whole model.', tags: ['ai'] },
-  { file: 'date-table-generator.html', name: 'Date Table Generator', desc: 'A date table with your fiscal year, weeks and holidays, as DAX, Power Query or a TMDL script. Can start and end with your data.', tags: ['dates', 'noai'] },
-  { file: 'layout-designer.html', name: 'Layout Designer', desc: 'Plan a page on an even grid: pick a layout, place visuals, and get a wireframe with sample visuals, exact positions, and a designed background image (Figma-ready).', tags: ['noai'] },
-  { file: 'theme-builder.html', name: 'Theme Builder', desc: 'A full report theme from one brand color: data palette, text, background, good and bad colors, font and styles for every common visual, checked for readability and color blindness.', tags: ['noai'] },
+  { free: true, file: 'power-query-explainer.html', name: 'Power Query Explainer', desc: 'Comment every step of a Power Query query, or get a cleaner version checked against the original. One query or the whole model.', tags: ['ai'] },
+  { free: true, file: 'date-table-generator.html', name: 'Date Table Generator', desc: 'A date table with your fiscal year, weeks and holidays, as DAX, Power Query or a TMDL script. Can start and end with your data.', tags: ['dates', 'noai'] },
+  { free: true, file: 'layout-designer.html', name: 'Layout Designer', desc: 'Plan a page on an even grid: pick a layout, place visuals, and get a wireframe with sample visuals, exact positions, and a designed background image (Figma-ready).', tags: ['noai'] },
+  { free: true, file: 'theme-builder.html', name: 'Theme Builder', desc: 'A full report theme from one brand color: data palette, text, background, good and bad colors, font and styles for every common visual, checked for readability and color blindness.', tags: ['noai'] },
 ];
-const TAG = { pbip: '<span class="tag exp">PBIP folder or your export</span>', exp: '<span class="tag exp">Uses your export</span>', dates: '<span class="tag exp">Date columns from your export</span>', ai: '<span class="tag ai">Copilot</span>', noai: '<span class="tag noai">No AI</span>' };
+const TAG = { opt: '<span class="tag opt">Export optional</span>', pbip: '<span class="tag exp">PBIP folder or your export</span>', exp: '<span class="tag exp">Uses your export</span>', dates: '<span class="tag exp">Date columns from your export</span>', ai: '<span class="tag ai">Copilot</span>', noai: '<span class="tag noai">No AI</span>' };
 const $ = id => document.getElementById(id);
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function msg(level, html){ return '<div class="msg ' + level + '">' + html + '</div>'; }
@@ -1542,6 +1576,11 @@ function renderSaved(){
   if (!$('modelName').value) $('modelName').value = v.name || '';
 }
 function renderTools(){
+  const card = t => '<a class="tool" href="' + t.file + '"><span class="tn">' + esc(t.name) + '</span><span class="td">' + esc(t.desc) + '</span><span class="tags">' + (t.free ? t.tags.map(x => x === 'exp' || x === 'dates' ? 'opt' : x) : t.tags.filter(x => x !== 'exp')).map(x => TAG[x]).join('') + '</span></a>';
+  const FREE_ORDER = ['theme-builder.html', 'layout-designer.html', 'date-table-generator.html', 'power-query-explainer.html', 'dax-reviewer.html'];
+  $('toolsFree').innerHTML = TOOLS.filter(t => t.free).sort((a, b) => FREE_ORDER.indexOf(a.file) - FREE_ORDER.indexOf(b.file)).map(card).join('');
+  $('tools').innerHTML = TOOLS.filter(t => !t.free).map(card).join('');
+  return;
   $('tools').innerHTML = TOOLS.map(t => '<a class="tool" href="' + t.file + '"><span class="tn">' + esc(t.name) + '</span><span class="td">' + esc(t.desc) + '</span><span class="tags">' + t.tags.map(x => TAG[x]).join('') + '</span></a>').join('');
 }
 function save(){

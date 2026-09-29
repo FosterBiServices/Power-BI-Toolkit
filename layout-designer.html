@@ -267,6 +267,32 @@ input[type=number]{font-family:var(--sans)}
 input:focus-visible + .filebtn,.filebtn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 .chk.small{font-size:13px}
 .lim{margin:0}
+.suggest{border:1px solid var(--accent);border-left:4px solid var(--accent);border-radius:10px;background:var(--surface)}
+.suggest>summary{cursor:pointer;padding:12px 14px;font-size:15px}
+.suggest>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.suggest-body{padding:0 14px 14px;display:flex;flex-direction:column;gap:12px}
+.suggest-body .note{margin:0;max-width:95ch}
+.sgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:820px){.sgrid{grid-template-columns:1fr}}
+.sq{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:10px 12px;display:flex;flex-direction:column;gap:10px;min-width:0;margin:0}
+.sq legend{font-weight:700;font-size:14px;padding:0 4px}
+.sq select{width:100%}
+.sg-out{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.sg-out:empty{display:none}
+.sg{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.sg.rec{border-color:var(--accent);box-shadow:inset 0 3px 0 var(--gold)}
+.sg h4{margin:0;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sg .rec-tag{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:var(--accent);color:#fff;border-radius:999px;padding:2px 8px}
+.sg .blurb{margin:0;font-size:13.5px;color:var(--muted)}
+.sg svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:6px}
+.sg ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.45}
+.sg li b{display:inline-block;min-width:46px;border-radius:999px;padding:1px 7px;margin-right:6px;color:#fff;text-align:center;font-size:11.5px}
+.sg li b.z3{background:#0B7A75}.sg li b.z30{background:#1F6FB2}.sg li b.z300{background:#5B3E96}
+.sg .msg{font-size:12.5px}
+.sg-note{grid-column:1/-1}
+.pptx-card{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px}
+.pptx-txt{flex:1;min-width:240px;display:flex;flex-direction:column;gap:6px}
+.pptx-txt h3{margin:0}
 .shadowbox{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
 .shadowbox .cfg[hidden]{display:none}
 .crow-in{display:flex;gap:8px;align-items:center}
@@ -434,11 +460,37 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
         <h2 id="s2">Layout and visuals</h2>
         <p>Start from a layout, then click any visual to change it, or an empty cell to add one. Visuals can span several columns and rows.</p>
       </div>
+      <details class="suggest" id="suggestBox">
+        <summary><b>Suggest a layout</b> <span class="muted">(3-30-3: answer a few questions, get three layouts)</span></summary>
+        <div class="suggest-body">
+          <p class="note small">A good report page answers three questions in order. <b>3 seconds</b>: how are we doing? (headline KPIs top left, big numbers, status against target). <b>30 seconds</b>: where and why? (trend, simple bar charts, heatmaps, filters). <b>300 seconds</b>: which records? (details on demand: a formatted table or a drill-through page).</p>
+          <div class="sgrid">
+            <fieldset class="sq"><legend>3 s: headline numbers</legend>
+              <div class="field sm"><label for="sgK">KPIs</label><input type="number" id="sgK" min="0" max="8"></div>
+              <div class="field"><label for="sgT">With a target</label><select id="sgT"><option value="none">None</option><option value="some">Some (the top 2)</option><option value="all">All of them</option></select></div>
+            </fieldset>
+            <fieldset class="sq"><legend>30 s: patterns</legend>
+              <label class="chk"><input type="checkbox" id="sgTrend"> A trend over time</label>
+              <div class="field sm"><label for="sgB">Categories to compare</label><input type="number" id="sgB" min="0" max="4"></div>
+              <label class="chk"><input type="checkbox" id="sgGeo"> One of them is a location</label>
+              <label class="chk"><input type="checkbox" id="sgHeat"> Two categories at once (heatmap)</label>
+            </fieldset>
+            <fieldset class="sq"><legend>300 s: details</legend>
+              <div class="field"><label for="sgD">Individual records</label><select id="sgD"><option value="page">On this page</option><option value="drill">On a drill-through page</option><option value="none">Not needed</option></select></div>
+              <div class="field sm"><label for="sgF">Filters (slicers)</label><input type="number" id="sgF" min="0" max="8"></div>
+              <div class="field"><label for="sgP">Filters go</label><select id="sgP"><option value="auto">Where they fit best</option><option value="header">In the header</option><option value="side">In a side panel</option></select></div>
+            </fieldset>
+          </div>
+          <div class="btns"><button type="button" class="btn primary" id="sgGo">Suggest layouts</button></div>
+          <div id="sgOut" class="sg-out"></div>
+        </div>
+      </details>
       <div class="field"><label>Start from a layout</label><div class="chips" id="templates" role="group" aria-label="Layouts"></div></div>
       <div class="cfg">
         <div class="field sm"><label for="cols">Columns</label><input type="number" id="cols" min="1" max="12"></div>
         <div class="field sm"><label for="rows">Rows</label><input type="number" id="rows" min="1" max="12"></div>
         <label class="chk inline"><input type="checkbox" id="showDims" checked> Show sizes</label>
+        <label class="chk inline"><input type="checkbox" id="showZones"> Show 3-30-3 zones</label>
       </div>
       <div class="designer">
         <div class="canvas-wrap"><div id="canvas" class="canvas"></div></div>
@@ -503,6 +555,11 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
           <div class="btns"><button type="button" class="btn primary" data-dl="bg-png2">Download PNG</button><button type="button" class="btn" data-dl="bg-png1">PNG at 1&times;</button><button type="button" class="btn" data-dl="bg-svg">SVG</button><button type="button" class="btn figma-only" data-copy="bg-svg">Copy for Figma</button></div>
           <p class="note small">In Power BI Desktop: <b>Format page</b> &gt; <b>Canvas background</b> &gt; <b>Image</b>, <b>Image fit: Fit</b>, <b>Transparency 0%</b>. Then turn off each visual&rsquo;s own background so the cards show through. The PNG is twice the page size so it stays sharp.</p>
         </div>
+      </div>
+      <div class="out-card pptx-card">
+        <div class="pptx-txt"><h3>PowerPoint</h3>
+          <p class="note small">Three slides at the page&rsquo;s size: the layout as <b>editable shapes</b> (header, logo, title, cards and labels you can move, resize and recolor, with your shadow), the wireframe with sample visuals, and the background image. Good for design reviews and sign-off.</p></div>
+        <div class="btns"><button type="button" class="btn primary" data-dl="pptx">Download PowerPoint (.pptx)</button></div>
       </div>
       <div class="figma-only figma-box">
         <h3>Into Figma</h3>
@@ -820,12 +877,12 @@ const LO = (() => {
       const ih = +c.side.itemH || 64; let y = top + g;
       c.side.items.forEach((x, i) => {
         if (y + ih > top + sh - g + 0.01) { probs.push({ level: 'warn', text: 'The side panel is too short for ' + c.side.items.length + ' items of ' + ih + ' px; ' + (c.side.items.length - i) + ' left off the page.' }); y = Infinity; return; }
-        out.push({ id: 's' + i, region: 'side', idx: i, type: x.type, title: x.title, x: sx + g, y, w: side - 2 * g, h: ih }); y += ih + g;
+        out.push({ id: 's' + i, region: 'side', idx: i, type: x.type, title: x.title, zone: x.zone, x: sx + g, y, w: side - 2 * g, h: ih }); y += ih + g;
       });
     }
     if (c.strip.on && c.strip.items.length) {
       const sh = +c.strip.h, ws = split(cw, c.strip.items.length, g, R), xs = starts(left, ws, g);
-      c.strip.items.forEach((x, i) => out.push({ id: 't' + i, region: 'strip', idx: i, type: x.type, title: x.title, x: xs[i], y: top, w: ws[i], h: sh }));
+      c.strip.items.forEach((x, i) => out.push({ id: 't' + i, region: 'strip', idx: i, type: x.type, title: x.title, zone: x.zone, x: xs[i], y: top, w: ws[i], h: sh }));
       top += sh + g;
     }
     const cols = Math.max(1, +c.grid.cols || 1), rows = Math.max(1, +c.grid.rows || 1);
@@ -838,7 +895,7 @@ const LO = (() => {
       if (c0 >= cols || r0 >= rows) { probs.push({ level: 'warn', text: '“' + (x.title || typeOf(x.type).label) + '” is outside the ' + cols + ' × ' + rows + ' grid, so it’s left out.' }); return; }
       const c1 = Math.min(cols, c0 + cs) - 1, r1 = Math.min(rows, r0 + rs) - 1;
       for (let a = c0; a <= c1; a++) for (let b = r0; b <= r1; b++) { const k = a + ',' + b; if (taken[k] !== undefined) probs.push({ level: 'warn', text: '“' + (x.title || typeOf(x.type).label) + '” overlaps “' + (c.items[taken[k]].title || typeOf(c.items[taken[k]].type).label) + '”.' }); taken[k] = i; }
-      out.push({ id: 'g' + i, region: 'grid', idx: i, type: x.type, title: x.title, x: gx[c0], y: gy[r0], w: gx[c1] + gw[c1] - gx[c0], h: gy[r1] + gh[r1] - gy[r0], c: c0, r: r0, cs: c1 - c0 + 1, rs: r1 - r0 + 1 });
+      out.push({ id: 'g' + i, region: 'grid', idx: i, type: x.type, title: x.title, zone: x.zone, x: gx[c0], y: gy[r0], w: gx[c1] + gw[c1] - gx[c0], h: gy[r1] + gh[r1] - gy[r0], c: c0, r: r0, cs: c1 - c0 + 1, rs: r1 - r0 + 1 });
     });
     // sanity
     if (gw.some(v => v < 60) || gh.some(v => v < 60)) probs.push({ level: 'warn', text: 'Some grid cells are under 60 px (' + Math.min(...gw) + ' × ' + Math.min(...gh) + '). Use fewer columns or rows, or a smaller gap.' });
@@ -1061,6 +1118,9 @@ const LR = (() => {
       const sel = opts.selected === o.id;
       out.push('<g class="vis" data-id="' + o.id + '"' + (opts.hit ? ' tabindex="0" role="button" aria-label="' + esc((o.title || LO.typeOf(o.type).label) + ', ' + LO.typeOf(o.type).label) + '"' : '') + ' id="' + (opts.ids === false ? '' : 'Visual-' + idName(o.title || LO.typeOf(o.type).label)) + '">' + (o.tile ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="' + Math.min(+st.radius || 0, 8, o.h / 3) + '" fill="' + col.card + '"' + (st.shadow ? ' filter="url(#lo-shadow)"' : '') + '/>' : '') + sketch(o, o.logo && !(st.header === 'band' || st.header === 'bleed') ? Object.assign({}, col, { headerText: col.text }) : col, font)
         + (opts.hit ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" fill="transparent"' + (sel ? ' stroke="' + col.select + '" stroke-width="3"' : '') + (st.radius ? ' rx="' + st.radius + '"' : '') + '/>' : '') + '</g>');
+      const zone = o.zone || (o.type === 'slicer' ? '30' : '');
+      if (opts.zones && zone) { const zc = { '3': '#0B7A75', '30': '#1F6FB2', '300': '#5B3E96' }[zone], zt = zone + ' s', zw = 12 + zt.length * 6.4, zh = 18, zx = o.x + o.w - zw - 6, zy = o.y + 6;
+        if (o.w > zw + 12 && o.h > zh + 8) out.push('<g class="zone"><rect x="' + f(zx) + '" y="' + f(zy) + '" width="' + f(zw) + '" height="' + zh + '" rx="9" fill="' + zc + '"/><text x="' + f(zx + zw / 2) + '" y="' + f(zy + 12.5) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF" font-family="' + font + '">' + zt + '</text></g>'); }
       if (opts.dims && o.h >= 44) out.push('<text x="' + f(o.x + o.w - 6) + '" y="' + f(o.y + o.h - 6) + '" font-size="10" text-anchor="end" fill="' + col.muted + '" font-family="Consolas, monospace">' + Math.round(o.w) + '×' + Math.round(o.h) + ' @ ' + Math.round(o.x) + ',' + Math.round(o.y) + '</text>');
     });
     const defs = st.shadow ? '' : '';
@@ -1137,6 +1197,245 @@ const LX = (() => {
 })();
 
 
+/* ---------- Layout Designer: PowerPoint (.pptx) export, built in the browser ---------- */
+const LP = (() => {
+  const EMU = 9525; // per pixel at 96 dpi
+  const e = v => Math.round(v * EMU);
+  const xml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const hex = c => (TB.norm(c) || '#000000').slice(1);
+  const NS = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"';
+  const HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+
+  /* ----- stored zip ----- */
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  function zip(entries, type){
+    const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+    for (const [path, content] of entries) {
+      const name = enc.encode(path), data = typeof content === 'string' ? enc.encode(content) : content, crc = crc32(data);
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(10, 0, true); h.setUint16(12, 0x21, true);
+      h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true);
+      parts.push(new Uint8Array(h.buffer), name, data);
+      const cd = new DataView(new ArrayBuffer(46));
+      cd.setUint32(0, 0x02014b50, true); cd.setUint16(4, 20, true); cd.setUint16(6, 20, true); cd.setUint16(8, 0x0800, true); cd.setUint16(14, 0x21, true);
+      cd.setUint32(16, crc, true); cd.setUint32(20, data.length, true); cd.setUint32(24, data.length, true); cd.setUint16(28, name.length, true); cd.setUint32(42, off, true);
+      central.push(new Uint8Array(cd.buffer), name);
+      off += 30 + name.length + data.length;
+    }
+    const size = central.reduce((a, b) => a + b.length, 0), end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true); end.setUint32(12, size, true); end.setUint32(16, off, true);
+    return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: type || 'application/zip' });
+  }
+
+  /* ----- shapes ----- */
+  let nextId = 2;
+  const xfrm = (x, y, w, h) => '<a:xfrm><a:off x="' + e(x) + '" y="' + e(y) + '"/><a:ext cx="' + Math.max(1, e(w)) + '" cy="' + Math.max(1, e(h)) + '"/></a:xfrm>';
+  function shadowXml(st){
+    if (!st.shadow) return '';
+    const s = LR.shadowOf(st), dist = Math.hypot(+s.x || 0, +s.y || 0), dir = Math.round(((Math.atan2(+s.y || 0, +s.x || 0) * 180 / Math.PI) + 360) % 360 * 60000);
+    return '<a:effectLst><a:outerShdw blurRad="' + e(+s.blur || 0) + '" dist="' + e(dist) + '" dir="' + dir + '" algn="ctr" rotWithShape="0"><a:srgbClr val="' + hex(s.color) + '"><a:alpha val="' + Math.round(Math.max(0, Math.min(100, +s.opacity || 0)) * 1000) + '"/></a:srgbClr></a:outerShdw></a:effectLst>';
+  }
+  const run = (text, o) => '<a:r><a:rPr lang="en-US" sz="' + Math.round((o.px || 12) * 0.75 * 100) + '"' + (o.bold ? ' b="1"' : '') + ' dirty="0"><a:solidFill><a:srgbClr val="' + hex(o.color) + '"/></a:solidFill><a:latin typeface="' + xml(o.font || 'Segoe UI') + '"/><a:cs typeface="' + xml(o.font || 'Segoe UI') + '"/></a:rPr><a:t>' + xml(text) + '</a:t></a:r>';
+  function shape(name, x, y, w, h, o){
+    o = o || {};
+    const minSide = Math.max(1, Math.min(w, h)), r = +o.radius || 0;
+    const geom = r ? '<a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val ' + Math.min(50000, Math.round(r / minSide * 100000)) + '"/></a:avLst></a:prstGeom>' : '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>';
+    const fill = o.fill ? '<a:solidFill><a:srgbClr val="' + hex(o.fill) + '"/></a:solidFill>' : '<a:noFill/>';
+    const ln = o.line ? '<a:ln w="' + e(o.lineW || 1) + '"' + '><a:solidFill><a:srgbClr val="' + hex(o.line) + '"/></a:solidFill>' + (o.dash ? '<a:prstDash val="dash"/>' : '') + '</a:ln>' : '<a:ln><a:noFill/></a:ln>';
+    const paras = (o.lines || []).map(l => '<a:p>' + (l.align ? '<a:pPr algn="' + l.align + '"/>' : '') + run(l.text, l) + '</a:p>').join('') || '<a:p><a:endParaRPr lang="en-US"/></a:p>';
+    const pad = e(o.pad == null ? 8 : o.pad);
+    return '<p:sp><p:nvSpPr><p:cNvPr id="' + (nextId++) + '" name="' + xml(name) + '"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>' + xfrm(x, y, w, h) + geom + fill + ln + (o.shadow || '') + '</p:spPr>'
+      + '<p:txBody><a:bodyPr wrap="square" lIns="' + pad + '" tIns="' + pad + '" rIns="' + pad + '" bIns="' + pad + '" anchor="' + (o.anchor || 't') + '"><a:normAutofit/></a:bodyPr><a:lstStyle/>' + paras + '</p:txBody></p:sp>';
+  }
+  const pic = (name, rid, x, y, w, h) => '<p:pic><p:nvPicPr><p:cNvPr id="' + (nextId++) + '" name="' + xml(name) + '"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="' + rid + '"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>' + xfrm(x, y, w, h) + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
+  const slideXml = (name, body) => HEAD + '<p:sld ' + NS + '><p:cSld name="' + xml(name) + '"><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>' + body + '</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>';
+
+  /* The editable layout: every container is a PowerPoint shape you can move, resize and restyle */
+  function layoutSlide(L, c, col, st, font, logoRid){
+    const W = c.w, H = c.h, r = +st.radius || 0, sh = shadowXml(st), out = [];
+    const border = st.border ? { line: col.border } : {};
+    out.push(shape('Page background', 0, 0, W, H, { fill: col.page, pad: 0 }));
+    const hdr = L.items.find(o => o.id === 'header');
+    const onBand = st.header === 'band' || st.header === 'bleed';
+    if (hdr && st.header === 'bleed') out.push(shape('Header', 0, 0, W, hdr.y + hdr.h, { fill: col.header, pad: 0 }));
+    else if (hdr && st.header === 'band') out.push(shape('Header', hdr.x, hdr.y, hdr.w, hdr.h, Object.assign({ fill: col.header, radius: r, shadow: sh, pad: 0 })));
+    else if (hdr && st.header === 'line') out.push(shape('Header underline', hdr.x, hdr.y + hdr.h - 3, hdr.w, 3, { fill: col.accent, pad: 0 }));
+    const side = L.items.find(o => o.id === 'side');
+    if (side && st.side !== 'none') out.push(shape('Side panel', side.x, side.y, side.w, side.h, Object.assign({ fill: col.sidePanel, radius: r, shadow: sh, pad: 0 }, border)));
+    // blank containers for empty cells
+    if (st.cards !== 'none') (L.empty || []).forEach(([a, b]) => { const G = L.grid; out.push(shape('Empty cell ' + (a + 1) + ',' + (b + 1), G.x[a], G.y[b], G.w[a], G.h[b], Object.assign({ fill: col.card, radius: r, shadow: sh }, border))); });
+    L.items.filter(o => !o.band && !o.logo).forEach(o => {
+      const label = LO.typeOf(o.type).label, title = o.title || label;
+      const cardBg = st.cards !== 'none' && !(o.region === 'side' && st.side !== 'none');
+      const small = o.h < 60;
+      const lines = small ? [{ text: title + (o.type === 'slicer' ? '  ▾' : ''), px: Math.min(12, Math.max(8, o.h * 0.34)), color: col.text, bold: o.type !== 'slicer', font }]
+        : [{ text: title, px: 12, bold: true, color: col.text, font }, { text: label + ' · ' + Math.round(o.w) + ' × ' + Math.round(o.h), px: 10, color: col.muted, font }];
+      out.push(shape((o.region === 'header' ? 'Header ' : '') + label + ' - ' + title, o.x, o.y, o.w, o.h, Object.assign({ fill: cardBg || o.region === 'header' ? col.card : null, radius: Math.min(r, o.h / 3), shadow: cardBg || o.tile ? sh : '', lines, anchor: small ? 'ctr' : 't', pad: small ? 6 : 10 }, cardBg ? border : { line: col.border })));
+    });
+    const lg = L.items.find(o => o.logo);
+    if (lg) out.push(logoRid ? pic('Logo', logoRid, lg.x, lg.y, lg.w, lg.h) : shape('Logo', lg.x, lg.y, lg.w, lg.h, { line: onBand ? col.headerText : col.text, dash: true, lines: [{ text: 'LOGO', px: Math.min(12, lg.h * 0.4), bold: true, color: onBand ? col.headerText : col.text, align: 'ctr', font }], anchor: 'ctr', pad: 2 }));
+    const t = L.items.find(o => o.id === 'title');
+    if (t) out.push(shape('Title', t.x, t.y, t.w, t.h, { lines: [{ text: t.title, px: t.fontSize, bold: true, color: onBand ? col.headerText : col.text, font }], anchor: 'ctr', pad: 0 }));
+    return out.join('');
+  }
+
+  const THEME = HEAD + '<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Toolkit"><a:themeElements><a:clrScheme name="Toolkit"><a:dk1><a:srgbClr val="252423"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="1F3A5F"/></a:dk2><a:lt2><a:srgbClr val="F3F4F6"/></a:lt2><a:accent1><a:srgbClr val="1F6FB2"/></a:accent1><a:accent2><a:srgbClr val="7A4FA3"/></a:accent2><a:accent3><a:srgbClr val="00A99C"/></a:accent3><a:accent4><a:srgbClr val="C172B5"/></a:accent4><a:accent5><a:srgbClr val="2C408E"/></a:accent5><a:accent6><a:srgbClr val="728DE3"/></a:accent6><a:hlink><a:srgbClr val="1F6FB2"/></a:hlink><a:folHlink><a:srgbClr val="7A4FA3"/></a:folHlink></a:clrScheme>'
+    + '<a:fontScheme name="Toolkit"><a:majorFont><a:latin typeface="Segoe UI"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont><a:minorFont><a:latin typeface="Segoe UI"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont></a:fontScheme>'
+    + '<a:fmtScheme name="Toolkit"><a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst><a:lnStyleLst><a:ln w="6350"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln w="12700"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln w="19050"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements><a:objectDefaults/><a:extraClrSchemeLst/></a:theme>';
+  const EMPTY_TREE = '<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr></p:spTree>';
+  const rels = list => HEAD + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + list.map(([id, type, target]) => '<Relationship Id="' + id + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/' + type + '" Target="' + target + '"/>').join('') + '</Relationships>';
+  const b64 = s => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+
+  /* images: { wf: Uint8Array png, bg: Uint8Array png } */
+  function build(L, c, col, st, font, images){
+    nextId = 2;
+    const W = c.w, H = c.h, files = [], slides = [], media = [];
+    // logo as a picture when it's a PNG or JPEG
+    let logoRid = null;
+    const lg = c.header && c.header.logo, m = lg && lg.on && lg.src && /^data:image\/(png|jpe?g);base64,(.*)$/i.exec(lg.src);
+    if (m) { const ext = /png/i.test(m[1]) ? 'png' : 'jpeg'; media.push(['ppt/media/logo.' + ext, b64(m[2])]); logoRid = 'rId2'; }
+    slides.push({ name: 'Layout (editable)', body: layoutSlide(L, c, col, st, font, logoRid), rels: [['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml']].concat(logoRid ? [['rId2', 'image', '../media/logo.' + (/png/i.test(m[1]) ? 'png' : 'jpeg')]] : []) });
+    if (images && images.wf) { media.push(['ppt/media/wireframe.png', images.wf]); slides.push({ name: 'Wireframe with sample visuals', body: pic('Wireframe', 'rId2', 0, 0, W, H), rels: [['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'], ['rId2', 'image', '../media/wireframe.png']] }); }
+    if (images && images.bg) { media.push(['ppt/media/background.png', images.bg]); slides.push({ name: 'Background image', body: pic('Background', 'rId2', 0, 0, W, H), rels: [['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'], ['rId2', 'image', '../media/background.png']] }); }
+
+    files.push(['[Content_Types].xml', HEAD + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="jpeg" ContentType="image/jpeg"/>'
+      + '<Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/><Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/><Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/><Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>'
+      + slides.map((s, i) => '<Override PartName="/ppt/slides/slide' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>').join('')
+      + '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>']);
+    files.push(['_rels/.rels', HEAD + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>']);
+    const now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+    files.push(['docProps/core.xml', HEAD + '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>' + xml(c.name || 'Layout') + '</dc:title><dc:creator>SF Power BI Toolkit</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">' + now + '</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">' + now + '</dcterms:modified></cp:coreProperties>']);
+    files.push(['docProps/app.xml', HEAD + '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>SF Power BI Toolkit</Application><Slides>' + slides.length + '</Slides></Properties>']);
+    files.push(['ppt/presentation.xml', HEAD + '<p:presentation ' + NS + ' saveSubsetFonts="1"><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst>' + slides.map((s, i) => '<p:sldId id="' + (256 + i) + '" r:id="rId' + (i + 3) + '"/>').join('') + '</p:sldIdLst><p:sldSz cx="' + e(W) + '" cy="' + e(H) + '"/><p:notesSz cx="6858000" cy="9144000"/></p:presentation>']);
+    files.push(['ppt/_rels/presentation.xml.rels', rels([['rId1', 'slideMaster', 'slideMasters/slideMaster1.xml'], ['rId2', 'theme', 'theme/theme1.xml']].concat(slides.map((s, i) => ['rId' + (i + 3), 'slide', 'slides/slide' + (i + 1) + '.xml'])))]);
+    files.push(['ppt/slideMasters/slideMaster1.xml', HEAD + '<p:sldMaster ' + NS + '><p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>' + EMPTY_TREE + '</p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst><p:txStyles><p:titleStyle/><p:bodyStyle/><p:otherStyle/></p:txStyles></p:sldMaster>']);
+    files.push(['ppt/slideMasters/_rels/slideMaster1.xml.rels', rels([['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'], ['rId2', 'theme', '../theme/theme1.xml']])]);
+    files.push(['ppt/slideLayouts/slideLayout1.xml', HEAD + '<p:sldLayout ' + NS + ' type="blank" preserve="1"><p:cSld name="Blank">' + EMPTY_TREE + '</p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>']);
+    files.push(['ppt/slideLayouts/_rels/slideLayout1.xml.rels', rels([['rId1', 'slideMaster', '../slideMasters/slideMaster1.xml']])]);
+    files.push(['ppt/theme/theme1.xml', THEME]);
+    slides.forEach((s, i) => { files.push(['ppt/slides/slide' + (i + 1) + '.xml', slideXml(s.name, s.body)]); files.push(['ppt/slides/_rels/slide' + (i + 1) + '.xml.rels', rels(s.rels)]); });
+    media.forEach(f => files.push(f));
+    return zip(files, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+  }
+  return { build, zip };
+})();
+
+
+/* ---------- Layout Designer: 3-30-3 layout suggestions ----------
+   3 seconds: headline KPIs top left, big numbers, status against target.
+   30 seconds: trend and breakdowns (bars, map, heatmap) to spot patterns and weak spots.
+   300 seconds: details on demand: formatted records here or on a drill-through page. */
+const LS = (() => {
+  const CATS = ['Region', 'Product', 'Channel', 'Segment'];
+  const KPI_NAMES = ['Sales', 'Margin %', 'Orders', 'Customers', 'Avg order value', 'Returns', 'Units', 'Growth %'];
+  const blankInput = () => ({ kpis: 4, targets: 'some', trend: true, breakdowns: 2, geo: false, heatmap: false, detail: 'page', filters: 3, filterPlace: 'auto' });
+
+  function parts(inp){
+    const nK = Math.max(0, Math.min(8, +inp.kpis | 0));
+    const nT = inp.targets === 'all' ? nK : inp.targets === 'some' ? Math.min(nK, 2) : 0;
+    const strip = Array.from({ length: nK }, (_, i) => ({ type: i < nT ? 'kpi' : 'card', title: KPI_NAMES[i] + (i < nT ? ' vs target' : ''), zone: '3' }));
+    const v30 = [];
+    if (inp.trend) v30.push({ type: 'lineChart', title: 'Sales trend this year vs last', zone: '30' });
+    const nB = Math.max(0, Math.min(4, +inp.breakdowns | 0));
+    for (let i = 0; i < nB; i++) v30.push(i === 0 && inp.geo ? { type: 'map', title: 'Sales by location', zone: '30' } : { type: 'clusteredBarChart', title: 'Sales by ' + CATS[i].toLowerCase(), zone: '30' });
+    if (inp.heatmap) v30.push({ type: 'pivotTable', title: 'Heatmap: region × month', zone: '30' });
+    const detail = inp.detail === 'page' ? { type: 'tableEx', title: 'Details: individual records', zone: '300' } : null;
+    const nF = Math.max(0, Math.min(8, +inp.filters | 0));
+    const place = inp.filterPlace === 'auto' ? (nF <= 3 ? 'header' : 'side') : inp.filterPlace;
+    return { strip, v30, detail, nF, place, nK, nT };
+  }
+
+  // base config: keep the page, spacing, header style, logo and title; set header/strip/side from the answers
+  function frame(base, p){
+    const c = JSON.parse(JSON.stringify(base));
+    c.header.on = true;
+    const cards = (c.header.items || []).filter(x => x.type === 'card').length;
+    LO.setHeaderCounts(c.header, 0, p.place === 'header' ? p.nF : 0);
+    c.header.items.forEach((x, i) => { x.title = ['Year', 'Region', 'Product', 'Channel', 'Segment', 'Month', 'Customer', 'Category'][i] || x.title; });
+    c.side = p.place === 'side' && p.nF ? { pos: 'right', w: 220, itemH: 60, items: Array.from({ length: p.nF }, (_, i) => ({ type: 'slicer', title: ['Year', 'Region', 'Product', 'Channel', 'Segment', 'Month', 'Customer', 'Category'][i] })) } : { pos: 'none', w: 220, itemH: 64, items: [] };
+    c.strip = { on: p.strip.length > 0, h: p.nT ? 110 : 100, items: p.strip.map(x => Object.assign({}, x)) };
+    void cards;
+    return c;
+  }
+  const at = (x, c, r, cs, rs) => Object.assign({}, x, { c, r, cs: cs || 1, rs: rs || 1 });
+
+  // A: rows of patterns, details across the bottom
+  function stacked(p){
+    const n = p.v30.length, cols = n >= 3 ? 3 : Math.max(1, n === 2 ? 2 : 1), items = [];
+    let r = 0;
+    if (n) {
+      const rows30 = Math.ceil(n / cols);
+      for (let i = 0; i < n; i++) {
+        const row = Math.floor(i / cols), inRow = Math.min(cols, n - row * cols), k = i - row * cols;
+        // share a short row's width: the first item takes the extra columns
+        const span = inRow < cols && k === 0 ? cols - inRow + 1 : 1, c0 = k === 0 ? 0 : k + (cols - inRow);
+        items.push(at(p.v30[i], c0, row, span));
+      }
+      r = rows30;
+    }
+    if (p.detail) items.push(at(p.detail, 0, r, cols)), r++;
+    return { cols, rows: Math.max(1, r), items };
+  }
+  // B: the trend across the top, breakdowns (and details) side by side below
+  function trendLed(p){
+    const [lead, ...rest] = p.v30;
+    if (!lead) return stacked(p);
+    const below = rest.concat(p.detail ? [p.detail] : []);
+    const cols = Math.max(1, Math.min(4, below.length || 1)), items = [at(lead, 0, 0, cols)];
+    below.forEach((x, i) => items.push(at(x, i, 1)));
+    return { cols, rows: below.length ? 2 : 1, items };
+  }
+  // C: patterns on the left, a tall details table (or the lead visual) on the right
+  function side(p){
+    const right = p.detail || p.v30[0], left = p.detail ? p.v30 : p.v30.slice(1);
+    if (!right) return stacked(p);
+    if (!left.length) return { cols: 1, rows: 1, items: [at(right, 0, 0)] };
+    const rows = Math.min(3, left.length <= 2 ? left.length : 2), perRow = Math.ceil(left.length / rows), cols = perRow + 1, items = [];
+    // with a details table it goes on the right; otherwise the lead visual takes a tall column on the left
+    const shift = p.detail ? 0 : 1;
+    left.forEach((x, i) => { const row = Math.floor(i / perRow), k = i % perRow, inRow = Math.min(perRow, left.length - row * perRow); items.push(at(x, shift + (k === 0 ? 0 : k + (perRow - inRow)), row, k === 0 ? perRow - inRow + 1 : 1)); });
+    items.push(at(right, p.detail ? perRow : 0, 0, 1, rows));
+    return { cols, rows, items };
+  }
+
+  function explain(p, kind){
+    const w = [];
+    w.push(['3 s', p.nK ? p.nK + ' headline KPI' + (p.nK === 1 ? '' : 's') + ' top left in large, bold numbers' + (p.nT ? '; ' + p.nT + ' as KPI visual' + (p.nT === 1 ? '' : 's') + ' showing status against target, colored with your good and bad colors' : '') + '.' : 'No headline KPIs: consider at least one, so the page answers “how are we doing?” at a glance.']);
+    const bits = p.v30.map(x => x.type === 'lineChart' ? 'a trend line' : x.type === 'map' ? 'a map' : x.type === 'pivotTable' ? 'a heatmap (matrix with conditional formatting)' : 'a bar chart').reduce((a, b) => { a[b] = (a[b] || 0) + 1; return a; }, {});
+    const list = Object.entries(bits).map(([k, n]) => n > 1 ? n + ' ' + k.replace(/^a /, '').replace('chart', 'charts') : k).join(', ');
+    w.push(['30 s', (list ? list.charAt(0).toUpperCase() + list.slice(1) + ' to spot patterns and weak categories. Sort bars by value and use conditional formatting to flag the ones below target.' : 'No trend or breakdowns yet: add one to explain what drives the KPIs.') + (p.nF ? ' ' + p.nF + ' slicer' + (p.nF === 1 ? '' : 's') + (p.place === 'header' ? ' in the header' : ' in a side panel on the right, so the KPIs keep the top-left spot') + '.' : '')]);
+    w.push(['300 s', p.detail ? (kind === 'side' ? 'A tall details table on the right, for scanning individual records next to the charts, away from the top-left KPI spot.' : kind === 'trend' ? 'A details table beside the breakdowns, below the trend: individual records, formatted, with totals.' : 'Details across the bottom: individual records, formatted, with totals, below everything that needs a first look.') : 'Details on a drill-through page: right-click a bar or point to see its records. Use \u201cStart the detail page\u201d to lay it out.']);
+    return w;
+  }
+
+  function suggest(inp, base){
+    const p = parts(inp), out = [];
+    const make = (id, name, fn, blurb) => { const g = fn(p), c = frame(base, p); c.grid = { cols: g.cols, rows: g.rows }; c.items = g.items; return { id, name, blurb, cfg: c, why: explain(p, id) }; };
+    const A = make('stacked', 'KPIs, then patterns, then details', stacked, 'Reads top to bottom in the 3-30-300 order. The safest choice.');
+    const B = make('trend', 'Trend-led', trendLed, 'The trend gets the full width; breakdowns sit side by side beneath it.');
+    const C = make('side', p.detail ? 'Details alongside' : 'One focus visual', side, p.detail ? 'Charts on the left, a tall details table on the right.' : 'The lead visual gets a tall column on the left; the rest sit beside it.');
+    // rank: which reads best for these answers
+    let order = [A, B, C];
+    if (p.detail && p.v30.length >= 3) order = [C, A, B];
+    else if (inp.trend && p.v30.length >= 3 && !p.detail) order = [B, A, C];
+    const seen = new Set(), res = [];
+    order.forEach(v => { const k = JSON.stringify(v.cfg.grid) + JSON.stringify(v.cfg.items.map(i => [i.c, i.r, i.cs, i.rs])); if (!seen.has(k)) { seen.add(k); res.push(v); } });
+    res.forEach((v, i) => { v.recommended = i === 0; const L = LO.layout(v.cfg); v.probs = L.probs; const small = L.items.filter(o => o.region === 'grid' && (o.h < 140 || o.w < 180)); if (small.length) v.probs = v.probs.concat([{ level: 'info', text: small.length + ' visual' + (small.length === 1 ? ' is' : 's are') + ' small at this page size. A taller page (1280 × 960) or fewer visuals gives them more room.' }]); });
+    return res;
+  }
+
+  function detailPage(base){
+    const c = LO.fromTemplate('detail', base);
+    c.name = (base.name || 'Report') + ' – details'; c.header.title = c.name;
+    c.items = [{ type: 'pivotTable', title: 'Details: individual records', c: 0, r: 0, cs: 1, rs: 1, zone: '300' }];
+    return c;
+  }
+
+  return { blankInput, suggest, detailPage };
+})();
+
+
 /* ---------- Layout Designer page ---------- */
 const $ = id => document.getElementById(id);
 const PREFIX = 'klo.';
@@ -1157,7 +1456,7 @@ const COLOR_KEYS = [['page', 'Page'], ['card', 'Cards'], ['header', 'Header'], [
 const blankLook = () => ({ src: 'tb', themeText: '', pickAccent: '#1F6FB2', overrides: {}, style: { radius: 8, shadow: true, sh: { x: 0, y: 4, blur: 16, spread: 0, color: '#1F3A5F', opacity: 35 }, header: 'band', cards: 'all', border: false }, font: 'Segoe UI' });
 const blankCfg = () => LO.fromTemplate('blank');
 const EX_CFG = () => LO.fromTemplate('panel');
-const state = { example: false, cfg: blankCfg(), look: blankLook(), figma: false, sel: null, dims: true, src: null, out: {} };
+const state = { sg: LS.blankInput(), zones: false, example: false, cfg: blankCfg(), look: blankLook(), figma: false, sel: null, dims: true, src: null, out: {} };
 
 function persist(){
   store.set('cfg', JSON.stringify(state.example ? null : state.cfg));
@@ -1188,8 +1487,10 @@ function renderPage(){
   const c = state.cfg, sizes = LO.PAGE_SIZES;
   $('pSize').innerHTML = sizes.map((s, i) => '<option value="' + i + '">' + esc(s[0]) + '</option>').join('') + '<option value="custom">Custom</option>';
   const i = sizes.findIndex(s => s[1] === +c.w && s[2] === +c.h);
-  $('pSize').value = i >= 0 ? String(i) : 'custom';
-  $('customWrap').hidden = $('customWrap2').hidden = i >= 0;
+  // 'Custom' stays chosen even while the width and height still match a preset
+  const custom = state.customSize || i < 0;
+  $('pSize').value = custom ? 'custom' : String(i);
+  $('customWrap').hidden = $('customWrap2').hidden = !custom;
   const set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
   set('pName', c.name); set('pW', c.w); set('pH', c.h); set('margin', c.margin); set('gap', c.gap); $('rounding').value = c.rounding;
   const h = c.header, lg = h.logo || (h.logo = { on: false, w: 120, h: 32, src: '', inBg: false });
@@ -1222,7 +1523,7 @@ function renderPage(){
 function renderTemplates(){ $('templates').innerHTML = LO.TEMPLATES.map(t => '<button type="button" class="chip" data-tpl="' + t.id + '">' + esc(t.name) + '</button>').join(''); }
 function renderCanvas(){
   const L = state.L, col = state.col;
-  $('canvas').innerHTML = LR.wireframe(L, state.cfg, Object.assign({}, col), state.look.style, { hit: true, empty: true, grid: true, selected: state.sel, dims: state.dims, font: state.look.font, ids: false });
+  $('canvas').innerHTML = LR.wireframe(L, state.cfg, Object.assign({}, col), state.look.style, { hit: true, empty: true, grid: true, selected: state.sel, dims: state.dims, zones: state.zones, font: state.look.font, ids: false });
   $('layoutMsg').innerHTML = L.probs.map(p => '<div class="msg ' + p.level + '">' + esc(p.text) + '</div>').join('');
 }
 function typeSelect(id, cur, only){
@@ -1253,6 +1554,27 @@ function renderEditor(){
   const o = state.L.items.find(x => x.id === state.sel);
   if (o) h += '<p class="note small mono">x ' + Math.round(o.x * 100) / 100 + ', y ' + Math.round(o.y * 100) / 100 + ' &middot; ' + Math.round(o.w * 100) / 100 + ' &times; ' + Math.round(o.h * 100) / 100 + '</p>';
   $('editor').innerHTML = h + quick;
+}
+
+/* ---------- 3-30-3 suggestions ---------- */
+function renderSuggestInputs(){
+  const g = state.sg, set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
+  set('sgK', g.kpis); $('sgT').value = g.targets; $('sgTrend').checked = !!g.trend; set('sgB', g.breakdowns); $('sgGeo').checked = !!g.geo; $('sgHeat').checked = !!g.heatmap;
+  $('sgD').value = g.detail; set('sgF', g.filters); $('sgP').value = g.filterPlace;
+  $('sgGeo').disabled = !(+g.breakdowns > 0);
+}
+function renderSuggestions(){
+  const list = state.sgOut; if (!list) { $('sgOut').innerHTML = ''; return; }
+  const esc2 = esc, col = state.col, st = state.look.style;
+  let h = list.map((v, i) => {
+    const L = LO.layout(v.cfg), svg = LR.wireframe(L, v.cfg, col, st, { zones: true, font: state.look.font, ids: false });
+    return '<div class="sg' + (v.recommended ? ' rec' : '') + '"><h4>' + esc2(v.name) + (v.recommended ? '<span class="rec-tag">Best fit</span>' : '') + '</h4><p class="blurb">' + esc2(v.blurb) + '</p>' + svg
+      + '<ul>' + v.why.map(([z, t]) => '<li><b class="z' + z.replace(' s', '') + '">' + z + '</b>' + esc2(t) + '</li>').join('') + '</ul>'
+      + (v.probs || []).map(p => '<div class="msg ' + p.level + '">' + esc2(p.text) + '</div>').join('')
+      + '<div class="btns"><button type="button" class="btn' + (v.recommended ? ' primary' : '') + '" data-usesg="' + i + '">Use this layout</button></div></div>';
+  }).join('');
+  if (state.sg.detail === 'drill') h += '<div class="msg info sg-note">For the 300-second level, build a drill-through page next: <button type="button" class="btn small" id="sgDetail">Start the detail page</button> lays out a details matrix with a filter panel. In Power BI Desktop, add the fields people drill on to the page&rsquo;s <b>Drill through</b> well.</div>';
+  $('sgOut').innerHTML = h;
 }
 
 /* ---------- step 3 ---------- */
@@ -1304,22 +1626,25 @@ function renderAll(){ compute(); renderPage(); renderCanvas(); renderEditor(); r
 function refresh(opts){ compute(); renderPage(); renderCanvas(); if (opts && opts.editor) renderEditor(); if (opts && opts.look) renderLook(); else renderColors(); renderOut(); persist(); }
 
 /* ---------- init ---------- */
-function resetAll(){ state.cfg = blankCfg(); state.look = blankLook(); state.sel = null; setExample(false); renderAll(); }
+function resetAll(){ state.customSize = false; state.cfg = blankCfg(); state.look = blankLook(); state.sel = null; setExample(false); renderAll(); }
 function init(){
   renderTemplates();
   let cfg = null, look = null; try { cfg = JSON.parse(store.get('cfg') || 'null'); look = JSON.parse(store.get('look') || 'null'); } catch (e) {}
   state.figma = store.get('figma') === '1';
   if (cfg) { state.cfg = LO.upgrade(Object.assign(LO.base(), cfg)); if (look) state.look = Object.assign(blankLook(), look); }
-  if (typeof state.look.style.shadow === 'string') { state.look.style.shadow = !!state.look.style.shadow; state.look.style.sh = state.look.style.sh || Object.assign({}, LR.SH_DEFAULT); }
   else if (store.get('blank') !== '1') { state.cfg = EX_CFG(); setExample(true); }
   if (!cfg && look) state.look = Object.assign(blankLook(), look);
-  renderAll();
+  // older saved looks: shadow was 'soft' / 'strong'
+  if (typeof state.look.style.shadow === 'string') { state.look.style.shadow = !!state.look.style.shadow; state.look.style.sh = state.look.style.sh || Object.assign({}, LR.SH_DEFAULT); }
+  try { const g = JSON.parse(store.get('sg') || 'null'); if (g) state.sg = Object.assign(LS.blankInput(), g); } catch (e) {}
+  if (!cfg) $('suggestBox').open = true;
+  renderAll(); renderSuggestInputs();
 
   const num = (v, d) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
   const edited = opts => { leaveExample(); refresh(opts); };
   // step 1
   $('pName').addEventListener('input', () => { state.cfg.name = $('pName').value; edited(); });
-  $('pSize').addEventListener('change', () => { const v = $('pSize').value; if (v !== 'custom') { const s = LO.PAGE_SIZES[+v]; state.cfg.w = s[1]; state.cfg.h = s[2]; } $('customWrap').hidden = $('customWrap2').hidden = v !== 'custom'; edited(); });
+  $('pSize').addEventListener('change', () => { const v = $('pSize').value; state.customSize = v === 'custom'; if (v !== 'custom') { const s = LO.PAGE_SIZES[+v]; state.cfg.w = s[1]; state.cfg.h = s[2]; } $('customWrap').hidden = $('customWrap2').hidden = v !== 'custom'; edited(); });
   [['pW', 'w', 1280], ['pH', 'h', 720], ['margin', 'margin', 10], ['gap', 'gap', 10]].forEach(([id, k, d]) => $(id).addEventListener('input', () => { state.cfg[k] = Math.max(0, num($(id).value, d)); edited(); }));
   $('rounding').addEventListener('change', () => { state.cfg.rounding = $('rounding').value; edited(); });
   $('hdrOn').addEventListener('change', () => { state.cfg.header.on = $('hdrOn').checked; edited({ editor: true }); });
@@ -1386,6 +1711,20 @@ function init(){
     edited({ editor: true });
     if (/^add/.test(a) && $('edTitle')) { $('edTitle').focus(); $('edTitle').select(); }
   });
+  // 3-30-3 suggestions
+  const sgChange = () => { const g = state.sg;
+    g.kpis = Math.max(0, Math.min(8, num($('sgK').value, 4))); g.targets = $('sgT').value; g.trend = $('sgTrend').checked; g.breakdowns = Math.max(0, Math.min(4, num($('sgB').value, 2)));
+    g.geo = $('sgGeo').checked && g.breakdowns > 0; g.heatmap = $('sgHeat').checked; g.detail = $('sgD').value; g.filters = Math.max(0, Math.min(8, num($('sgF').value, 3))); g.filterPlace = $('sgP').value;
+    store.set('sg', JSON.stringify(g)); renderSuggestInputs(); if (state.sgOut) { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); } };
+  ['sgK', 'sgB', 'sgF'].forEach(id => $(id).addEventListener('input', sgChange));
+  ['sgT', 'sgTrend', 'sgGeo', 'sgHeat', 'sgD', 'sgP'].forEach(id => $(id).addEventListener('change', sgChange));
+  $('sgGo').addEventListener('click', () => { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); const f = $('sgOut').querySelector('[data-usesg]'); if (f) f.focus(); });
+  $('sgOut').addEventListener('click', e => {
+    const u = e.target.closest('[data-usesg]');
+    if (u) { const v = state.sgOut[+u.dataset.usesg]; state.cfg = LO.upgrade(JSON.parse(JSON.stringify(v.cfg))); state.sel = null; state.zones = true; $('showZones').checked = true; edited({ editor: true }); $('canvas').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    if (e.target.id === 'sgDetail') { state.cfg = LO.upgrade(LS.detailPage(state.cfg)); state.sel = null; edited({ editor: true }); $('canvas').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  });
+  $('showZones').addEventListener('change', () => { state.zones = $('showZones').checked; renderCanvas(); });
   // step 3
   $('colorSrc').addEventListener('change', () => { state.look.src = $('colorSrc').value; state.look.overrides = {}; edited({ look: true }); });
   $('font').addEventListener('change', () => { state.look.font = $('font').value; edited(); });
@@ -1419,6 +1758,11 @@ function init(){
       else if (b.dataset.dl === 'bg-svg') download(new Blob([state.out.bg], { type: 'image/svg+xml' }), name + ' background.svg');
       else if (b.dataset.dl === 'wf-png') download(await LX.png(state.out.wf, c.w, c.h, 2), name + ' wireframe.png');
       else if (b.dataset.dl === 'bg-png2') download(await LX.png(state.out.bg, c.w, c.h, 2), name + ' background.png');
+      else if (b.dataset.dl === 'pptx') {
+        const bytes = async svg => new Uint8Array(await (await LX.png(svg, c.w, c.h, 2)).arrayBuffer());
+        const blob = LP.build(state.L, c, state.col, state.look.style, state.look.font, { wf: await bytes(state.out.wf), bg: await bytes(state.out.bg) });
+        download(blob, name + ' layout.pptx');
+      }
       else if (b.dataset.dl === 'bg-png1') download(await LX.png(state.out.bg, c.w, c.h, 1), name + ' background 1x.png');
     } catch (err) { const m = document.createElement('div'); m.className = 'msg err'; m.textContent = err.message || String(err); b.closest('.btns').after(m); setTimeout(() => m.remove(), 8000); }
   });
