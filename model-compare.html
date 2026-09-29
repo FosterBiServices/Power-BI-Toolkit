@@ -416,6 +416,8 @@ const DAX_QUERY = [
 '// Hierarchy levels, to tell which columns a hierarchy uses',
 'VAR _levels = SELECTCOLUMNS ( INFO.LEVELS (), "LCID", [ColumnID], "LHID", [HierarchyID] )',
 'VAR _hierarchies = SELECTCOLUMNS ( INFO.HIERARCHIES (), "HID", [ID], "HName", [Name] )',
+'// Calculated tables (partition type 2), for field parameters and other DAX tables',
+'VAR _calcParts = SELECTCOLUMNS ( FILTER ( INFO.PARTITIONS (), [Type] = 2 ), "CTID", [TableID], "CExpr", [QueryDefinition] )',
 'VAR _tables =',
 '\tSELECTCOLUMNS (',
 '\t\tINFO.VIEW.TABLES (),',
@@ -426,7 +428,11 @@ const DAX_QUERY = [
 '\t\t"Folder", "",',
 '\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [IsPrivate], " private", "" ),',
 '\t\t"Description", ' + CLEAN('[Description]', ' ') + ',',
-'\t\t"Expression", "",',
+'\t\t"Expression",',
+'\t\t\tVAR _ctn = [Name]',
+'\t\t\tVAR _ctid = MAXX ( FILTER ( _tableIds, [TName] = _ctn ), [TID] )',
+'\t\t\tRETURN SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( MAXX ( FILTER ( _calcParts, [CTID] = _ctid ), [CExpr] ), UNICHAR ( 13 ), "" ), UNICHAR ( 10 ), UNICHAR ( 8629 ) ), UNICHAR ( 9 ), "    " ),',
+
 '\t\t"ToTable", "",',
 '\t\t"ToColumn", "",',
 '\t\t"Summarize", "",',
@@ -1438,6 +1444,7 @@ const MC = (() => {
       out.rows.push({ kind, table, name, type: g('type'), folder: g('folder'), flags, description: g('description'), expression: g('expression'),
         toTable: g('totable'), toColumn: g('tocolumn'), summarize: g('summarize'), sortBy: g('sortby'), hierarchies: g('hierarchies'), storage: g('storage'), source: g('source') });
     }
+    out.has.calc = out.rows.some(r => r.kind === 'table' && (r.expression || '').trim());
     if (!out.rows.length) return { error: 'The header row was found but no model rows came with it. Paste the full results.' };
     return out;
   }
@@ -1457,7 +1464,7 @@ const MC = (() => {
   const DIR = { onedirection: 'single', bothdirections: 'both', automatic: 'automatic' };
   // [id, label, get(row), importance]
   const PROPS = {
-    table: [['hidden', 'Hidden', r => flagSet(r).has('hidden'), 'house'], ['category', 'Data category', r => r.type || '', 'house'], ['description', 'Description', r => r.description || '', 'house'],
+    table: [['expression', 'DAX (calculated table or field parameter)', r => r.expression || '', 'change'], ['hidden', 'Hidden', r => flagSet(r).has('hidden'), 'house'], ['category', 'Data category', r => r.type || '', 'house'], ['description', 'Description', r => r.description || '', 'house'],
       ['storage', 'Storage mode', r => r.storage, 'change'], ['source', 'Source model', r => r.source, 'change']],
     column: [['expression', 'DAX (calculated column)', r => r.expression || '', 'change'], ['type', 'Data type', r => r.type || '', 'attention'], ['hidden', 'Hidden', r => flagSet(r).has('hidden'), 'house'],
       ['key', 'Key column', r => flagSet(r).has('key'), 'house'], ['folder', 'Display folder', r => r.folder || '', 'house'], ['description', 'Description', r => r.description || '', 'house'],
@@ -1570,6 +1577,7 @@ const MC = (() => {
       PROPS[kind].forEach(([id, lab, get, imp]) => {
         let va = get(a), vb = get(b);
         if (va === undefined || vb === undefined) return; // not in one of the exports
+        if (id === 'expression' && kind === 'table' && !(A.has.calc && B.has.calc)) return; // an older export query has no calculated table DAX
         if (id === 'expression' && kind !== 'relationship') {
           if (va === vb) return;
           const ra = renameIn(va, ren), renamed = ra !== va;

@@ -236,7 +236,10 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 .btn.small{padding:4px 10px;font-size:13px}
 .rules{display:flex;flex-direction:column;gap:8px}
 .rule{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px 14px;display:flex;flex-direction:column;gap:4px}
-.rule.is-off{background:var(--surface-2)}
+.rule.is-off,.rule.needs{background:var(--surface-2)}
+.rule.needs .rule-t{color:var(--muted)}
+.rules-h{margin:10px 0 0;font-size:15px}
+.subopt input[type=number]{width:64px;font-family:var(--sans);font-size:13.5px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--code-bg);color:var(--ink)}
 .rule.is-off .rule-t,.rule.is-off .rule-why{color:var(--muted)}
 .rule-main{display:flex;align-items:center;gap:10px;cursor:pointer;flex-wrap:wrap}
 .rule-main input{width:18px;height:18px;accent-color:var(--accent);margin:0}
@@ -297,7 +300,7 @@ ul.fl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>Model Linter</h1>
-        <p class="lede">Best-practice checks on your model export: measures without a folder or format string, visible key columns, bidirectional relationships, implicit measures and unused columns. Each finding says why it matters and how to fix it in Power BI Desktop. No AI needed.</p>
+        <p class="lede">Best-practice checks on your model export: measures without a folder or format string, visible key columns, bidirectional relationships, implicit measures, unused columns and measures, and, with a PBIP folder, report checks such as alt text and crowded pages. Each finding says why it matters and how to fix it in Power BI Desktop. No AI needed.</p>
       </div>
       <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
@@ -339,7 +342,7 @@ ul.fl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
       <div class="repbox" id="repBox">
         <div class="rep-head"><h3>Report pages <span class="muted">(optional)</span></h3>
           <span class="btns"><button type="button" class="btn" id="pickReport">Choose a PBIP folder</button><button type="button" class="btn" id="clearReport" hidden>Remove report pages</button></span></div>
-        <p class="note small" id="repIntro">The export can&rsquo;t see which columns are on report pages. Choose the project folder (or its <b>.Report</b> folder) of a report saved as a Power BI Project, and visible columns are checked against every visual, filter and bookmark in it. Choose a parent folder to include several reports on the same model. Only the report files are read, on this page; nothing is uploaded.</p>
+        <p class="note small" id="repIntro">Choose the project folder (or its <b>.Report</b> folder) of a report saved as a Power BI Project. Visible columns and every measure are then checked against each visual, filter, formatting rule and bookmark in it, and the report checks run: alt text, titles, hidden visuals, unused bookmarks, empty and crowded pages. If the folder also holds the semantic model, its field parameters are read so measures used only there count as used. Choose a parent folder to include several reports on the same model. Files are read on this page; nothing is uploaded.</p>
         <div class="drop" id="repDrop">or drop the folder here</div>
         <input type="file" id="repInput" webkitdirectory multiple hidden>
         <div id="repMsg"></div>
@@ -397,6 +400,8 @@ const DAX_QUERY = [
 '// Hierarchy levels, to tell which columns a hierarchy uses',
 'VAR _levels = SELECTCOLUMNS ( INFO.LEVELS (), "LCID", [ColumnID], "LHID", [HierarchyID] )',
 'VAR _hierarchies = SELECTCOLUMNS ( INFO.HIERARCHIES (), "HID", [ID], "HName", [Name] )',
+'// Calculated tables (partition type 2), for field parameters and other DAX tables',
+'VAR _calcParts = SELECTCOLUMNS ( FILTER ( INFO.PARTITIONS (), [Type] = 2 ), "CTID", [TableID], "CExpr", [QueryDefinition] )',
 'VAR _tables =',
 '\tSELECTCOLUMNS (',
 '\t\tINFO.VIEW.TABLES (),',
@@ -407,7 +412,11 @@ const DAX_QUERY = [
 '\t\t"Folder", "",',
 '\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [IsPrivate], " private", "" ),',
 '\t\t"Description", ' + CLEAN('[Description]', ' ') + ',',
-'\t\t"Expression", "",',
+'\t\t"Expression",',
+'\t\t\tVAR _ctn = [Name]',
+'\t\t\tVAR _ctid = MAXX ( FILTER ( _tableIds, [TName] = _ctn ), [TID] )',
+'\t\t\tRETURN SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( MAXX ( FILTER ( _calcParts, [CTID] = _ctid ), [CExpr] ), UNICHAR ( 13 ), "" ), UNICHAR ( 10 ), UNICHAR ( 8629 ) ), UNICHAR ( 9 ), "    " ),',
+
 '\t\t"ToTable", "",',
 '\t\t"ToColumn", "",',
 '\t\t"Summarize", "",',
@@ -1406,7 +1415,7 @@ const ML = (() => {
       if (!lines[i].trim()) continue;
       const c = lines[i].split('\t'), kind = low(get(c, 'kind')), table = get(c, 'table'), name = get(c, 'name'), flags = low(get(c, 'flags'));
       if (/^(localdatetable_|datetabletemplate_)/i.test(table)) continue;
-      if (kind === 'table') res.tables.push({ name, hidden: /\bhidden\b/.test(flags), category: get(c, 'type') });
+      if (kind === 'table') res.tables.push({ name, hidden: /\bhidden\b/.test(flags), category: get(c, 'type'), expression: get(c, 'expression') });
       else if (kind === 'column') {
         if (/^RowNumber-/i.test(name)) continue;
         res.columns.push({ table, name, dataType: get(c, 'type'), folder: get(c, 'folder'), hidden: /\bhidden\b/.test(flags), key: /\bkey\b/.test(flags),
@@ -1450,8 +1459,24 @@ const ML = (() => {
     });
     m.measures.forEach(x => scan(x.expression, x.table, 'measure'));
     m.columns.forEach(x => { if (x.expression) scan(x.expression, x.table, 'calculated column'); });
+    m.tables.forEach(t => { if (t.expression) scan(t.expression, t.name, 'calculated table'); });
+    (m.extraExprs || []).forEach(x => scan(x.expr, x.table, x.why));
     m.rels.forEach(r => { mark(r.fromTable, r.fromColumn, 'relationship'); mark(r.toTable, r.toColumn, 'relationship'); });
     m.columns.forEach(x => { if (x.sortBy) mark(x.table, x.sortBy, 'sort by'); if (x.hierarchies) mark(x.table, x.name, 'hierarchy'); });
+    return used;
+  }
+
+  // Why each measure counts as used: other measures, calculated columns and tables (field parameters), the report
+  function measureUsage(m, rep){
+    const byName = new Map(m.measures.map(x => [low(x.name), x]));
+    const used = new Map();
+    const mark = (n, why) => { const k = low(n); if (!byName.has(k)) return; if (!used.has(k)) used.set(k, new Set()); used.get(k).add(why); };
+    const scan = (expr, why, self) => refs(expr).forEach(r => { if (!self || low(r.col) !== low(self)) mark(r.col, why); });
+    m.measures.forEach(x => scan(x.expression, 'measure', x.name));
+    m.columns.forEach(x => { if (x.expression) scan(x.expression, 'calculated column'); });
+    m.tables.forEach(t => { if (t.expression) scan(t.expression, 'calculated table or field parameter'); });
+    (m.extraExprs || []).forEach(x => scan(x.expr, x.why));
+    if (rep) { (rep.refs || []).forEach(r => mark(r[1], 'report')); (rep.exprs || []).forEach(e => scan(e, 'report-level measure')); }
     return used;
   }
 
@@ -1473,16 +1498,41 @@ const ML = (() => {
       fix: 'Turn on <b>Discourage implicit measures</b>: in Model view, select the model in the Data pane’s <b>Model</b> tab and switch it on in Properties. For single columns, set <b>Summarize by</b> to <b>None</b> in the Properties pane (you can select several at once).' },
     { id: 'unused', title: 'Unused columns', short: 'Unused column',
       why: 'Every column is loaded and compressed whether anyone uses it or not. Removing unused ones makes the model smaller and faster to refresh.',
-      fix: 'Remove the column in Power Query (Choose columns or Remove columns), not just in the model, so it isn’t loaded at all. Add report pages in Step 1 to check visible columns against them, and check any other reports on the model before removing a column.' }
+      fix: 'Remove the column in Power Query (Choose columns or Remove columns), not just in the model, so it isn’t loaded at all. Add report pages in Step 1 to check visible columns against them, and check any other reports on the model before removing a column.' },
+    { id: 'unusedm', title: 'Unused measures', short: 'Unused measure', needsReport: true,
+      why: 'Measures nobody uses still have to be kept working, tested and explained. Old versions and experiments pile up and make the right measure harder to find.',
+      fix: 'Check other reports on this model first (they can’t be seen from here), then delete the measure in Power BI Desktop, or move it to an <b>_Archive</b> display folder and hide it for a while if you’re unsure.' },
+    { id: 'alttext', title: 'Visuals without alt text', short: 'No alt text', needsReport: true, group: 'report',
+      why: 'Screen readers read a visual’s alt text to describe it. Without it, people using one hear only the visual type.',
+      fix: 'Select the visual, open <b>Format &gt; General &gt; Alt text</b>, and describe what the visual shows and the point it makes (up to 250 characters). Use <b>fx</b> to build it from a measure so it stays current.' },
+    { id: 'title', title: 'Charts and tables with the title turned off', short: 'Title off', needsReport: true, group: 'report',
+      why: 'A title says what a chart shows and is announced by screen readers. A text box above the chart looks the same but isn’t tied to it.',
+      fix: 'Turn on <b>Format &gt; General &gt; Title</b>, or, if a text box does the job, add alt text to the chart so screen readers still know what it is.' },
+    { id: 'hiddenvis', title: 'Hidden visuals no bookmark shows', short: 'Hidden visual', needsReport: true, group: 'report',
+      why: 'A hidden visual still loads with the page in some cases and makes the page harder to maintain. If no bookmark ever shows it, nobody sees it.',
+      fix: 'Open <b>View &gt; Selection</b>, find the visual (it has a crossed-out eye) and delete it, or add it to the bookmark that should show it.' },
+    { id: 'bookmarks', title: 'Bookmarks no button or navigator uses', short: 'Unused bookmark', needsReport: true, group: 'report',
+      why: 'Old bookmarks keep old filters and visibility settings. Changing the page later can make them show the wrong thing if someone opens them.',
+      fix: 'Open <b>View &gt; Bookmarks</b> and delete the ones you no longer need. Keep any that readers open from the Bookmarks pane on purpose.' },
+    { id: 'emptypages', title: 'Empty pages', short: 'Empty page', needsReport: true, group: 'report',
+      why: 'An empty page shows up in the page list and looks unfinished.',
+      fix: 'Delete the page, or hide it (right-click the page tab, <b>Hide page</b>) if you’re still building it.' },
+    { id: 'crowded', title: 'Pages with many visuals', short: 'Crowded page', needsReport: true, group: 'report',
+      why: 'Every visual runs its own query and has to be drawn. On a crowded page, visuals wait for each other, so the page takes longer to be ready, and readers have more to take in.',
+      fix: 'Combine cards into one multi-row card or new card visual, move detail to a drill-through or tooltip page, and use buttons or a field parameter to swap visuals instead of showing them all at once.' }
   ];
 
   const numeric = t => NUMERIC.test((t || '').trim());
+  const TYPE_NAMES = { tableEx: 'Table', pivotTable: 'Matrix', cardVisual: 'Card', card: 'Card', multiRowCard: 'Multi-row card', kpi: 'KPI', image: 'Image', map: 'Map', filledMap: 'Filled map', azureMap: 'Azure map', decompositionTreeVisual: 'Decomposition tree' };
+  const typeName = t => TYPE_NAMES[t] || (t ? t.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase()) : 'Visual');
   const looksKey = n => /(key|id|sk|code)$/i.test(n.replace(/[\s_]+/g, '')) || /^(id|key)\b/i.test(n);
 
   function lint(m, cfg){
     const on = id => !cfg.off || !cfg.off[id];
+    // calculated tables (field parameters) read from the semantic model's TMDL in the PBIP folder
+    if (cfg.report && (cfg.report.modelExprs || []).length) m = Object.assign({}, m, { extraExprs: cfg.report.modelExprs.map(x => ({ expr: x.expr, table: x.table, why: 'calculated table or field parameter' })) });
     const out = [], notes = {};
-    const add = (rule, sev, kind, table, name, detail) => out.push({ rule, sev, kind, table, name, detail, id: rule + '|' + kind + '|' + low(table) + '|' + low(name) });
+    const add = (rule, sev, kind, table, name, detail, uid) => out.push({ rule, sev, kind, table, name, detail, id: rule + '|' + kind + '|' + low(table) + '|' + low(name) + (uid ? '|' + uid : '') });
     const hiddenTable = new Set(m.tables.filter(t => t.hidden).map(t => low(t.name)));
     const visible = x => !x.hidden && !hiddenTable.has(low(x.table));
 
@@ -1558,6 +1608,47 @@ const ML = (() => {
       }
       if (extra.length) notes.unused = extra.join(' ');
     }
+    const rep = cfg.report && cfg.report.refs ? cfg.report : null;
+    if (on('unusedm')) {
+      if (!rep) {
+        const used = measureUsage(m, null), n = m.measures.filter(x => !used.has(low(x.name))).length;
+        notes.unusedm = 'Needs report pages: a measure can be used only on a visual, so add the report\u2019s PBIP folder in Step 1. ' + (n ? n + ' measure' + (n === 1 ? ' isn\u2019t' : 's aren\u2019t') + ' used by any other measure, calculated column or field parameter.' : '');
+      } else {
+        const used = measureUsage(m, rep);
+        const noCalcTables = !m.tables.some(t => t.expression) && !(m.extraExprs || []).length;
+        m.measures.filter(x => !used.has(low(x.name))).forEach(x =>
+          add('unusedm', 'warn', 'Measure', x.table, x.name, (x.hidden ? 'Hidden. ' : '') + 'Not used by any other measure, calculated column, field parameter, or visual, filter or formatting on the ' + rep.pages + ' report page' + (rep.pages === 1 ? '' : 's') + ' checked.'));
+        const bits = ['Checked against ' + rep.pages + ' page' + (rep.pages === 1 ? '' : 's') + ' in ' + rep.reports.join(', ') + '. Other reports on the published model, Excel workbooks and dashboards can\u2019t be seen from here.'];
+        const objs = new Set(m.columns.map(c => key(c.table, c.name)).concat(m.measures.map(x => key(x.table, x.name))));
+        const known = rep.refs.filter(r => objs.has(key(r[0], r[1])) || m.measures.some(x => low(x.name) === low(r[1])));
+        if (rep.refs.length >= 5 && known.length < rep.refs.length / 2) bits.push('\u26a0 Only ' + known.length + ' of the ' + rep.refs.length + ' fields on these pages are in this model export, so the report may be built on a different model and this list isn\u2019t reliable.');
+        if (noCalcTables) bits.push('This export doesn\u2019t include calculated table definitions, so measures used only in a field parameter may show here. Run the updated export query, or choose the project folder that also holds the semantic model.');
+        notes.unusedm = bits.join(' ');
+      }
+    }
+    // report checks: only with PBIR report pages
+    const d = rep && rep.detail;
+    const REPORT_RULES = ['alttext', 'title', 'hiddenvis', 'bookmarks', 'emptypages', 'crowded'];
+    if (!d) REPORT_RULES.forEach(id => { if (on(id)) notes[id] = rep && rep.legacy ? 'This report uses the older single-file format (report.json), so these checks can\u2019t run. Save it with the PBIR format (Options > Preview features) to check it.' : 'Needs report pages: add the report\u2019s PBIP folder in Step 1.'; });
+    else {
+      const pageLabel = p => p.name + (rep.reports.length > 1 ? ' (' + p.report + ')' : '');
+      const CHARTS = /^(barChart|clusteredBarChart|stackedBarChart|hundredPercentStackedBarChart|columnChart|clusteredColumnChart|stackedColumnChart|hundredPercentStackedColumnChart|lineChart|areaChart|stackedAreaChart|hundredPercentStackedAreaChart|lineClusteredColumnComboChart|lineStackedColumnComboChart|ribbonChart|waterfallChart|funnel|scatterChart|pieChart|donutChart|treemap|map|filledMap|azureMap|shapeMap|tableEx|pivotTable|decompositionTreeVisual|keyDriversVisual|gauge)$/;
+      const NO_ALT = /^(textbox|basicShape|shape|actionButton|pageNavigator|bookmarkNavigator|slicer|advancedSlicerVisual|listSlicer|textSlicer)$/i;
+      const DECOR = /^(textbox|basicShape|shape|image|actionButton|pageNavigator|bookmarkNavigator)$/i;
+      d.pages.forEach(p => {
+        const vis = p.visuals.filter(v => !v.group);
+        if (on('alttext')) vis.filter(v => !v.hidden && !NO_ALT.test(v.type) && !v.alt).forEach(v => add('alttext', 'info', 'Visual', pageLabel(p), v.label, 'No alt text' + (v.titleOff ? ', and the title is off' : '') + '.' + (v.label !== typeName(v.type) ? ' ' + typeName(v.type) + '.' : ''), v.id));
+        if (on('title')) vis.filter(v => !v.hidden && CHARTS.test(v.type) && v.titleOff).forEach(v => add('title', v.alt ? 'info' : 'warn', 'Visual', pageLabel(p), v.label, 'Title turned off' + (v.alt ? ', but it has alt text.' : ' and no alt text, so nothing says what it shows.'), v.id));
+        if (on('hiddenvis')) vis.filter(v => v.hidden && !v.inBookmark).forEach(v => add('hiddenvis', 'info', 'Visual', pageLabel(p), v.label, 'Hidden, and no bookmark shows it.' + (v.label !== typeName(v.type) ? ' ' + typeName(v.type) + '.' : ''), v.id));
+        if (on('emptypages') && !vis.length) add('emptypages', p.hidden ? 'info' : 'warn', 'Page', pageLabel(p), p.name, 'No visuals' + (p.hidden ? ' (hidden page).' : '.'), p.id);
+        if (on('crowded')) {
+          const data = vis.filter(v => !v.hidden && !DECOR.test(v.type)).length, lim = +cfg.crowded || 12;
+          if (data > lim) add('crowded', data > lim * 1.5 ? 'warn' : 'info', 'Page', pageLabel(p), p.name, data + ' visuals that load data (the limit set is ' + lim + ').', p.id);
+        }
+      });
+      if (on('bookmarks')) d.bookmarks.filter(b => !b.used).forEach(b => add('bookmarks', 'info', 'Bookmark', b.report, b.label, 'No button or bookmark navigator uses it' + (b.group ? ' (group ' + b.group + ')' : '') + '. Readers can still open it from the Bookmarks pane.', b.id));
+      if (on('crowded')) notes.crowded = 'Counts visuals that load data (not text boxes, shapes, images or buttons). Change the limit above if your pages are designed around more.';
+    }
     return { findings: out, notes };
   }
 
@@ -1582,7 +1673,14 @@ const ML = (() => {
       };
       walk(data);
     };
+    // details for the report checks (PBIR only)
+    const pg = new Map(), bms = [], bmText = [], navs = [], exprs = [], modelExprs = []; let legacy = false;
+    const lit = o => { const v = o && o.expr && o.expr.Literal && o.expr.Literal.Value; return typeof v === 'string' ? v.replace(/^'(.*)'$/s, '$1').replace(/''/g, "'") : v; };
+    const prop = (objs, obj, p) => { const a = objs && objs[obj]; const x = Array.isArray(a) && a[0] && a[0].properties; return x ? x[p] : undefined; };
+    const page = (r, id) => { const k = r + '|' + id; if (!pg.has(k)) pg.set(k, { report: r, id, name: id, hidden: false, visuals: [], order: 1e4 }); return pg.get(k); };
     for (const [path, text] of files) {
+      // calculated tables (field parameters) in the semantic model's TMDL, for measure usage
+      if (/\.SemanticModel\/definition\/tables\/[^\/]+\.tmdl$/i.test(path) && /=\s*calculated\s*$/m.test(text)) { const t = (text.match(/^table\s+(.+?)\s*$/m) || [])[1] || ''; modelExprs.push({ table: t.replace(/^'(.*)'$/, '$1'), expr: text.slice(text.search(/^\tpartition\b/m)) }); continue; }
       const m = path.match(/(?:^|\/)([^\/]+)\.Report\//i); if (!m || !/\.json$/i.test(path)) continue;
       let data; try { data = JSON.parse(text.replace(/^﻿/, '')); } catch (e) { continue; }
       readable++; reports.add(m[1]);
@@ -1590,11 +1688,41 @@ const ML = (() => {
       if (/\/visuals\/[^\/]+\/visual\.json$/i.test(path)) visuals++;
       if (/\.Report\/report\.json$/i.test(path) && Array.isArray(data.sections)) data.sections.forEach((sec, i) => { pages.add(path + '#' + i); visuals += (sec.visualContainers || []).length; });
       doc(data);
+      const r = m[1];
+      let x;
+      if (/\.Report\/report\.json$/i.test(path) && Array.isArray(data.sections)) legacy = true;
+      if ((x = path.match(/\/pages\/([^\/]+)\/page\.json$/i))) { const p = page(r, x[1]); p.name = data.displayName || x[1]; p.hidden = /hidden/i.test(data.visibility || ''); p.path = path; }
+      if ((x = path.match(/\/pages\/pages\.json$/i)) && Array.isArray(data.pageOrder)) data.pageOrder.forEach((id, i) => { page(r, id).order = i; });
+      if ((x = path.match(/\/pages\/([^\/]+)\/visuals\/([^\/]+)\/visual\.json$/i))) {
+        const v = data.visual || {}, o = v.visualContainerObjects || {}, type = v.visualType || (data.visualGroup ? 'group' : '');
+        const title = lit(prop(o, 'title', 'text')), alt = prop(o, 'general', 'altText');
+        const altOk = alt && (typeof lit(alt) === 'string' ? lit(alt).trim() : true);
+        page(r, x[1]).visuals.push({ id: data.name || x[2], type, group: !!data.visualGroup, hidden: !!data.isHidden, alt: !!altOk, titleOff: lit(prop(o, 'title', 'show')) === 'false', label: (typeof title === 'string' && title.trim()) || (data.visualGroup && data.visualGroup.displayName) || typeName(type) });
+        if (/bookmarkNavigator/i.test(type)) navs.push({ report: r, text });
+        bmText.push({ report: r, text: /bookmarkNavigator/i.test(type) ? '' : text });
+      }
+      if (/\/bookmarks\/bookmarks\.json$/i.test(path) && Array.isArray(data.items)) {
+        const walkB = (items, group) => items.forEach(it => { if (!it || !it.name) return; if (Array.isArray(it.children)) walkB(it.children, it.displayName || it.name); else { const y = bms.find(z => z.report === r && z.name === it.name); if (y) { y.group = group || ''; if (it.displayName) y.label = it.displayName; } else bms.push({ report: r, name: it.name, group: group || '', label: it.displayName || it.name }); } });
+        walkB(data.items, '');
+        data.items.filter(it => it && Array.isArray(it.children)).forEach(g => g.children.forEach(c => { const b = bms.find(y => y.report === r && y.name === c.name); if (b) b.groupName = g.name; }));
+      }
+      if (/\/bookmarks\/[^\/]+\.bookmark\.json$/i.test(path)) { const b = data.name; bmText.push({ report: r, bookmark: true, text }); if (b) { const y = bms.find(z => z.report === r && z.name === b); if (y && data.displayName) y.label = data.displayName; else if (!y) bms.push({ report: r, name: b, group: '', label: data.displayName || b }); } }
+      if (/\/reportExtensions\.json$/i.test(path)) { const walkE = n => { if (isObj(n)) { if (typeof n.expression === 'string') exprs.push(n.expression); Object.values(n).forEach(walkE); } else if (Array.isArray(n)) n.forEach(walkE); }; walkE(data); }
     }
-    return { reports: [...reports].sort(), pages: pages.size, visuals, files: readable, refs: [...refs.values()] };
+    // bookmark labels from their own files, and which ones a button or navigator uses
+    bms.forEach(b => {
+      const own = bmText.filter(t => !t.bookmark && t.report === b.report).some(t => t.text.includes(b.name));
+      const nav = navs.filter(n => n.report === b.report).some(n => !bms.some(o => o.groupName && n.text.includes(o.groupName)) || (b.groupName && n.text.includes(b.groupName)));
+      b.used = own || nav; b.id = b.report + '|' + b.name;
+    });
+    const bmAll = bmText.filter(t => t.bookmark).map(t => t.text).join('\n');
+    pg.forEach(p => p.visuals.forEach(v => { if (v.hidden) v.inBookmark = bmAll.includes(v.id); }));
+    const detail = legacy && !pg.size ? null : { pages: [...pg.values()].filter(p => p.path).sort((a, b) => a.report.localeCompare(b.report) || a.order - b.order), bookmarks: bms.map(({ report, name, group, label, used, id }) => ({ report, name, group, label, used, id })) };
+    if (detail) detail.pages.forEach(p => { delete p.path; });
+    return { reports: [...reports].sort(), pages: pages.size, visuals, files: readable, refs: [...refs.values()], exprs, modelExprs, legacy: legacy && !pg.size, detail };
   }
 
-  return { parse, lint, refs, usage, reportUsage, RULES, numeric };
+  return { parse, lint, refs, usage, measureUsage, reportUsage, RULES, numeric, typeName };
 })();
 
 
@@ -1615,12 +1743,14 @@ function copyText(text, btn){
   try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
 }
 
-const blankCfg = () => ({ off: {}, visibleUnused: false, ignored: {}, showIgnored: false, collapsed: {} });
+const blankCfg = () => ({ off: {}, visibleUnused: false, ignored: {}, showIgnored: false, collapsed: {}, crowded: 12 });
 const state = { example: false, model: null, cfg: blankCfg(), result: null, report: null };
 
 /* ---------- report pages from a PBIP folder (only .Report files are read) ---------- */
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.pbi', '.vs', 'StaticResources', 'RegisteredResources']);
-const skipDir = n => SKIP_DIRS.has(n) || /\.SemanticModel$/i.test(n) || /\.Dataset$/i.test(n);
+const skipDir = n => SKIP_DIRS.has(n) || /\.Dataset$/i.test(n);
+// report files, plus the semantic model's table files (for field parameters and other calculated tables)
+const wanted = p => /\.Report\/.*\.json$/i.test(p) || /\.SemanticModel\/definition\/tables\/[^\/]+\.tmdl$/i.test(p);
 async function decode(file){
   const buf = await file.arrayBuffer();
   let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { t = new TextDecoder('windows-1252').decode(buf); }
@@ -1629,12 +1759,12 @@ async function decode(file){
 async function walkHandle(dir, prefix, out){
   for await (const [name, h] of dir.entries()) {
     if (h.kind === 'directory') { if (!skipDir(name)) await walkHandle(h, prefix + '/' + name, out); }
-    else if (/\.json$/i.test(name)) out.push({ path: prefix + '/' + name, file: await h.getFile() });
+    else if (/\.(json|tmdl)$/i.test(name)) out.push({ path: prefix + '/' + name, file: await h.getFile() });
   }
 }
 function walkEntry(entry, prefix, out){
   return new Promise(resolve => {
-    if (entry.isFile) { if (/\.json$/i.test(entry.name)) entry.file(f => { out.push({ path: prefix + '/' + entry.name, file: f }); resolve(); }, () => resolve()); else resolve(); return; }
+    if (entry.isFile) { if (/\.(json|tmdl)$/i.test(entry.name)) entry.file(f => { out.push({ path: prefix + '/' + entry.name, file: f }); resolve(); }, () => resolve()); else resolve(); return; }
     if (skipDir(entry.name)) { resolve(); return; }
     const reader = entry.createReader(); const all = [];
     const next = () => reader.readEntries(batch => { if (!batch.length) { Promise.all(all.map(e => walkEntry(e, prefix + '/' + entry.name, out))).then(resolve); return; } all.push(...batch); next(); }, () => resolve());
@@ -1644,10 +1774,10 @@ function walkEntry(entry, prefix, out){
 async function loadReport(root, list){
   $('repMsg').innerHTML = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>';
   // a chosen .Report folder itself: its files have no ".Report/" above them, so add it back
-  const norm = p => (/\.Report$/i.test(root) && !/\.Report\//i.test(p)) ? root + '/' + p.split('/').slice(1).join('/') : p;
+  const norm = p => (/\.(Report|SemanticModel)$/i.test(root) && !/\.(Report|SemanticModel)\//i.test(p)) ? root + '/' + p.split('/').slice(1).join('/') : p;
   const files = new Map();
   for (const { path, file } of list) {
-    const p = norm(path); if (!/\.Report\//i.test(p) || file.size > 30 * 1024 * 1024) continue;
+    const p = norm(path); if (!wanted(p) || file.size > 30 * 1024 * 1024) continue;
     try { files.set(p, await decode(file)); } catch (e) {}
   }
   const r = ML.reportUsage(files);
@@ -1664,7 +1794,8 @@ function renderReport(){
   $('clearReport').hidden = !r; $('pickReport').textContent = r ? 'Choose a different folder' : 'Choose a PBIP folder';
   if (!r) { if (!/Reading/.test($('repMsg').textContent) && !/No report pages/.test($('repMsg').textContent)) $('repMsg').innerHTML = ''; return; }
   const cols = state.model ? r.refs.filter(x => state.model.columns.some(c => lc(c.table) === lc(x[0]) && lc(c.name) === lc(x[1]))).length : 0;
-  $('repMsg').innerHTML = '<div class="msg ok">&#10003; <b>' + esc(r.reports.join(', ')) + '</b>: ' + r.pages + ' page' + (r.pages === 1 ? '' : 's') + ', ' + r.visuals + ' visual' + (r.visuals === 1 ? '' : 's') + ', ' + r.refs.length + ' fields' + (state.model ? ' (' + cols + ' columns of this model)' : '') + '. Unused columns are now checked against these pages.</div>';
+  const bm = r.detail ? r.detail.bookmarks.length : 0;
+  $('repMsg').innerHTML = '<div class="msg ok">&#10003; <b>' + esc(r.reports.join(', ')) + '</b>: ' + r.pages + ' page' + (r.pages === 1 ? '' : 's') + ', ' + r.visuals + ' visual' + (r.visuals === 1 ? '' : 's') + (bm ? ', ' + bm + ' bookmark' + (bm === 1 ? '' : 's') : '') + ', ' + r.refs.length + ' fields' + (state.model ? ' (' + cols + ' columns of this model)' : '') + '.' + ((r.modelExprs || []).length ? ' The semantic model&rsquo;s field parameters and calculated tables were read too.' : '') + ' Unused columns and measures, and the report checks, now use these pages.</div>';
 }
 
 function persist(){
@@ -1676,6 +1807,9 @@ function leaveExample(){ if (state.example) setExample(false); }
 
 function objLabel(f){
   if (f.kind === 'Model') return 'Model settings';
+  if (f.kind === 'Visual') return f.table + ' \u203a ' + f.name;
+  if (f.kind === 'Page') return f.table;
+  if (f.kind === 'Bookmark') return f.name + (state.report && state.report.reports.length > 1 ? ' (' + f.table + ')' : '');
   if (f.kind === 'Relationship') return qName(f.table) + '[' + f.name.replace(' → ', '] → ');
   return qName(f.table) + bracket(f.name);
 }
@@ -1697,13 +1831,22 @@ function run(){
 
 function renderRules(){
   const r = state.result, c = state.cfg;
-  $('rules').innerHTML = ML.RULES.map(rule => {
+  const needs = !state.report || !state.report.detail;
+  $('rules').innerHTML = ML.RULES.map((rule, idx) => {
+    const head = rule.group === 'report' && ML.RULES[idx - 1].group !== 'report' ? '<h3 class="rules-h">Report pages' + (needs ? ' <span class="muted small">(add a PBIP folder in Step 1 to run these)</span>' : '') + '</h3>' : '';
+    return head + ruleHtml(rule);
+  }).join('');
+}
+function ruleHtml(rule){
+  const r = state.result, c = state.cfg;
+  {
     const on = !c.off[rule.id];
     const n = r ? r.findings.filter(f => f.rule === rule.id && !c.ignored[f.id]).length : 0;
-    const badge = !r ? '' : !on ? '<span class="cnt off">off</span>' : n ? '<span class="cnt bad">' + n + '</span>' : '<span class="cnt ok">&#10003;</span>';
-    const extra = rule.id === 'unused' && state.report ? '<p class="subopt muted">Visible columns are checked against the report pages added in Step 1.</p>' : rule.id === 'unused' ? '<label class="subopt"><input type="checkbox" id="visibleUnused"' + (c.visibleUnused ? ' checked' : '') + (on ? '' : ' disabled') + '> Also list visible columns <span class="muted">(the export can&rsquo;t see report pages, so these need checking by hand)</span></label>' : '';
-    return '<div class="rule' + (on ? '' : ' is-off') + '"><label class="rule-main"><input type="checkbox" data-rule="' + rule.id + '"' + (on ? ' checked' : '') + '><span class="rule-t">' + esc(rule.title) + '</span>' + badge + '</label><p class="rule-why">' + esc(rule.why) + '</p>' + extra + '</div>';
-  }).join('');
+    const waiting = rule.needsReport && (!state.report || (rule.group === 'report' && !state.report.detail));
+    const badge = !r ? '' : !on ? '<span class="cnt off">off</span>' : waiting ? '<span class="cnt off">needs report pages</span>' : n ? '<span class="cnt bad">' + n + '</span>' : '<span class="cnt ok">&#10003;</span>';
+    const extra = rule.id === 'crowded' ? '<label class="subopt">More than <input type="number" id="crowdedN" min="3" max="60" value="' + (+c.crowded || 12) + '"' + (on ? '' : ' disabled') + '> visuals that load data on one page</label>' : rule.id === 'unused' && state.report ? '<p class="subopt muted">Visible columns are checked against the report pages added in Step 1.</p>' : rule.id === 'unused' ? '<label class="subopt"><input type="checkbox" id="visibleUnused"' + (c.visibleUnused ? ' checked' : '') + (on ? '' : ' disabled') + '> Also list visible columns <span class="muted">(the export can&rsquo;t see report pages, so these need checking by hand)</span></label>' : '';
+    return '<div class="rule' + (on ? '' : ' is-off') + (rule.needsReport && (!state.report || (rule.group === 'report' && !state.report.detail)) ? ' needs' : '') + '"><label class="rule-main"><input type="checkbox" data-rule="' + rule.id + '"' + (on ? ' checked' : '') + '><span class="rule-t">' + esc(rule.title) + '</span>' + badge + '</label><p class="rule-why">' + esc(rule.why) + '</p>' + extra + '</div>';
+  }
 }
 
 function row(f, ignored){
@@ -1720,7 +1863,10 @@ function renderResults(){
   const active = ML.RULES.filter(x => !c.off[x.id]);
   $('sumBar').innerHTML = '<div class="sum-txt">' + (live.length ? '<b>' + live.length + '</b> finding' + (live.length === 1 ? '' : 's') + ': <b>' + w + '</b> to fix, <b>' + i + '</b> worth a look' : '<b class="okc">&#10003; No findings</b> across ' + active.length + ' check' + (active.length === 1 ? '' : 's')) + (ign.length ? ' &middot; ' + ign.length + ' ignored' : '') + '</div>'
     + '<div class="btns">' + (ign.length ? '<button type="button" class="btn" id="toggleIgn">' + (c.showIgnored ? 'Hide ignored' : 'Show ignored') + '</button>' : '') + (r.findings.length ? '<button type="button" class="btn primary" id="copyAll">Copy findings for Excel</button>' : '') + '</div>';
-  $('results').innerHTML = active.map(rule => {
+  const waiting = rule => rule.needsReport && (!state.report || (rule.group === 'report' && !state.report.detail));
+  const waitRep = active.filter(x => x.group === 'report' && waiting(x));
+  $('results').innerHTML = active.filter(x => !(x.group === 'report' && waiting(x))).map(rule => {
+    if (waiting(rule)) return '<div class="grp pass"><div class="grp-head"><span class="grp-t muted">' + esc(rule.title) + '</span><span class="muted small">needs report pages</span></div>' + (r.notes[rule.id] ? '<div class="msg info">' + esc(r.notes[rule.id]) + '</div>' : '') + '</div>';
     const fs = live.filter(f => f.rule === rule.id), fi = c.showIgnored ? ign.filter(f => f.rule === rule.id) : [];
     const note = r.notes[rule.id];
     const vu = rule.id === 'unused' && !c.visibleUnused && r.notes.visibleUnused ? '<div class="msg info">' + r.notes.visibleUnused + ' visible column' + (r.notes.visibleUnused === 1 ? ' isn’t' : 's aren’t') + ' used anywhere in the model either. They&rsquo;re probably on report pages; turn on <b>Also list visible columns</b> in Step 2 to review them.</div>' : '';
@@ -1731,7 +1877,7 @@ function renderResults(){
       + '<span class="grp-act"><button type="button" class="btn small" data-copyrule="' + rule.id + '">Copy list</button>' + (fs.length > 1 ? '<button type="button" class="btn small" data-ignall="' + rule.id + '">Ignore all</button>' : '') + '</span></summary>'
       + '<div class="grp-body"><div class="fix"><b>How to fix.</b> ' + rule.fix + '</div>' + noteHtml + vu
       + '<ul class="fl">' + fs.map(f => row(f, false)).join('') + fi.map(f => row(f, true)).join('') + '</ul></div></details>';
-  }).join('') || '<p class="muted">All checks are off. Turn some on in Step 2.</p>';
+  }).join('') + (waitRep.length ? '<div class="grp pass"><div class="grp-head"><span class="grp-t muted">Report checks</span><span class="muted small">' + waitRep.length + ' check' + (waitRep.length === 1 ? '' : 's') + ' waiting for report pages</span></div><div class="msg info">' + esc(r.notes[waitRep[0].id] || '') + '</div></div>' : '') || '<p class="muted">All checks are off. Turn some on in Step 2.</p>';
 }
 
 function tsv(list){
@@ -1764,6 +1910,7 @@ function init(){
     const id = e.target.dataset.rule;
     if (id) { if (e.target.checked) delete state.cfg.off[id]; else state.cfg.off[id] = true; change(); }
     else if (e.target.id === 'visibleUnused') { state.cfg.visibleUnused = e.target.checked; change(); }
+    else if (e.target.id === 'crowdedN') { const v = Math.max(3, Math.min(60, +e.target.value || 12)); state.cfg.crowded = v; change(); }
   });
   $('results').addEventListener('toggle', e => { const g = e.target.dataset && e.target.dataset.grp; if (!g) return; if (e.target.open) delete state.cfg.collapsed[g]; else state.cfg.collapsed[g] = true; persist(); }, true);
   document.addEventListener('click', e => {
@@ -1784,7 +1931,7 @@ function init(){
   $('repInput').addEventListener('change', async e => {
     const fl = [...e.target.files]; if (!fl.length) return;
     const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
-    const list = fl.filter(f => /\.json$/i.test(f.name) && !(f.webkitRelativePath || '').split('/').some(skipDir)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }));
+    const list = fl.filter(f => /\.(json|tmdl)$/i.test(f.name) && !(f.webkitRelativePath || '').split('/').some(skipDir)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }));
     try { await loadReport(root, list); } catch (err) { $('repMsg').innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(err.message || err) + '</div>'; }
     e.target.value = '';
   });
