@@ -244,7 +244,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 .msg.info{background:var(--info-soft);color:var(--info)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .tabbar button[aria-checked="true"]{border:2px solid var(--accent);padding:11px 15px;background:var(--accent-soft);box-shadow:inset 0 -4px 0 var(--gold)}
-.only-switch[hidden],#groupNameWrap[hidden],#outBox[hidden],#selEmpty[hidden]{display:none!important}
+.only-switch[hidden],#destBox[hidden],#groupNameWrap[hidden],#outBox[hidden],#selEmpty[hidden]{display:none!important}
 .cfg{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end}
 .cfg input[type=text]{width:230px;font-family:var(--sans)}
 .opts{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center}
@@ -283,6 +283,8 @@ ol.sel{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap
 .ib:disabled{opacity:.35;cursor:default}
 .ib:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 @media (max-width:520px){.srow{grid-template-columns:minmax(0,1fr) auto}.ord{display:none}}
+  .dest-hint{width:100%;font-size:12.5px}
+.home-t{display:inline-block;padding:7px 0;font-size:13.5px}
 #outBox{display:flex;flex-direction:column;gap:12px;min-width:0}
 #outBox>*{min-width:0;max-width:100%}
 #outBox h3{margin:6px 0 0}
@@ -308,6 +310,13 @@ ol.sel{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap
       <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
     </div>
     <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste your model export in Step 1 to start again.</div>
+    <div class="dest only-switch" id="destBox" role="group" aria-labelledby="destLbl" hidden>
+      <span class="lbl" id="destLbl">Where the new measure goes</span>
+      <div class="field"><label>Home table</label><span class="mono home-t" id="destTable"></span></div>
+      <div class="field"><label for="mFolder">Display folder <span class="muted">(use \ for subfolders)</span></label><input type="text" id="mFolder" list="destFolders" spellcheck="false" autocomplete="off" style="width:240px"></div>
+      <span class="small muted dest-hint">The measure lives in the switcher table. Leave the folder empty to show it at the top of that table, or pick or type a folder.</span>
+      <datalist id="destFolders"></datalist>
+    </div>
     <div class="banner" id="exampleBanner" hidden>
       <span><strong>Example loaded.</strong> The model and the five picked measures are samples. Paste your own model export in Step 1 to start.</span>
       <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
@@ -356,7 +365,6 @@ ol.sel{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap
       <div class="cfg">
         <div class="field"><label for="tName">Table name</label><input type="text" id="tName" autocomplete="off" placeholder="Measure Selector"></div>
         <div class="field only-switch"><label for="mName">Measure name</label><input type="text" id="mName" autocomplete="off" placeholder="Selected Measure"></div>
-        <div class="field only-switch"><label for="mFolder">Display folder <span class="muted">(optional)</span></label><input type="text" id="mFolder" autocomplete="off" placeholder="Selectors"></div>
         <div class="field only-switch"><label for="fallback">When nothing or several are picked</label>
           <select id="fallback"><option value="first">Show the first option</option><option value="blank">Show blank</option></select></div>
       </div>
@@ -1606,6 +1614,9 @@ function renderModel(){
 }
 function renderType(){
   const c = state.cfg, sw = c.type === 'switch';
+  $('destTable').textContent = (c.table || '').trim() ? qName(c.table.trim()) : '(name it in Step 2)';
+  const fs = new Set(); (state.model ? state.model.measures : []).forEach(x => { const f = normFolder(x.folder || ''); if (!f) return; const p = f.split('\\'); for (let i = 1; i <= p.length; i++) fs.add(p.slice(0, i).join('\\')); });
+  $('destFolders').innerHTML = [...fs].sort((a, b) => a.localeCompare(b)).map(f => '<option value="' + esc(f) + '"></option>').join('');
   $('typeField').setAttribute('aria-checked', !sw); $('typeSwitch').setAttribute('aria-checked', sw);
   document.querySelectorAll('.only-switch').forEach(el => { el.hidden = !sw; });
   $('kindFilter').disabled = sw; if (sw) $('kindFilter').value = 'measure'; else $('kindFilter').value = state.kindFilter;
@@ -1822,6 +1833,7 @@ init();
     ['prep-for-ai-writer.html', 'Prep for AI Writer'],
     ['dax-reviewer.html', 'DAX Reviewer'],
     ['validation-query-builder.html', 'Validation Query Builder'],
+    ['time-intelligence-builder.html', 'Time Intelligence Builder'],
     ['field-parameter-builder.html', 'Field Parameter Builder'],
     ['model-documenter.html', 'Model Documenter'],
     ['power-query-explainer.html', 'Power Query Explainer'],
