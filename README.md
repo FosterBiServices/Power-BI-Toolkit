@@ -20,6 +20,7 @@ Every page is a single HTML file that runs entirely in your browser. There is no
 | [Model Documenter](https://fosterbiservices.github.io/Power-BI-Toolkit/model-documenter.html) | One HTML document for the whole model: tables, measures, lineage, relationships, data sources, model checks and report pages. Reads a PBIP project folder in the browser, or works from your model export. | ✓ | — |
 | [Power Query Explainer](https://fosterbiservices.github.io/Power-BI-Toolkit/power-query-explainer.html) | Comments every step of a Power Query (M) query, or produces a cleaner version checked against the original. One query or the whole model; custom functions are excluded automatically. | Own export | ✓ |
 | [Date Table Generator](https://fosterbiservices.github.io/Power-BI-Toolkit/date-table-generator.html) | A date table with your fiscal year, weeks, month sort and filter columns, and rule-based holidays, as DAX, Power Query or a TMDL script. Can start and end with the dates in your data. | Date columns | — |
+| [Theme Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/theme-builder.html) | A complete Power BI report theme from one brand color: data palette, text, background, good/neutral/bad colors, font, text styles, icons and formatting for 27 visual types, with readability and color-blindness checks and a live preview. | — | — |
 
 ## Getting started
 
@@ -57,6 +58,7 @@ dax-reviewer.html
 validation-query-builder.html
 power-query-explainer.html
 date-table-generator.html
+theme-builder.html
 time-intelligence-builder.html
 field-parameter-builder.html
 model-documenter.html
