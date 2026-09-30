@@ -2323,6 +2323,7 @@ init();
     ['model-compare.html', 'Model Compare'],
     ['model-documenter.html', 'Model Documenter'],
     ['about-this-report.html', 'About This Report'],
+    ['power-query-writer.html', 'Power Query Writer'],
     ['power-query-explainer.html', 'Power Query Explainer'],
     ['date-table-generator.html', 'Date Table Generator'],
     ['theme-builder.html', 'Theme Builder'],
@@ -2343,7 +2344,7 @@ init();
   }
 
   // Disclaimer: a short notice in every tool's footer, and an AI warning on the Copilot tools
-  const AI_TOOLS = ['kpi-measure-builder.html', 'measure-describer.html', 'prep-for-ai-writer.html', 'dax-reviewer.html', 'power-query-explainer.html', 'about-this-report.html'];
+  const AI_TOOLS = ['kpi-measure-builder.html', 'measure-describer.html', 'prep-for-ai-writer.html', 'dax-reviewer.html', 'power-query-explainer.html', 'about-this-report.html', 'power-query-writer.html'];
   if (!document.body.dataset.home && !document.getElementById('suiteDisc')) {
     const f = document.querySelector('footer');
     if (f) { const d = document.createElement('span'); d.id = 'suiteDisc'; d.className = 'suite-disc'; d.innerHTML = 'Generated output can be wrong. Check all of it, and test changes on a copy of your model first. Provided as is, without warranty; you use it at your own discretion and risk. <a href="' + HOME + '#disclaimer">Full disclaimer</a>'; f.appendChild(d); }
@@ -2362,7 +2363,8 @@ init();
     'prep-for-ai-writer.html': [['insPromptView', 'insReply', 'AI instructions prompt'], ['dPromptView', 'dReply', 'Descriptions prompt']],
     'dax-reviewer.html': [['promptView', 'reply', 'DAX Reviewer prompt']],
     'power-query-explainer.html': [['exPromptView', 'exReply', 'Power Query comments prompt'], ['exFollowView', 'exReply', 'Power Query follow-up prompt'], ['clPromptView', 'clReply', 'Power Query cleanup prompt'], ['mPromptView', 'mReply', 'Power Query model prompt']],
-    'about-this-report.html': [['promptView', 'aiInput', 'About This Report prompt']]
+    'about-this-report.html': [['promptView', 'aiInput', 'About This Report prompt']],
+    'power-query-writer.html': [['pwPromptView', 'pwReply', 'Power Query Writer prompt']]
   };
   const saveText = (name, text) => {
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text.replace(/\r?\n/g, '\r\n')], { type: 'text/plain;charset=utf-8' })); a.download = name;

@@ -1478,6 +1478,7 @@ function testQuery(measures){
     ['model-compare.html', 'Model Compare'],
     ['model-documenter.html', 'Model Documenter'],
     ['about-this-report.html', 'About This Report'],
+    ['power-query-writer.html', 'Power Query Writer'],
     ['power-query-explainer.html', 'Power Query Explainer'],
     ['date-table-generator.html', 'Date Table Generator'],
     ['theme-builder.html', 'Theme Builder'],
@@ -1498,7 +1499,7 @@ function testQuery(measures){
   }
 
   // Disclaimer: a short notice in every tool's footer, and an AI warning on the Copilot tools
-  const AI_TOOLS = ['kpi-measure-builder.html', 'measure-describer.html', 'prep-for-ai-writer.html', 'dax-reviewer.html', 'power-query-explainer.html', 'about-this-report.html'];
+  const AI_TOOLS = ['kpi-measure-builder.html', 'measure-describer.html', 'prep-for-ai-writer.html', 'dax-reviewer.html', 'power-query-explainer.html', 'about-this-report.html', 'power-query-writer.html'];
   if (!document.body.dataset.home && !document.getElementById('suiteDisc')) {
     const f = document.querySelector('footer');
     if (f) { const d = document.createElement('span'); d.id = 'suiteDisc'; d.className = 'suite-disc'; d.innerHTML = 'Generated output can be wrong. Check all of it, and test changes on a copy of your model first. Provided as is, without warranty; you use it at your own discretion and risk. <a href="' + HOME + '#disclaimer">Full disclaimer</a>'; f.appendChild(d); }
@@ -1517,7 +1518,8 @@ function testQuery(measures){
     'prep-for-ai-writer.html': [['insPromptView', 'insReply', 'AI instructions prompt'], ['dPromptView', 'dReply', 'Descriptions prompt']],
     'dax-reviewer.html': [['promptView', 'reply', 'DAX Reviewer prompt']],
     'power-query-explainer.html': [['exPromptView', 'exReply', 'Power Query comments prompt'], ['exFollowView', 'exReply', 'Power Query follow-up prompt'], ['clPromptView', 'clReply', 'Power Query cleanup prompt'], ['mPromptView', 'mReply', 'Power Query model prompt']],
-    'about-this-report.html': [['promptView', 'aiInput', 'About This Report prompt']]
+    'about-this-report.html': [['promptView', 'aiInput', 'About This Report prompt']],
+    'power-query-writer.html': [['pwPromptView', 'pwReply', 'Power Query Writer prompt']]
   };
   const saveText = (name, text) => {
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text.replace(/\r?\n/g, '\r\n')], { type: 'text/plain;charset=utf-8' })); a.download = name;
@@ -1663,6 +1665,7 @@ const TOOLS = [
   { file: 'model-compare.html', name: 'Model Compare', desc: 'What changed between two model exports: tables, columns, measures and relationships added, removed, renamed or changed, with DAX differences side by side and release notes to copy.', tags: ['exp', 'noai'] },
   { file: 'model-documenter.html', name: 'Model Documenter', desc: 'One HTML document for the whole model: tables, measures, lineage, relationships, sources, model checks and report pages. Reads your PBIP folder in the browser.', tags: ['pbip', 'noai'] },
   { free: true, file: 'power-query-explainer.html', name: 'Power Query Explainer', desc: 'Comment every step of a Power Query query, or get a cleaner version checked against the original. One query or the whole model.', tags: ['ai'] },
+  { free: true, file: 'power-query-writer.html', name: 'Power Query Writer', desc: 'Describe a query in plain words and get a Copilot prompt that writes it: working, easy to maintain and short, with one-word step names and tidy formatting. Copilot\u2019s reply is checked before you use it.', tags: ['ai'] },
   { free: true, file: 'date-table-generator.html', name: 'Date Table Generator', desc: 'A date table with your fiscal year, weeks and holidays, as DAX, Power Query or a TMDL script. Can start and end with your data.', tags: ['dates', 'noai'] },
   { free: true, file: 'layout-designer.html', name: 'Layout Designer', desc: 'Plan a page on an even grid, or get three 3-30-3 layout suggestions from a few questions. Wireframe with sample visuals, exact positions, a designed background image, and Figma and PowerPoint exports.', tags: ['noai'] },
   { free: true, file: 'theme-builder.html', name: 'Theme Builder', desc: 'A full report theme from one brand color: data palette, text, background, good and bad colors, font and styles for every common visual, checked for readability and color blindness.', tags: ['noai'] },
@@ -1691,7 +1694,7 @@ function renderSaved(){
 }
 function renderTools(){
   const card = t => '<a class="tool" href="' + t.file + '"><span class="tn">' + esc(t.name) + '</span><span class="td">' + esc(t.desc) + '</span><span class="tags">' + (t.free ? t.tags.map(x => x === 'exp' || x === 'dates' ? 'opt' : x) : t.tags.filter(x => x !== 'exp')).map(x => TAG[x]).join('') + '</span></a>';
-  const FREE_ORDER = ['theme-builder.html', 'layout-designer.html', 'date-table-generator.html', 'power-query-explainer.html', 'dax-reviewer.html'];
+  const FREE_ORDER = ['theme-builder.html', 'layout-designer.html', 'date-table-generator.html', 'power-query-writer.html', 'power-query-explainer.html', 'dax-reviewer.html'];
   $('toolsFree').innerHTML = TOOLS.filter(t => t.free).sort((a, b) => FREE_ORDER.indexOf(a.file) - FREE_ORDER.indexOf(b.file)).map(card).join('');
   $('tools').innerHTML = TOOLS.filter(t => !t.free).map(card).join('');
   return;
