@@ -50,6 +50,8 @@ Tip: rename the query tab in DAX query view (for example *Toolkit export*) and k
 
 ## Good to know
 
+- **Long prompts go to Copilot as a file.** Every Copilot prompt has a **Download file** button: attach the .txt in Copilot and send the short message the page gives you. Prompts ask Copilot for one reply, as a downloadable file if it's too long for the chat, and every reply box can open that file (.txt, .md, .json or Word).
+
 - **Your data stays with you.** The pages make no network requests with your content. The saved export lives in your browser's local storage for this site only, so it isn't shared with other browsers, other computers or other people.
 - **One export at a time.** Pasting a model export into any tool also replaces the saved one, so every tool stays on the same model. Remove it any time from the home page.
 - **Each tool keeps its own work** (requests, replies, settings) in your browser. **Clear entries** on a tool empties that tool only.

@@ -2702,7 +2702,9 @@ init();
       + '.suite-nav select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 8px;max-width:60vw}'
       + '.brandbar a.logo-link{display:flex;flex:none;border-radius:6px}'
       + '.suite-disc{display:block;margin-top:6px;max-width:90ch;margin-left:auto;margin-right:auto;line-height:1.5}.suite-disc a{color:inherit}'
-      + '.suite-ai{font-size:13.5px}';
+      + '.suite-ai{font-size:13.5px}'
+      + '.suite-file{margin-top:8px}.suite-msg{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px}.suite-msg .btn{flex:none}'
+      + '.suite-reply{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:4px 0}.suite-reply .btn{padding:4px 10px;font-size:13px}.suite-ok{color:var(--ok)}.suite-err{color:var(--err)}';
     document.head.appendChild(st);
   }
   // Navigation back to the home page and across tools
@@ -2747,6 +2749,94 @@ init();
     const hdr = document.querySelector('header.top');
     if (hdr && AI_TOOLS.includes(here2)) { const n = document.createElement('div'); n.className = 'msg warn suite-ai'; n.setAttribute('role', 'note'); n.innerHTML = '<b>AI can make mistakes.</b> This page checks Copilot&rsquo;s reply where it can, but not every error in logic or meaning. Review everything before you use it, only use AI tools your organization approves, and test on a copy of your model first. <a href="' + HOME + '#disclaimer">Disclaimer</a>'; hdr.insertAdjacentElement('afterend', n); }
   }
+
+  // Copilot prompts as files: every prompt can be downloaded as a .txt to attach in Copilot, with a short message
+  // to send alongside it, and every reply box can open a reply file (.txt, .md, .json or .docx) Copilot made.
+  const ONE_REPLY = '\n\nReply in one single response. If the complete reply is too long to show in full in the chat, put the whole reply, in the format asked for above, in one downloadable .txt file instead of splitting it across messages or shortening it.';
+  const ATTACH_MSG = 'Follow the instructions in the attached file exactly. Reply in one single response, in the format the file asks for. If the complete reply won’t fit in the chat, put all of it in one downloadable .txt file.';
+  const PROMPTS = {
+    'kpi-measure-builder.html': [['promptView', 'response', 'KPI Measure Builder prompt']],
+    'measure-describer.html': [['promptView', 'reply', 'Measure Describer prompt']],
+    'prep-for-ai-writer.html': [['insPromptView', 'insReply', 'AI instructions prompt'], ['dPromptView', 'dReply', 'Descriptions prompt']],
+    'dax-reviewer.html': [['promptView', 'reply', 'DAX Reviewer prompt']],
+    'power-query-explainer.html': [['exPromptView', 'exReply', 'Power Query comments prompt'], ['exFollowView', 'exReply', 'Power Query follow-up prompt'], ['clPromptView', 'clReply', 'Power Query cleanup prompt'], ['mPromptView', 'mReply', 'Power Query model prompt']],
+    'about-this-report.html': [['promptView', 'aiInput', 'About This Report prompt']]
+  };
+  const saveText = (name, text) => {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text.replace(/\r?\n/g, '\r\n')], { type: 'text/plain;charset=utf-8' })); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  };
+  // text out of a Word file: unzip word/document.xml (stored or deflated) and keep paragraphs, tabs and breaks
+  async function docxText(buf){
+    const u = new Uint8Array(buf), dv = new DataView(buf);
+    let eocd = -1; for (let i = u.length - 22; i >= Math.max(0, u.length - 70000); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    if (eocd < 0) throw new Error('This doesn’t look like a Word file.');
+    let p = dv.getUint32(eocd + 16, true); const n = dv.getUint16(eocd + 10, true);
+    for (let k = 0; k < n; k++) {
+      const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), el = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true);
+      const name = new TextDecoder().decode(u.subarray(p + 46, p + 46 + nl));
+      if (name === 'word/document.xml') {
+        const start = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true), data = u.subarray(start, start + csize);
+        let xml;
+        if (method === 0) xml = new TextDecoder().decode(data);
+        else if (typeof DecompressionStream !== 'undefined') xml = await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+        else throw new Error('This browser can’t open Word files. Save the reply as a .txt file instead.');
+        const t = xml.replace(/<w:tab\/>/g, '\t').replace(/<w:br[^>]*\/>/g, '\n').replace(/<\/w:p>/g, '\n').replace(/<[^>]+>/g, '');
+        const box = document.createElement('textarea'); box.innerHTML = t; return box.value.replace(/\n{3,}/g, '\n\n').trim();
+      }
+      p += 46 + nl + el + cl;
+    }
+    throw new Error('No document text was found in this Word file.');
+  }
+  S.promptFiles = () => {
+    const here = (location.pathname.split('/').pop() || '').toLowerCase(), list = PROMPTS[here];
+    if (!list || document.getElementById('suitePromptFiles')) return;
+    const mark = document.createElement('span'); mark.id = 'suitePromptFiles'; mark.hidden = true; document.body.appendChild(mark);
+    const promptIds = list.map(x => x[0]);
+    const promptTexts = () => promptIds.map(id => { const el = document.getElementById(id); return el ? el.textContent.trim() : ''; }).filter(Boolean);
+    // copying a prompt adds the one-reply line too
+    if (typeof window.copyText === 'function') { const orig = window.copyText; window.copyText = (t, b) => orig(typeof t === 'string' && t.trim() && promptTexts().includes(t.trim()) ? t.trim() + ONE_REPLY : t, b); }
+    const replyDone = new Set();
+    list.forEach(([pid, rid, label]) => {
+      const pre = document.getElementById(pid); if (!pre) return;
+      const box = pre.closest('.codebox'), bar = box && box.querySelector('.codebox-bar .r');
+      if (bar) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = 'Download file';
+        b.title = 'Download this prompt as a .txt file to attach in Copilot';
+        b.addEventListener('click', () => {
+          const t = pre.textContent.trim(); if (!t) return;
+          const bl = document.getElementById('batchLabel'), bn = document.getElementById('batchNav');
+          const part = (bl && bn && !bn.hidden) ? ' ' + document.getElementById('batchLabel').textContent.replace(/^Prompt /, 'part ').replace(/ of /, ' of ') : '';
+          saveText(label + part + '.txt', t + ONE_REPLY);
+        });
+        bar.insertBefore(b, bar.firstChild);
+        const d = document.createElement('details'); d.className = 'extra suite-file';
+        d.innerHTML = '<summary>Send it to Copilot as a file <span class="muted">(for long prompts)</span></summary><div class="extra-body"><ol class="how"><li>Select <b>Download file</b> above.</li><li>In Copilot, attach the file to a new chat.</li><li>Send this message with it:</li></ol>'
+          + '<div class="suite-msg"><span>' + esc(ATTACH_MSG) + '</span><button type="button" class="btn">Copy message</button></div>'
+          + '<p class="note small">If Copilot answers with a file, download it and select <b>Open a reply file</b> by the reply box. Copying or downloading a prompt adds one line asking Copilot for a single reply, as a file if it’s too long for the chat.</p></div>';
+        d.querySelector('.suite-msg button').addEventListener('click', e => { const btn = e.currentTarget; try { navigator.clipboard.writeText(ATTACH_MSG).then(() => { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy message'; }, 1600); }); } catch (err) {} });
+        box.insertAdjacentElement('afterend', d);
+      }
+      const ta = rid && document.getElementById(rid);
+      if (ta && !replyDone.has(rid)) {
+        replyDone.add(rid);
+        const row = document.createElement('div'); row.className = 'suite-reply';
+        row.innerHTML = '<button type="button" class="btn small">Open a reply file</button><span class="muted small">.txt, .md, .json or Word file from Copilot</span><input type="file" accept=".txt,.md,.json,.csv,.tsv,.docx,text/plain" hidden>';
+        const inp = row.querySelector('input'), msg = document.createElement('span'); msg.className = 'small'; row.appendChild(msg);
+        row.querySelector('button').addEventListener('click', () => inp.click());
+        inp.addEventListener('change', async () => {
+          const f = inp.files[0]; inp.value = ''; if (!f) return;
+          try {
+            const t = /\.docx$/i.test(f.name) ? await docxText(await f.arrayBuffer()) : (await f.text()).replace(/^﻿/, '');
+            ta.value = t; ta.dispatchEvent(new Event('input', { bubbles: true })); ta.dispatchEvent(new Event('change', { bubbles: true }));
+            msg.className = 'small suite-ok'; msg.textContent = '✓ ' + f.name + ' loaded';
+          } catch (err) { msg.className = 'small suite-err'; msg.textContent = err.message || String(err); }
+        });
+        ta.insertAdjacentElement('beforebegin', row);
+      }
+    });
+  };
+  if (!document.body.dataset.home) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', S.promptFiles); else S.promptFiles(); }
 
   // cfg: { input: textarea id, prefix: this page's storage prefix, mode: 'export' | 'dates', open: details id to open }
   S.hook = cfg => {
