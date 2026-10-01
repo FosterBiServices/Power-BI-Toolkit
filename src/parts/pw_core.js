@@ -115,7 +115,12 @@ const PW = (() => {
   function parseReply(text){
     const t = cleanReply(text).replace(/[‘’]/g, "'");
     if (!t.trim()) return null;
-    const bs = blocks(t);
+    // Copilot sometimes repeats the prompt's format example before its answer: skip the example blocks, use the last real one
+    const example = b => b.kind === 'QUERY' ? /^\s*let\s+\.\.\.\s+in\s+LastStep\s*$/.test(b.body)
+      : b.kind === 'STEPS' ? /StepName: one short sentence on what the step does/.test(b.body)
+      : b.kind === 'PARAMETERS' ? /\(only parameters that must be created/.test(b.body)
+      : b.kind === 'QUESTIONS' ? /^\s*Anything you had to assume, or need to know to finish the query\. Leave empty if none\.\s*$/.test(b.body) : false;
+    const all = blocks(t), bs = all.filter(b => !example(b)).reverse();
     const qb = bs.find(b => b.kind === 'QUERY' || b.kind === 'CODE');
     let code = qb ? qb.body.replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '').replace(/^\s*\n|\s+$/g, '') : '';
     if (!code) { const m = t.match(/```(?:m|powerquery|pq)?\s*\n([\s\S]*?\blet\b[\s\S]*?)```/i); if (m) code = m[1].trim(); else if (/^\s*let\b[\s\S]*\bin\b/.test(t)) code = t.trim(); }
@@ -123,9 +128,9 @@ const PW = (() => {
     const steps = lines(bs.find(b => b.kind === 'STEPS')).map(l => { const m = l.match(/^#?"?([^":]+?)"?\s*:\s*(.+)$/); return m ? { name: m[1].trim(), text: m[2].trim() } : null; }).filter(Boolean);
     const params = lines(bs.find(b => b.kind === 'PARAMETERS')).filter(l => !/^name\s*\|/i.test(l) && /\|/.test(l)).map(l => { const c = l.split('|').map(s => s.trim()); return { name: c[0].replace(/^#"(.*)"$/, '$1'), type: c[1] || 'Text', value: c.slice(2).join('|') }; }).filter(p => p.name && !/^\(/.test(p.name));
     const questions = lines(bs.find(b => b.kind === 'QUESTIONS')).filter(l => !/^\(?leave empty|^none\.?$|^n\/a$/i.test(l));
-    // the prompt itself pasted back: its format example, not a reply
-    if (/^let\s+\.\.\.\s+in\s+LastStep$/.test(code.trim()) || /StepName: one short sentence on what the step does/.test(t))
-      return { code: '', steps: [], params: [], questions: [], error: 'This is the prompt, not Copilot’s reply. Send the prompt to Copilot, then paste or open what Copilot answers here.' };
+    // only the prompt's format example, no answer: the prompt was pasted back, or Copilot stopped before answering
+    if (!code && all.some(example))
+      return { code: '', steps: [], params: [], questions: [], error: 'This has only the prompt’s format example, not a query from Copilot. If you pasted the prompt, send it to Copilot and paste its answer here. If Copilot repeated the format without answering, ask it to fill in the blocks.' };
     return { code, steps, params, questions, error: code ? null : 'No @@@ QUERY @@@ block was found. Paste Copilot’s whole reply, or ask it to answer in the format the prompt gives.' };
   }
 
