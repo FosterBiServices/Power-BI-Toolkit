@@ -61,6 +61,16 @@ a{color:var(--accent)}
 .brandbar .eyebrow{font-family:var(--font-display);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
 .brandbar h1{color:var(--band-ink);font-size:30px;letter-spacing:-.01em}
 .lede{color:var(--band-muted);max-width:66ch;margin:0}
+.clear-btn{margin-left:auto;align-self:flex-start;flex:none;font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--band-ink);background:transparent;border:1px solid rgba(255,255,255,.55);border-radius:6px;padding:6px 12px;cursor:pointer}
+.clear-btn:hover{background:rgba(255,255,255,.12);border-color:#fff}
+.clear-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.clear-confirm{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--bad-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);border-radius:10px;padding:10px 14px;font-size:14px}
+.clear-confirm[hidden],.clear-done[hidden]{display:none!important}
+.clear-confirm b{color:var(--bad)}
+.clear-confirm .btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.danger:hover{filter:brightness(1.08);background:var(--bad);color:#fff}
+.clear-done{background:var(--good-soft);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:14px}
 @media (max-width:520px){.brandbar{padding:14px 16px;gap:12px}.brandbar img{width:40px;height:48px}.brandbar h1{font-size:25px}}
 footer{font-size:12.5px;color:var(--muted);text-align:center}
 
@@ -124,6 +134,9 @@ thead th{position:sticky;top:0;background:var(--surface-2);font-weight:600;z-ind
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 .tol{display:flex;align-items:center;gap:8px;margin:4px 0 0 24px;font-size:13px;color:var(--muted)}
 .tol input{width:110px}
+.nalist input{width:100%;max-width:240px;background:var(--surface);border:1px solid var(--line-strong);border-radius:6px;padding:6px 8px;color:var(--ink);font-family:var(--font-data);font-size:12.5px}
+.nalist input:disabled{opacity:.55}
+.infobox{margin-top:14px;background:var(--accent-soft);border-radius:6px;padding:8px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
 
 /* mapping */
 .map-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin:20px 0 8px}
@@ -138,6 +151,11 @@ thead th{position:sticky;top:0;background:var(--surface-2);font-weight:600;z-ind
 .btn .dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;background:var(--c)}
 .btn.src{--c:var(--src)} .btn.tgt{--c:var(--tgt)}
 .btn-select{width:auto;padding:5px 8px;font-size:13px}
+.map-filter{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 8px}
+.map-filter input[type=search]{width:260px}
+.map-filter select{width:auto}
+.map-filter .cnt{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.map tr.nomatch td{color:var(--muted);text-align:center;padding:18px 8px}
 .map-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:460px}
 .map td{font-family:var(--font-ui);font-size:13px;vertical-align:middle}
 .map th.c,.map td.c{text-align:center;width:1%}
@@ -233,6 +251,7 @@ td.d.focus{outline:2px solid var(--bad);outline-offset:-2px}
   .step{padding:16px}
   .tools-r input[type=search]{width:100%}
   .tools-r{width:100%}
+  .map-filter input[type=search],.map-filter select{width:100%}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
@@ -254,7 +273,13 @@ td.d.focus{outline:2px solid var(--bad);outline-offset:-2px}
         <h1>Sheet Recon</h1>
         <p class="lede">Compare two tables from Excel or CSV by key, after cleaning both the same way: DAX column names, dates, numbers and blanks. No Copilot needed.</p>
       </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This removes every loaded file, the column matches and the results from this page, and puts your cleaning choices back to the defaults. Sheet Recon never saves your files in the browser, so nothing of them is left behind. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done" id="clearDone" role="status" hidden>Entries cleared. Add your files in step 1 to start again, or <button type="button" class="linkbtn" id="loadExample">load the example</button>.</div>
   </header>
 
   <!-- STEP 1 -->
@@ -301,6 +326,8 @@ td.d.focus{outline:2px solid var(--bad);outline-offset:-2px}
         <label class="chk"><input type="checkbox" id="o-trim" data-opt="trim"><span>Trim leading and trailing spaces</span></label>
         <label class="chk"><input type="checkbox" id="o-ignoreCase" data-opt="ignoreCase"><span>Ignore letter case<small>Shipped = shipped</small></span></label>
         <label class="chk"><input type="checkbox" id="o-blanksEqual" data-opt="blanksEqual"><span>Treat empty, NULL and (Blank) as equal</span></label>
+        <label class="chk"><input type="checkbox" id="o-naBlank" data-opt="naBlank"><span>Treat N/A as blank too<small>Off: N/A and an empty cell count as a difference</small></span></label>
+        <div class="tol nalist"><label for="o-naList">Count as blank</label><input type="text" id="o-naList" data-opt="naList" spellcheck="false" aria-describedby="naHelp"><small id="naHelp" class="sr">Separate with commas. Letter case is ignored.</small></div>
         <label class="chk"><input type="checkbox" id="o-numeric" data-opt="numeric"><span>Compare numbers by value<small>1,250.50 = 1250.5 · 007 = 7</small></span></label>
         <div class="tol"><label for="o-tolerance">Tolerance ±</label><input type="number" id="o-tolerance" data-opt="tolerance" min="0" step="any"></div>
       </div>
@@ -343,10 +370,24 @@ td.d.focus{outline:2px solid var(--bad);outline-offset:-2px}
         </select>
       </div>
     </div>
+    <div class="map-filter" role="search" aria-label="Filter columns">
+      <input type="search" id="mapSearch" placeholder="Search column names" aria-label="Search column names" autocomplete="off">
+      <select id="mapShow" aria-label="Show columns">
+        <option value="all">All columns</option>
+        <option value="paired">Paired</option>
+        <option value="unpaired">Unpaired</option>
+        <option value="key">Keys</option>
+        <option value="use">Compared</option>
+        <option value="nouse">Paired, not compared</option>
+        <option value="date">Dates</option>
+      </select>
+      <button type="button" class="btn" id="mapClear" hidden>Clear filter</button>
+      <span class="cnt" id="mapCount" aria-live="polite"></span>
+    </div>
     <div class="map-wrap">
       <table class="map">
         <thead><tr>
-          <th class="c" title="Include in the value comparison"><label class="th-all"><input type="checkbox" id="useAll" aria-label="Compare all pairs">Compare</label></th>
+          <th class="c" title="Include in the value comparison"><label class="th-all"><input type="checkbox" id="useAll" aria-label="Compare all pairs shown">Compare</label></th>
           <th class="c" title="Columns that identify a row. Tick more than one for a composite key.">Key</th>
           <th><span class="tag-s">Source</span> column</th>
           <th><span class="tag-t">Target</span> column</th>
@@ -417,6 +458,14 @@ const MONTHS=['january','february','march','april','may','june','july','august',
 const MON3=MONTHS.map(m=>m[0].toUpperCase()+m.slice(1,3));
 const SEP='␟';
 const BLANKS=new Set(['','null','(blank)','nan']);
+// placeholder values such as N/A that the user can choose to count as blank
+let naCache={src:null,set:new Set()};
+function naSet(){
+  const src=state.opts.naList||'';
+  if(naCache.src!==src) naCache={src,set:new Set(src.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean))};
+  return naCache.set;
+}
+const isNA=v=>v!=null&&typeof v!=='object'&&naSet().has(String(v).trim().toLowerCase());
 const PAGE=100;
 const AUTO_LIMIT=150000;
 
@@ -426,11 +475,13 @@ const state={
   raw:{source:null,target:null},
   hdr:{source:[],target:[]},
   mapping:[],
-  opts:{stripDax:true,looseMatch:true,trim:true,ignoreCase:false,blanksEqual:true,numeric:true,tolerance:0,dateIn:'mdy',dateOut:'m/d/yyyy',keepTime:false,exportFmt:'xlsx'},
+  opts:{stripDax:true,looseMatch:true,trim:true,ignoreCase:false,blanksEqual:true,naBlank:false,naList:'N/A, #N/A, NA, n.a., -',numeric:true,tolerance:0,dateIn:'mdy',dateOut:'m/d/yyyy',keepTime:false,exportFmt:'xlsx'},
   results:null, stale:false,
   view:{tab:'diff',page:0,col:null,search:'',onlyDiffCols:true}
 };
 let fileSeq=0;
+const DEFAULT_OPTS=Object.assign({},state.opts);
+const BLANK_KEY='ksr.blank'; // set by Clear entries so a reload stays empty instead of showing the example
 
 /* ---------- value helpers ---------- */
 const isBlank=v=>v==null||(typeof v==='string'&&v.trim()==='');
@@ -534,6 +585,7 @@ function cmpKey(v){
   let s=String(v);
   if(s==='') return '';
   if(o.blanksEqual&&BLANKS.has(s.trim().toLowerCase())) return '';
+  if(o.naBlank&&isNA(s)) return '';
   if(o.numeric){ const n=toNum(s); if(n!==null) return 'n:'+canonNum(n); }
   if(o.ignoreCase) s=s.toLowerCase();
   return 's:'+s;
@@ -594,6 +646,7 @@ function buildHeaders(side){
   });
 }
 function loadSide(side){
+  if(typeof mapFilter!=='undefined'&&(mapFilter.q||mapFilter.show!=='all')){ mapFilter.q=''; mapFilter.show='all'; $('#mapSearch').value=''; $('#mapShow').value='all'; } // new data starts unfiltered
   const s=state.side[side];
   const f=state.files.find(x=>x.id===s.fileId);
   const ws=f&&s.sheet!=null?f.wb.Sheets[s.sheet]:null;
@@ -631,6 +684,7 @@ async function addFiles(list){
     }catch(e){ toast(`Couldn't read ${f.name}: ${e.message||e}`); }
   }
   if(!added.length) return;
+  $('#clearDone').hidden=true;
   if(state.files.some(x=>x.isSample)){
     const sampleIds=new Set(state.files.filter(x=>x.isSample).map(x=>x.id));
     state.files=state.files.filter(x=>!x.isSample);
@@ -762,14 +816,15 @@ function runCompare(){
   const group=(rows,side)=>{ const map=new Map(); rows.forEach((r,i)=>{ const k=keys.map(m=>cmpKey(r[side==='s'?m.src:m.tgt])).join(SEP); const a=map.get(k); if(a) a.push(i); else map.set(k,[i]); }); return map; };
   const gS=group(S.rows,'s'), gT=group(T.rows,'t');
   const pairs=[], onlyS=[], onlyT=[], colDiff=new Array(cmpCols.length).fill(0);
-  let dupS=0, dupT=0;
+  let dupS=0, dupT=0, naOnly=0;
+  const o=state.opts, blankKey=v=>v==null||String(v).trim()===''||(o.blanksEqual&&BLANKS.has(String(v).trim().toLowerCase()));
   for(const [k,sl] of gS){
     if(sl.length>1) dupS++;
     const tl=gT.get(k)||[];
     const n=Math.min(sl.length,tl.length);
     for(let i=0;i<n;i++){
       const sr=S.rows[sl[i]], tr=T.rows[tl[i]], diffs=[];
-      for(let c=0;c<cmpCols.length;c++){ const m=cmpCols[c]; if(!same(sr[m.src],tr[m.tgt])){ diffs.push(c); colDiff[c]++; } }
+      for(let c=0;c<cmpCols.length;c++){ const m=cmpCols[c]; if(!same(sr[m.src],tr[m.tgt])){ diffs.push(c); colDiff[c]++; const a=sr[m.src], b=tr[m.tgt]; if(!o.naBlank&&((isNA(a)&&blankKey(b))||(isNA(b)&&blankKey(a)))) naOnly++; } }
       pairs.push({s:sl[i],t:tl[i],diffs});
     }
     for(let i=n;i<sl.length;i++) onlyS.push(sl[i]);
@@ -781,7 +836,7 @@ function runCompare(){
   }
   onlyT.sort((a,b)=>a-b);
   const rs=state.raw.source, rt=state.raw.target;
-  state.results={S,T,keys,cmpCols,pairs,diffPairs:pairs.filter(p=>p.diffs.length),samePairs:pairs.filter(p=>!p.diffs.length),onlyS,onlyT,dupS,dupT,colDiff,
+  state.results={S,T,keys,cmpCols,pairs,diffPairs:pairs.filter(p=>p.diffs.length),samePairs:pairs.filter(p=>!p.diffs.length),onlyS,onlyT,dupS,dupT,naOnly,colDiff,
     srcLabel:`${rs.file} › ${rs.sheet}`,tgtLabel:`${rt.file} › ${rt.sheet}`,dateCols:state.mapping.filter(m=>m.date&&isPaired(m)).map(m=>m.srcName),ms:Math.round(performance.now()-t0)};
   state.stale=false;
   const v=state.view; v.page=0;
@@ -833,7 +888,7 @@ function renderMapping(){
   const tb=$('#mapBody');
   if(!state.raw.source||!state.raw.target){
     tb.innerHTML=`<tr><td colspan="7" class="empty">Choose a source and a target in step 1 to match their columns.</td></tr>`;
-    $('#keyline').innerHTML=''; $('#unmappedNote').textContent=''; $('#useAll').checked=false; return;
+    $('#keyline').innerHTML=''; $('#unmappedNote').textContent=''; applyMapFilter(); return;
   }
   const S=state.hdr.source, T=state.hdr.target, rawS=state.raw.source, rawT=state.raw.target;
   const inS=new Set(), inT=new Set();
@@ -858,12 +913,48 @@ function renderMapping(){
     </tr>`;
   }).join('');
   const paired=state.mapping.filter(isPaired), keys=paired.filter(m=>m.key), cmp=paired.filter(m=>!m.key);
-  $('#useAll').checked=cmp.length>0&&cmp.every(m=>m.use);
-  $('#useAll').indeterminate=cmp.some(m=>m.use)&&!cmp.every(m=>m.use);
+  applyMapFilter();
   $('#keyline').innerHTML=keys.length?`Key: ${keys.map(m=>`<b>${esc(m.srcName)}</b>`).join(' + ')}`:'<span class="status bad">No key selected. Tick Key on at least one paired column.</span>';
   const uS=state.mapping.filter(m=>m.src!=null&&m.tgt==null).length, uT=state.mapping.filter(m=>m.tgt!=null&&m.src==null).length;
   $('#unmappedNote').textContent=`${paired.length} pair${paired.length===1?'':'s'}, ${cmp.filter(m=>m.use).length} compared.`+((uS||uT)?` Unpaired: ${uS} source and ${uT} target column${uT===1?'':'s'}. Unpaired columns are ignored; choose the matching column from the other file in the same row to pair them.`:'');
 }
+/* ---------- search and filter for the column list ---------- */
+const mapFilter={q:'',show:'all'};
+function mapFilterOn(){ return mapFilter.q.trim()!==''||mapFilter.show!=='all'; }
+function mapRowShown(m){
+  if(m.fresh&&!isPaired(m)) return true; // a row just added with "+ Add pair" always stays in view
+  const p=isPaired(m), s=mapFilter.show;
+  if(s==='paired'&&!p) return false;
+  if(s==='unpaired'&&p) return false;
+  if(s==='key'&&!m.key) return false;
+  if(s==='use'&&!(p&&(m.use||m.key))) return false;
+  if(s==='nouse'&&!(p&&!m.key&&!m.use)) return false;
+  if(s==='date'&&!m.date) return false;
+  const words=mapFilter.q.toLowerCase().split(/\s+/).filter(Boolean);
+  if(!words.length) return true;
+  const rS=state.raw.source, rT=state.raw.target;
+  const hay=[m.srcName,m.tgtName,m.src!=null&&rS?rS.headersRaw[m.src]:'',m.tgt!=null&&rT?rT.headersRaw[m.tgt]:''].join(' \u0001 ').toLowerCase();
+  return words.every(w=>hay.includes(w));
+}
+// the pairs the "Compare" header box acts on: every pair, or only those the filter shows
+function mapScope(){ return state.mapping.filter(m=>isPaired(m)&&!m.key&&(!mapFilterOn()||mapRowShown(m))); }
+function applyMapFilter(){
+  const tb=$('#mapBody'), on=mapFilterOn();
+  $('#mapClear').hidden=!on;
+  const old=tb.querySelector('tr.nomatch'); if(old) old.remove();
+  if(!state.raw.source||!state.raw.target){ $('#mapCount').textContent=''; $('#useAll').checked=false; $('#useAll').indeterminate=false; return; }
+  let shown=0;
+  tb.querySelectorAll('tr[data-i]').forEach(tr=>{ const ok=mapRowShown(state.mapping[+tr.dataset.i]); tr.hidden=!ok; if(ok) shown++; });
+  const total=state.mapping.length;
+  $('#mapCount').textContent=on?`Showing ${shown} of ${total} row${total===1?'':'s'}`:'';
+  if(on&&!shown) tb.insertAdjacentHTML('beforeend','<tr class="nomatch"><td colspan="7">No columns match. <button type="button" class="linkbtn" data-clearfilter>Clear the filter</button></td></tr>');
+  const cmp=mapScope();
+  $('#useAll').checked=cmp.length>0&&cmp.every(m=>m.use);
+  $('#useAll').indeterminate=cmp.some(m=>m.use)&&!cmp.every(m=>m.use);
+  $('#useAll').title=on?'Tick or untick the pairs shown':'Tick or untick every pair';
+}
+function clearMapFilter(){ mapFilter.q=''; mapFilter.show='all'; $('#mapSearch').value=''; $('#mapShow').value='all'; applyMapFilter(); }
+
 function renderStatus(){
   const el=$('#status');
   el.className='status';
@@ -896,6 +987,7 @@ function renderResults(){
     <div class="stats">${segs.map(([k,l,n])=>`<button type="button" class="stat s-${k}" data-tab="${k}"><span class="n">${n.toLocaleString()}</span><span class="l">${l}</span><span class="pct">${pct(n,total)} of all keys</span></button>`).join('')}</div>
     <div class="bar" role="img" aria-label="Share of keys: ${segs.map(([,l,n])=>`${l} ${n}`).join(', ')}">${segs.map(([k,,n])=>n?`<span class="seg s-${k}" style="flex:${n}"></span>`:'').join('')}</div>
     ${dup}
+    ${R.naOnly?`<div class="infobox"><span><b>N/A against blank:</b> ${R.naOnly.toLocaleString()} difference${R.naOnly===1?' is':'s are'} only N/A (or a similar placeholder) on one side and an empty cell on the other. If they mean the same thing here, ignore them.</span><button type="button" class="btn" data-na-on>Treat N/A as blank</button></div>`:''}
     <h3 class="cols-h">Differences by column <span class="note" style="font-family:var(--font-ui);font-weight:400">· rows where the value differs, out of ${R.pairs.length.toLocaleString()} paired</span></h3>
     <div class="colsum">${cols}</div>`;
   renderTable();
@@ -978,7 +1070,7 @@ function exportResults(){
     ['Identical',R.samePairs.length],['With differences',R.diffPairs.length],['Only in source',R.onlyS.length],['Only in target',R.onlyT.length],
     ['Repeated keys in source',R.dupS],['Repeated keys in target',R.dupT],[],
     ['Settings'],['Remove table names from headers',yn(o.stripDax)],['Trim spaces',yn(o.trim)],['Ignore letter case',yn(o.ignoreCase)],
-    ['Empty, NULL and (Blank) equal',yn(o.blanksEqual)],['Compare numbers by value',yn(o.numeric)],['Numeric tolerance',+o.tolerance||0],
+    ['Empty, NULL and (Blank) equal',yn(o.blanksEqual)],['N/A treated as blank',o.naBlank?(o.naList||'None listed'):'No'],['Compare numbers by value',yn(o.numeric)],['Numeric tolerance',+o.tolerance||0],
     ['Ambiguous dates read as',o.dateIn==='mdy'?'Month first':'Day first'],['Date output format',o.dateOut],['Keep time of day',yn(o.keepTime)],
     ['Date columns',R.dateCols.join(', ')||'None']
   ],'Summary');
@@ -1040,16 +1132,19 @@ $('#swap').addEventListener('click',()=>{
   toast('Swapped source and target');
 });
 
+function syncNa(){ $('#o-naList').disabled=!state.opts.naBlank; }
 for(const el of $$('[data-opt]')){
   const k=el.dataset.opt, v=state.opts[k];
   if(el.type==='checkbox') el.checked=!!v; else el.value=v;
   el.addEventListener(el.type==='number'?'input':'change',()=>{
     state.opts[k]=el.type==='checkbox'?el.checked:el.type==='number'?(parseFloat(el.value)||0):el.value;
     if(k==='exportFmt') return;
+    if(k==='naBlank') syncNa();
     if(k==='stripDax'||k==='looseMatch'){ buildHeaders('source'); buildHeaders('target'); buildMapping(true); }
     renderSides(); renderMapping(); changed();
   });
 }
+syncNa();
 $('#rematch').addEventListener('click',()=>{ buildMapping(false); renderSides(); renderMapping(); changed(); toast('Columns re-matched by name'); });
 $('#exportSrc').addEventListener('click',()=>exportClean('source'));
 $('#exportTgt').addEventListener('click',()=>exportClean('target'));
@@ -1080,9 +1175,14 @@ $('#mapBody').addEventListener('click',e=>{
   tidyMapping(); renderSides(); renderMapping(); changed();
 });
 $('#useAll').addEventListener('change',e=>{
-  for(const m of state.mapping) if(isPaired(m)&&!m.key) m.use=e.target.checked;
+  for(const m of mapScope()) m.use=e.target.checked;
   renderMapping(); changed();
 });
+$('#mapSearch').addEventListener('input',e=>{ mapFilter.q=e.target.value; applyMapFilter(); });
+$('#mapSearch').addEventListener('keydown',e=>{ if(e.key==='Escape'&&e.target.value){ e.stopPropagation(); mapFilter.q=''; e.target.value=''; applyMapFilter(); } });
+$('#mapShow').addEventListener('change',e=>{ mapFilter.show=e.target.value; applyMapFilter(); });
+$('#mapClear').addEventListener('click',()=>{ clearMapFilter(); $('#mapSearch').focus(); });
+$('#mapBody').addEventListener('click',e=>{ if(e.target.closest('[data-clearfilter]')){ clearMapFilter(); $('#mapSearch').focus(); } });
 $('#addPair').addEventListener('click',()=>{
   state.mapping.push({src:null,tgt:null,srcName:null,tgtName:null,use:false,key:false,date:false,fresh:true});
   renderMapping();
@@ -1091,6 +1191,7 @@ $('#addPair').addEventListener('click',()=>{
 
 $('#compareBtn').addEventListener('click',()=>{ runCompare(); });
 $('#summary').addEventListener('click',e=>{
+  if(e.target.closest('[data-na-on]')){ state.opts.naBlank=true; $('#o-naBlank').checked=true; syncNa(); renderSides(); renderMapping(); runCompare(); toast('N/A now counts as blank'); return; }
   const st=e.target.closest('[data-tab]');
   if(st){ state.view.tab=st.dataset.tab; state.view.page=0; renderTable(); $('#resultArea').scrollIntoView({behavior:'smooth',block:'start'}); return; }
   const c=e.target.closest('[data-col]');
@@ -1143,7 +1244,41 @@ function loadSample(){
   setSide('source',rec,'PBI Export'); setSide('target',rec,'Warehouse');
   onSidesChanged(false);
 }
-loadSample();
+/* ---------- Clear entries ---------- */
+function resetAll(){
+  clearTimeout(cmpTimer);
+  state.files=[];
+  state.side={source:{fileId:null,sheet:null,headerRow:1},target:{fileId:null,sheet:null,headerRow:1}};
+  state.raw={source:null,target:null}; state.hdr={source:[],target:[]}; state.mapping=[];
+  state.opts=Object.assign({},DEFAULT_OPTS);
+  state.results=null; state.stale=false;
+  state.view={tab:'diff',page:0,col:null,search:'',onlyDiffCols:true};
+  for(const el of $$('[data-opt]')){ const v=state.opts[el.dataset.opt]; if(el.type==='checkbox') el.checked=!!v; else el.value=v; }
+  syncNa();
+  $('#search').value=''; $('#onlyDiffCols').checked=true; $('#fileInput').value='';
+  clearMapFilter();
+  onSidesChanged(false);
+}
+(function(){
+  const btn=$('#clearEntries'), box=$('#clearConfirm'), done=$('#clearDone');
+  const show=on=>{ box.hidden=!on; btn.setAttribute('aria-expanded',on); if(on){ done.hidden=true; $('#clearNo').focus(); } };
+  btn.addEventListener('click',()=>show(box.hidden));
+  $('#clearNo').addEventListener('click',()=>{ show(false); btn.focus(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!box.hidden){ show(false); btn.focus(); } });
+  $('#clearYes').addEventListener('click',()=>{
+    try{ Object.keys(localStorage).filter(k=>k.startsWith('ksr.')).forEach(k=>localStorage.removeItem(k)); }catch(e){}
+    resetAll();
+    try{ localStorage.setItem(BLANK_KEY,'1'); }catch(e){}
+    show(false); done.hidden=false;
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+  $('#loadExample').addEventListener('click',()=>{
+    try{ localStorage.removeItem(BLANK_KEY); }catch(e){}
+    done.hidden=true; resetAll(); loadSample();
+  });
+})();
+let startBlank=false; try{ startBlank=localStorage.getItem(BLANK_KEY)==='1'; }catch(e){}
+if(startBlank) $('#clearDone').hidden=false; else loadSample();
 })();
 </script>
 <script>
