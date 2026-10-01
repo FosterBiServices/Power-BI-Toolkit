@@ -195,12 +195,12 @@ function renderQuery(){
 /* ---------- explain ---------- */
 function followUpPrompt(text, q, missing, audience, name){
   const L = explainPrompt(text, q, { audience, name }).split('\n');
-  const i = L.indexOf('## Steps');
+  const i = L.indexOf('## CONTEXT: the steps');
   const head = L.slice(0, i).filter(l => !/^- SUMMARY:/.test(l)).join('\n')
-    .replace(/Write a short comment for every step and a summary of the whole query\./, 'Some steps are still missing comments. Write a comment for ONLY the steps listed below.')
+    .replace(/Write a short comment for every step listed under CONTEXT, and a summary of the whole query\./, 'Some steps are still missing comments. Write a comment for ONLY the steps listed under CONTEXT.')
     .replace(/@@@ SUMMARY @@@\nTwo to four sentences\.\n@@@ END @@@\n/, '')
     .replace('One STEP block per step, in the order listed', 'One STEP block for each listed step');
-  return head + '\n## Steps\n' + missing.map((n, k) => (k + 1) + '. ' + n).join('\n') + '\n\n## The query\n' + text.trim() + '\n\n=== END OF PROMPT ===';
+  return head + '\n## CONTEXT: the steps\n' + missing.map((n, k) => (k + 1) + '. ' + n).join('\n') + '\n\n## STARTING POINT: the query\n' + text.trim() + '\n\n=== END OF PROMPT ===';
 }
 function lenNote(p){ return p.length > LONG_PROMPT ? msg('warn', 'This prompt is long (' + p.length.toLocaleString() + ' characters). If Copilot cuts it off or stops early, the follow-up in Step 4 picks up the missing steps.') : ''; }
 function renderExplain(){
@@ -444,10 +444,12 @@ function loadExample(){
   setExample(true);
 }
 // Drop every sample value except the one the person just typed into
-function dropExample(){
+function dropExample(keep){
   if (!state.example) return;
-  if ($('qInput').value === EX_QUERY) $('qInput').value = '';
-  if ($('qName').value === EX_NAME) $('qName').value = '';
+  const ex = { qInput: EX_QUERY, qName: EX_NAME }, v = keep ? SF_SUITE.ownText($(keep).value, ex[keep]) : '';
+  if ($('qInput').value === EX_QUERY || keep === 'qInput') $('qInput').value = '';
+  if ($('qName').value === EX_NAME || keep === 'qName') $('qName').value = '';
+  if (keep) $(keep).value = v;
   if ($('mInput').value === EX_MODEL_EXPORT) $('mInput').value = '';
   Object.assign(state, { exReply: '', clReply: '', mDone: {}, mAsked: {}, mPick: {}, mLastBatch: [] });
   $('mReplyMsg').innerHTML = '';
@@ -484,12 +486,15 @@ function init(){
 
   const unblank = () => { try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {} };
   $('qInput').addEventListener('input', () => {
-    dropExample();
+    dropExample('qInput');
     if (state.exReply === EX_EXPLAIN) state.exReply = '';
     if (state.clReply === EX_CLEAN) state.clReply = '';
     syncControls(); unblank(); renderAll(); persist();
   });
-  $('qName').addEventListener('input', () => { leaveExample(); renderExplain(); renderClean(); persist(); });
+  $('qName').addEventListener('input', () => {
+    if (state.example) { dropExample('qName'); state.exReply = ''; state.clReply = ''; syncControls(); renderAll(); }
+    renderExplain(); renderClean(); persist();
+  });
   $('tabEx').addEventListener('click', () => { setTab('ex'); persist(); });
   $('tabCl').addEventListener('click', () => { setTab('cl'); persist(); });
   $('tabs').addEventListener('keydown', e => {

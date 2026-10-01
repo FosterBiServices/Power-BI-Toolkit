@@ -888,19 +888,19 @@ function buildPrompt(model, requestsText, opts){
   const L = [];
   L.push('You are an expert in Power BI and DAX. Write DAX measures for the semantic model described below.');
   L.push('');
-  L.push('## Measures to write');
+  L.push('## TASK: measures to write (the user’s requests)');
   reqs.forEach((r, i) => L.push((i + 1) + '. ' + r));
   details.forEach((d, i) => L.push((reqs.length + i + 1) + '. ' + (d.name || 'Detailed measure D' + (i + 1)) + ': see Detailed measure D' + (i + 1) + ' below.'));
   if (!reqs.length && !details.length) L.push('1. (describe the measures you need here)');
   if (details.length) {
     L.push('');
-    L.push('## Detailed measures');
+    L.push('## TASK: detailed measures');
     L.push('These are complex. Read every line of each one before writing it.');
     details.forEach((d, i) => { L.push(''); detailSection(model, d, i + 1, dateCol).forEach(x => L.push(x)); });
   }
   L.push('');
-  L.push('## Rules');
-  L.push('- Use only the tables, columns and measures listed under "Model". Do not invent names.');
+  L.push('## RULES');
+  L.push('- Use only the tables, columns and measures listed under CONTEXT: model. Do not invent names.');
   L.push("- Reference columns as 'Table'[Column]. Reference measures as [Measure] with no table prefix.");
   L.push('- Reuse an existing measure when it already calculates what you need.');
   L.push('- Use DIVIDE() for division. Use VAR ... RETURN when a measure has more than one step.');
@@ -915,7 +915,7 @@ function buildPrompt(model, requestsText, opts){
   L.push('- When a one-line request asks for a separate measure "for each" value of a column, write one measure per value, named with the value, for example "Sales - Consumer". This does not apply to detailed measures, where "iterate over each value" means one measure that loops.');
   if (model.composite) {
     L.push('');
-    L.push('## Composite model rules');
+    L.push('## RULES: composite model');
     L.push('This model combines tables from more than one data source. Each table below says where it comes from.');
     L.push('- Relationships marked LIMITED connect different data sources, or are many-to-many. Filters still flow across them.');
     L.push('- Across a LIMITED relationship, do not use RELATED or RELATEDTABLE, and do not iterate the rows of one table while reading columns of a table on the other side.');
@@ -924,7 +924,7 @@ function buildPrompt(model, requestsText, opts){
   }
   if (details.length) {
     L.push('');
-    L.push('## Rules for detailed measures');
+    L.push('## RULES: detailed measures');
     L.push('- Add a NOTES line (2 to 4 plain sentences) explaining your approach, just before DAX:.');
     L.push('- Capture values from the outer filter context, such as the selected date, in VARs BEFORE any iterator. Inside an iterator, CALCULATE and measure references cause context transition, which changes those values.');
     L.push('- Iterate over the smallest table that works: VALUES of the column you iterate over, or SUMMARIZE of the columns you need. Do not iterate a whole fact table unless the request says to.');
@@ -934,7 +934,7 @@ function buildPrompt(model, requestsText, opts){
     L.push('- Break the DAX into named VAR steps with a short // comment on each.');
   }
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block.');
   L.push('Inside the code block, write each measure in exactly this layout:');
   L.push('');
@@ -962,7 +962,7 @@ function buildPrompt(model, requestsText, opts){
   L.push('REASON: What the model is missing, for example a column or relationship.');
   L.push('@@@ END @@@');
   L.push('');
-  L.push('## Model');
+  L.push('## CONTEXT: model');
   L.push('');
   L.push('### Tables and columns');
   for (const t of model.tables) {

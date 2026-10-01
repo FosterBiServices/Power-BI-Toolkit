@@ -100,7 +100,7 @@ async function loadFolder(root, list){
   const rep = r.reports.length ? { reports: r.reports, pages: r.pages, drill: r.drill, visuals: r.visuals, counts: [...r.counts], slicers: r.slicers } : null;
   store.set('report', JSON.stringify({ root, rep, tmdl: tm }));
   setFolder(root, rep, tm);
-  leaveExample(); if (rep && !state.cfg.basics.name && rep.reports[0]) state.cfg.basics.name = rep.reports[0];
+  dropExample(); if (rep && !state.cfg.basics.name && rep.reports[0]) state.cfg.basics.name = rep.reports[0];
   renderAll(); persist();
 }
 function setFolder(root, rep, tm){
@@ -293,6 +293,8 @@ function persist(){
 }
 function setExample(on){ state.example = on; $('exampleBanner').hidden = !on; }
 function leaveExample(){ if (state.example) setExample(false); }
+// facts about your own report replace the whole example (model, sources and answers), so none of it reaches the prompt
+function dropExample(){ if (!state.example) return; $('modelInput').value = ''; $('srcInput').value = ''; $('aiInput').value = ''; state.cfg = blankCfg(); setExample(false); renderAll(); }
 
 function renderAll(){ renderModel(); derive(); renderSrcMsg(); renderFolder(); renderBasics(); renderSections(); renderAi(); renderOut(); }
 
@@ -329,16 +331,16 @@ function init(){
     clearBlank(); renderModel(); derive(); renderSrcMsg(); renderBasics(); renderSections(); renderOut(); persist();
   });
   // Step 2
-  const basic = (id, key) => $(id).addEventListener('input', () => { state.cfg.basics[key] = $(id).value; leaveExample(); refreshDrafts(); renderOut(); persist(); });
+  const basic = (id, key) => $(id).addEventListener('input', () => { const v = state.example ? SF_SUITE.ownText($(id).value, state.cfg.basics[key] || '') : $(id).value; dropExample(); state.cfg.basics[key] = v; if ($(id).value !== v) $(id).value = v; refreshDrafts(); renderOut(); persist(); });
   basic('bName', 'name'); basic('bOwner', 'owner'); basic('bContact', 'contact'); basic('bTime', 'time');
-  $('bFreq').addEventListener('change', () => { state.cfg.basics.freq = $('bFreq').value; leaveExample(); renderBasics(); refreshDrafts(); renderOut(); persist(); });
+  $('bFreq').addEventListener('change', () => { const v = $('bFreq').value; dropExample(); state.cfg.basics.freq = v; $('bFreq').value = v; renderBasics(); refreshDrafts(); renderOut(); persist(); });
   $('audChips').addEventListener('click', e => {
     const b = e.target.closest('[data-aud]'); if (!b) return;
-    const a = b.dataset.aud, list = state.cfg.basics.audience, i = list.indexOf(a);
+    dropExample(); const a = b.dataset.aud, list = state.cfg.basics.audience, i = list.indexOf(a);
     if (i >= 0) list.splice(i, 1); else list.push(a);
     leaveExample(); renderAud(); refreshDrafts(); renderOut(); persist();
   });
-  const addAud = () => { const v = $('audAdd').value.trim(); if (!v) return; const b = state.cfg.basics; if (!b.extraAud.includes(v)) b.extraAud.push(v); if (!b.audience.includes(v)) b.audience.push(v); $('audAdd').value = ''; leaveExample(); renderAud(); refreshDrafts(); renderOut(); persist(); };
+  const addAud = () => { const v = $('audAdd').value.trim(); if (!v) return; dropExample(); const b = state.cfg.basics; if (!b.extraAud.includes(v)) b.extraAud.push(v); if (!b.audience.includes(v)) b.audience.push(v); $('audAdd').value = ''; leaveExample(); renderAud(); refreshDrafts(); renderOut(); persist(); };
   $('audAddBtn').addEventListener('click', addAud);
   $('audAdd').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addAud(); } });
 

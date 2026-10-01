@@ -13,7 +13,14 @@ prompt the user takes to Copilot, then check the reply pasted back. Nothing call
 - Examples use generic customer and sales data (Customer, Sales, Product, Date, Region...).
   Never real client names or data.
 - Each page loads with example data so it shows what it does. Typing or loading anything of
-  the user's own replaces the whole example (not a mix of both).
+  the user's own replaces the whole example (not a mix of both). Text typed into a field that held
+  example text keeps only what was typed (`SF_SUITE.ownText`), and every other example field
+  is cleared, so no example content reaches a Copilot prompt.
+- Every Copilot prompt uses the same sections: TASK (the user's request, or what the tool
+  asks for), CONTEXT, STARTING POINT, RULES, and REPLY FORMAT (marked as a template). suite.js
+  adds `READ_RULE` to every copied or downloaded prompt: only TASK is the task, and sample or
+  example content (including the reply template) is never a requirement. Reply parsers skip
+  blocks that are only the reply template, in case Copilot repeats it.
 - A **Clear entries** button in the banner, with a confirm step. It empties the page, removes
   everything the page saved in the browser (its own `localStorage` prefix), and leaves a flag
   (`<prefix>blank`) so a reload stays empty instead of bringing the example back.
@@ -83,8 +90,8 @@ Things to know:
 - Home link and Switch tool menu (`S.TOOLS`).
 - Prompts as files: for every page in `PROMPTS` (prompt element → reply element) each prompt
   box gets **Download file**, a "Send it to Copilot as a file" note, and "Open a reply file"
-  (.txt, .md, .json, .csv, .tsv, .docx). Copied prompts get `ONE_REPLY` appended (asks Copilot
-  for one reply, or one downloadable .txt if too long).
+  (.txt, .md, .json, .csv, .tsv, .docx). Copied and downloaded prompts get `READ_RULE` and
+  `ONE_REPLY` appended (one reply, or one downloadable .txt if too long).
 - The export query lives in the pages and is rewritten by `query_patch.py`. It returns
   Kind, Table, Name, Type, Folder, Flags, Description, Expression, ToTable, ToColumn,
   Summarize, SortBy, Hierarchies, Storage, Source, plus a `_model` row. Calculated tables'
@@ -132,11 +139,12 @@ needs internet (or set `XLSX_FILE` to a local `xlsx.full.min.js` 0.18.5).
 
 ## Not yet checked in real Power BI or Copilot
 
-- About This Report: the data sources query (INFO.PARTITIONS / INFO.REFRESHPOLICIES /
-  INFO.EXPRESSIONS).
-- Model Linter: the INFO.CALCDEPENDENCY dependencies query.
 - Prompt files in Copilot (attaching the downloaded prompt; Copilot's file reply).
-- Power Query Writer on a real query.
-- Model Compare on a real before/after change.
+
+Checked on a real model in Power BI Desktop 2.158 (Oct 2026): the About This Report data
+sources query, the Model Linter dependencies query, the shared export, and Model Compare on a
+before/after change. Power Query Writer gave a working query from Copilot on a real
+Excel-based query. On that build INFO.VIEW.MEASURES leaves FormatString empty, so the export
+reads measure format strings from INFO.MEASURES.
 
 The owner keeps a progress doc and checklist in Claude (claude.ai); it isn't in this repo.

@@ -955,19 +955,19 @@ function buildPrompt(model, requestsText, opts){
   const L = [];
   L.push('You are an expert in Power BI and DAX. Write DAX measures for the semantic model described below.');
   L.push('');
-  L.push('## Measures to write');
+  L.push('## TASK: measures to write (the user’s requests)');
   reqs.forEach((r, i) => L.push((i + 1) + '. ' + r));
   details.forEach((d, i) => L.push((reqs.length + i + 1) + '. ' + (d.name || 'Detailed measure D' + (i + 1)) + ': see Detailed measure D' + (i + 1) + ' below.'));
   if (!reqs.length && !details.length) L.push('1. (describe the measures you need here)');
   if (details.length) {
     L.push('');
-    L.push('## Detailed measures');
+    L.push('## TASK: detailed measures');
     L.push('These are complex. Read every line of each one before writing it.');
     details.forEach((d, i) => { L.push(''); detailSection(model, d, i + 1, dateCol).forEach(x => L.push(x)); });
   }
   L.push('');
-  L.push('## Rules');
-  L.push('- Use only the tables, columns and measures listed under "Model". Do not invent names.');
+  L.push('## RULES');
+  L.push('- Use only the tables, columns and measures listed under CONTEXT: model. Do not invent names.');
   L.push("- Reference columns as 'Table'[Column]. Reference measures as [Measure] with no table prefix.");
   L.push('- Reuse an existing measure when it already calculates what you need.');
   L.push('- Use DIVIDE() for division. Use VAR ... RETURN when a measure has more than one step.');
@@ -982,7 +982,7 @@ function buildPrompt(model, requestsText, opts){
   L.push('- When a one-line request asks for a separate measure "for each" value of a column, write one measure per value, named with the value, for example "Sales - Consumer". This does not apply to detailed measures, where "iterate over each value" means one measure that loops.');
   if (model.composite) {
     L.push('');
-    L.push('## Composite model rules');
+    L.push('## RULES: composite model');
     L.push('This model combines tables from more than one data source. Each table below says where it comes from.');
     L.push('- Relationships marked LIMITED connect different data sources, or are many-to-many. Filters still flow across them.');
     L.push('- Across a LIMITED relationship, do not use RELATED or RELATEDTABLE, and do not iterate the rows of one table while reading columns of a table on the other side.');
@@ -991,7 +991,7 @@ function buildPrompt(model, requestsText, opts){
   }
   if (details.length) {
     L.push('');
-    L.push('## Rules for detailed measures');
+    L.push('## RULES: detailed measures');
     L.push('- Add a NOTES line (2 to 4 plain sentences) explaining your approach, just before DAX:.');
     L.push('- Capture values from the outer filter context, such as the selected date, in VARs BEFORE any iterator. Inside an iterator, CALCULATE and measure references cause context transition, which changes those values.');
     L.push('- Iterate over the smallest table that works: VALUES of the column you iterate over, or SUMMARIZE of the columns you need. Do not iterate a whole fact table unless the request says to.');
@@ -1001,7 +1001,7 @@ function buildPrompt(model, requestsText, opts){
     L.push('- Break the DAX into named VAR steps with a short // comment on each.');
   }
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block.');
   L.push('Inside the code block, write each measure in exactly this layout:');
   L.push('');
@@ -1029,7 +1029,7 @@ function buildPrompt(model, requestsText, opts){
   L.push('REASON: What the model is missing, for example a column or relationship.');
   L.push('@@@ END @@@');
   L.push('');
-  L.push('## Model');
+  L.push('## CONTEXT: model');
   L.push('');
   L.push('### Tables and columns');
   for (const t of model.tables) {
@@ -1481,9 +1481,9 @@ function batches(list, size){ const out = []; for (let i = 0; i < list.length; i
 function describePrompt(model, batch, opts){
   const o = Object.assign({ audience: 'users', length: 'one', rules: '' }, opts || {});
   const L = [];
-  L.push('You are documenting a Power BI semantic model. Write a description for each measure listed under "Measures to describe". Power BI shows the description as a tooltip when someone hovers the measure.');
+  L.push('You are documenting a Power BI semantic model. Write a description for each measure listed under TASK. Power BI shows the description as a tooltip when someone hovers the measure.');
   L.push('');
-  L.push('## How to write each description');
+  L.push('## RULES: how to write each description');
   if (o.audience === 'users') {
     L.push('- Audience: report users who do not know DAX. Say what the number means in business terms: what is counted, added up or compared, which conditions or filters apply, and which time period it covers.');
     L.push("- Do not mention DAX functions, and do not write table names in quotes or column names in brackets. Refer to other measures by their plain names.");
@@ -1497,9 +1497,9 @@ function describePrompt(model, batch, opts){
   L.push('- If a measure already has a current description, keep it if it is accurate and clear; otherwise improve it.');
   L.push('- Formulas marked [formula shortened] are cut to save space; describe them from the part shown and their names.');
   const rules = (o.rules || '').split('\n').map(s => s.trim()).filter(Boolean);
-  if (rules.length) { L.push(''); L.push('## House rules'); rules.forEach(r => L.push('- ' + r.replace(/^[-*•]\s*/, ''))); }
+  if (rules.length) { L.push(''); L.push('## RULES: house rules (from the user)'); rules.forEach(r => L.push('- ' + r.replace(/^[-*•]\s*/, ''))); }
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block.');
   L.push('Write one block per measure, in the order listed:');
   L.push('');
@@ -1518,7 +1518,7 @@ function describePrompt(model, batch, opts){
   L.push('Do not skip any other measure.');
   L.push('Use each NAME exactly as listed. If a formula you are not skipping is too unclear to describe with confidence, still write its block and start the description with "UNCLEAR:" followed by what is unclear.');
   L.push('');
-  L.push('## Measures to describe');
+  L.push('## TASK: measures to describe');
   for (const m of batch) {
     L.push('');
     L.push('### ' + bracket(m.name));
@@ -1538,7 +1538,7 @@ function describePrompt(model, batch, opts){
   batch.concat(deps).forEach(m => tableRefs(m.expression, model).forEach(t => tables.add(t)));
   if (deps.length || tables.size) {
     L.push('');
-    L.push('## Context (do not write descriptions for these)');
+    L.push('## CONTEXT (do not write descriptions for these)');
   }
   if (deps.length) {
     L.push('');
@@ -1977,7 +1977,7 @@ function init(){
 
   $('modelInput').addEventListener('input', () => {
     // pasting your own model while the example is showing clears the example's descriptions
-    if (state.example) { state.collected = {}; state.edits = {}; state.excluded = new Set(); state.skipped = {}; $('reply').value = ''; }
+    if (state.example) { $('modelInput').value = SF_SUITE.ownText($('modelInput').value, EX_MODEL); state.collected = {}; state.edits = {}; state.excluded = new Set(); state.skipped = {}; $('reply').value = ''; }
     leaveExample(); renderModel(); defaultSelection();
     // keep collected descriptions only for measures that still need one
     for (const k of Object.keys(state.collected)) { const x = state.model.measures.find(mm => lc(mm.name) === k); if (!x || hasDesc(x)) delete state.collected[k]; }

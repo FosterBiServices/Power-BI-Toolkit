@@ -112,7 +112,7 @@ function init(){
 
   FIELDS.forEach(k => $(k).addEventListener('input', () => {
     // typing anything of your own replaces the whole example
-    if (state.example) { const val = $(k).value; leaveExample(); state.v[k] = val; $(k).value = val; }
+    if (state.example) { const val = SF_SUITE.ownText($(k).value, state.v[k] || ''); leaveExample(); state.v[k] = val; $(k).value = val; }
     else state.v[k] = $(k).value;
     try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
     if (k === 'pwReply') renderReply(); else if (k === 'columns') { renderCols(); renderPrompt(); renderReply(); } else if (k === 'existing') { renderStart(); renderPrompt(); } else { renderPrompt(); if (k === 'params' || k === 'merges') renderReply(); }

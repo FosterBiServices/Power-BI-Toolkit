@@ -177,9 +177,12 @@ function stepListing(src, q){
 function explainPrompt(src, q, o){
   const opts = Object.assign({ audience: 'mixed', name: '' }, o || {});
   const L = [];
-  L.push('You are explaining a Power Query (M) query from Power BI' + (opts.name ? ', named "' + opts.name + '"' : '') + '. Write a short comment for every step and a summary of the whole query.');
+  L.push('You are explaining a Power Query (M) query from Power BI' + (opts.name ? ', named "' + opts.name + '"' : '') + '.');
   L.push('');
-  L.push('## How to write the comments');
+  L.push('## TASK');
+  L.push('Write a short comment for every step listed under CONTEXT, and a summary of the whole query.');
+  L.push('');
+  L.push('## RULES: how to write the comments');
   if (opts.audience === 'business') L.push('- Audience: report authors who don’t read M. Say what the step does to the data in plain words, not how the function works.');
   else L.push('- Audience: people who maintain the query. Say what the step does and, where it isn’t obvious, why it matters.');
   L.push('- One sentence per step, at most 120 characters. Start with a verb: "Keeps rows where...", "Renames...".');
@@ -187,7 +190,7 @@ function explainPrompt(src, q, o){
   L.push('- If a step looks wrong, unnecessary or risky, add a NOTE line saying why, briefly. Otherwise leave NOTE out.');
   L.push('- SUMMARY: 2 to 4 sentences: where the data comes from, the main changes, and what one row of the result is.');
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block. One STEP block per step, in the order listed, using each step name exactly as listed:');
   L.push('');
   L.push('@@@ SUMMARY @@@');
@@ -199,10 +202,10 @@ function explainPrompt(src, q, o){
   L.push('NOTE: Only if the step looks wrong or risky.');
   L.push('@@@ END @@@');
   L.push('');
-  L.push('## Steps');
+  L.push('## CONTEXT: the steps');
   stepListing(src, q).forEach(l => L.push(l));
   L.push('');
-  L.push('## The query');
+  L.push('## STARTING POINT: the query');
   L.push(src.trim());
   L.push('');
   L.push('=== END OF PROMPT ===');
@@ -213,13 +216,13 @@ function cleanupPrompt(src, q, checks, o){
   const L = [];
   L.push('You are cleaning up a Power Query (M) query from Power BI' + (opts.name ? ', named "' + opts.name + '"' : '') + '. Rewrite it so it is easier to read and maintain, WITHOUT changing its result.');
   L.push('');
-  L.push('## Rules you must keep');
+  L.push('## RULES you must keep');
   L.push('- The result must be exactly the same: the same columns with the same names, types and order, and the same rows.');
   L.push('- Keep the same data source, server, database, file, sheet and credentials. Do not add or remove connectors.');
   L.push('- Do not add Table.Buffer, Table.AddIndexColumn or other steps that can stop query folding, and do not move steps that filter or remove columns later than they are now.');
   L.push('- Keep valid M that Power BI’s Advanced Editor accepts, starting with "let" and ending with "in" and the last step.');
   L.push('');
-  L.push('## Changes to make');
+  L.push('## TASK: changes to make');
   if (opts.rename) L.push('- Rename default step names (such as "Changed Type1" or "Filtered Rows") to short names that say why, for example #"Kept Orders With Dates". Update every reference.');
   if (opts.merge) L.push('- Merge consecutive steps of the same kind where the result is identical (for example two type changes or two renames in a row), and set the type of new columns directly in Table.AddColumn instead of a separate type step.');
   if (opts.unused) L.push('- Remove steps that nothing uses, and sorts that don’t affect the result.');
@@ -228,11 +231,11 @@ function cleanupPrompt(src, q, checks, o){
   L.push('- Change nothing else. If a change could alter the result, leave it out and mention it in CHANGES as a suggestion.');
   if (checks && checks.length) {
     L.push('');
-    L.push('## Issues found in this query');
+    L.push('## CONTEXT: issues found in this query');
     checks.forEach(c => L.push('- ' + (c.step ? c.step + ': ' : '') + c.title + '. ' + c.detail));
   }
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block:');
   L.push('');
   L.push('@@@ CODE @@@');
@@ -252,7 +255,7 @@ function cleanupPrompt(src, q, checks, o){
   L.push('- One line per change, in plain words.');
   L.push('@@@ END @@@');
   L.push('');
-  L.push('## The query');
+  L.push('## STARTING POINT: the query');
   L.push(src.trim());
   L.push('');
   L.push('=== END OF PROMPT ===');
@@ -272,6 +275,11 @@ function blocks(t){
   }
   return out;
 }
+// blocks without the reply-format template, in case Copilot repeats it in its answer
+const TEMPLATE_LINES = ['NAME: Step name', 'TEXT: Two to four sentences.', 'NAME: ParameterName', '- One line per change, in plain words.'];
+function answerBlocks(t){
+  return blocks(t).filter(b => { const x = b.body.trim(); return !(x === 'Two to four sentences.' || /^let\s+\.\.\.\s+in\s+\.\.\.$/.test(x) || TEMPLATE_LINES.some(l => x.includes(l))); });
+}
 function field(body, label, labels){
   const re = new RegExp('(^|\\n)[ \\t]*' + label + '[ \\t]*:', 'i');
   const m = re.exec(body); if (!m) return '';
@@ -283,7 +291,7 @@ function field(body, label, labels){
 function parseExplain(text){
   const t = cleanReply(text).replace(/[‘’]/g, "'");
   if (!t.trim()) return { summary: '', steps: [], error: null };
-  const bs = blocks(t);
+  const bs = answerBlocks(t);
   const L = ['NAME', 'COMMENT', 'NOTE'];
   const steps = bs.filter(b => b.kind === 'STEP').map(b => ({
     name: field(b.body, 'NAME', L).replace(/^#"(.*)"$/s, '$1').replace(/^"(.*)"$/s, '$1').replace(/""/g, '"').trim(),
@@ -296,7 +304,7 @@ function parseExplain(text){
 function parseCleanup(text){
   const t = cleanReply(text);
   if (!t.trim()) return { code: '', params: [], changes: [], error: null };
-  const bs = blocks(t);
+  const bs = answerBlocks(t);
   const cb = bs.find(b => b.kind === 'CODE');
   let code = cb ? cb.body.replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '').replace(/^\s*\n|\s+$/g, '') : '';
   if (!cb) { const m = t.match(/```(?:m|powerquery|pq)?\s*\n([\s\S]*?\blet\b[\s\S]*?)```/i); if (m) code = m[1].trim(); }

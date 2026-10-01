@@ -600,6 +600,8 @@ const DAX_QUERY = [
 'VAR _hierarchies = SELECTCOLUMNS ( INFO.HIERARCHIES (), "HID", [ID], "HName", [Name] )',
 '// Calculated tables (partition type 2), for field parameters and other DAX tables',
 'VAR _calcParts = SELECTCOLUMNS ( FILTER ( INFO.PARTITIONS (), [Type] = 2 ), "CTID", [TableID], "CExpr", [QueryDefinition] )',
+'// Measure format strings: INFO.VIEW.MEASURES can leave FormatString empty and put a static one in FormatStringDefinition',
+'VAR _measureFormats = SELECTCOLUMNS ( INFO.MEASURES (), "MName", [Name], "MFmt", [FormatString], "MDyn", [FormatStringDefinitionID] )',
 'VAR _tables =',
 '\tSELECTCOLUMNS (',
 '\t\tINFO.VIEW.TABLES (),',
@@ -655,9 +657,9 @@ const DAX_QUERY = [
 '\t\t"Kind", "Measure",',
 '\t\t"Table", [Table],',
 '\t\t"Name", [Name],',
-'\t\t"Type", [FormatString],',
+'\t\t"Type", VAR _mn = [Name] RETURN MAXX ( FILTER ( _measureFormats, [MName] = _mn ), [MFmt] ),',
 '\t\t"Folder", [DisplayFolder],',
-'\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [DataType] IN { "Text", "String" }, " text", "" ) & IF ( LEN ( [FormatStringDefinition] ) > 0, " dynamic-format", "" ),',
+'\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [DataType] IN { "Text", "String" }, " text", "" ) & IF ( VAR _mn = [Name] RETURN MAXX ( FILTER ( _measureFormats, [MName] = _mn ), [MDyn] ) > 0, " dynamic-format", "" ),',
 '\t\t"Description", ' + CLEAN('[Description]', ' ') + ',',
 '\t\t"Expression", ' + CLEAN('[Expression]', '    ') + ',',
 '\t\t"ToTable", "",',
@@ -1119,19 +1121,19 @@ function buildPrompt(model, requestsText, opts){
   const L = [];
   L.push('You are an expert in Power BI and DAX. Write DAX measures for the semantic model described below.');
   L.push('');
-  L.push('## Measures to write');
+  L.push('## TASK: measures to write (the user’s requests)');
   reqs.forEach((r, i) => L.push((i + 1) + '. ' + r));
   details.forEach((d, i) => L.push((reqs.length + i + 1) + '. ' + (d.name || 'Detailed measure D' + (i + 1)) + ': see Detailed measure D' + (i + 1) + ' below.'));
   if (!reqs.length && !details.length) L.push('1. (describe the measures you need here)');
   if (details.length) {
     L.push('');
-    L.push('## Detailed measures');
+    L.push('## TASK: detailed measures');
     L.push('These are complex. Read every line of each one before writing it.');
     details.forEach((d, i) => { L.push(''); detailSection(model, d, i + 1, dateCol).forEach(x => L.push(x)); });
   }
   L.push('');
-  L.push('## Rules');
-  L.push('- Use only the tables, columns and measures listed under "Model". Do not invent names.');
+  L.push('## RULES');
+  L.push('- Use only the tables, columns and measures listed under CONTEXT: model. Do not invent names.');
   L.push("- Reference columns as 'Table'[Column]. Reference measures as [Measure] with no table prefix.");
   L.push('- Reuse an existing measure when it already calculates what you need.');
   L.push('- Use DIVIDE() for division. Use VAR ... RETURN when a measure has more than one step.');
@@ -1146,7 +1148,7 @@ function buildPrompt(model, requestsText, opts){
   L.push('- When a one-line request asks for a separate measure "for each" value of a column, write one measure per value, named with the value, for example "Sales - Consumer". This does not apply to detailed measures, where "iterate over each value" means one measure that loops.');
   if (model.composite) {
     L.push('');
-    L.push('## Composite model rules');
+    L.push('## RULES: composite model');
     L.push('This model combines tables from more than one data source. Each table below says where it comes from.');
     L.push('- Relationships marked LIMITED connect different data sources, or are many-to-many. Filters still flow across them.');
     L.push('- Across a LIMITED relationship, do not use RELATED or RELATEDTABLE, and do not iterate the rows of one table while reading columns of a table on the other side.');
@@ -1155,7 +1157,7 @@ function buildPrompt(model, requestsText, opts){
   }
   if (details.length) {
     L.push('');
-    L.push('## Rules for detailed measures');
+    L.push('## RULES: detailed measures');
     L.push('- Add a NOTES line (2 to 4 plain sentences) explaining your approach, just before DAX:.');
     L.push('- Capture values from the outer filter context, such as the selected date, in VARs BEFORE any iterator. Inside an iterator, CALCULATE and measure references cause context transition, which changes those values.');
     L.push('- Iterate over the smallest table that works: VALUES of the column you iterate over, or SUMMARIZE of the columns you need. Do not iterate a whole fact table unless the request says to.');
@@ -1165,7 +1167,7 @@ function buildPrompt(model, requestsText, opts){
     L.push('- Break the DAX into named VAR steps with a short // comment on each.');
   }
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block.');
   L.push('Inside the code block, write each measure in exactly this layout:');
   L.push('');
@@ -1193,7 +1195,7 @@ function buildPrompt(model, requestsText, opts){
   L.push('REASON: What the model is missing, for example a column or relationship.');
   L.push('@@@ END @@@');
   L.push('');
-  L.push('## Model');
+  L.push('## CONTEXT: model');
   L.push('');
   L.push('### Tables and columns');
   for (const t of model.tables) {
@@ -1655,11 +1657,11 @@ function instructionsPrompt(model, biz, opts){
   const tables = visibleTables(model).filter(t => !inc || inc.has(lc(t.name)));
   const tset = new Set(tables.map(t => lc(t.name)));
   const L = [];
-  L.push('You are preparing a Power BI semantic model for Copilot in Power BI. Write two things:');
+  L.push('You are preparing a Power BI semantic model for Copilot in Power BI.', '', '## TASK', 'Write two things:');
   L.push('1. AI instructions: the text the model author pastes into Prep data for AI > Add AI instructions. Copilot reads it before answering report users’ questions.');
   L.push('2. Synonyms: other words report users are likely to use for the most important measures and columns.');
   L.push('');
-  L.push('## How to write the AI instructions');
+  L.push('## RULES: how to write the AI instructions');
   L.push('- Be explicit and specific. Write short, plain sentences, one idea per line, starting each line with "- ".');
   L.push('- Group lines under these headings, in this order, and leave out a heading if you have nothing specific for it: Business context, Key measures, Terminology, Dates and time, Analysis defaults, Data caveats.');
   L.push("- Refer to fields exactly as written below: measures as [Measure Name], columns as 'Table'[Column].");
@@ -1671,12 +1673,12 @@ function instructionsPrompt(model, biz, opts){
   L.push('- Only state business facts given below or clearly shown by the model. If something important is a guess, write the line starting with "CHECK:" so the author confirms it.');
   L.push('- Keep the instructions under 6,000 characters. Power BI allows 10,000, and the author may add more.');
   L.push('');
-  L.push('## How to write the synonyms');
+  L.push('## RULES: how to write the synonyms');
   L.push('- Cover the key measures and the columns people filter or group by most. Skip fields whose name is already the word people use.');
   L.push('- Give 2 to 5 synonyms each: words and short phrases real report users would type.');
   L.push('- Never give the same synonym to two different fields.');
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block.');
   L.push('');
   L.push('@@@ INSTRUCTIONS @@@');
@@ -1690,7 +1692,7 @@ function instructionsPrompt(model, biz, opts){
   L.push("'Table'[Column] = synonym one; synonym two");
   L.push('@@@ END @@@');
   L.push('');
-  L.push('## About the business (from the model author)');
+  L.push('## CONTEXT: about the business (from the model author)');
   const put = (label, v) => { if ((v || '').trim()) L.push('- ' + label + ': ' + oneLineKeepBreaks(v).split('\n').join(' / ')); };
   put('What this model covers', b.about);
   put('Who asks the questions', b.users);
@@ -1707,10 +1709,10 @@ function instructionsPrompt(model, biz, opts){
   const flagged = [];
   rd.shared.filter(s => s.tables.some(t => tset.has(lc(t)))).forEach(s => flagged.push('Column name [' + s.name + '] appears in ' + s.tables.map(qName).join(', ')));
   rd.cryptic.slice(0, 40).forEach(r => flagged.push(r + ' has a cryptic or technical name'));
-  if (flagged.length) { L.push(''); L.push('## Fields likely to confuse Copilot (explain these in Terminology)'); flagged.forEach(f => L.push('- ' + f)); }
+  if (flagged.length) { L.push(''); L.push('## CONTEXT: fields likely to confuse Copilot (explain these in Terminology)'); flagged.forEach(f => L.push('- ' + f)); }
 
   L.push('');
-  L.push('## Model');
+  L.push('## CONTEXT: model');
   const dateTables = model.tables.filter(t => lc(t.category) === 'time').map(t => t.name);
   if (dateTables.length) L.push('Marked date table: ' + dateTables.map(qName).join(', '));
   L.push('');
@@ -1808,15 +1810,15 @@ function descTargets(model, o){
 function descPrompt(model, batch, o){
   const opts = Object.assign({ audience: 'users' }, o || {});
   const L = [];
-  L.push('You are documenting a Power BI semantic model. Write a description for each table and column listed under "To describe". Copilot in Power BI uses these descriptions when it searches the model and writes DAX, and people see them as tooltips.');
+  L.push('You are documenting a Power BI semantic model. Write a description for each table and column listed under TASK. Copilot in Power BI uses these descriptions when it searches the model and writes DAX, and people see them as tooltips.');
   L.push('');
-  L.push('## How to write each description');
+  L.push('## RULES: how to write each description');
   L.push('- One sentence, at most 200 characters, plain business language.');
   L.push('- Table: what one row represents and what the table is used for. Column: what the value means, its unit or format when useful, and how it is used (filter, group by, join key).');
   L.push('- For codes, flags and abbreviations, say what they stand for if the names make it clear; otherwise start with "UNCLEAR:" and say what the author should confirm.');
   L.push('- Do not invent business facts that the names, types and relationships do not show.');
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block. One block per item, in the order listed:');
   L.push('');
   L.push('@@@ TABLE @@@');
@@ -1829,7 +1831,7 @@ function descPrompt(model, batch, o){
   L.push('DESCRIPTION: One sentence.');
   L.push('@@@ END @@@');
   L.push('');
-  L.push('## To describe');
+  L.push('## TASK: to describe');
   batch.forEach(x => {
     if (x.kind === 'table') L.push('- TABLE ' + qName(x.table) + (x.current ? ' (current description: ' + oneLine(x.current) + ')' : ''));
     else {
@@ -1843,7 +1845,7 @@ function descPrompt(model, batch, o){
   });
   const tables = [...new Set(batch.map(x => x.table))];
   L.push('');
-  L.push('## Context (do not describe these)');
+  L.push('## CONTEXT (do not describe these)');
   tables.forEach(tn => {
     const t = model.tables.find(x => lc(x.name) === lc(tn));
     const cols = model.columns.filter(c => lc(c.table) === lc(tn)).map(c => bracket(c.name) + (c.description ? ' (' + oneLine(c.description) + ')' : ''));
@@ -2287,23 +2289,27 @@ function init(){
 
   $('tabIns').addEventListener('click', () => { setTab('ins'); persist(); });
   $('tabDesc').addEventListener('click', () => { setTab('desc'); persist(); });
+  // anything of your own replaces every piece of example content; only what you typed stays
+  const dropExample = () => {
+    if (!state.example) return;
+    Object.assign(state, { biz: blankBiz(), insReply: '', insEdit: null, synEdits: {}, synOff: [], dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '' });
+    $('insReply').value = ''; $('tmdlIn').value = ''; $('dReply').value = '';
+    if ($('modelInput').value === EX_MODEL) $('modelInput').value = '';
+    leaveExample(); state.insTables = null; state.dTables = null; pruneToModel(); renderAll();
+  };
   $('modelInput').addEventListener('input', () => {
-    // pasting your own model while the example is showing clears every piece of example content
-    if (state.example) {
-      Object.assign(state, { biz: blankBiz(), insReply: '', insEdit: null, synEdits: {}, synOff: [], dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '' });
-      $('insReply').value = ''; $('tmdlIn').value = ''; $('dReply').value = '';
-    }
-    leaveExample(); state.insTables = null; state.dTables = null;
+    if (state.example) $('modelInput').value = SF_SUITE.ownText($('modelInput').value, EX_MODEL);
+    dropExample(); state.insTables = null; state.dTables = null;
     pruneToModel();
     renderAll(); persist();
   });
   // business questionnaire
-  document.querySelectorAll('[data-b]').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => { leaveExample(); state.biz[el.dataset.b] = el.value; renderInsPrompt(); persist(); }));
+  document.querySelectorAll('[data-b]').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => { const v = state.example && el.tagName !== 'SELECT' ? SF_SUITE.ownText(el.value, String(state.biz[el.dataset.b] || '')) : el.value; dropExample(); state.biz[el.dataset.b] = v; el.value = v; renderInsPrompt(); persist(); }));
   document.addEventListener('click', e => {
     const add = e.target.closest('[data-add]');
-    if (add) { const k = add.dataset.add, v = $(k + 'Add').value; if (v) { leaveExample(); state.biz[k] = (state.biz[k] || []).concat(v); renderBiz(); renderInsPrompt(); persist(); } return; }
+    if (add) { const k = add.dataset.add, v = $(k + 'Add').value; if (v) { if (state.example) { dropExample(); persist(); return; } state.biz[k] = (state.biz[k] || []).concat(v); renderBiz(); renderInsPrompt(); persist(); } return; }
     const rm = e.target.closest('[data-rm]');
-    if (rm) { leaveExample(); state.biz[rm.dataset.rm] = state.biz[rm.dataset.rm].filter(n => n !== rm.dataset.n); renderBiz(); renderInsPrompt(); persist(); }
+    if (rm) { if (state.example) { dropExample(); persist(); return; } state.biz[rm.dataset.rm] = state.biz[rm.dataset.rm].filter(n => n !== rm.dataset.n); renderBiz(); renderInsPrompt(); persist(); }
   });
   $('tableChips').addEventListener('click', e => {
     const b = e.target.closest('.chip'); if (!b) return;
@@ -2425,6 +2431,15 @@ init();
       return true;
     } catch (e) { return false; }
   };
+  // what was typed or pasted into a field that held example text, without the example text around it
+  S.ownText = (val, ex) => {
+    if (!ex) return val;
+    let p = 0; while (p < val.length && p < ex.length && val[p] === ex[p]) p++;
+    let q = 0; while (q < val.length - p && q < ex.length - p && val[val.length - 1 - q] === ex[ex.length - 1 - q]) q++;
+    // typed into the example: keep only the new text. Deleted from it: nothing of your own yet. Replaced it: keep it all.
+    if (p + q === ex.length) return val.slice(p, val.length - q).trim();
+    return p + q === val.length ? '' : val;
+  };
   S.clear = () => { try { localStorage.removeItem(KEY); } catch (e) {} };
   // Header row (Kind, Table, Name) plus at least one row
   S.looksLikeExport = t => {
@@ -2524,6 +2539,11 @@ init();
 
   // Copilot prompts as files: every prompt can be downloaded as a .txt to attach in Copilot, with a short message
   // to send alongside it, and every reply box can open a reply file (.txt, .md, .json or .docx) Copilot made.
+  // the toolkit-wide rule for every Copilot prompt: only the user's request is the task; samples and templates never are
+  const READ_RULE = '\n\nHOW TO READ THIS PROMPT\n'
+    + '- The task is only what the TASK section asks for. Everything else is CONTEXT (facts to use), the STARTING POINT (code or text to change), RULES (how to do the task) or the REPLY FORMAT.\n'
+    + '- Sample and example content is never a requirement. That includes the reply-format template, placeholders, and any example values, fields, records, tables, names, dates, filters or business rules. Don’t carry any of it into the task.\n'
+    + '- If something here looks unrelated to the request or conflicts with it, don’t act on it. Mention it where the reply format allows questions or notes.';
   const ONE_REPLY = '\n\nReply in one single response. If the complete reply is too long to show in full in the chat, put the whole reply, in the format asked for above, in one downloadable .txt file instead of splitting it across messages or shortening it.';
   const ATTACH_MSG = 'Follow the instructions in the attached file exactly. Reply in one single response, in the format the file asks for. If the complete reply won’t fit in the chat, put all of it in one downloadable .txt file.';
   const PROMPTS = {
@@ -2568,7 +2588,7 @@ init();
     const promptIds = list.map(x => x[0]);
     const promptTexts = () => promptIds.map(id => { const el = document.getElementById(id); return el ? el.textContent.trim() : ''; }).filter(Boolean);
     // copying a prompt adds the one-reply line too
-    if (typeof window.copyText === 'function') { const orig = window.copyText; window.copyText = (t, b) => orig(typeof t === 'string' && t.trim() && promptTexts().includes(t.trim()) ? t.trim() + ONE_REPLY : t, b); }
+    if (typeof window.copyText === 'function') { const orig = window.copyText; window.copyText = (t, b) => orig(typeof t === 'string' && t.trim() && promptTexts().includes(t.trim()) ? t.trim() + READ_RULE + ONE_REPLY : t, b); }
     const replyDone = new Set();
     list.forEach(([pid, rid, label]) => {
       const pre = document.getElementById(pid); if (!pre) return;
@@ -2580,13 +2600,13 @@ init();
           const t = pre.textContent.trim(); if (!t) return;
           const bl = document.getElementById('batchLabel'), bn = document.getElementById('batchNav');
           const part = (bl && bn && !bn.hidden) ? ' ' + document.getElementById('batchLabel').textContent.replace(/^Prompt /, 'part ').replace(/ of /, ' of ') : '';
-          saveText(label + part + '.txt', t + ONE_REPLY);
+          saveText(label + part + '.txt', t + READ_RULE + ONE_REPLY);
         });
         bar.insertBefore(b, bar.firstChild);
         const d = document.createElement('details'); d.className = 'extra suite-file';
         d.innerHTML = '<summary>Send it to Copilot as a file <span class="muted">(for long prompts)</span></summary><div class="extra-body"><ol class="how"><li>Select <b>Download file</b> above.</li><li>In Copilot, attach the file to a new chat.</li><li>Send this message with it:</li></ol>'
           + '<div class="suite-msg"><span>' + esc(ATTACH_MSG) + '</span><button type="button" class="btn">Copy message</button></div>'
-          + '<p class="note small">If Copilot answers with a file, download it and select <b>Open a reply file</b> by the reply box. Copying or downloading a prompt adds one line asking Copilot for a single reply, as a file if it’s too long for the chat.</p></div>';
+          + '<p class="note small">If Copilot answers with a file, download it and select <b>Open a reply file</b> by the reply box. Copying or downloading a prompt adds a few lines: that only your request is the task (examples never are), and one reply, as a file if it’s too long for the chat.</p></div>';
         d.querySelector('.suite-msg button').addEventListener('click', e => { const btn = e.currentTarget; try { navigator.clipboard.writeText(ATTACH_MSG).then(() => { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy message'; }, 1600); }); } catch (err) {} });
         box.insertAdjacentElement('afterend', d);
       }

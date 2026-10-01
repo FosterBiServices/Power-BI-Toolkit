@@ -57,6 +57,16 @@ function lineDiff(a, b){
 }
 function setExample(on){ state.example = on; $('exampleBanner').hidden = !on; }
 function leaveExample(){ if (state.example) { setExample(false); persist(); } }
+// typing your own text replaces the whole example: only what you typed stays, every other sample is cleared
+function dropExample(keep){
+  if (!state.example) return;
+  const ex = { mInput: EX_MEASURE, modelInput: EX_MODEL, notes: EX_NOTES, reply: EX_REPLY }, v = keep ? SF_SUITE.ownText($(keep).value, ex[keep]) : '';
+  Object.keys(ex).forEach(id => { if (id === keep || $(id).value === ex[id]) $(id).value = ''; });
+  if (keep) $(keep).value = v;
+  if (!$('modelInput').value) $('modelBox').open = false;
+  state.rules.custom = state.rules.custom.filter(c => !EX_CUSTOM.some(e => e.id === c.id && e.name === c.name));
+  setExample(false); persist();
+}
 function persist(){
   store.set('rules', JSON.stringify(state.rules)); // the checklist is kept even while the example shows
   if (state.example) return;
@@ -244,20 +254,8 @@ function init(){
   renderAll();
 
   const change = () => { renderAll(); persist(); };
-  $('mInput').addEventListener('input', () => {
-    if (state.example) {
-      // drop every sample except the measure being typed
-      if ($('modelInput').value === EX_MODEL) $('modelInput').value = '';
-      $('notes').value = ''; $('reply').value = ''; $('modelBox').open = false;
-      state.rules.custom = state.rules.custom.filter(c => !EX_CUSTOM.some(e => e.id === c.id && e.name === c.name));
-      setExample(false);
-    }
-    try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
-    change();
-  });
-  $('modelInput').addEventListener('input', () => { leaveExample(); change(); });
-  $('notes').addEventListener('input', () => { leaveExample(); change(); });
-  $('reply').addEventListener('input', () => { leaveExample(); change(); });
+  $('mInput').addEventListener('input', () => { dropExample('mInput'); try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {} change(); });
+  ['modelInput', 'notes', 'reply'].forEach(id => $(id).addEventListener('input', () => { dropExample(id); change(); }));
   $('wantRewrite').addEventListener('change', () => { state.wantRewrite = $('wantRewrite').checked; change(); });
   $('tTable').addEventListener('input', () => { state.tTable = $('tTable').value; renderReply(); persist(); });
   $('tBy').addEventListener('input', () => { state.tBy = $('tBy').value; renderReply(); persist(); });

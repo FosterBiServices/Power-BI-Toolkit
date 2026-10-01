@@ -167,7 +167,7 @@ const AB = (() => {
     '\t\t"Name", VAR _t = [TableID] RETURN MAXX ( FILTER ( _tables, [TID] = _t ), [TName] ),',
     '\t\t"SourceType", [Type],',
     '\t\t"Via", VAR _e = [ExpressionSourceID] RETURN MAXX ( FILTER ( _exprIds, [EID] = _e ), [EName] ),',
-    '\t\t"Refreshed", [RefreshedTime],',
+    '\t\t"Refreshed", IF ( [RefreshedTime] > DATE ( 1900, 1, 1 ), FORMAT ( [RefreshedTime], "yyyy-mm-dd hh:nn:ss" ), "" ),',
     '\t\t"Text", ' + CLEAN('[QueryDefinition]', ' '),
     '\t)',
     'VAR _policies =',
@@ -177,7 +177,7 @@ const AB = (() => {
     '\t\t"Name", VAR _t = [TableID] RETURN MAXX ( FILTER ( _tables, [TID] = _t ), [TName] ),',
     '\t\t"SourceType", 4,',
     '\t\t"Via", "",',
-    '\t\t"Refreshed", BLANK (),',
+    '\t\t"Refreshed", "",',
     '\t\t"Text", ' + CLEAN('[SourceExpression]', ' '),
     '\t)',
     'VAR _queries =',
@@ -187,7 +187,7 @@ const AB = (() => {
     '\t\t"Name", [Name],',
     '\t\t"SourceType", [Kind],',
     '\t\t"Via", "",',
-    '\t\t"Refreshed", BLANK (),',
+    '\t\t"Refreshed", "",',
     '\t\t"Text", ' + CLEAN('[Expression]', ' '),
     '\t)',
     'RETURN',
@@ -195,6 +195,16 @@ const AB = (() => {
     'ORDER BY [Kind], [Name]'
   ].join('\n');
 
+  // an older copy of the query gives the refresh time as a number (Excel serial); 1699-12-30 means never refreshed
+  function when(v){
+    v = (v || '').trim();
+    if (/^-?\d+(\.\d+)?$/.test(v)) {
+      const n = parseFloat(v); if (n <= 1) return '';
+      const d = new Date(Math.round((n - 25569) * 86400000)), p = x => String(x).padStart(2, '0');
+      return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate()) + ' ' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds());
+    }
+    return /^1[6-8]\d\d\b/.test(v) ? '' : v;
+  }
   // rows: { kind: 'table' | 'query', name, type: 'm' | 'calculated' | 'entity' | 'calcgroup' | '', via, refreshed, text }
   function parseSourcesQuery(text){
     const lines = (text || '').replace(/\r/g, '').split('\n'); let map = null; const rows = [];
@@ -205,7 +215,7 @@ const AB = (() => {
       const g = k => map[k] === undefined ? '' : restore(unquoteCell((cells[map[k]] || '').trim()));
       const kind = lcs(g('kind')), st = g('sourcetype').trim();
       const type = kind === 'query' ? 'm' : st === '2' ? 'calculated' : st === '5' ? 'entity' : st === '7' ? 'calcgroup' : st === '3' ? 'none' : 'm';
-      rows.push({ kind: kind === 'query' ? 'query' : 'table', policy: kind === 'policy', name: g('name'), type, via: g('via'), refreshed: g('refreshed'), text: g('text') });
+      rows.push({ kind: kind === 'query' ? 'query' : 'table', policy: kind === 'policy', name: g('name'), type, via: g('via'), refreshed: when(g('refreshed')), text: g('text') });
     }
     if (!map) return { error: 'The header row (Kind, Name, SourceType, Via, Refreshed, Text) wasn’t found. Use the Copy button above the results grid so the column names come along.', rows: [] };
     return { rows };
@@ -643,16 +653,21 @@ const AB = (() => {
     return [
       'You are helping write the "About this report" text for a Power BI report. Readers are business users, not developers.',
       '',
-      'Rules:',
+      'TASK',
+      'Write the summary, business value, audience, key questions and measure meanings for the report described under CONTEXT.',
+      '',
+      'RULES',
       '- Use only the facts in the JSON below. Do not invent numbers, targets, results, owners or data sources.',
       '- Plain language. No DAX, no table or column names in brackets, no technical details apart from the data source names given.',
       '- Refer to key measures by the names given. Do not add measures that are not listed.',
       '- If something needed for a good summary is missing (for example the audience or the business goal), list it under evidence_gaps instead of guessing.',
       '- Keep report_summary to one or two sentences and business_value to one sentence. Give three to five key_questions.',
-      '- Reply with JSON only, no code fences, in exactly this shape:',
+      '',
+      'REPLY FORMAT (a template: fill in the values)',
+      'Reply with JSON only, no code fences, in exactly this shape:',
       '{"report_summary": "", "business_value": "", "audience": "", "key_questions": [""], "measure_meanings": {"<measure name>": ""}, "evidence_gaps": [""]}',
       '',
-      'Report facts:',
+      'CONTEXT (report facts)',
       JSON.stringify(ctx, null, 2)
     ].join('\n');
   }

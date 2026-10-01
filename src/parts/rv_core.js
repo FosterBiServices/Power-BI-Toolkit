@@ -239,7 +239,10 @@ function reviewPrompt(o){
   const L = [];
   L.push('You are reviewing a DAX measure from a Power BI model against the checklist below.' + (o.name ? ' The measure is called [' + o.name + '].' : ''));
   L.push('');
-  L.push('## How to review');
+  L.push('## TASK');
+  L.push('Review the measure under STARTING POINT against the checklist' + (o.rewrite ? ', then rewrite it' : '') + '.');
+  L.push('');
+  L.push('## RULES: how to review');
   L.push('- Check the measure against EVERY rule in the checklist. Report each problem as one FINDING block, using the rule ID. Use rule ID OTHER for important problems the checklist doesn’t cover (wrong results, filter context mistakes).');
   L.push('- Give the line number from the numbered listing. Quote the exact code in WHERE.');
   L.push('- Be precise about DAX behaviour. Say what actually happens (for example which filters are removed, or when a blank appears), not generic advice.');
@@ -248,15 +251,15 @@ function reviewPrompt(o){
     L.push('- Then write a REWRITE of the whole measure that fixes the findings. It must return exactly the same results in every filter context, unless a finding says the current result is wrong; if so, say that in CHANGES.');
     L.push('- In the rewrite use VAR and RETURN, DIVIDE, and only tables, columns and measures that already appear in the measure or the related measures. Write only the expression, without the measure name or "=".');
   }
-  if (o.notes) { L.push(''); L.push('## About this measure'); L.push(o.notes.trim()); }
+  if (o.notes) { L.push(''); L.push('## CONTEXT: about this measure (from the user)'); L.push(o.notes.trim()); }
   L.push('');
-  L.push('## Checklist');
+  L.push('## RULES: checklist');
   o.rules.forEach(r => L.push('- ' + r.id + ' (' + r.sev + '): ' + r.name + '. ' + r.check));
   L.push('');
-  L.push('## Found by the page');
+  L.push('## CONTEXT: found by the page');
   if (o.found.length) o.found.forEach(f => L.push('- ' + f.rule + ', line ' + f.line + ': ' + f.what)); else L.push('- Nothing.');
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block:');
   L.push('');
   L.push('@@@ SUMMARY @@@');
@@ -287,11 +290,11 @@ function reviewPrompt(o){
   L.push('Write no FINDING blocks if you find nothing.');
   if (o.related && o.related.length) {
     L.push('');
-    L.push('## Related measures (for context; don’t review them)');
+    L.push('## CONTEXT: related measures (don’t review them)');
     o.related.forEach(r => L.push('[' + r.name + '] = ' + oneLine(r.expression).slice(0, 400)));
   }
   L.push('');
-  L.push('## The measure (numbered lines)');
+  L.push('## STARTING POINT: the measure (numbered lines)');
   L.push(numbered(o.expr));
   L.push('');
   L.push('=== END OF PROMPT ===');
@@ -314,7 +317,8 @@ function parseReview(text){
   const t = unMarkdown((text || '').replace(/\r/g, '')).replace(/[“”]/g, '"').replace(/ /g, ' ');
   const res = { summary: '', findings: [], dismiss: [], rewrite: '', changes: [], error: null };
   if (!t.trim()) return res;
-  const bs = rvBlocks(t);
+  // Copilot sometimes repeats the format template: skip its placeholder blocks
+  const bs = rvBlocks(t).filter(b => !/^\s*(RULE:\s*rule ID|One or two sentences on the overall quality|VAR \.\.\.\s*RETURN \.\.\.\s*$|- One line per change\.\s*$)/.test(b.body));
   const FL = ['RULE', 'SEVERITY', 'LINE', 'WHERE', 'WHAT', 'FIX'], DL = ['RULE', 'LINE', 'REASON'];
   bs.forEach(b => {
     if (b.kind === 'SUMMARY') res.summary = oneLine(b.body.replace(/^[ \t]*```[\w-]*[ \t]*$/gm, ''));

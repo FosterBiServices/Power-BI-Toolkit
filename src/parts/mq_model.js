@@ -185,7 +185,10 @@ function modelExplainPrompt(batch, o){
   const L = [];
   L.push('You are explaining Power Query (M) queries from one Power BI model. For each query below, write a short comment for each listed step' + (batch.some(b => b.summary) ? ', and a summary where asked' : '') + '.');
   L.push('');
-  L.push('## How to write the comments');
+  L.push('## TASK');
+  L.push('Comment the listed steps of each query under STARTING POINT' + (batch.some(b => b.summary) ? ', and write a summary where asked' : '') + '.');
+  L.push('');
+  L.push('## RULES: how to write the comments');
   if (opts.audience === 'business') L.push('- Audience: report authors who don’t read M. Say what the step does to the data in plain words, not how the function works.');
   else L.push('- Audience: people who maintain the queries. Say what the step does and, where it isn’t obvious, why it matters.');
   L.push('- One sentence per step, at most 120 characters. Start with a verb: "Keeps rows where...", "Renames...".');
@@ -193,7 +196,7 @@ function modelExplainPrompt(batch, o){
   L.push('- If a step looks wrong, unnecessary or risky, add a NOTE line saying why, briefly. Otherwise leave NOTE out.');
   L.push('- SUMMARY: 2 to 4 sentences: where the data comes from, the main changes, and what one row of the result is.');
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block. Every block starts with the QUERY line, using the query name exactly as given. Use each step name exactly as listed:');
   L.push('');
   L.push('@@@ SUMMARY @@@');
@@ -208,7 +211,7 @@ function modelExplainPrompt(batch, o){
   L.push('@@@ END @@@');
   batch.forEach((b, i) => {
     L.push('');
-    L.push('## Query ' + (i + 1) + ': ' + b.name + ' (' + (TYPE_LABEL[b.type] || 'query').toLowerCase() + ')');
+    L.push('## STARTING POINT: query ' + (i + 1) + ': ' + b.name + ' (' + (TYPE_LABEL[b.type] || 'query').toLowerCase() + ')');
     L.push(b.summary ? 'Write a SUMMARY for this query.' : 'No summary needed.');
     L.push('Steps to comment:');
     b.steps.forEach((n, k) => { const s = b.q.steps.find(x => x.name === n); L.push((k + 1) + '. ' + n + (s && s.fn ? ' (' + s.fn + ')' : '')); });
@@ -223,7 +226,7 @@ function parseModelExplain(text){
   const t = cleanReply(text).replace(/[‘’]/g, "'");
   const res = { summaries: [], steps: [], error: null };
   if (!t.trim()) return res;
-  const bs = blocks(t);
+  const bs = answerBlocks(t);
   const L = ['QUERY', 'NAME', 'COMMENT', 'NOTE', 'TEXT'];
   const qn = b => field(b.body, 'QUERY', L).replace(/^#"(.*)"$/s, '$1').replace(/^"(.*)"$/s, '$1').replace(/""/g, '"').trim();
   bs.forEach(b => {

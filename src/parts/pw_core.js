@@ -50,25 +50,34 @@ const PW = (() => {
     return (text || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean).map(l => { const m = l.match(/^#?"?([^"=:]+?)"?\s*[=:]\s*(.*)$/); return m ? { name: m[1].trim(), value: m[2].trim() } : { name: l, value: '' }; }).filter(p => p.name);
   }
   function parseMerges(text){
-    return (text || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean).map(l => { const m = l.match(/^([^:]+):\s*(.*)$/); return m ? { query: m[1].trim(), columns: m[2].split(/[,;\t]/).map(s => s.trim()).filter(Boolean) } : { query: l, columns: [] }; });
+    const out = [];
+    (text || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
+      const m = l.match(/^([^:\t]+):\s*(.*)$/), prev = out[out.length - 1];
+      // a pasted header row (tab-separated) under a query name: that query's columns
+      if (!m && /\t/.test(l) && prev && !prev.columns.length) { prev.columns = l.split('\t').map(s => s.trim()).filter(Boolean); return; }
+      out.push(m ? { query: m[1].trim(), columns: m[2].split(/[,;\t]/).map(s => s.trim()).filter(Boolean) } : { query: l, columns: [] });
+    });
+    return out;
   }
 
   function prompt(inp){
     const L = [];
     const src = SOURCES.find(s => s[0] === inp.source) || SOURCES[SOURCES.length - 1];
-    const db = DB.has(inp.source) || (inp.start === 'existing' && inp.existingDb);
+    const fromExisting = inp.start === 'existing' && !!(inp.existing || '').trim();
+    const db = fromExisting ? !!inp.existingDb : DB.has(inp.source);
     const cols = parseColumns(inp.columns), params = parseParams(inp.params), merges = parseMerges(inp.merges);
     L.push('You are an expert in Power Query M. Write one Power Query query for Power BI that does what is asked below.');
     L.push('The query must work first time, be easy for another developer to maintain, and be as short as it can be while still doing everything asked. Leave out anything that isn’t asked for.');
-    L.push('', 'WHAT IT SHOULD DO', (inp.goal || '(not given)').trim());
+    L.push('', 'TASK (the user’s request: all the query has to do)', (inp.goal || '(not given)').trim());
     L.push('', 'STARTING POINT');
     if (inp.start === 'existing' && (inp.existing || '').trim()) {
-      L.push('Build on this existing query. Keep its source step exactly as it is (same connector and arguments), and keep what it already does unless the request says otherwise:', '```', inp.existing.trim(), '```');
+      L.push('Build on this existing query. Keep its steps as they are, including the source step (same connector and arguments), and keep what it already does unless the request says otherwise. The naming and parameter rules below apply to the steps you add:', '```', inp.existing.trim(), '```');
     } else {
       L.push('Source: ' + src[1] + '.');
       if ((inp.sourceDetail || '').trim()) L.push('Details: ' + inp.sourceDetail.trim());
       if (inp.source === 'query') L.push('Reference the other query by its name as the first step (Source = QueryName); don’t repeat its steps.');
     }
+    L.push('', 'CONTEXT (facts about the data, not things to do)');
     if (cols.length) {
       L.push('', 'COLUMNS AVAILABLE AT THE START (exact names; types are from the data where known)');
       cols.forEach(c => L.push('- ' + c.name + (c.type ? ' (' + c.type + ')' : '')));
@@ -88,7 +97,7 @@ const PW = (() => {
     L.push('- Each step builds on an earlier step, and the query returns its last step after "in".');
     L.push('- Set the types of the columns the query keeps in one Table.TransformColumnTypes step' + ((inp.culture || '').trim() ? ' with the culture above' : '') + '. Give each new column its type in the fourth argument of Table.AddColumn instead of another type step.');
     L.push('- Handle nulls and errors only where the request says to expect them. Don’t wrap everything in try … otherwise.');
-    L.push('- ' + (inp.makeParams ? 'Don’t type a server, database, file path or URL into the query. Use an existing parameter, or add a new parameter under PARAMETERS and use its name.' : 'Keep the source values as given.'));
+    L.push('- ' + (!inp.makeParams ? 'Keep the source values as given.' : fromExisting ? 'Keep the existing source step as it is. Don’t type a server, database, file path or URL into any step you add: use an existing parameter, or add a new parameter under PARAMETERS and use its name.' : 'Don’t type a server, database, file path or URL into the query. Use an existing parameter, or add a new parameter under PARAMETERS and use its name.'));
     L.push('It must be easy to maintain:');
     L.push('- Name every step with a single descriptive word, no spaces and no #"..." quoting (PascalCase when it needs two words, for example Source, Filtered, Typed, RecentOrders). Say what the step achieves, not which button made it.');
     L.push('- Keep columns with Table.SelectColumns and an explicit list, not Table.RemoveColumns, so new source columns don’t flow through and a missing one is caught early.');
@@ -103,7 +112,7 @@ const PW = (() => {
     L.push('- If a function call doesn’t fit in about 100 characters, put each argument on its own line indented 4 more spaces, with the closing ) on its own line at the indentation of the line that opened it.');
     L.push('- Lists { } and records [ ] that don’t fit on one line: one item per line, the same way. Column-and-type pairs one per line: {"Column", type text}.');
     L.push('- One space after commas and around = and operators. Spaces only, no tabs, no trailing spaces. Use "each" and [Column] for single-argument functions.');
-    L.push('', 'REPLY FORMAT');
+    L.push('', 'REPLY FORMAT (a template: replace the placeholder lines with your answer)');
     L.push('Reply with these blocks only, nothing before or after them:');
     L.push('@@@ QUERY @@@', 'let', '    ...', 'in', '    LastStep', '@@@ END @@@');
     L.push('@@@ STEPS @@@', 'StepName: one short sentence on what the step does and why', '(one line per step, in order)', '@@@ END @@@');
@@ -115,7 +124,12 @@ const PW = (() => {
   function parseReply(text){
     const t = cleanReply(text).replace(/[‘’]/g, "'");
     if (!t.trim()) return null;
-    const bs = blocks(t);
+    // Copilot sometimes repeats the prompt's format example before its answer: skip the example blocks, use the last real one
+    const example = b => b.kind === 'QUERY' ? /^\s*let\s+\.\.\.\s+in\s+LastStep\s*$/.test(b.body)
+      : b.kind === 'STEPS' ? /StepName: one short sentence on what the step does/.test(b.body)
+      : b.kind === 'PARAMETERS' ? /\(only parameters that must be created/.test(b.body)
+      : b.kind === 'QUESTIONS' ? /^\s*Anything you had to assume, or need to know to finish the query\. Leave empty if none\.\s*$/.test(b.body) : false;
+    const all = blocks(t), bs = all.filter(b => !example(b)).reverse();
     const qb = bs.find(b => b.kind === 'QUERY' || b.kind === 'CODE');
     let code = qb ? qb.body.replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '').replace(/^\s*\n|\s+$/g, '') : '';
     if (!code) { const m = t.match(/```(?:m|powerquery|pq)?\s*\n([\s\S]*?\blet\b[\s\S]*?)```/i); if (m) code = m[1].trim(); else if (/^\s*let\b[\s\S]*\bin\b/.test(t)) code = t.trim(); }
@@ -123,6 +137,9 @@ const PW = (() => {
     const steps = lines(bs.find(b => b.kind === 'STEPS')).map(l => { const m = l.match(/^#?"?([^":]+?)"?\s*:\s*(.+)$/); return m ? { name: m[1].trim(), text: m[2].trim() } : null; }).filter(Boolean);
     const params = lines(bs.find(b => b.kind === 'PARAMETERS')).filter(l => !/^name\s*\|/i.test(l) && /\|/.test(l)).map(l => { const c = l.split('|').map(s => s.trim()); return { name: c[0].replace(/^#"(.*)"$/, '$1'), type: c[1] || 'Text', value: c.slice(2).join('|') }; }).filter(p => p.name && !/^\(/.test(p.name));
     const questions = lines(bs.find(b => b.kind === 'QUESTIONS')).filter(l => !/^\(?leave empty|^none\.?$|^n\/a$/i.test(l));
+    // only the prompt's format example, no answer: the prompt was pasted back, or Copilot stopped before answering
+    if (!code && all.some(example))
+      return { code: '', steps: [], params: [], questions: [], error: 'This has only the prompt’s format example, not a query from Copilot. If you pasted the prompt, send it to Copilot and paste its answer here. If Copilot repeated the format without answering, ask it to fill in the blocks.' };
     return { code, steps, params, questions, error: code ? null : 'No @@@ QUERY @@@ block was found. Paste Copilot’s whole reply, or ask it to answer in the format the prompt gives.' };
   }
 

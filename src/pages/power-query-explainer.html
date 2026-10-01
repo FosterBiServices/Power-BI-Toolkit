@@ -822,9 +822,12 @@ function stepListing(src, q){
 function explainPrompt(src, q, o){
   const opts = Object.assign({ audience: 'mixed', name: '' }, o || {});
   const L = [];
-  L.push('You are explaining a Power Query (M) query from Power BI' + (opts.name ? ', named "' + opts.name + '"' : '') + '. Write a short comment for every step and a summary of the whole query.');
+  L.push('You are explaining a Power Query (M) query from Power BI' + (opts.name ? ', named "' + opts.name + '"' : '') + '.');
   L.push('');
-  L.push('## How to write the comments');
+  L.push('## TASK');
+  L.push('Write a short comment for every step listed under CONTEXT, and a summary of the whole query.');
+  L.push('');
+  L.push('## RULES: how to write the comments');
   if (opts.audience === 'business') L.push('- Audience: report authors who don’t read M. Say what the step does to the data in plain words, not how the function works.');
   else L.push('- Audience: people who maintain the query. Say what the step does and, where it isn’t obvious, why it matters.');
   L.push('- One sentence per step, at most 120 characters. Start with a verb: "Keeps rows where...", "Renames...".');
@@ -832,7 +835,7 @@ function explainPrompt(src, q, o){
   L.push('- If a step looks wrong, unnecessary or risky, add a NOTE line saying why, briefly. Otherwise leave NOTE out.');
   L.push('- SUMMARY: 2 to 4 sentences: where the data comes from, the main changes, and what one row of the result is.');
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block. One STEP block per step, in the order listed, using each step name exactly as listed:');
   L.push('');
   L.push('@@@ SUMMARY @@@');
@@ -844,10 +847,10 @@ function explainPrompt(src, q, o){
   L.push('NOTE: Only if the step looks wrong or risky.');
   L.push('@@@ END @@@');
   L.push('');
-  L.push('## Steps');
+  L.push('## CONTEXT: the steps');
   stepListing(src, q).forEach(l => L.push(l));
   L.push('');
-  L.push('## The query');
+  L.push('## STARTING POINT: the query');
   L.push(src.trim());
   L.push('');
   L.push('=== END OF PROMPT ===');
@@ -858,13 +861,13 @@ function cleanupPrompt(src, q, checks, o){
   const L = [];
   L.push('You are cleaning up a Power Query (M) query from Power BI' + (opts.name ? ', named "' + opts.name + '"' : '') + '. Rewrite it so it is easier to read and maintain, WITHOUT changing its result.');
   L.push('');
-  L.push('## Rules you must keep');
+  L.push('## RULES you must keep');
   L.push('- The result must be exactly the same: the same columns with the same names, types and order, and the same rows.');
   L.push('- Keep the same data source, server, database, file, sheet and credentials. Do not add or remove connectors.');
   L.push('- Do not add Table.Buffer, Table.AddIndexColumn or other steps that can stop query folding, and do not move steps that filter or remove columns later than they are now.');
   L.push('- Keep valid M that Power BI’s Advanced Editor accepts, starting with "let" and ending with "in" and the last step.');
   L.push('');
-  L.push('## Changes to make');
+  L.push('## TASK: changes to make');
   if (opts.rename) L.push('- Rename default step names (such as "Changed Type1" or "Filtered Rows") to short names that say why, for example #"Kept Orders With Dates". Update every reference.');
   if (opts.merge) L.push('- Merge consecutive steps of the same kind where the result is identical (for example two type changes or two renames in a row), and set the type of new columns directly in Table.AddColumn instead of a separate type step.');
   if (opts.unused) L.push('- Remove steps that nothing uses, and sorts that don’t affect the result.');
@@ -873,11 +876,11 @@ function cleanupPrompt(src, q, checks, o){
   L.push('- Change nothing else. If a change could alter the result, leave it out and mention it in CHANGES as a suggestion.');
   if (checks && checks.length) {
     L.push('');
-    L.push('## Issues found in this query');
+    L.push('## CONTEXT: issues found in this query');
     checks.forEach(c => L.push('- ' + (c.step ? c.step + ': ' : '') + c.title + '. ' + c.detail));
   }
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block:');
   L.push('');
   L.push('@@@ CODE @@@');
@@ -897,7 +900,7 @@ function cleanupPrompt(src, q, checks, o){
   L.push('- One line per change, in plain words.');
   L.push('@@@ END @@@');
   L.push('');
-  L.push('## The query');
+  L.push('## STARTING POINT: the query');
   L.push(src.trim());
   L.push('');
   L.push('=== END OF PROMPT ===');
@@ -917,6 +920,11 @@ function blocks(t){
   }
   return out;
 }
+// blocks without the reply-format template, in case Copilot repeats it in its answer
+const TEMPLATE_LINES = ['NAME: Step name', 'TEXT: Two to four sentences.', 'NAME: ParameterName', '- One line per change, in plain words.'];
+function answerBlocks(t){
+  return blocks(t).filter(b => { const x = b.body.trim(); return !(x === 'Two to four sentences.' || /^let\s+\.\.\.\s+in\s+\.\.\.$/.test(x) || TEMPLATE_LINES.some(l => x.includes(l))); });
+}
 function field(body, label, labels){
   const re = new RegExp('(^|\\n)[ \\t]*' + label + '[ \\t]*:', 'i');
   const m = re.exec(body); if (!m) return '';
@@ -928,7 +936,7 @@ function field(body, label, labels){
 function parseExplain(text){
   const t = cleanReply(text).replace(/[‘’]/g, "'");
   if (!t.trim()) return { summary: '', steps: [], error: null };
-  const bs = blocks(t);
+  const bs = answerBlocks(t);
   const L = ['NAME', 'COMMENT', 'NOTE'];
   const steps = bs.filter(b => b.kind === 'STEP').map(b => ({
     name: field(b.body, 'NAME', L).replace(/^#"(.*)"$/s, '$1').replace(/^"(.*)"$/s, '$1').replace(/""/g, '"').trim(),
@@ -941,7 +949,7 @@ function parseExplain(text){
 function parseCleanup(text){
   const t = cleanReply(text);
   if (!t.trim()) return { code: '', params: [], changes: [], error: null };
-  const bs = blocks(t);
+  const bs = answerBlocks(t);
   const cb = bs.find(b => b.kind === 'CODE');
   let code = cb ? cb.body.replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '').replace(/^\s*\n|\s+$/g, '') : '';
   if (!cb) { const m = t.match(/```(?:m|powerquery|pq)?\s*\n([\s\S]*?\blet\b[\s\S]*?)```/i); if (m) code = m[1].trim(); }
@@ -1241,7 +1249,10 @@ function modelExplainPrompt(batch, o){
   const L = [];
   L.push('You are explaining Power Query (M) queries from one Power BI model. For each query below, write a short comment for each listed step' + (batch.some(b => b.summary) ? ', and a summary where asked' : '') + '.');
   L.push('');
-  L.push('## How to write the comments');
+  L.push('## TASK');
+  L.push('Comment the listed steps of each query under STARTING POINT' + (batch.some(b => b.summary) ? ', and write a summary where asked' : '') + '.');
+  L.push('');
+  L.push('## RULES: how to write the comments');
   if (opts.audience === 'business') L.push('- Audience: report authors who don’t read M. Say what the step does to the data in plain words, not how the function works.');
   else L.push('- Audience: people who maintain the queries. Say what the step does and, where it isn’t obvious, why it matters.');
   L.push('- One sentence per step, at most 120 characters. Start with a verb: "Keeps rows where...", "Renames...".');
@@ -1249,7 +1260,7 @@ function modelExplainPrompt(batch, o){
   L.push('- If a step looks wrong, unnecessary or risky, add a NOTE line saying why, briefly. Otherwise leave NOTE out.');
   L.push('- SUMMARY: 2 to 4 sentences: where the data comes from, the main changes, and what one row of the result is.');
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block. Every block starts with the QUERY line, using the query name exactly as given. Use each step name exactly as listed:');
   L.push('');
   L.push('@@@ SUMMARY @@@');
@@ -1264,7 +1275,7 @@ function modelExplainPrompt(batch, o){
   L.push('@@@ END @@@');
   batch.forEach((b, i) => {
     L.push('');
-    L.push('## Query ' + (i + 1) + ': ' + b.name + ' (' + (TYPE_LABEL[b.type] || 'query').toLowerCase() + ')');
+    L.push('## STARTING POINT: query ' + (i + 1) + ': ' + b.name + ' (' + (TYPE_LABEL[b.type] || 'query').toLowerCase() + ')');
     L.push(b.summary ? 'Write a SUMMARY for this query.' : 'No summary needed.');
     L.push('Steps to comment:');
     b.steps.forEach((n, k) => { const s = b.q.steps.find(x => x.name === n); L.push((k + 1) + '. ' + n + (s && s.fn ? ' (' + s.fn + ')' : '')); });
@@ -1279,7 +1290,7 @@ function parseModelExplain(text){
   const t = cleanReply(text).replace(/[‘’]/g, "'");
   const res = { summaries: [], steps: [], error: null };
   if (!t.trim()) return res;
-  const bs = blocks(t);
+  const bs = answerBlocks(t);
   const L = ['QUERY', 'NAME', 'COMMENT', 'NOTE', 'TEXT'];
   const qn = b => field(b.body, 'QUERY', L).replace(/^#"(.*)"$/s, '$1').replace(/^"(.*)"$/s, '$1').replace(/""/g, '"').trim();
   bs.forEach(b => {
@@ -1493,12 +1504,12 @@ function renderQuery(){
 /* ---------- explain ---------- */
 function followUpPrompt(text, q, missing, audience, name){
   const L = explainPrompt(text, q, { audience, name }).split('\n');
-  const i = L.indexOf('## Steps');
+  const i = L.indexOf('## CONTEXT: the steps');
   const head = L.slice(0, i).filter(l => !/^- SUMMARY:/.test(l)).join('\n')
-    .replace(/Write a short comment for every step and a summary of the whole query\./, 'Some steps are still missing comments. Write a comment for ONLY the steps listed below.')
+    .replace(/Write a short comment for every step listed under CONTEXT, and a summary of the whole query\./, 'Some steps are still missing comments. Write a comment for ONLY the steps listed under CONTEXT.')
     .replace(/@@@ SUMMARY @@@\nTwo to four sentences\.\n@@@ END @@@\n/, '')
     .replace('One STEP block per step, in the order listed', 'One STEP block for each listed step');
-  return head + '\n## Steps\n' + missing.map((n, k) => (k + 1) + '. ' + n).join('\n') + '\n\n## The query\n' + text.trim() + '\n\n=== END OF PROMPT ===';
+  return head + '\n## CONTEXT: the steps\n' + missing.map((n, k) => (k + 1) + '. ' + n).join('\n') + '\n\n## STARTING POINT: the query\n' + text.trim() + '\n\n=== END OF PROMPT ===';
 }
 function lenNote(p){ return p.length > LONG_PROMPT ? msg('warn', 'This prompt is long (' + p.length.toLocaleString() + ' characters). If Copilot cuts it off or stops early, the follow-up in Step 4 picks up the missing steps.') : ''; }
 function renderExplain(){
@@ -1742,10 +1753,12 @@ function loadExample(){
   setExample(true);
 }
 // Drop every sample value except the one the person just typed into
-function dropExample(){
+function dropExample(keep){
   if (!state.example) return;
-  if ($('qInput').value === EX_QUERY) $('qInput').value = '';
-  if ($('qName').value === EX_NAME) $('qName').value = '';
+  const ex = { qInput: EX_QUERY, qName: EX_NAME }, v = keep ? SF_SUITE.ownText($(keep).value, ex[keep]) : '';
+  if ($('qInput').value === EX_QUERY || keep === 'qInput') $('qInput').value = '';
+  if ($('qName').value === EX_NAME || keep === 'qName') $('qName').value = '';
+  if (keep) $(keep).value = v;
   if ($('mInput').value === EX_MODEL_EXPORT) $('mInput').value = '';
   Object.assign(state, { exReply: '', clReply: '', mDone: {}, mAsked: {}, mPick: {}, mLastBatch: [] });
   $('mReplyMsg').innerHTML = '';
@@ -1782,12 +1795,15 @@ function init(){
 
   const unblank = () => { try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {} };
   $('qInput').addEventListener('input', () => {
-    dropExample();
+    dropExample('qInput');
     if (state.exReply === EX_EXPLAIN) state.exReply = '';
     if (state.clReply === EX_CLEAN) state.clReply = '';
     syncControls(); unblank(); renderAll(); persist();
   });
-  $('qName').addEventListener('input', () => { leaveExample(); renderExplain(); renderClean(); persist(); });
+  $('qName').addEventListener('input', () => {
+    if (state.example) { dropExample('qName'); state.exReply = ''; state.clReply = ''; syncControls(); renderAll(); }
+    renderExplain(); renderClean(); persist();
+  });
   $('tabEx').addEventListener('click', () => { setTab('ex'); persist(); });
   $('tabCl').addEventListener('click', () => { setTab('cl'); persist(); });
   $('tabs').addEventListener('keydown', e => {
