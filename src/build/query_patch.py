@@ -51,6 +51,12 @@ CALC_EXPR = r"""'\t\t"Expression",',
 '\t\t\tVAR _ctid = MAXX ( FILTER ( _tableIds, [TName] = _ctn ), [TID] )',
 '\t\t\tRETURN """ + CLEANED + r""",',
 """
+FMT_LOOKUP = r"""'// Measure format strings: INFO.VIEW.MEASURES can leave FormatString empty and put a static one in FormatStringDefinition',
+'VAR _measureFormats = SELECTCOLUMNS ( INFO.MEASURES (), "MName", [Name], "MFmt", [FormatString], "MDyn", [FormatStringDefinitionID] )',
+"""
+FMT_TYPE = r"""'\t\t"Type", VAR _mn = [Name] RETURN MAXX ( FILTER ( _measureFormats, [MName] = _mn ), [MFmt] ),',
+"""
+FMT_DYN = 'IF ( VAR _mn = [Name] RETURN MAXX ( FILTER ( _measureFormats, [MName] = _mn ), [MDyn] ) > 0, " dynamic-format", "" )'
 CALC_LOOKUP = r"""'// Calculated tables (partition type 2), for field parameters and other DAX tables',
 'VAR _calcParts = SELECTCOLUMNS ( FILTER ( INFO.PARTITIONS (), [Type] = 2 ), "CTID", [TableID], "CExpr", [QueryDefinition] )',
 """
@@ -79,8 +85,14 @@ def upgrade(s):
         s = s[:j] + extra + s[j:]
     mf = r"""'\t\t"Flags", IF ( [IsHidden], "hidden", "" ),',
 """
-    s = once(s, mf, r"""'\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [DataType] IN { "Text", "String" }, " text", "" ) & IF ( LEN ( [FormatStringDefinition] ) > 0, " dynamic-format", "" ),',
+    s = once(s, mf, r"""'\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [DataType] IN { "Text", "String" }, " text", "" ) & """ + FMT_DYN + r""",',
 """)
+    i = s.index("'VAR _measures =',")
+    t = r"""'\t\t"Type", [FormatString],',
+"""
+    j = s.index(t, i)
+    s = s[:j] + FMT_TYPE + s[j + len(t):]
+    s = once(s, exp + LOOKUPS, exp + LOOKUPS + FMT_LOOKUP)
     # calculated tables (field parameters, date tables): their DAX, so measures and columns used only there count as used
     i = s.index("'VAR _tables =',")
     j = s.index(r"""'\t\t"Expression", "",',""", i)
