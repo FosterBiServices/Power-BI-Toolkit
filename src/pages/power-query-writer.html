@@ -971,6 +971,9 @@ const PW = (() => {
     const steps = lines(bs.find(b => b.kind === 'STEPS')).map(l => { const m = l.match(/^#?"?([^":]+?)"?\s*:\s*(.+)$/); return m ? { name: m[1].trim(), text: m[2].trim() } : null; }).filter(Boolean);
     const params = lines(bs.find(b => b.kind === 'PARAMETERS')).filter(l => !/^name\s*\|/i.test(l) && /\|/.test(l)).map(l => { const c = l.split('|').map(s => s.trim()); return { name: c[0].replace(/^#"(.*)"$/, '$1'), type: c[1] || 'Text', value: c.slice(2).join('|') }; }).filter(p => p.name && !/^\(/.test(p.name));
     const questions = lines(bs.find(b => b.kind === 'QUESTIONS')).filter(l => !/^\(?leave empty|^none\.?$|^n\/a$/i.test(l));
+    // the prompt itself pasted back: its format example, not a reply
+    if (/^let\s+\.\.\.\s+in\s+LastStep$/.test(code.trim()) || /StepName: one short sentence on what the step does/.test(t))
+      return { code: '', steps: [], params: [], questions: [], error: 'This is the prompt, not Copilot’s reply. Send the prompt to Copilot, then paste or open what Copilot answers here.' };
     return { code, steps, params, questions, error: code ? null : 'No @@@ QUERY @@@ block was found. Paste Copilot’s whole reply, or ask it to answer in the format the prompt gives.' };
   }
 
