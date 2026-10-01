@@ -132,11 +132,12 @@ needs internet (or set `XLSX_FILE` to a local `xlsx.full.min.js` 0.18.5).
 
 ## Not yet checked in real Power BI or Copilot
 
-- About This Report: the data sources query (INFO.PARTITIONS / INFO.REFRESHPOLICIES /
-  INFO.EXPRESSIONS).
-- Model Linter: the INFO.CALCDEPENDENCY dependencies query.
 - Prompt files in Copilot (attaching the downloaded prompt; Copilot's file reply).
 - Power Query Writer on a real query.
-- Model Compare on a real before/after change.
+
+Checked on a real model in Power BI Desktop 2.158 (Oct 2026): the About This Report data
+sources query, the Model Linter dependencies query, the shared export, and Model Compare on a
+before/after change. On that build INFO.VIEW.MEASURES leaves FormatString empty, so the export
+reads measure format strings from INFO.MEASURES.
 
 The owner keeps a progress doc and checklist in Claude (claude.ai); it isn't in this repo.
