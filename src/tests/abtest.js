@@ -10,6 +10,10 @@ const { chromium } = require('playwright'); const fs = require('fs');
   await p.screenshot({ path: 'ab_1.png', fullPage: true });
   // edit name -> drafts follow
   await p.fill('#bName', 'Revenue Pulse'); console.log('summary draft:', (await p.locator('[data-draft=summary]').inputValue()).slice(0, 60), '| banner', await p.locator('#exampleBanner').isVisible());
+  // a name of your own replaces the whole example (expect name Revenue Pulse, model empty, prompt without example measures)
+  console.log('own name:', await p.inputValue('#bName'), '| model', JSON.stringify(await p.inputValue('#modelInput')), '| prompt has Total Sales', (await p.evaluate(() => (document.getElementById('promptView') || {}).textContent || '')).includes('Total Sales'));
+  // back to the example for the rest of the checks
+  await p.evaluate(() => localStorage.clear()); await p.reload();
   // use alternative wording
   await p.locator('[data-use=summary]').first().click(); console.log('alt used:', (await p.locator('[data-draft=summary]').inputValue()).slice(0, 50), '| reset btn', await p.locator('[data-reset=summary]').count());
   // add a question suggestion

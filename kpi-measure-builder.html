@@ -989,19 +989,19 @@ function buildPrompt(model, requestsText, opts){
   const L = [];
   L.push('You are an expert in Power BI and DAX. Write DAX measures for the semantic model described below.');
   L.push('');
-  L.push('## Measures to write');
+  L.push('## TASK: measures to write (the user’s requests)');
   reqs.forEach((r, i) => L.push((i + 1) + '. ' + r));
   details.forEach((d, i) => L.push((reqs.length + i + 1) + '. ' + (d.name || 'Detailed measure D' + (i + 1)) + ': see Detailed measure D' + (i + 1) + ' below.'));
   if (!reqs.length && !details.length) L.push('1. (describe the measures you need here)');
   if (details.length) {
     L.push('');
-    L.push('## Detailed measures');
+    L.push('## TASK: detailed measures');
     L.push('These are complex. Read every line of each one before writing it.');
     details.forEach((d, i) => { L.push(''); detailSection(model, d, i + 1, dateCol).forEach(x => L.push(x)); });
   }
   L.push('');
-  L.push('## Rules');
-  L.push('- Use only the tables, columns and measures listed under "Model". Do not invent names.');
+  L.push('## RULES');
+  L.push('- Use only the tables, columns and measures listed under CONTEXT: model. Do not invent names.');
   L.push("- Reference columns as 'Table'[Column]. Reference measures as [Measure] with no table prefix.");
   L.push('- Reuse an existing measure when it already calculates what you need.');
   L.push('- Use DIVIDE() for division. Use VAR ... RETURN when a measure has more than one step.');
@@ -1016,7 +1016,7 @@ function buildPrompt(model, requestsText, opts){
   L.push('- When a one-line request asks for a separate measure "for each" value of a column, write one measure per value, named with the value, for example "Sales - Consumer". This does not apply to detailed measures, where "iterate over each value" means one measure that loops.');
   if (model.composite) {
     L.push('');
-    L.push('## Composite model rules');
+    L.push('## RULES: composite model');
     L.push('This model combines tables from more than one data source. Each table below says where it comes from.');
     L.push('- Relationships marked LIMITED connect different data sources, or are many-to-many. Filters still flow across them.');
     L.push('- Across a LIMITED relationship, do not use RELATED or RELATEDTABLE, and do not iterate the rows of one table while reading columns of a table on the other side.');
@@ -1025,7 +1025,7 @@ function buildPrompt(model, requestsText, opts){
   }
   if (details.length) {
     L.push('');
-    L.push('## Rules for detailed measures');
+    L.push('## RULES: detailed measures');
     L.push('- Add a NOTES line (2 to 4 plain sentences) explaining your approach, just before DAX:.');
     L.push('- Capture values from the outer filter context, such as the selected date, in VARs BEFORE any iterator. Inside an iterator, CALCULATE and measure references cause context transition, which changes those values.');
     L.push('- Iterate over the smallest table that works: VALUES of the column you iterate over, or SUMMARIZE of the columns you need. Do not iterate a whole fact table unless the request says to.');
@@ -1035,7 +1035,7 @@ function buildPrompt(model, requestsText, opts){
     L.push('- Break the DAX into named VAR steps with a short // comment on each.');
   }
   L.push('');
-  L.push('## Output format');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
   L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block.');
   L.push('Inside the code block, write each measure in exactly this layout:');
   L.push('');
@@ -1063,7 +1063,7 @@ function buildPrompt(model, requestsText, opts){
   L.push('REASON: What the model is missing, for example a column or relationship.');
   L.push('@@@ END @@@');
   L.push('');
-  L.push('## Model');
+  L.push('## CONTEXT: model');
   L.push('');
   L.push('### Tables and columns');
   for (const t of model.tables) {
@@ -1907,21 +1907,26 @@ function init(){
   }
   renderAll();
 
-  const onEdit = (fn) => () => { if (state.example) { setExample(false); } persist(); fn(); };
+  // typing your own text replaces the whole example: only what you typed stays, every other sample is cleared
+  const EXF = { modelInput: EX_MODEL, requests: EX_REQUESTS, response: EX_RESPONSE, extraMeasures: EX_EXTRA, valCols: EX_VAL_COLS, valResults: EX_VAL_RESULTS };
+  const dropExample = keep => {
+    if (!state.example) return;
+    const v = keep in EXF ? SF_SUITE.ownText($(keep).value, EXF[keep]) : null;
+    Object.keys(EXF).forEach(id => { if (id === keep || $(id).value === EXF[id]) $(id).value = ''; });
+    if (v !== null) $(keep).value = v;
+    state.details = []; state.selected = null; store.del('tables');
+    setExample(false); persist(); renderAll();
+  };
+  const onEdit = (fn) => e => { dropExample(e && e.target && e.target.id); persist(); fn(); };
   // Pasting your own model while the example is showing clears every piece of example content
   $('modelInput').addEventListener('input', () => {
-    if (state.example) {
-      ['requests', 'response', 'extraMeasures', 'valCols', 'valResults'].forEach(id => { $(id).value = ''; });
-      state.details = [];
-      setExample(false);
-    }
+    dropExample('modelInput');
     persist(); state.selected = null; store.del('tables'); renderAll();
   });
   $('extraMeasures').addEventListener('input', onEdit(renderAll));
   const onValues = onEdit(() => { renderValues(); renderPrompt(); renderOutput(); });
-  const leaveExample = () => { if (state.example) { setExample(false); persist(); } };
   $('addDetail').addEventListener('click', () => {
-    leaveExample();
+    dropExample();
     state.details.push(blankDetail());
     onDetailsChanged(true);
     const i = state.details.length - 1;
@@ -1929,8 +1934,9 @@ function init(){
   });
   const detailField = e => {
     const el = e.target.closest('[data-f]'); if (!el) return;
-    const card = el.closest('.dcard'); const i = +card.dataset.i;
-    leaveExample();
+    const card = el.closest('.dcard'); let i = +card.dataset.i;
+    // an edit to an example detail keeps only what was typed, in a new detail of your own
+    if (state.example) { const v = SF_SUITE.ownText(el.value, String(state.details[i][el.dataset.f] || '')); dropExample(); state.details = [blankDetail()]; i = 0; state.details[0][el.dataset.f] = el.tagName === 'SELECT' ? el.value : v; onDetailsChanged(true); return; }
     state.details[i][el.dataset.f] = el.value;
     if (el.tagName === 'SELECT') renderDetailPaths(i);
     onDetailsChanged(false);
@@ -1940,7 +1946,7 @@ function init(){
   $('detailList').addEventListener('click', e => {
     const b = e.target.closest('[data-act]'); if (!b) return;
     const card = b.closest('.dcard'); const i = +card.dataset.i;
-    leaveExample();
+    if (state.example) { dropExample(); return; }
     if (b.dataset.act === 'remove') { state.details.splice(i, 1); onDetailsChanged(true); }
     else if (b.dataset.act === 'addTable') { const v = $('d' + i + '-addt').value; if (v) { state.details[i].tables.push(v); onDetailsChanged(true); } }
     else if (b.dataset.act === 'rmTable') { state.details[i].tables = state.details[i].tables.filter(t => t !== b.dataset.t); onDetailsChanged(true); }
@@ -2046,6 +2052,15 @@ init();
       return true;
     } catch (e) { return false; }
   };
+  // what was typed or pasted into a field that held example text, without the example text around it
+  S.ownText = (val, ex) => {
+    if (!ex) return val;
+    let p = 0; while (p < val.length && p < ex.length && val[p] === ex[p]) p++;
+    let q = 0; while (q < val.length - p && q < ex.length - p && val[val.length - 1 - q] === ex[ex.length - 1 - q]) q++;
+    // typed into the example: keep only the new text. Deleted from it: nothing of your own yet. Replaced it: keep it all.
+    if (p + q === ex.length) return val.slice(p, val.length - q).trim();
+    return p + q === val.length ? '' : val;
+  };
   S.clear = () => { try { localStorage.removeItem(KEY); } catch (e) {} };
   // Header row (Kind, Table, Name) plus at least one row
   S.looksLikeExport = t => {
@@ -2145,6 +2160,11 @@ init();
 
   // Copilot prompts as files: every prompt can be downloaded as a .txt to attach in Copilot, with a short message
   // to send alongside it, and every reply box can open a reply file (.txt, .md, .json or .docx) Copilot made.
+  // the toolkit-wide rule for every Copilot prompt: only the user's request is the task; samples and templates never are
+  const READ_RULE = '\n\nHOW TO READ THIS PROMPT\n'
+    + '- The task is only what the TASK section asks for. Everything else is CONTEXT (facts to use), the STARTING POINT (code or text to change), RULES (how to do the task) or the REPLY FORMAT.\n'
+    + '- Sample and example content is never a requirement. That includes the reply-format template, placeholders, and any example values, fields, records, tables, names, dates, filters or business rules. Don’t carry any of it into the task.\n'
+    + '- If something here looks unrelated to the request or conflicts with it, don’t act on it. Mention it where the reply format allows questions or notes.';
   const ONE_REPLY = '\n\nReply in one single response. If the complete reply is too long to show in full in the chat, put the whole reply, in the format asked for above, in one downloadable .txt file instead of splitting it across messages or shortening it.';
   const ATTACH_MSG = 'Follow the instructions in the attached file exactly. Reply in one single response, in the format the file asks for. If the complete reply won’t fit in the chat, put all of it in one downloadable .txt file.';
   const PROMPTS = {
@@ -2189,7 +2209,7 @@ init();
     const promptIds = list.map(x => x[0]);
     const promptTexts = () => promptIds.map(id => { const el = document.getElementById(id); return el ? el.textContent.trim() : ''; }).filter(Boolean);
     // copying a prompt adds the one-reply line too
-    if (typeof window.copyText === 'function') { const orig = window.copyText; window.copyText = (t, b) => orig(typeof t === 'string' && t.trim() && promptTexts().includes(t.trim()) ? t.trim() + ONE_REPLY : t, b); }
+    if (typeof window.copyText === 'function') { const orig = window.copyText; window.copyText = (t, b) => orig(typeof t === 'string' && t.trim() && promptTexts().includes(t.trim()) ? t.trim() + READ_RULE + ONE_REPLY : t, b); }
     const replyDone = new Set();
     list.forEach(([pid, rid, label]) => {
       const pre = document.getElementById(pid); if (!pre) return;
@@ -2201,13 +2221,13 @@ init();
           const t = pre.textContent.trim(); if (!t) return;
           const bl = document.getElementById('batchLabel'), bn = document.getElementById('batchNav');
           const part = (bl && bn && !bn.hidden) ? ' ' + document.getElementById('batchLabel').textContent.replace(/^Prompt /, 'part ').replace(/ of /, ' of ') : '';
-          saveText(label + part + '.txt', t + ONE_REPLY);
+          saveText(label + part + '.txt', t + READ_RULE + ONE_REPLY);
         });
         bar.insertBefore(b, bar.firstChild);
         const d = document.createElement('details'); d.className = 'extra suite-file';
         d.innerHTML = '<summary>Send it to Copilot as a file <span class="muted">(for long prompts)</span></summary><div class="extra-body"><ol class="how"><li>Select <b>Download file</b> above.</li><li>In Copilot, attach the file to a new chat.</li><li>Send this message with it:</li></ol>'
           + '<div class="suite-msg"><span>' + esc(ATTACH_MSG) + '</span><button type="button" class="btn">Copy message</button></div>'
-          + '<p class="note small">If Copilot answers with a file, download it and select <b>Open a reply file</b> by the reply box. Copying or downloading a prompt adds one line asking Copilot for a single reply, as a file if it’s too long for the chat.</p></div>';
+          + '<p class="note small">If Copilot answers with a file, download it and select <b>Open a reply file</b> by the reply box. Copying or downloading a prompt adds a few lines: that only your request is the task (examples never are), and one reply, as a file if it’s too long for the chat.</p></div>';
         d.querySelector('.suite-msg button').addEventListener('click', e => { const btn = e.currentTarget; try { navigator.clipboard.writeText(ATTACH_MSG).then(() => { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy message'; }, 1600); }); } catch (err) {} });
         box.insertAdjacentElement('afterend', d);
       }

@@ -68,15 +68,16 @@ const PW = (() => {
     const cols = parseColumns(inp.columns), params = parseParams(inp.params), merges = parseMerges(inp.merges);
     L.push('You are an expert in Power Query M. Write one Power Query query for Power BI that does what is asked below.');
     L.push('The query must work first time, be easy for another developer to maintain, and be as short as it can be while still doing everything asked. Leave out anything that isn’t asked for.');
-    L.push('', 'WHAT IT SHOULD DO', (inp.goal || '(not given)').trim());
+    L.push('', 'TASK (the user’s request: all the query has to do)', (inp.goal || '(not given)').trim());
     L.push('', 'STARTING POINT');
     if (inp.start === 'existing' && (inp.existing || '').trim()) {
-      L.push('Build on this existing query. Keep its source step exactly as it is (same connector and arguments), and keep what it already does unless the request says otherwise:', '```', inp.existing.trim(), '```');
+      L.push('Build on this existing query. Keep its steps as they are, including the source step (same connector and arguments), and keep what it already does unless the request says otherwise. The naming and parameter rules below apply to the steps you add:', '```', inp.existing.trim(), '```');
     } else {
       L.push('Source: ' + src[1] + '.');
       if ((inp.sourceDetail || '').trim()) L.push('Details: ' + inp.sourceDetail.trim());
       if (inp.source === 'query') L.push('Reference the other query by its name as the first step (Source = QueryName); don’t repeat its steps.');
     }
+    L.push('', 'CONTEXT (facts about the data, not things to do)');
     if (cols.length) {
       L.push('', 'COLUMNS AVAILABLE AT THE START (exact names; types are from the data where known)');
       cols.forEach(c => L.push('- ' + c.name + (c.type ? ' (' + c.type + ')' : '')));
@@ -111,7 +112,7 @@ const PW = (() => {
     L.push('- If a function call doesn’t fit in about 100 characters, put each argument on its own line indented 4 more spaces, with the closing ) on its own line at the indentation of the line that opened it.');
     L.push('- Lists { } and records [ ] that don’t fit on one line: one item per line, the same way. Column-and-type pairs one per line: {"Column", type text}.');
     L.push('- One space after commas and around = and operators. Spaces only, no tabs, no trailing spaces. Use "each" and [Column] for single-argument functions.');
-    L.push('', 'REPLY FORMAT');
+    L.push('', 'REPLY FORMAT (a template: replace the placeholder lines with your answer)');
     L.push('Reply with these blocks only, nothing before or after them:');
     L.push('@@@ QUERY @@@', 'let', '    ...', 'in', '    LastStep', '@@@ END @@@');
     L.push('@@@ STEPS @@@', 'StepName: one short sentence on what the step does and why', '(one line per step, in order)', '@@@ END @@@');

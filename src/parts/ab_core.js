@@ -653,16 +653,21 @@ const AB = (() => {
     return [
       'You are helping write the "About this report" text for a Power BI report. Readers are business users, not developers.',
       '',
-      'Rules:',
+      'TASK',
+      'Write the summary, business value, audience, key questions and measure meanings for the report described under CONTEXT.',
+      '',
+      'RULES',
       '- Use only the facts in the JSON below. Do not invent numbers, targets, results, owners or data sources.',
       '- Plain language. No DAX, no table or column names in brackets, no technical details apart from the data source names given.',
       '- Refer to key measures by the names given. Do not add measures that are not listed.',
       '- If something needed for a good summary is missing (for example the audience or the business goal), list it under evidence_gaps instead of guessing.',
       '- Keep report_summary to one or two sentences and business_value to one sentence. Give three to five key_questions.',
-      '- Reply with JSON only, no code fences, in exactly this shape:',
+      '',
+      'REPLY FORMAT (a template: fill in the values)',
+      'Reply with JSON only, no code fences, in exactly this shape:',
       '{"report_summary": "", "business_value": "", "audience": "", "key_questions": [""], "measure_meanings": {"<measure name>": ""}, "evidence_gaps": [""]}',
       '',
-      'Report facts:',
+      'CONTEXT (report facts)',
       JSON.stringify(ctx, null, 2)
     ].join('\n');
   }
