@@ -1,0 +1,182 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Date Table Generator</h1>
+        <p class="lede">Set your fiscal year, weeks and holidays, check the rows, and copy a ready-made date table as DAX, Power Query (M) or a TMDL script. No Copilot needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This puts every setting back to its default, empties your own holidays and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Every setting is back to its default.</div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Fiscal year and date range</h2>
+        <p>The range should cover every date in your data, in whole years.</p>
+      </div>
+      <div class="cfg">
+        <div class="field"><label for="tableName">Table name</label><input type="text" id="tableName" autocomplete="off"></div>
+        <div class="field"><label for="fyStart">Fiscal year starts in</label><select id="fyStart"></select></div>
+        <div class="field fyonly"><span class="flabel">Name each fiscal year by</span>
+          <span class="seg" role="radiogroup" aria-label="Name each fiscal year by">
+            <label><input type="radio" name="fyNaming" value="end"><span>The year it ends</span></label>
+            <label><input type="radio" name="fyNaming" value="start"><span>The year it starts</span></label>
+          </span></div>
+        <div class="field"><label for="fyStyle">Fiscal year label</label><select id="fyStyle"><option value="fy">FY2026</option><option value="short">FY26</option><option value="span">2025-26</option></select></div>
+      </div>
+      <p class="tip" id="fyExample"></p>
+      <div class="cfg">
+        <div class="field fyonly"><span class="flabel">Whole years are</span>
+          <span class="seg" role="radiogroup" aria-label="Whole years are">
+            <label><input type="radio" name="align" value="fiscal"><span>Fiscal years</span></label>
+            <label><input type="radio" name="align" value="calendar"><span>Calendar years</span></label>
+          </span></div>
+      </div>
+      <div class="cfg">
+        <div class="field"><span class="flabel">Start</span>
+          <span class="seg" role="radiogroup" aria-label="Start">
+            <label><input type="radio" name="startMode" value="fixed"><span>A fixed year</span></label>
+            <label><input type="radio" name="startMode" value="data"><span>Earliest date in my data</span></label>
+          </span></div>
+        <div class="field"><label for="startYear" id="startYearLbl">First year</label><input type="number" id="startYear" min="1900" max="2200" class="num"></div>
+      </div>
+      <div class="field" id="startColsWrap"><label for="startCols">Date columns to look at <span class="muted">(one per line, as Table[Column])</span></label>
+        <textarea id="startCols" class="short-ta" spellcheck="false" placeholder="Sales[Order Date]&#10;Returns[Return Date]"></textarea>
+        <p class="note" id="startColsNote"></p>
+        <details class="extra" id="finder">
+          <summary>Find your date columns</summary>
+          <div class="extra-body">
+            <ol class="how">
+              <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query into a new tab and select <b>Run</b>.</li>
+              <li>Select <b>Copy</b> above the results grid and paste below. Then tick the columns to use.</li>
+            </ol>
+            <div class="codebox">
+              <div class="codebox-bar"><span class="t">DAX query: list date columns</span><span class="r"><button class="btn primary" type="button" id="copyDcQuery">Copy query</button></span></div>
+              <pre class="short" id="dcQueryView"></pre>
+            </div>
+            <textarea id="dcInput" class="short-ta" spellcheck="false" aria-label="Date column results" placeholder="Paste the results here (with headers)"></textarea>
+            <div id="dcMsg"></div>
+            <div class="dclist" id="dcList"></div>
+            <div id="dcRange" hidden>
+              <p class="note">To see how far back and forward each column goes, and how many rows are blank, run this second query. It covers the ticked columns, or every column in your list if none are ticked. Leave out columns whose earliest or latest date is a placeholder such as 1900-01-01 or 9999-12-31.</p>
+              <div class="codebox">
+                <div class="codebox-bar"><span class="t" id="dcRangeTitle">DAX query: date ranges</span><span class="r"><button class="btn primary" type="button" id="copyDcRange">Copy query</button></span></div>
+                <pre class="short" id="dcRangeView"></pre>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+      <div class="cfg">
+        <div class="field"><span class="flabel">End</span>
+          <span class="seg" role="radiogroup" aria-label="End">
+            <label><input type="radio" name="endMode" value="fixed"><span>A fixed year</span></label>
+            <label><input type="radio" name="endMode" value="rolling"><span>Years after today</span></label>
+            <label><input type="radio" name="endMode" value="today"><span>Today</span></label>
+            <label><input type="radio" name="endMode" value="yesterday"><span>Yesterday</span></label>
+            <label><input type="radio" name="endMode" value="data"><span>Latest date in my data</span></label>
+          </span></div>
+        <div class="field" id="endFixed"><label for="endYear" id="endYearLbl">Last year</label><input type="number" id="endYear" min="1900" max="2200" class="num"></div>
+        <div class="field" id="endRolling"><label for="rollYears">Years after the current one</label><select id="rollYears"><option>0</option><option>1</option><option>2</option><option>3</option><option>5</option></select></div>
+      </div>
+      <div class="stats" id="rangeStats"></div>
+      <div id="rangeMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Weeks, weekends and holidays</h2>
+        <p>These drive the week columns and <b>Is Working Day</b>.</p>
+      </div>
+      <div class="cfg">
+        <div class="field"><span class="flabel">Weeks start on</span>
+          <span class="seg" role="radiogroup" aria-label="Weeks start on">
+            <label><input type="radio" name="weekStart" value="mon"><span>Monday</span></label>
+            <label><input type="radio" name="weekStart" value="sun"><span>Sunday</span></label>
+          </span></div>
+        <div class="field"><span class="flabel">Weekend days</span><div class="chips" id="weekendChips"></div></div>
+      </div>
+      <div class="cfg">
+        <div class="field"><label for="country">Public holidays</label><select id="country"><option value="us">United States (federal)</option><option value="none">None</option></select></div>
+        <label class="chk" id="observedWrap"><input type="checkbox" id="observed"> When a fixed-date holiday falls on a weekend, also mark the weekday it&rsquo;s observed (Saturday &rarr; Friday, Sunday &rarr; Monday)</label>
+      </div>
+      <div class="hpick" id="holPick"></div>
+      <label class="lab" for="custom">Your own holidays <span class="hint">One per line: a date then a name. <code>2026-12-28 Company shutdown</code> is one day; <code>12-24 Christmas Eve</code> repeats every year.</span></label>
+      <textarea id="custom" class="mid" spellcheck="false" placeholder="2026-12-28 Company shutdown&#10;12-26 Day after Christmas"></textarea>
+      <div id="customMsg"></div>
+      <div class="hprev">
+        <div class="list-head"><h3>Holidays in <select id="holYear" aria-label="Year"></select></h3><span class="count" id="holCount"></span></div>
+        <div class="tablewrap"><table><thead><tr><th>Date</th><th>Day</th><th>Holiday</th></tr></thead><tbody id="holBody"></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Choose the columns</h2>
+        <p><b>Date</b> is always included and marks the table as a date table. Text columns that need a sort order get one; a hidden number column is added when needed.</p>
+      </div>
+      <div class="colgroups" id="colGroups"></div>
+      <label class="chk fyonly" id="fiscalOrderWrap"><input type="checkbox" id="fiscalOrder"> <span>Sort month names in fiscal order (<span id="fiscalOrderEx"></span>)</span></label>
+      <div class="field" id="mfStyleWrap"><label for="mfStyle">Month Filter shows the other months as</label><select id="mfStyle"><option value="long">September-2026</option><option value="short">Sep-2026</option></select></div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Check some rows</h2>
+        <p>Exactly what the table will hold for these dates. Pick a date near a fiscal year end or a holiday to check them.</p>
+      </div>
+      <div class="cfg">
+        <div class="field"><label for="previewFrom">Show 7 days from</label><input type="date" id="previewFrom"></div>
+        <div class="field"><span class="flabel">Jump to</span><span class="jump"><button type="button" class="btn" data-jump="fy">Next fiscal year start</button><button type="button" class="btn" data-jump="hol">Next holiday</button><button type="button" class="btn" data-jump="today">Today</button></span></div>
+      </div>
+      <div class="tablewrap"><table class="prev"><thead id="prevHead"></thead><tbody id="prevBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- STEP 5 -->
+  <section class="step" aria-labelledby="s5">
+    <div class="step-num">Step<b>5</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s5">Copy the date table</h2>
+        <p>DAX makes a calculated table; Power Query makes a query you can refresh and reuse. The TMDL script adds the table with its sort orders, formats and date-table setting in one go.</p>
+      </div>
+      <div class="cfg">
+        <span class="seg" role="radiogroup" aria-label="Language">
+          <label><input type="radio" name="lang" value="dax"><span>DAX</span></label>
+          <label><input type="radio" name="lang" value="m"><span>Power Query (M)</span></label>
+        </span>
+        <span class="seg" role="radiogroup" aria-label="Form">
+          <label><input type="radio" name="form" value="code"><span>Code only</span></label>
+          <label><input type="radio" name="form" value="tmdl"><span>TMDL script</span></label>
+        </span>
+      </div>
+      <div id="outMsg"></div>
+      <div class="codebox">
+        <div class="codebox-bar"><span class="t" id="outTitle">DAX</span><span class="r"><span class="count" id="outCount"></span><button class="btn primary" type="button" id="copyOut">Copy</button></span></div>
+        <pre class="tall" id="outView"></pre>
+      </div>
+      <div class="apply" id="applyBox"></div>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your settings are saved only in this browser.</footer>
+</div>

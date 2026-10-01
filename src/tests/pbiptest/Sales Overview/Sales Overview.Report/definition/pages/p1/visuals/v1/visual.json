@@ -1,0 +1,1 @@
+{"name": "v1", "visual": {"visualType": "tableEx", "query": {"queryState": {"Values": {"projections": [{"field": {"Column": {"Expression": {"SourceRef": {"Entity": "Customer"}}, "Property": "Region"}}}, {"field": {"Measure": {"Expression": {"SourceRef": {"Entity": "_Measures"}}, "Property": "Total Sales"}}}]}}}}}

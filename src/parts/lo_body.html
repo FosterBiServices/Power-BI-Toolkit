@@ -1,0 +1,216 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Layout Designer</h1>
+        <p class="lede">Plan a report page on an even grid: pick a layout, place visuals, and get a wireframe with sample visuals, every visual&rsquo;s exact position, and a designed background image to use in Power BI or refine in Figma. No AI needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This resets the page, layout, visuals and colors, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Start from a layout in Step 2.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> A sample sales page with a slicer panel. Change anything below to make it yours.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Page and spacing</h2>
+        <p>The same logic as an alignment guide: one margin around the page, one gap between visuals, and every width and height worked out so the edges line up.</p>
+      </div>
+      <div class="cfg">
+        <div class="field"><label for="pName">Page name</label><input type="text" id="pName" autocomplete="off"></div>
+        <div class="field"><label for="pSize">Page size</label><select id="pSize"></select></div>
+        <div class="field sm" id="customWrap" hidden><label for="pW">Width</label><input type="number" id="pW" min="200" max="4000"></div>
+        <div class="field sm" id="customWrap2" hidden><label for="pH">Height</label><input type="number" id="pH" min="200" max="8000"></div>
+      </div>
+      <div class="cfg">
+        <div class="field sm"><label for="margin">Margin <span class="muted">(px)</span></label><input type="number" id="margin" min="0" max="100"></div>
+        <div class="field sm"><label for="gap">Gap <span class="muted">(px)</span></label><input type="number" id="gap" min="0" max="100"></div>
+        <div class="field"><label for="rounding">Sizes</label><select id="rounding"><option value="fit">Whole pixels that fill the page exactly</option><option value="roundup">Rounded up (like the Alignment page)</option><option value="exact">Exact decimals</option></select></div>
+      </div>
+
+      <h3 class="sub">Page areas</h3>
+      <div class="areas">
+        <div class="area">
+          <label class="chk"><input type="checkbox" id="hdrOn"> <b>Header</b></label>
+          <div class="pair"><div class="field sm"><label for="hdrH">Height <span class="muted">(px)</span></label><input type="number" id="hdrH" min="20" max="300"></div>
+          <div class="field"><label for="hdrStyle">Style</label><select id="hdrStyle"><option value="band">Colored band</option><option value="bleed">Full-width bar</option><option value="line">No background, accent underline</option><option value="none">No background</option></select></div></div>
+        </div>
+        <div class="area">
+          <div class="field"><label for="sidePos"><b>Side panel</b></label><select id="sidePos"><option value="none">None</option><option value="left">On the left</option><option value="right">On the right</option></select></div>
+          <div class="pair" id="sideCfg"><div class="field sm"><label for="sideW">Width</label><input type="number" id="sideW" min="60" max="800"></div><div class="field sm"><label for="sideItemH">Item height</label><input type="number" id="sideItemH" min="20" max="400"></div></div>
+        </div>
+        <div class="area">
+          <label class="chk"><input type="checkbox" id="stripOn"> <b>Card strip</b> <span class="muted">(KPI cards)</span></label>
+          <div class="field sm"><label for="stripH">Height <span class="muted">(px)</span></label><input type="number" id="stripH" min="30" max="400"></div>
+        </div>
+      </div>
+
+      <div class="hdrbox" id="hdrBox">
+        <h3 class="sub">Header contents</h3>
+        <div class="hgrid">
+          <div class="hcol">
+            <h4>Title</h4>
+            <div class="field"><label for="hdrTitle">Text</label><input type="text" id="hdrTitle" autocomplete="off"></div>
+          </div>
+          <div class="hcol">
+            <h4><label class="chk"><input type="checkbox" id="logoOn"> Logo</label></h4>
+            <div class="pair" id="logoCfg"><div class="field sm"><label for="logoW">Width</label><input type="number" id="logoW" min="8" max="800"></div><div class="field sm"><label for="logoH">Height</label><input type="number" id="logoH" min="8" max="300"></div></div>
+            <p class="lim small muted" id="logoLim"></p>
+            <div id="logoCfg2" class="logo-more">
+              <input type="file" id="logoFile" class="sr" accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp"><label class="filebtn btn small" for="logoFile" id="logoFileLbl">Add the logo image</label>
+              <span id="logoInfo" class="small muted"></span>
+              <button type="button" class="linkbtn" id="logoClear" hidden>Remove the image</button>
+              <label class="chk small" id="logoInBgWrap" hidden><input type="checkbox" id="logoInBg"> Also put it in the background image</label>
+            </div>
+          </div>
+          <div class="hcol">
+            <h4>Cards</h4>
+            <div class="field sm"><label for="hCardN">How many</label><input type="number" id="hCardN" min="0" max="8"></div>
+            <div class="pair"><div class="field sm"><label for="hCardW">Width</label><input type="number" id="hCardW" min="40" max="600"></div><div class="field sm"><label for="hCardH">Height</label><input type="number" id="hCardH" min="16" max="200"></div></div>
+            <p class="lim small muted" id="cardLim"></p>
+          </div>
+          <div class="hcol">
+            <h4>Slicers</h4>
+            <div class="field sm"><label for="hSlicerN">How many</label><input type="number" id="hSlicerN" min="0" max="8"></div>
+            <div class="pair"><div class="field sm"><label for="hSlicerW">Width</label><input type="number" id="hSlicerW" min="40" max="600"></div><div class="field sm"><label for="hSlicerH">Height</label><input type="number" id="hSlicerH" min="16" max="200"></div></div>
+            <p class="lim small muted" id="slicerLim"></p>
+          </div>
+        </div>
+        <p class="note small">Sizes are capped so everything fits: the title keeps the room it needs, and the logo, cards and slicers share the rest. The logo sits on the left with the title after it. Cards, then slicers, line up on the right. Everything is centered top to bottom in the header. Click a header card or slicer in Step 2 to name it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Layout and visuals</h2>
+        <p>Start from a layout, then click any visual to change it, or an empty cell to add one. Visuals can span several columns and rows.</p>
+      </div>
+      <details class="suggest" id="suggestBox">
+        <summary><b>Suggest a layout</b> <span class="muted">(3-30-3: answer a few questions, get three layouts)</span></summary>
+        <div class="suggest-body">
+          <p class="note small">A good report page answers three questions in order. <b>3 seconds</b>: how are we doing? (headline KPIs top left, big numbers, status against target). <b>30 seconds</b>: where and why? (trend, simple bar charts, heatmaps, filters). <b>300 seconds</b>: which records? (details on demand: a formatted table or a drill-through page).</p>
+          <div class="sgrid">
+            <fieldset class="sq"><legend>3 s: headline numbers</legend>
+              <div class="field sm"><label for="sgK">KPIs</label><input type="number" id="sgK" min="0" max="8"></div>
+              <div class="field"><label for="sgT">With a target</label><select id="sgT"><option value="none">None</option><option value="some">Some (the top 2)</option><option value="all">All of them</option></select></div>
+            </fieldset>
+            <fieldset class="sq"><legend>30 s: patterns</legend>
+              <label class="chk"><input type="checkbox" id="sgTrend"> A trend over time</label>
+              <div class="field sm"><label for="sgB">Categories to compare</label><input type="number" id="sgB" min="0" max="4"></div>
+              <label class="chk"><input type="checkbox" id="sgGeo"> One of them is a location</label>
+              <label class="chk"><input type="checkbox" id="sgHeat"> Two categories at once (heatmap)</label>
+            </fieldset>
+            <fieldset class="sq"><legend>300 s: details</legend>
+              <div class="field"><label for="sgD">Individual records</label><select id="sgD"><option value="page">On this page</option><option value="drill">On a drill-through page</option><option value="none">Not needed</option></select></div>
+              <div class="field sm"><label for="sgF">Filters (slicers)</label><input type="number" id="sgF" min="0" max="8"></div>
+              <div class="field"><label for="sgP">Filters go</label><select id="sgP"><option value="auto">Where they fit best</option><option value="header">In the header</option><option value="side">In a side panel</option></select></div>
+            </fieldset>
+          </div>
+          <div class="btns"><button type="button" class="btn primary" id="sgGo">Suggest layouts</button></div>
+          <div id="sgOut" class="sg-out"></div>
+        </div>
+      </details>
+      <div class="field"><label>Start from a layout</label><div class="chips" id="templates" role="group" aria-label="Layouts"></div></div>
+      <div class="cfg">
+        <div class="field sm"><label for="cols">Columns</label><input type="number" id="cols" min="1" max="12"></div>
+        <div class="field sm"><label for="rows">Rows</label><input type="number" id="rows" min="1" max="12"></div>
+        <label class="chk inline"><input type="checkbox" id="showDims" checked> Show sizes</label>
+        <label class="chk inline"><input type="checkbox" id="showZones"> Show 3-30-3 zones</label>
+      </div>
+      <div class="designer">
+        <div class="canvas-wrap"><div id="canvas" class="canvas"></div></div>
+        <aside class="editor" id="editor" aria-live="polite"></aside>
+      </div>
+      <div id="layoutMsg" class="msgs"></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Look</h2>
+        <p>Colors for the background design and the sample visuals. Take them from a theme or pick your own, then adjust any of them.</p>
+      </div>
+      <div class="cfg">
+        <div class="field"><label for="colorSrc">Colors from</label><select id="colorSrc"><option value="tb">The theme saved in the Theme Builder</option><option value="file">An existing theme file</option><option value="pick">My own picks</option></select></div>
+        <div class="field"><label for="font">Font</label><select id="font"><option>Segoe UI</option><option>Segoe UI Semibold</option><option>Arial</option><option>Calibri</option><option>DIN</option><option>Georgia</option><option>Tahoma</option><option>Trebuchet MS</option><option>Verdana</option></select></div>
+      </div>
+      <div id="srcBox"></div>
+      <div class="colors" id="colors"></div>
+      <div class="cfg">
+        <div class="field sm"><label for="radius">Corners <span class="muted">(px)</span></label><input type="number" id="radius" min="0" max="40"></div>
+        <div class="field"><label for="cards">Visual cards</label><select id="cards"><option value="all">A card behind every visual</option><option value="none">No cards</option></select></div>
+        <label class="chk inline"><input type="checkbox" id="border"> Border</label>
+      </div>
+      <div class="shadowbox">
+        <label class="chk"><input type="checkbox" id="shOn"> <b>Shadow</b> <span class="muted">(on every container: header, side panel and visual cards)</span></label>
+        <div class="cfg" id="shCfg">
+          <div class="field sm"><label for="shX">X</label><input type="number" id="shX" min="-50" max="50"></div>
+          <div class="field sm"><label for="shY">Y</label><input type="number" id="shY" min="-50" max="50"></div>
+          <div class="field sm"><label for="shBlur">Blur</label><input type="number" id="shBlur" min="0" max="100"></div>
+          <div class="field sm"><label for="shSpread">Spread</label><input type="number" id="shSpread" min="0" max="50"></div>
+          <div class="field"><label for="shColor">Color</label><span class="crow-in"><label class="cpick sm"><input type="color" id="shColorPick" aria-label="Shadow color"></label><input type="text" class="hex" id="shColor" spellcheck="false"></span></div>
+          <div class="field sm"><label for="shOp">Opacity <span class="muted">(%)</span></label><input type="number" id="shOp" min="0" max="100"></div>
+          <button type="button" class="linkbtn" id="shReset">Default (0, 4, 16, 0, #1F3A5F, 35%)</button>
+        </div>
+      </div>
+      <label class="chk figma"><input type="checkbox" id="figmaOn"> <span><b>I use Figma</b> <span class="muted">(adds Figma-ready copies of the drawings, with named layers)</span></span></label>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Wireframe and files</h2>
+        <p>Share the wireframe, and use the background image and positions in Power BI Desktop.</p>
+      </div>
+      <div class="outs">
+        <div class="out-card">
+          <h3>Wireframe with sample visuals</h3>
+          <div class="thumb" id="wfThumb"></div>
+          <div class="btns"><button type="button" class="btn primary" data-dl="wf-png">Download PNG</button><button type="button" class="btn" data-dl="wf-svg">SVG</button><button type="button" class="btn figma-only" data-copy="wf-svg">Copy for Figma</button></div>
+        </div>
+        <div class="out-card">
+          <h3>Background image</h3>
+          <div class="thumb" id="bgThumb"></div>
+          <div class="btns"><button type="button" class="btn primary" data-dl="bg-png2">Download PNG</button><button type="button" class="btn" data-dl="bg-png1">PNG at 1&times;</button><button type="button" class="btn" data-dl="bg-svg">SVG</button><button type="button" class="btn figma-only" data-copy="bg-svg">Copy for Figma</button></div>
+          <p class="note small">In Power BI Desktop: <b>Format page</b> &gt; <b>Canvas background</b> &gt; <b>Image</b>, <b>Image fit: Fit</b>, <b>Transparency 0%</b>. Then turn off each visual&rsquo;s own background so the cards show through. The PNG is twice the page size so it stays sharp.</p>
+        </div>
+      </div>
+      <div class="out-card pptx-card">
+        <div class="pptx-txt"><h3>PowerPoint</h3>
+          <p class="note small">Three slides at the page&rsquo;s size: the layout as <b>editable shapes</b> (header, logo, title, cards and labels you can move, resize and recolor, with your shadow), the wireframe with sample visuals, and the background image. Good for design reviews and sign-off.</p></div>
+        <div class="btns"><button type="button" class="btn primary" data-dl="pptx">Download PowerPoint (.pptx)</button></div>
+      </div>
+      <div class="figma-only figma-box">
+        <h3>Into Figma</h3>
+        <ol class="how">
+          <li><b>Copy for Figma</b>, then in Figma select a page and press <b>Ctrl+V</b>. The drawing arrives as one frame of editable shapes, with layers named Page, Header, Side-panel and Card-&lt;visual&gt;.</li>
+          <li>Refine it there (shapes, icons, gradients). Shadows come through as SVG filters; if one doesn’t, add a Drop shadow effect with the same X, Y, Blur, Spread, color and opacity as in Step 3. Hide the sample visuals layer before exporting the background.</li>
+          <li>Export the background frame as PNG at 2&times; and set it as the canvas background in Power BI Desktop, as above.</li>
+        </ol>
+      </div>
+      <h3>Positions <span class="muted small">(Format pane &gt; General &gt; Properties: Size and Position)</span></h3>
+      <div class="tablewrap"><table class="pos" id="posTable"></table></div>
+      <div class="btns"><button type="button" class="btn" data-copy="tsv">Copy positions for Excel</button></div>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your layout and colors are saved only in this browser.</footer>
+</div>

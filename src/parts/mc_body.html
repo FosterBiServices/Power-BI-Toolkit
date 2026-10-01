@@ -1,0 +1,99 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Model Compare</h1>
+        <p class="lede">What changed in your model between two exports: tables, columns, measures and relationships, with DAX differences side by side and renames recognized. Copy the result as release notes, a change log or a list for Excel. No AI.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties both exports on this page and your choices, and removes what this page saved in your browser. The earlier exports the toolkit keeps stay; remove those in Step 2. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste your model export in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> Two versions of a sample customers and sales model. Paste your own model export in Step 1 to compare yours.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">The model now</h2>
+        <p>The model export from after your changes. It reads the model&rsquo;s definition, not your data.</p>
+      </div>
+      <details class="extra" id="modelBox">
+        <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+        <div class="extra-body">
+          <ol class="how">
+            <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+            <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+          </ol>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+            <pre class="short" id="exportView"></pre>
+          </div>
+        </div>
+      </details>
+      <textarea id="modelInput" class="short" spellcheck="false" aria-label="Model export after the changes" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+      <div class="stats" id="afterStats"></div>
+      <div id="afterMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">The model before</h2>
+        <p>Each time you save a new export on the home page, or paste one into any tool, the toolkit keeps the one it replaces. Pick one of those, or paste or open an export you saved yourself.</p>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="Where the earlier export comes from"><label><input type="radio" name="bsrc" value="saved"><span>Kept by the toolkit</span></label><label><input type="radio" name="bsrc" value="paste"><span>Paste or open a file</span></label></div>
+      <div id="savedList"></div>
+      <div id="pasteBox" hidden>
+        <div class="pickrow"><button type="button" class="btn" id="openBefore">Open a saved export file</button><input type="file" id="beforeFile" accept=".txt,.tsv,.csv,text/plain" hidden></div>
+        <textarea id="beforeInput" class="short" spellcheck="false" aria-label="Model export before the changes" placeholder="Paste the earlier export here"></textarea>
+      </div>
+      <div class="stats" id="beforeStats"></div>
+      <div id="beforeMsg"></div>
+      <p class="note small tipline">Tip: before you start changing a model, <button type="button" class="linkbtn" id="saveFile">save the current export as a file</button>. It&rsquo;s your &ldquo;before&rdquo; even in another browser.</p>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">What changed</h2>
+        <p><span class="imp attention">Check reports</span> may break visuals or other reports on this model. <span class="imp change">Change</span> changes results or adds something. <span class="imp house">Housekeeping</span> is tidy-up: folders, descriptions, hiding, layout.</p>
+      </div>
+      <div class="sum-bar" id="sumBar"></div>
+      <div class="filters" id="filters"></div>
+      <div id="changes"></div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Write it up</h2>
+        <p>Release notes for a pull request, a change log or an email, grouped by importance.</p>
+      </div>
+      <div class="field"><label for="notesName">Model or report name</label><input type="text" id="notesName" class="txt" placeholder="for example Sales Overview"></div>
+      <div class="opts"><label><input type="checkbox" id="optHouse"> Include housekeeping</label><label><input type="checkbox" id="optDax"> Include the DAX of changed and added measures</label></div>
+      <div class="codebox">
+        <div class="codebox-bar"><span class="t">Release notes (Markdown)</span><span class="r"><button class="btn" type="button" id="copyText">Copy as plain text</button><button class="btn" type="button" id="copyTsv">Copy for Excel</button><button class="btn primary" type="button" id="copyMd">Copy Markdown</button></span></div>
+        <pre class="tall" id="notesView"></pre>
+      </div>
+      <p class="note small">Markdown pastes cleanly into Azure DevOps, GitHub and Teams. Plain text suits email.</p>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your model exports are saved only in this browser.</footer>
+</div>

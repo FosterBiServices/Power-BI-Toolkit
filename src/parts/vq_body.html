@@ -1,0 +1,94 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Validation Query Builder</h1>
+        <p class="lede">Pick a check, choose measures and columns from your model, and copy a ready-to-run DAX query that validates numbers, totals, relationships or a whole table. No Copilot needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties every box on this page and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste a model export in Step 2 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> The model and choices below are samples. Paste your own export in Step 2 to start.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Export your model from Power BI Desktop</h2>
+        <p>The same query the other toolkit pages use. If you already ran it, paste those results in Step 2.</p>
+      </div>
+      <ol class="how">
+        <li>Open your report in Power BI Desktop and select <b>DAX query view</b> on the left rail.</li>
+        <li>Paste the query below into a new query tab and select <b>Run</b>.</li>
+        <li>Above the results grid, select <b>Copy</b>. It copies every row with the column headers.</li>
+      </ol>
+      <div class="codebox">
+        <div class="codebox-bar"><span class="t">DAX query</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+        <pre class="short" id="exportView"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Paste the results</h2>
+        <p>The page reads your tables, columns, measures and relationships so every name in the query is exact.</p>
+      </div>
+      <textarea id="modelInput" class="big" spellcheck="false" aria-label="Query results" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
+      <div id="modelMsg"></div>
+      <div class="stats" id="modelStats"></div>
+    </div>
+  </section>
+
+  <div id="work" hidden>
+    <!-- STEP 3 -->
+    <section class="step" aria-labelledby="s3">
+      <div class="step-num">Step<b>3</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="s3">Choose a check</h2>
+          <p>Each one answers a different question about your model.</p>
+        </div>
+        <div class="checks" role="radiogroup" aria-label="Check" id="checks"></div>
+      </div>
+    </section>
+
+    <!-- STEP 4 -->
+    <section class="step" aria-labelledby="s4">
+      <div class="step-num">Step<b>4</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="s4">Set it up</h2>
+          <p id="setupHint"></p>
+        </div>
+        <div id="setup" class="setup"></div>
+      </div>
+    </section>
+
+    <!-- STEP 5 -->
+    <section class="step" aria-labelledby="s5">
+      <div class="step-num">Step<b>5</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="s5">Run it in DAX query view</h2>
+          <p>Paste into a new query tab and select <b>Run</b>. Rename the tab (for example <i>Check: Sales by region</i>) and keep it: the queries are saved in the file, so you can run the same check after every refresh.</p>
+        </div>
+        <div id="outMsg"></div>
+        <div id="outs"></div>
+        <div class="tip" id="lookFor"></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>Everything runs in this page. Your model export and choices are saved only in this browser.</footer>
+</div>

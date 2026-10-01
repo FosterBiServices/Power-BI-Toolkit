@@ -1,0 +1,134 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Field Parameter Builder</h1>
+        <p class="lede">Pick measures (or columns), label and order them, and get a TMDL script that adds a measure-switcher table to your model: a Power BI field parameter, or a SWITCH measure with its selector table. No AI needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties the model export and the selector you&rsquo;ve built, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste your model export in Step 1 to start again.</div>
+    <div class="dest only-switch" id="destBox" role="group" aria-labelledby="destLbl" hidden>
+      <span class="lbl" id="destLbl">Where the new measure goes</span>
+      <div class="field"><label>Home table</label><span class="mono home-t" id="destTable"></span></div>
+      <div class="field"><label for="mFolder">Display folder <span class="muted">(use \ for subfolders)</span></label><input type="text" id="mFolder" list="destFolders" spellcheck="false" autocomplete="off" style="width:240px"></div>
+      <span class="small muted dest-hint">The measure lives in the switcher table. Leave the folder empty to show it at the top of that table, or pick or type a folder.</span>
+      <datalist id="destFolders"></datalist>
+    </div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> The model and the five picked measures are samples. Paste your own model export in Step 1 to start.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Your model export</h2>
+        <p>The page lists your measures and columns from it and checks every name, so the script only refers to fields that exist.</p>
+      </div>
+      <details class="extra" id="modelBox">
+        <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+        <div class="extra-body">
+          <ol class="how">
+            <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+            <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+          </ol>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+            <pre class="short" id="exportView"></pre>
+          </div>
+        </div>
+      </details>
+      <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+      <div class="stats" id="modelStats"></div>
+      <div id="modelMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Choose the kind of switcher</h2>
+        <p>Both give you a slicer that changes what a visual shows. They differ in where the result can be used.</p>
+      </div>
+      <div class="tabbar" role="radiogroup" aria-label="Kind of switcher">
+        <button type="button" role="radio" id="typeField" aria-checked="true"><span class="tn">Field parameter</span><span class="td">Power BI&rsquo;s own feature. Swaps the measures or columns in a visual, and the visual&rsquo;s titles and formats follow.</span></button>
+        <button type="button" role="radio" id="typeSwitch" aria-checked="false"><span class="tn">SWITCH measure</span><span class="td">One measure that returns whichever measure is picked. Works inside other measures, card titles and conditional formatting.</span></button>
+      </div>
+      <div class="cfg">
+        <div class="field"><label for="tName">Table name</label><input type="text" id="tName" autocomplete="off" placeholder="Measure Selector"></div>
+        <div class="field only-switch"><label for="mName">Measure name</label><input type="text" id="mName" autocomplete="off" placeholder="Selected Measure"></div>
+        <div class="field only-switch"><label for="fallback">When nothing or several are picked</label>
+          <select id="fallback"><option value="first">Show the first option</option><option value="blank">Show blank</option></select></div>
+      </div>
+      <div class="opts">
+        <label class="only-switch"><input type="checkbox" id="dynFormat" checked> Keep each measure&rsquo;s format (a dynamic format string)</label>
+        <label><input type="checkbox" id="groupOn"> Add a group column</label>
+        <span class="field inline" id="groupNameWrap" hidden><label for="groupName" class="sr">Group column name</label><input type="text" id="groupName" autocomplete="off" placeholder="Group"></span>
+      </div>
+      <p class="note" id="typeNote"></p>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Pick and order the fields</h2>
+        <p>Select a field to add it. The label is what the slicer shows; the order is the slicer&rsquo;s order.</p>
+      </div>
+      <div class="picker2">
+        <div class="pane-l">
+          <div class="pick-head">
+            <input type="text" id="search" class="search" placeholder="Search fields" aria-label="Search fields" autocomplete="off">
+            <select id="kindFilter" aria-label="Show"><option value="measure">Measures</option><option value="column">Columns</option><option value="all">Measures and columns</option></select>
+          </div>
+          <div class="mlist" id="avail" role="list" aria-label="Fields in the model"></div>
+          <div class="reply-actions"><button type="button" class="linkbtn" id="addShown">Add all shown</button></div>
+        </div>
+        <div class="pane-r">
+          <div class="pick-head"><h3>In the switcher <span class="muted" id="selCount"></span></h3><button type="button" class="linkbtn" id="clearSel">Remove all</button></div>
+          <ol class="sel" id="sel" aria-label="Fields in the switcher"></ol>
+          <p class="note small" id="selEmpty">Nothing picked yet.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Test, then add it to your model</h2>
+        <p>Checks run as you go. The test query changes nothing in your model; the TMDL script adds the table.</p>
+      </div>
+      <div id="checks"></div>
+      <div id="outBox">
+        <h3>1. Test the names <span class="muted">(DAX query view)</span></h3>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">DAX query: test</span><span class="r"><button class="btn primary" type="button" data-copy="test">Copy query</button></span></div>
+          <pre class="short" id="testView"></pre>
+        </div>
+        <h3>2. Add the table <span class="muted">(TMDL view)</span></h3>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t" id="tmdlTitle">TMDL script</span><span class="r"><button class="btn primary" type="button" data-copy="tmdl">Copy script</button></span></div>
+          <pre class="tall" id="tmdlView"></pre>
+        </div>
+        <div class="apply">
+          <ol id="applySteps"></ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your model export and choices are saved only in this browser.</footer>
+</div>

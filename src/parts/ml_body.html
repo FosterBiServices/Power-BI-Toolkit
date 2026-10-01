@@ -1,0 +1,99 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Model Linter</h1>
+        <p class="lede">Best-practice checks on your model export: measures without a folder or format string, visible key columns, bidirectional relationships, implicit measures, unused columns and measures, and, with a PBIP folder, report checks such as alt text and crowded pages. Each finding says why it matters and how to fix it in Power BI Desktop. No AI needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties the model export, your rule choices and ignored findings, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste your model export in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> The findings come from a sample customers and sales model. Paste your own model export in Step 1 to check yours.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Your model export</h2>
+        <p>The checks read the model&rsquo;s definition: tables, columns, measures, relationships and model settings. Nothing about your data.</p>
+      </div>
+      <details class="extra" id="modelBox">
+        <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+        <div class="extra-body">
+          <ol class="how">
+            <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+            <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+          </ol>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+            <pre class="short" id="exportView"></pre>
+          </div>
+        </div>
+      </details>
+      <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+      <div class="stats" id="modelStats"></div>
+      <div id="modelMsg"></div>
+      <details class="extra" id="depBox">
+        <summary>Dependencies from Power BI <span class="muted">(optional: the most complete check for unused measures and columns)</span></summary>
+        <div class="extra-body">
+          <p class="note">The linter reads the DAX of your measures to see what uses what. Power BI keeps its own dependency list too, including calculation groups, security roles and anything the linter might misread. Run this second query to use it.</p>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: dependencies</span><span class="r"><button class="btn primary" type="button" data-copy="deps">Copy query</button></span></div>
+            <pre class="short" id="depsView"></pre>
+          </div>
+          <textarea id="depInput" class="mid" spellcheck="false" aria-label="Dependencies query results" placeholder="Paste the dependencies results here (optional)"></textarea>
+          <div id="depMsg"></div>
+        </div>
+      </details>
+      <div class="repbox" id="repBox">
+        <div class="rep-head"><h3>Report pages <span class="muted">(optional)</span></h3>
+          <span class="btns"><button type="button" class="btn" id="pickReport">Choose a PBIP folder</button><button type="button" class="btn" id="clearReport" hidden>Remove report pages</button></span></div>
+        <p class="note small" id="repIntro">Choose the project folder (or its <b>.Report</b> folder) of a report saved as a Power BI Project. Visible columns and every measure are then checked against each visual, filter, formatting rule and bookmark in it, and the report checks run: alt text, titles, hidden visuals, unused bookmarks, empty and crowded pages. If the folder also holds the semantic model, its field parameters are read so measures used only there count as used. If the folder holds several projects, you pick which reports to check, and each is read with its own semantic model. Files are read on this page; nothing is uploaded.</p>
+        <div class="drop" id="repDrop">or drop the folder here</div>
+        <input type="file" id="repInput" webkitdirectory multiple hidden>
+        <div id="repMsg"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Choose the checks</h2>
+        <p>Turn off any rule your team doesn&rsquo;t follow. Hidden measures and columns are skipped where hiding already solves the problem.</p>
+      </div>
+      <div class="rules" id="rules"></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Findings</h2>
+        <p><span class="sev warn" aria-hidden="true"></span> Fix &nbsp; <span class="sev info" aria-hidden="true"></span> Worth a look. Select <b>Ignore</b> on anything that&rsquo;s intended; it stays ignored the next time you check this model.</p>
+      </div>
+      <div class="sum-bar" id="sumBar"></div>
+      <details class="extra" id="whereBox">
+        <summary>Where is it used? <span class="muted">(look up any measure or column)</span></summary>
+        <div class="extra-body">
+          <div class="whererow"><input type="text" id="whereInput" class="txt" list="whereList" placeholder="Measure or column name" aria-label="Measure or column name"><datalist id="whereList"></datalist></div>
+          <div id="whereOut"></div>
+        </div>
+      </details>
+      <div id="results"></div>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your model export is saved only in this browser.</footer>
+</div>

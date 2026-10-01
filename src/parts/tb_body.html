@@ -1,0 +1,114 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Theme Builder</h1>
+        <p class="lede">Start from one brand color. The page builds the data palette, text, background, good and bad colors, and a full report theme with styles for every common visual, checks it for readability and color blindness, and gives you the theme file to import. No AI needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This resets every color and setting on this page and removes what it saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Pick your brand color in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> The colors are a sample brand. Pick your own brand color in Step 1 to start.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Your brand colors</h2>
+        <p>One color is enough. Add up to two more if your brand has them; the page fills the rest of the palette to match.</p>
+      </div>
+      <div class="cfg">
+        <div class="field"><label for="tName">Theme name</label><input type="text" id="tName" autocomplete="off" placeholder="Contoso Retail"></div>
+      </div>
+      <div class="seeds" id="seeds"></div>
+      <div class="reply-actions"><button type="button" class="btn" id="addSeed">+ Add a brand color</button></div>
+      <div class="cfg">
+        <div class="field"><label for="style">Palette</label><select id="style"><option value="varied">Varied colors that go with the brand</option><option value="shades">Shades of the brand color</option></select></div>
+        <div class="field"><label for="count">Data colors</label><select id="count"><option>6</option><option>8</option><option>10</option><option>12</option></select></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Fine-tune</h2>
+        <p>Change any data color, and choose the page and visual backgrounds, text, good and bad colors and the font. Everything else in the theme follows from these.</p>
+      </div>
+      <h3>Data colors <span class="muted small">(series colors, in order)</span></h3>
+      <div class="swatches" id="swatches"></div>
+      <div class="reply-actions"><button type="button" class="linkbtn" id="resetPalette">Undo my changes to the data colors</button></div>
+
+      <div class="grid2">
+        <div class="box">
+          <h3>Backgrounds and text</h3>
+          <div class="sub" id="pageLbl">Report page <span class="muted">(the canvas behind everything)</span></div>
+          <div class="chips" id="bgPresets" role="group" aria-labelledby="pageLbl"></div>
+          <div class="crow" id="bgRow"></div>
+          <div class="sub" id="visLbl">Visuals <span class="muted">(charts, tables, cards and slicers)</span></div>
+          <div class="chips" id="visPresets" role="group" aria-labelledby="visLbl"></div>
+          <div class="crow" id="visRow" hidden></div>
+          <div class="field"><label for="textMode">Text color</label>
+            <select id="textMode"><option value="brand">Brand color (darkened if needed to be readable)</option><option value="neutral">Near black (near white on dark backgrounds)</option><option value="custom">My own color</option></select></div>
+          <div class="crow" id="textRow" hidden></div>
+          <div class="field"><label for="font">Font</label>
+            <select id="font"><option>Segoe UI</option><option>Segoe UI Semibold</option><option>Arial</option><option>Calibri</option><option>Candara</option><option>Corbel</option><option>DIN</option><option>Georgia</option><option>Tahoma</option><option>Trebuchet MS</option><option>Verdana</option></select></div>
+        </div>
+        <div class="box">
+          <h3>Good, neutral and bad</h3>
+          <p class="note small">Used for waterfall increases and decreases, KPI status, and conditional formatting.</p>
+          <div class="chips" id="sentPresets" role="group" aria-label="Good and bad presets"></div>
+          <div class="crow" id="goodRow"></div>
+          <div class="crow" id="neutralRow"></div>
+          <div class="crow" id="badRow"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Preview</h2>
+        <p>A sketch of a report page with the theme applied, to judge the colors together. Power BI&rsquo;s own rendering will differ in detail.</p>
+      </div>
+      <div class="preview" id="preview"></div>
+      <div id="checks"></div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Download and import</h2>
+        <p>The theme file includes your colors, font, text styles, icons and formatting for 27 visual types and the page.</p>
+      </div>
+      <div class="out-head"><span class="fname" id="fileName"></span>
+        <span class="btns"><button type="button" class="btn" data-copy="json">Copy JSON</button><button type="button" class="btn primary" id="download">Download theme</button></span></div>
+      <details class="extra"><summary>See the theme JSON <span class="muted" id="jsonSize"></span></summary><div class="extra-body"><pre class="tall" id="jsonView"></pre></div></details>
+      <div class="apply">
+        <h3>Use it in Power BI Desktop</h3>
+        <ol>
+          <li>Open your report and select <b>View</b> &gt; <b>Themes</b> &gt; <b>Browse for themes</b>.</li>
+          <li>Choose the downloaded file. Power BI applies it to every page straight away.</li>
+          <li>To make it the starting point for new reports, save a blank report with the theme as a template (<b>File</b> &gt; <b>Export</b> &gt; <b>Power BI template</b>).</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your colors and settings are saved only in this browser.</footer>
+</div>

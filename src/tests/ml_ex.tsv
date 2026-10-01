@@ -1,0 +1,41 @@
+Kind	Table	Name	Type	Folder	Flags	Description	Expression	ToTable	ToColumn	Summarize	SortBy	Hierarchies	Storage	Source
+Column	Customer	Customer Code	String							None				
+Column	Customer	Customer Name	String							None				
+Column	Customer	CustomerKey	Int64		hidden key					None				
+Column	Customer	Region	String							None				
+Column	Customer	Segment	String			Consumer, Corporate or Home Office				None				
+Column	Date	Date	DateTime		key					None		Calendar		
+Column	Date	Fiscal Year	String			Fiscal year starts 1 July				None				
+Column	Date	Month	String							None	Month Number	Calendar		
+Column	Date	Month Number	Int64		hidden					None				
+Column	Date	Year	Int64							Default		Calendar		
+Column	Product	Category	String							None				
+Column	Product	Launch Date	DateTime			Date the product went on sale				None				
+Column	Product	Product Name	String							None				
+Column	Product	ProductKey	Int64							Default				
+Column	Product	Unit Cost	Decimal		hidden					Sum				
+Column	Sales	CustomerKey	Int64							Default				
+Column	Sales	Discount Amount	Decimal		hidden					Sum				
+Column	Sales	Net Amount	Decimal			Invoiced amount after discounts, before tax				Sum				
+Column	Sales	Order Date	DateTime		hidden					None				
+Column	Sales	Order Number	String							None				
+Column	Sales	ProductKey	Int64		hidden					None				
+Column	Sales	Quantity	Int64							Default				
+Column	Sales	Return Flag	Boolean			TRUE when the line is a customer return				None				
+Column	Sales	Total Cost	Decimal							Sum				
+Measure	_Measures	Average Order Value	\$#,0.00				DIVIDE ( [Total Sales], [Order Count] )							
+Measure	_Measures	Margin %					DIVIDE ( [Total Sales] - [Total Cost], [Total Sales] )							
+Measure	_Measures	Order Count	#,0	Core			DISTINCTCOUNT ( Sales[Order Number] )							
+Measure	_Measures	Sales Title		Titles	text		"Sales for " & SELECTEDVALUE ( 'Date'[Fiscal Year], "all years" )							
+Measure	_Measures	Sales YoY %		Time intelligence	dynamic-format		VAR _ly = CALCULATE ( [Total Sales], SAMEPERIODLASTYEAR ( 'Date'[Date] ) ) RETURN DIVIDE ( [Total Sales] - _ly, _ly )							
+Measure	_Measures	Total Cost	\$#,0	Core			SUM ( Sales[Total Cost] )							
+Measure	_Measures	Total Sales	\$#,0	Core		Net sales after discounts	SUM ( Sales[Net Amount] )							
+Model		Model												
+Relationship	Sales	CustomerKey	Many:One		OneDirection			Customer	CustomerKey					
+Relationship	Sales	Order Date	Many:One		OneDirection			Date	Date					
+Relationship	Sales	ProductKey	Many:One		BothDirections			Product	ProductKey					
+Table	Customer	Customer											Import	
+Table	Date	Date	Time										Import	
+Table	Product	Product											Import	
+Table	Sales	Sales				One row per order line							Import	
+Table	_Measures	_Measures											Import	

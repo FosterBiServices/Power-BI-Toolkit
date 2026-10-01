@@ -1,0 +1,296 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Power Query Explainer</h1>
+        <p class="lede">Get a comment on every step of your Power Query queries, or a cleaner version that returns the same data, checked before you paste it back. One query at a time, or the whole model at once.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties every box on this page and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste your own in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> The queries and Copilot replies on this page are samples. Paste your own in Step 1 to start.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <div class="modebar" role="tablist" aria-label="How many queries">
+    <button type="button" role="tab" id="modeOneBtn" aria-selected="true" aria-controls="modeOne"><span class="tn">One query</span><span class="td">Paste from the Advanced Editor. Explain it or clean it up.</span></button>
+    <button type="button" role="tab" id="modeModelBtn" aria-selected="false" aria-controls="modeModel"><span class="tn">Whole model</span><span class="td">Export every query at once. Check them all and explain them in batches.</span></button>
+  </div>
+
+  <div id="modeOne" role="tabpanel" aria-labelledby="modeOneBtn" class="mode">
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Paste a query from the Advanced Editor</h2>
+        <p>One query at a time. Nothing leaves this page until you paste the prompt into Copilot yourself.</p>
+      </div>
+      <ol class="how">
+        <li>In Power BI Desktop, select <b>Home &gt; Transform data</b> to open Power Query.</li>
+        <li>Select the query on the left, then <b>Home &gt; Advanced Editor</b>.</li>
+        <li>Click in the code, press <b>Ctrl+A</b> then <b>Ctrl+C</b>, and paste it below.</li>
+      </ol>
+      <div class="field"><label for="qName">Query name <span class="muted">(optional, helps Copilot)</span></label><input type="text" id="qName" placeholder="Sales" autocomplete="off"></div>
+      <textarea id="qInput" class="big" spellcheck="false" aria-label="Query code" placeholder="let&#10;    Source = ...&#10;in&#10;    ..."></textarea>
+      <div id="qMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2" id="mapStep" hidden>
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Check the steps</h2>
+        <p>Read straight from the code, without AI: what each step calls, which earlier step it uses, and things worth a look.</p>
+      </div>
+      <div class="stats" id="qStats"></div>
+      <div class="tablewrap"><table class="smap">
+        <thead><tr><th>#</th><th>Step</th><th>Calls</th><th>Uses</th><th>Findings</th></tr></thead>
+        <tbody id="mapBody"></tbody>
+      </table></div>
+      <div id="findings" class="findings"></div>
+    </div>
+  </section>
+
+  <div class="tabbar" role="tablist" aria-label="What to do with the query" id="tabs" hidden>
+    <button type="button" role="tab" id="tabEx" aria-selected="true" aria-controls="paneEx"><span class="tn">Explain it</span><span class="td">A plain-words comment above every step. The code isn&rsquo;t changed.</span></button>
+    <button type="button" role="tab" id="tabCl" aria-selected="false" aria-controls="paneCl"><span class="tn">Clean it up</span><span class="td">Clearer names, fewer steps, parameters. Same result.</span></button>
+  </div>
+
+  <!-- ================= EXPLAIN ================= -->
+  <div id="paneEx" role="tabpanel" aria-labelledby="tabEx" class="pane" hidden>
+    <section class="step" aria-labelledby="e3">
+      <div class="step-num">Step<b>3</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="e3">Copy the prompt into Copilot</h2>
+          <p>Choose who the comments are for, then paste the prompt into Copilot and send it.</p>
+        </div>
+        <div class="opts">
+          <span class="seg" role="radiogroup" aria-label="Audience">
+            <label><input type="radio" name="aud" value="business"><span>Report authors</span></label>
+            <label><input type="radio" name="aud" value="mixed" checked><span>People who maintain it</span></label>
+          </span>
+        </div>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">Prompt for Copilot</span><span class="r"><span class="count" id="exCount"></span><button class="btn primary" type="button" data-copy="exPrompt">Copy prompt</button></span></div>
+          <pre class="short" id="exPromptView"></pre>
+        </div>
+        <div id="exLong"></div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="e4">
+      <div class="step-num">Step<b>4</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="e4">Paste Copilot&rsquo;s reply</h2>
+          <p>Paste the whole reply. The comments go above each step; the code itself stays exactly as it is.</p>
+        </div>
+        <textarea id="exReply" class="mid" spellcheck="false" aria-label="Copilot reply" placeholder="Paste Copilot's reply here"></textarea>
+        <div id="exMsg"></div>
+        <div id="exMore" class="more" hidden>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">Follow-up prompt for the missing steps</span><span class="r"><button class="btn primary" type="button" data-copy="exFollow">Copy follow-up</button></span></div>
+            <pre class="short" id="exFollowView"></pre>
+          </div>
+          <label class="lab" for="exAdd">Paste the follow-up reply <span class="hint">It&rsquo;s added to the comments you already have.</span></label>
+          <textarea id="exAdd" class="mid" spellcheck="false" placeholder="Paste the follow-up reply here"></textarea>
+        </div>
+        <div id="exOut" hidden>
+          <div class="opts">
+            <label><input type="checkbox" id="exNotes" checked> Include notes about risky steps</label>
+            <label><input type="checkbox" id="exSummary" checked> Add the summary at the top</label>
+          </div>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">Commented query</span><span class="r"><button class="btn primary" type="button" data-copy="commented">Copy query</button></span></div>
+            <pre class="tall" id="commentedView"></pre>
+          </div>
+          <div class="apply">
+            <b>Put it back in Power BI</b>
+            <ol>
+              <li>Open the same query&rsquo;s <b>Advanced Editor</b>, press <b>Ctrl+A</b> and paste.</li>
+              <li>Select <b>Done</b>. Only <code>//</code> comment lines were added, so the data doesn&rsquo;t change.</li>
+              <li>The comment above each step also shows as its tooltip in <b>Applied Steps</b>.</li>
+            </ol>
+          </div>
+          <div id="exSumBox"></div>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Step</th><th>What it does</th></tr></thead>
+            <tbody id="exBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= CLEAN UP ================= -->
+  <div id="paneCl" role="tabpanel" aria-labelledby="tabCl" class="pane" hidden>
+    <section class="step" aria-labelledby="c3">
+      <div class="step-num">Step<b>3</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="c3">Choose the changes and copy the prompt</h2>
+          <p>Copilot is told to keep the result exactly the same. The findings from Step 2 go into the prompt too.</p>
+        </div>
+        <div class="opts" id="clOpts">
+          <label><input type="checkbox" data-opt="rename" checked> Rename default steps</label>
+          <label><input type="checkbox" data-opt="merge" checked> Merge repeated steps</label>
+          <label><input type="checkbox" data-opt="unused" checked> Remove unused steps</label>
+          <label><input type="checkbox" data-opt="params" checked> Use parameters for paths and servers</label>
+          <label><input type="checkbox" data-opt="comments"> Add step comments</label>
+        </div>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">Prompt for Copilot</span><span class="r"><span class="count" id="clCount"></span><button class="btn primary" type="button" data-copy="clPrompt">Copy prompt</button></span></div>
+          <pre class="short" id="clPromptView"></pre>
+        </div>
+        <div id="clLong"></div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="c4">
+      <div class="step-num">Step<b>4</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="c4">Paste Copilot&rsquo;s reply and check it</h2>
+          <p>The cleaned query is compared with yours: step references, the data source, filters and values that disappeared.</p>
+        </div>
+        <textarea id="clReply" class="mid" spellcheck="false" aria-label="Copilot reply" placeholder="Paste Copilot's reply here"></textarea>
+        <div id="clMsg"></div>
+        <div id="clOut" hidden>
+          <div id="clChecks"></div>
+          <div id="clParams"></div>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">Cleaned query</span><span class="r"><button class="btn primary" type="button" data-copy="clean">Copy query</button></span></div>
+            <pre class="tall" id="cleanView"></pre>
+          </div>
+          <details class="extra" id="diffBox">
+            <summary>Compare with the original <span class="muted" id="diffStat"></span></summary>
+            <div class="extra-body"><pre class="tall diff" id="diffView"></pre></div>
+          </details>
+          <div id="clChanges"></div>
+          <div class="apply">
+            <b>Put it back in Power BI</b>
+            <ol>
+              <li>Keep a copy first: right-click the query &gt; <b>Duplicate</b>.</li>
+              <li id="applyParams" hidden>Create the parameters above before you paste.</li>
+              <li>Open the original query&rsquo;s <b>Advanced Editor</b>, press <b>Ctrl+A</b>, paste the cleaned query and select <b>Done</b>.</li>
+              <li>Compare the two: the same columns and types, and the same row count (<b>Transform &gt; Count Rows</b> on each, then delete that step).</li>
+              <li>When they match, delete the duplicate.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  </div>
+  <!-- end one query -->
+
+  <!-- ================= WHOLE MODEL ================= -->
+  <div id="modeModel" role="tabpanel" aria-labelledby="modeModelBtn" class="mode" hidden>
+    <section class="step" aria-labelledby="m1">
+      <div class="step-num">Step<b>1</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="m1">Export every query from Power BI Desktop</h2>
+          <p>This query returns the Power Query code behind every loaded table, plus queries that aren&rsquo;t loaded, functions and parameters.</p>
+        </div>
+        <ol class="how">
+          <li>Open your report in Power BI Desktop and select <b>DAX query view</b> on the left rail.</li>
+          <li>Paste the query below into a new query tab and select <b>Run</b>.</li>
+          <li>Above the results grid, select <b>Copy</b>. It copies every row with the column headers.</li>
+        </ol>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">DAX query</span><span class="r"><button class="btn primary" type="button" data-copy="mExport">Copy query</button></span></div>
+          <pre class="short" id="mExportView"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="m2">
+      <div class="step-num">Step<b>2</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="m2">Paste the results and check every query</h2>
+          <p>These checks run without AI, across all queries at once. To clean up a query, select <b>Open</b> on its row.</p>
+        </div>
+        <textarea id="mInput" class="big" spellcheck="false" aria-label="Query results" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
+        <div id="mMsg"></div>
+        <div id="mCheck" class="mcheck" hidden>
+          <div class="stats" id="mStats"></div>
+          <div id="mFindings" class="findings"></div>
+          <div class="list-head"><h3>Queries</h3><span class="list-actions"><button type="button" class="linkbtn" id="mAllOn">Tick all except functions</button><button type="button" class="linkbtn" id="mAllOff">Untick all</button></span></div>
+          <div id="mFnNote"></div>
+          <div class="tablewrap"><table class="smap mtable">
+            <thead><tr><th class="ck"><span class="sr">Explain</span>Explain</th><th>Query</th><th>Type</th><th>Steps</th><th>Uses</th><th>Used by</th><th>Findings</th><th><span class="sr">Actions</span></th></tr></thead>
+            <tbody id="mBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="m3" id="mStep3" hidden>
+      <div class="step-num">Step<b>3</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="m3">Explain them in batches</h2>
+          <p>Each prompt covers the next few ticked queries that still need comments. Copy it, send it in Copilot, then paste the reply in Step 4. Repeat until the bar is full.</p>
+        </div>
+        <div class="filters">
+          <span class="seg" role="radiogroup" aria-label="Audience">
+            <label><input type="radio" name="maud" value="business"><span>Report authors</span></label>
+            <label><input type="radio" name="maud" value="mixed" checked><span>People who maintain it</span></label>
+          </span>
+          <div class="field"><label for="mBatch">Queries per prompt</label><select id="mBatch"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>8</option></select></div>
+        </div>
+        <div class="progress" id="mProgress"></div>
+        <div id="mQueueMsg"></div>
+        <div class="codebox" id="mPromptBox">
+          <div class="codebox-bar"><span class="t" id="mPromptTitle">Prompt for Copilot</span><span class="r"><span class="count" id="mCount"></span><button class="btn primary" type="button" data-copy="mPrompt">Copy prompt</button></span></div>
+          <pre class="short" id="mPromptView"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="m4" id="mStep4" hidden>
+      <div class="step-num">Step<b>4</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="m4">Paste each reply</h2>
+          <p>Each reply adds to the comments you already have; nothing is replaced. Steps Copilot leaves out go back in the queue.</p>
+        </div>
+        <textarea id="mReply" class="mid" spellcheck="false" aria-label="Copilot reply" placeholder="Paste Copilot's reply here. It's added as soon as you paste."></textarea>
+        <div class="reply-actions"><button type="button" class="btn" id="mAdd">Add reply</button></div>
+        <div id="mReplyMsg"></div>
+        <div id="mResults" class="mresults" hidden>
+          <div class="out-head">
+            <div class="opts">
+              <label><input type="checkbox" id="mNotes" checked> Include notes about risky steps</label>
+              <label><input type="checkbox" id="mSummary" checked> Add each summary at the top</label>
+            </div>
+            <button type="button" class="btn" data-copy="mAll">Copy all as one document</button>
+          </div>
+          <div class="apply">
+            <b>Put the comments back in Power BI</b>
+            <ol>
+              <li>Select <b>Home &gt; Transform data</b>, then for each query: select it, open <b>Advanced Editor</b>, press <b>Ctrl+A</b> and paste its commented code.</li>
+              <li>Select <b>Done</b>. Only <code>//</code> comment lines were added, so the data doesn&rsquo;t change.</li>
+              <li><b>Copy all as one document</b> is for keeping a record; don&rsquo;t paste it into a query.</li>
+            </ol>
+          </div>
+          <div id="mList" class="mlist2"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>Runs in your browser. Nothing is sent anywhere; your entries are saved on this device only.</footer>
+</div>

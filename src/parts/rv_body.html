@@ -1,0 +1,154 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>DAX Reviewer</h1>
+        <p class="lede">Paste a measure and review it against a checklist you control. The page checks what it can on its own; Copilot covers the rest, suggests a rewrite, and the page tests that the rewrite returns the same numbers.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties every box on this page and removes what this page saved in your browser, including your own checklist rules. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste a measure in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> The measure, model, extra rule and Copilot reply are samples. Paste your own measure in Step 1 to start.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Paste the measure</h2>
+        <p>Copy it from the formula bar (<i>Name = ...</i>), from TMDL view, or from a DAX query. The name and any TMDL properties are picked out for you.</p>
+      </div>
+      <div class="field" id="pickWrap" hidden><label for="pickM">Pick a measure from your model</label><select id="pickM"></select></div>
+      <textarea id="mInput" class="big" spellcheck="false" aria-label="Measure" placeholder="Total Sales = SUM ( Sales[Net Amount] )"></textarea>
+      <div class="stats" id="mStats"></div>
+      <details class="extra" id="modelBox">
+        <summary>Add your model export <span class="muted">(optional: pick measures from it, scan them all, and check names)</span></summary>
+        <div class="extra-body">
+          <p class="note">With the model, the page can tell columns from measures, check every name exists, give Copilot the formulas of the measures this one uses, and put the test query in the right table. Use the same export as the other toolkit pages.</p>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+            <pre class="short" id="exportView"></pre>
+          </div>
+          <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+          <div id="modelMsg"></div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Your checklist</h2>
+        <p>Turn rules on or off and set how serious each one is. Rules marked <span class="by page">Page + Copilot</span> are also checked here without AI; your own rules go to Copilot. Your checklist is saved in this browser.</p>
+      </div>
+      <div class="rules" id="rules"></div>
+      <div class="addrule">
+        <h3>Add your own rule</h3>
+        <div class="cfg">
+          <div class="field grow"><label for="nrName">Rule</label><input type="text" id="nrName" placeholder="Percent measures return blank, not 0, when there's nothing to compare"></div>
+          <div class="field"><label for="nrSev">Severity</label><select id="nrSev"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
+        </div>
+        <label class="lab" for="nrCheck">What Copilot should check <span class="hint">Optional. Be specific: what's wrong, and what good looks like.</span></label>
+        <textarea id="nrCheck" class="short-ta" placeholder="Any measure ending in % must return BLANK () when the denominator is blank or 0, so empty rows disappear from visuals."></textarea>
+        <div class="reply-actions"><button type="button" class="btn primary" id="nrAdd">Add rule</button><button type="button" class="linkbtn" id="rulesReset">Reset the built-in rules</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">What the page found</h2>
+        <p>Checked without AI, straight away. Line numbers match the listing below.</p>
+      </div>
+      <div id="autoOut"></div>
+      <details class="extra" id="scanBox" hidden>
+        <summary>Page checks on every measure in the model <span class="muted" id="scanStat"></span></summary>
+        <div class="extra-body">
+          <p class="note">The same checks, run on each measure with your checklist settings. Select <b>Review</b> to load one into Step 1 for the full Copilot review.</p>
+          <div class="field"><input type="text" id="scanFilter" placeholder="Search measures" aria-label="Search measures"></div>
+          <div class="tablewrap scanwrap"><table class="scan"><thead><tr><th>Measure</th><th>Table</th><th>High</th><th>Medium</th><th>Low</th><th>Rules</th><th><span class="sr">Review</span></th></tr></thead><tbody id="scanBody"></tbody></table></div>
+        </div>
+      </details>
+      <div class="codebox">
+        <div class="codebox-bar"><span class="t">The measure</span></div>
+        <pre class="tall numbered" id="codeView"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Ask Copilot for the full review</h2>
+        <p>The prompt carries your whole checklist, what the page already found, and the measures this one uses.</p>
+      </div>
+      <label class="lab" for="notes">Anything Copilot should know <span class="hint">Optional. What the measure is for, or a result you expect.</span></label>
+      <textarea id="notes" class="short-ta" placeholder="Used on the sales overview page, broken down by region and month."></textarea>
+      <div class="opts"><label><input type="checkbox" id="wantRewrite" checked> Ask for a rewrite that returns the same results</label></div>
+      <div class="codebox">
+        <div class="codebox-bar"><span class="t">Prompt for Copilot</span><span class="r"><span class="count" id="pCount"></span><button class="btn primary" type="button" data-copy="prompt">Copy prompt</button></span></div>
+        <pre class="short" id="promptView"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 5 -->
+  <section class="step" aria-labelledby="s5">
+    <div class="step-num">Step<b>5</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s5">Paste Copilot&rsquo;s reply</h2>
+        <p>The page merges Copilot&rsquo;s findings with its own, then checks the rewrite.</p>
+      </div>
+      <textarea id="reply" class="mid" spellcheck="false" aria-label="Copilot reply" placeholder="Paste Copilot's reply here"></textarea>
+      <div id="replyMsg"></div>
+      <div id="report" class="report" hidden>
+        <div class="out-head"><h3>Review</h3><button type="button" class="btn" data-copy="report">Copy review as text</button></div>
+        <div id="summary"></div>
+        <div id="findings"></div>
+        <div id="rewriteBox" hidden>
+          <h3>Rewrite</h3>
+          <div id="rwChecks"></div>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">Rewritten measure</span><span class="r"><button class="btn primary" type="button" data-copy="rewrite">Copy</button></span></div>
+            <pre class="tall" id="rwView"></pre>
+          </div>
+          <div id="rwChanges"></div>
+          <details class="extra"><summary>Compare with the original <span class="muted" id="diffStat"></span></summary><div class="extra-body"><pre class="tall diff" id="diffView"></pre></div></details>
+          <h3>Test it before you change anything</h3>
+          <p class="note">This DAX query runs the original and the rewrite side by side without changing your model. <b>Same</b> should be TRUE everywhere.</p>
+          <div class="cfg">
+            <div class="field"><label for="tTable">Table for the test measures</label><input type="text" id="tTable" list="tableList" autocomplete="off"></div>
+            <div class="field grow"><label for="tBy">Compare row by row, by <span class="muted">(optional)</span></label><input type="text" id="tBy" list="colList" autocomplete="off" placeholder="'Date'[Year]"></div>
+            <datalist id="tableList"></datalist><datalist id="colList"></datalist>
+          </div>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: compare</span><span class="r"><button class="btn primary" type="button" data-copy="compare">Copy query</button></span></div>
+            <pre class="short" id="cmpView"></pre>
+          </div>
+          <details class="extra" id="saveBox"><summary>Replace the measure with the rewrite</summary><div class="extra-body">
+            <p class="note">Only once the test shows the same numbers. Run this in DAX query view and select <b>Update model with changes</b>. The format string, folder and description stay as they are. Undo with Ctrl+Z if needed.</p>
+            <div id="saveMsg"></div>
+            <div class="codebox"><div class="codebox-bar"><span class="t">DAX query: update the measure</span><span class="r"><button class="btn primary" type="button" data-copy="save">Copy query</button></span></div><pre class="short" id="saveView"></pre></div>
+          </div></details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your measure, checklist and inputs are saved only in this browser.</footer>
+</div>

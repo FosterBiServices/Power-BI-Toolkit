@@ -1,0 +1,34 @@
+Kind	Table	Name	Type	Folder	Flags	Description	Expression	ToTable	ToColumn
+Column	Customer	CustomerKey	Int64		hidden key				
+Column	Customer	Customer Name	String						
+Column	Customer	Segment	String			Consumer, Corporate or Home Office			
+Column	Customer	Region	String						
+Column	Date	Date	DateTime		key				
+Column	Date	Fiscal Year	String			Fiscal year starts 1 July			
+Column	Date	Month	String						
+Column	Date	Month Number	Int64		hidden				
+Column	Date	Year	Int64						
+Column	Product	Category	String						
+Column	Product	Product Name	String						
+Column	Product	ProductKey	Int64		hidden key				
+Column	Product	Unit Cost	Decimal		hidden				
+Column	Product	Launch Date	DateTime			Date the product went on sale			
+Column	Sales	CustomerKey	Int64		hidden				
+Column	Sales	Net Amount	Decimal			Invoiced amount after discounts, before tax			
+Column	Sales	Order Date	DateTime		hidden				
+Column	Sales	Order Number	String						
+Column	Sales	ProductKey	Int64		hidden				
+Column	Sales	Quantity	Int64						
+Column	Sales	Return Flag	Boolean			TRUE when the line is a customer return			
+Column	Sales	Total Cost	Decimal						
+Measure	_Measures	Order Count	#,0	Core			DISTINCTCOUNT ( Sales[Order Number] )		
+Measure	_Measures	Total Cost	\$#,0	Core			SUM ( Sales[Total Cost] )		
+Measure	_Measures	Total Sales	\$#,0	Core		Net sales after discounts	SUM ( Sales[Net Amount] )		
+Relationship	Sales	CustomerKey	Many:One		OneDirection			Customer	CustomerKey
+Relationship	Sales	Order Date	Many:One		OneDirection			Date	Date
+Relationship	Sales	ProductKey	Many:One		OneDirection			Product	ProductKey
+Table	Customer	Customer							
+Table	Date	Date	Time						
+Table	Product	Product							
+Table	Sales	Sales				One row per order line			
+Table	_Measures	_Measures							

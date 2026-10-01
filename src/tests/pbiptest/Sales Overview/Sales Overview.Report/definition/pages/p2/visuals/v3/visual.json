@@ -1,0 +1,1 @@
+{"name": "v3", "visual": {"visualType": "tableEx", "query": {"queryState": {"Values": {"projections": [{"field": {"Column": {"Expression": {"SourceRef": {"Entity": "Product"}}, "Property": "Category"}}}, {"field": {"Column": {"Expression": {"SourceRef": {"Entity": "Product"}}, "Property": "Product Name"}}}]}}}}}

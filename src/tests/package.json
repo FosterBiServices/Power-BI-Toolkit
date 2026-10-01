@@ -1,0 +1,7 @@
+{
+  "name": "sf-powerbi-toolkit-tests",
+  "private": true,
+  "description": "Browser checks for the SF Power BI Toolkit pages",
+  "scripts": { "test": "node run.js" },
+  "devDependencies": { "playwright": "^1.47.0" }
+}

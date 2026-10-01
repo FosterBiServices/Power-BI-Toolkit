@@ -1,0 +1,111 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>RLS Role Generator</h1>
+        <p class="lede">Describe who should see which rows, and get the TMDL script that adds the row-level security roles to your model, a query that tests them, and a check of which tables each role actually restricts. No AI needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties the model export and the roles you&rsquo;ve set up, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste your model export in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> The model and the three roles are samples. Paste your own model export in Step 1 to start.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Your model export</h2>
+        <p>The page lists your tables and columns from it, checks every name, and follows your relationships to see where each role&rsquo;s filter reaches.</p>
+      </div>
+      <details class="extra" id="modelBox">
+        <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+        <div class="extra-body">
+          <ol class="how">
+            <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+            <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+          </ol>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+            <pre class="short" id="exportView"></pre>
+          </div>
+        </div>
+      </details>
+      <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+      <div class="stats" id="modelStats"></div>
+      <div id="modelMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Set up the roles</h2>
+        <p>Each role is a group of people who see the same slice of data. Add rules to say which rows they see; rules on different tables all apply. A role with no rules sees everything.</p>
+      </div>
+      <details class="extra">
+        <summary>Which kind of rule?</summary>
+        <div class="extra-body">
+          <ul class="kinds">
+            <li><b>Fixed values:</b> everyone in the role sees the same rows, such as Region is West. One role per region, team or country.</li>
+            <li><b>User&rsquo;s own rows:</b> a column holds each person&rsquo;s sign-in email (a sales rep on each customer, say), and people see the rows with their email. One role covers everyone.</li>
+            <li><b>Access table:</b> a separate table lists who may see what (Email and Region, one row per pair). One role covers everyone, and access changes by editing the table, not the model.</li>
+            <li><b>Custom DAX:</b> any TRUE/FALSE expression for each row of a table. <code>FALSE ()</code> hides the whole table from the role.</li>
+          </ul>
+        </div>
+      </details>
+      <div id="roles"></div>
+      <div class="reply-actions"><button type="button" class="btn" id="addRole">+ Add a role</button></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Script and test</h2>
+        <p>Add the roles in TMDL view, check them with the test query, then assign people in the Power BI service.</p>
+      </div>
+      <div id="outMsg"></div>
+      <div id="outBox">
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">TMDL script: roles</span><span class="r"><button class="btn primary" type="button" data-copy="tmdl">Copy script</button></span></div>
+          <pre id="tmdlView"></pre>
+        </div>
+        <div class="apply">
+          <h3>Add the roles</h3>
+          <ol>
+            <li>Save a copy of the report first. In Power BI Desktop, open <b>TMDL view</b>, paste the script into a new tab and select <b>Apply</b>. A role with the same name is replaced.</li>
+            <li>Check each role with <b>Modeling</b> &gt; <b>View as</b>. For user-based rules, tick <b>Other user</b> and type a person&rsquo;s sign-in email.</li>
+          </ol>
+        </div>
+        <div class="field"><label for="testUser">Test as <span class="muted">(sign-in email used in place of USERPRINCIPALNAME in the test query)</span></label><input type="email" id="testUser" autocomplete="off" spellcheck="false" placeholder="someone@contoso.com"></div>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">DAX query: rows each role sees</span><span class="r"><button class="btn" type="button" data-copy="test">Copy query</button></span></div>
+          <pre class="short" id="testView"></pre>
+        </div>
+        <div class="apply">
+          <h3>After you publish</h3>
+          <ol>
+            <li>In the Power BI service, open the semantic model&rsquo;s <b>&hellip;</b> menu &gt; <b>Security</b>, pick each role and add people or security groups. Groups are easier to keep up to date.</li>
+            <li>Roles only restrict people with the <b>Viewer</b> role in the workspace, or who get the report through an app or a share. Workspace Admins, Members and Contributors see all the data.</li>
+            <li>Use <b>Test as role</b> on the same Security page to check a real person&rsquo;s view before you tell people the report is ready.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="lists"></div>
+
+  <footer>Everything runs in this page. Your model export and roles are saved only in this browser.</footer>
+</div>

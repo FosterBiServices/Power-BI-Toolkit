@@ -1,0 +1,148 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Time Intelligence Builder</h1>
+        <p class="lede">Pick your date table and the calculations you need (year to date, last year, growth, rolling 12 months and more) and get them as TMDL: measures for the measures you choose, or one calculation group that works with every measure. No AI needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties the model export and your choices, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste your model export in Step 1 to start again.</div>
+    <div class="dest" id="destBox" role="group" aria-labelledby="destLbl">
+      <span class="lbl" id="destLbl">Where new measures go</span>
+      <div class="field"><label for="target">Home table</label><input type="text" id="target" list="destTables" spellcheck="false" autocomplete="off"></div>
+      <div class="field"><label for="folder">Display folder <span class="muted">(use \ for subfolders)</span></label><input type="text" id="folder" list="destFolders" spellcheck="false" autocomplete="off" style="width:240px"></div>
+      <div class="field"><label for="folderMode">Arrange</label><select id="folderMode"><option value="fixed">All in this folder</option><option value="perMeasure">A subfolder per measure</option><option value="under">Inside each measure&rsquo;s own folder</option></select></div>
+      <span class="small muted dest-hint" id="destHint"></span>
+      <datalist id="destTables"></datalist><datalist id="destFolders"></datalist>
+    </div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> The model and the picked measures and calculations are samples. Paste your own model export in Step 1 to start.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Your model export</h2>
+        <p>The page finds your date table and measures in it and checks every name, so the script only refers to things that exist.</p>
+      </div>
+      <details class="extra" id="modelBox">
+        <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+        <div class="extra-body">
+          <ol class="how">
+            <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+            <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+          </ol>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+            <pre class="short" id="exportView"></pre>
+          </div>
+        </div>
+      </details>
+      <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+      <div class="stats" id="modelStats"></div>
+      <div id="modelMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Your dates</h2>
+        <p>Time intelligence needs a date table with one row per day, related to your facts. The Date Table Generator can build one.</p>
+      </div>
+      <div class="cfg">
+        <div class="field"><label for="dTable">Date table</label><select id="dTable"></select></div>
+        <div class="field"><label for="dCol">Date column</label><select id="dCol"></select></div>
+        <div class="field"><label for="fyEnd">Year ends in</label><select id="fyEnd"></select></div>
+      </div>
+      <div class="opts"><label><input type="checkbox" id="hideFuture"> Show blank for dates after today <span class="hint">(stops last-year and year-to-date lines running on past today)</span></label></div>
+      <div id="dateMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Choose the calculations</h2>
+        <p>Tick the calculations you want and rename them if you like. Percent calculations get the percent format; the others keep each measure&rsquo;s own format.</p>
+      </div>
+      <div class="tabbar" role="radiogroup" aria-label="Output">
+        <button type="button" role="radio" id="outMeasures" aria-checked="true"><span class="tn">Measures</span><span class="td">One measure per measure and calculation, e.g. <i>Total Sales YTD</i>. Simple, and each can be used anywhere.</span></button>
+        <button type="button" role="radio" id="outGroup" aria-checked="false"><span class="tn">Calculation group</span><span class="td">One small table that applies each calculation to whatever measure is in the visual. Nothing to add when you add measures.</span></button>
+      </div>
+      <div class="calcs" id="calcs"></div>
+      <div class="cfg"><div class="field"><label for="pctFormat">Percent format</label><input type="text" id="pctFormat" autocomplete="off" placeholder="0.0%"></div></div>
+
+      <div class="only-measures sub">
+        <h3>Measures to build on</h3>
+        <div class="picker2">
+          <div class="pane-l">
+            <input type="text" id="search" class="search" placeholder="Search measures" aria-label="Search measures" autocomplete="off">
+            <div class="mlist" id="mList" role="group" aria-label="Measures"></div>
+          </div>
+          <div class="pane-r">
+            <div class="cfg col">
+              <div class="field"><label for="namePattern">Names</label><select id="namePattern"><option value="suffix">Measure, then calculation (Total Sales YTD)</option><option value="prefix">Calculation, then measure (YTD Total Sales)</option></select></div>
+            </div>
+            <p class="small" id="planInfo"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="only-group sub" hidden>
+        <div class="cfg">
+          <div class="field"><label for="gTable">Table name</label><input type="text" id="gTable" autocomplete="off" placeholder="Time Intelligence"></div>
+          <div class="field"><label for="gCol">Column name <span class="muted">(what the slicer shows)</span></label><input type="text" id="gCol" autocomplete="off" placeholder="Show as"></div>
+          <div class="field"><label for="prec">Precedence</label><input type="number" id="prec" min="0" step="1"></div>
+        </div>
+        <p class="note">A <b>Current</b> item (the measure unchanged) is always added first, so the slicer can go back to plain values. Precedence only matters if you have other calculation groups: the higher number is applied first.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Test, then add it to your model</h2>
+        <p>Checks run as you go. Run the test query to compare a few numbers with a visual, then apply the TMDL script.</p>
+      </div>
+      <div id="checks"></div>
+      <div id="outBox">
+        <div class="cfg">
+          <div class="field"><label for="testBy">Test query rows by</label><select id="testBy"></select></div>
+          <div class="field only-group"><label for="testMeasure">Test with measure</label><select id="testMeasure"></select></div>
+        </div>
+        <div id="testPart" class="part">
+        <h3 id="testTitle">1. Test</h3>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">DAX query: test</span><span class="r"><button class="btn primary" type="button" data-copy="test">Copy query</button></span></div>
+          <pre class="short" id="testView"></pre>
+        </div>
+        </div>
+        <div id="tmdlPart" class="part">
+        <h3 id="tmdlH">2. Add to the model <span class="muted">(TMDL view)</span></h3>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t" id="tmdlTitle">TMDL script</span><span class="r"><span class="count" id="tmdlCount"></span><button class="btn primary" type="button" data-copy="tmdl">Copy script</button></span></div>
+          <pre class="tall" id="tmdlView"></pre>
+        </div>
+        </div>
+        <div class="apply"><ol id="applySteps"></ol></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your model export and choices are saved only in this browser.</footer>
+</div>

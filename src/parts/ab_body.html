@@ -1,0 +1,159 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>About This Report</h1>
+        <p class="lede">Suggestions for a report&rsquo;s About page: which parts to include, why each one helps readers, and a first draft of each in plain language, taken from your model. You choose and edit; the text is yours. No technical details apart from data sources. An HTML measure is an optional extra at the end.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties the model export, data sources, report pages, your answers and every edited draft, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste your model export in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> The suggestions come from a sample customers and sales model. Paste your own model export in Step 1 to get suggestions for your report.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Your model</h2>
+        <p>The suggestions are built from measure names and descriptions, the things readers slice by, and where the data comes from. Nothing about your data values.</p>
+      </div>
+      <details class="extra" id="modelBox">
+        <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+        <div class="extra-body">
+          <ol class="how">
+            <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+            <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+          </ol>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+            <pre class="short" id="exportView"></pre>
+          </div>
+        </div>
+      </details>
+      <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+      <div class="stats" id="modelStats"></div>
+      <div id="modelMsg"></div>
+
+      <div class="more2">
+        <div class="addbox">
+          <h3>Data sources <span class="muted">(optional, recommended)</span></h3>
+          <p class="note small">The model export doesn&rsquo;t say where tables are loaded from. This second query reads the Power Query behind each table so the sources can be named for you.</p>
+          <details class="extra" id="srcBox">
+            <summary>The data sources query</summary>
+            <div class="extra-body">
+              <ol class="how"><li>Open a new tab in DAX query view, paste this query and select <b>Run</b>.</li><li>Select <b>Copy</b> above the results grid, then paste below.</li></ol>
+              <div class="codebox">
+                <div class="codebox-bar"><span class="t">DAX query: data sources</span><span class="r"><button class="btn primary" type="button" data-copy="sources">Copy query</button></span></div>
+                <pre class="short" id="sourcesView"></pre>
+              </div>
+            </div>
+          </details>
+          <textarea id="srcInput" class="short" spellcheck="false" aria-label="Data sources query results" placeholder="Paste the data sources results here (optional)"></textarea>
+          <div id="srcMsg"></div>
+        </div>
+        <div class="addbox">
+          <h3>Report pages <span class="muted">(optional)</span></h3>
+          <p class="note small">For a report saved as a Power BI Project (<b>.pbip</b>): the page names and slicers feed the tips, and measures on more visuals rank higher as key measures. If the folder includes the semantic model, data sources are read from it too. Files are read on this page; nothing is uploaded.</p>
+          <span class="btns"><button type="button" class="btn" id="pickReport">Choose a PBIP folder</button><button type="button" class="btn" id="clearReport" hidden>Remove</button></span>
+          <div class="drop" id="repDrop">or drop the folder here</div>
+          <input type="file" id="repInput" webkitdirectory multiple hidden>
+          <div id="repMsg"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">What the model can&rsquo;t tell</h2>
+        <p>A few answers only you know. Each one improves the drafts in Step 3; leave any of them blank.</p>
+      </div>
+      <div class="basics">
+        <div class="field wide"><label for="bName">Report name</label><input type="text" id="bName" class="txt" placeholder="for example Sales Overview"></div>
+        <div class="field wide"><label>Who reads it <span class="muted">(select all that apply)</span></label>
+          <div class="chips" id="audChips"></div>
+          <div class="addaud"><input type="text" id="audAdd" class="txt" placeholder="Add another group, then press Enter"><button type="button" class="btn small" id="audAddBtn">Add</button></div>
+        </div>
+        <div class="field"><label for="bOwner">Owner <span class="muted">(person or team)</span></label><input type="text" id="bOwner" class="txt" placeholder="for example Sales Analytics team"></div>
+        <div class="field"><label for="bContact">Contact for questions</label><input type="text" id="bContact" class="txt" placeholder="email, Teams channel or link"></div>
+        <div class="field"><label for="bFreq">How often the data refreshes</label>
+          <select id="bFreq"><option value="">Not sure yet</option><option value="hourly">Every hour</option><option value="intraday">Several times a day</option><option value="daily">Daily</option><option value="weekday">Every weekday</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="manual">On request</option><option value="live">Live (DirectQuery)</option></select></div>
+        <div class="field"><label for="bTime">At <span class="muted">(optional)</span></label><input type="text" id="bTime" class="txt" placeholder="for example 6:00 AM"></div>
+      </div>
+      <p class="note small" id="refreshHint" hidden></p>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Choose what to include</h2>
+        <p>Each part says why it helps. Tick the ones you want, then edit the draft or pick another suggestion. Drafts update from Steps 1 and 2 until you edit them.</p>
+      </div>
+      <div class="sum-bar" id="secBar"></div>
+      <div class="secs" id="secs"></div>
+
+      <details class="extra" id="aiBox">
+        <summary>Polish the wording with Copilot <span class="muted">(optional)</span></summary>
+        <div class="extra-body">
+          <p class="note">Copilot can smooth the summary, business value and questions. The prompt holds only the plain-language facts above (names, meanings, sources), no DAX. It asks Copilot not to invent anything and to list what it couldn&rsquo;t tell. You choose which parts of the reply to use.</p>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">Prompt for Copilot</span><span class="r"><button class="btn primary" type="button" id="copyPrompt">Copy prompt</button></span></div>
+            <pre class="short" id="promptView"></pre>
+          </div>
+          <textarea id="aiInput" class="short" spellcheck="false" aria-label="Copilot reply" placeholder="Paste Copilot's reply here (the JSON)"></textarea>
+          <div id="aiOut"></div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Your About text</h2>
+        <p>Paste it into a text box on an About page, a report description, or a SharePoint or Teams page. Read it through once: suggestions are a starting point, and AI can make mistakes.</p>
+      </div>
+      <div class="out-bar"><span class="muted small" id="outCount"></span><span class="btns"><button type="button" class="btn primary" id="copyText">Copy text</button><button type="button" class="btn" id="copyMd">Copy Markdown</button></span></div>
+      <div class="about" id="preview"></div>
+
+      <details class="extra" id="htmlBox">
+        <summary>HTML measure <span class="muted">(optional)</span></summary>
+        <div class="extra-body">
+          <p class="note">For an HTML content visual from AppSource. The text above stays the source of truth: edit it there, then copy the measure again. A measure is harder to review and edit than a text box, so use it when you want the About page styled or the last refresh shown live.</p>
+          <div class="hgrid2">
+            <div class="field"><label for="hName">Measure name</label><input type="text" id="hName" class="txt"></div>
+            <div class="field"><label for="hTable">Home table</label><input type="text" id="hTable" class="txt" list="tableList"><datalist id="tableList"></datalist></div>
+            <div class="field"><label for="hFolder">Display folder <span class="muted">(optional)</span></label><input type="text" id="hFolder" class="txt"></div>
+            <div class="field"><label for="hFont">Font size (px)</label><input type="number" id="hFont" min="10" max="28" step="1"></div>
+            <div class="field"><label for="hAccent">Heading color</label><span class="colrow"><input type="color" id="hAccentPick"><input type="text" id="hAccent" class="txt" maxlength="7"></span></div>
+            <div class="field"><label for="hRefresh">Show last refresh from</label><select id="hRefresh"></select></div>
+          </div>
+          <label class="opts"><span><input type="checkbox" id="hTitle"> Show the report name as a title</span></label>
+          <div class="about html-prev" id="htmlPrev"></div>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">TMDL: paste in TMDL view, then Apply</span><span class="r"><button class="btn" type="button" id="copyDax">Copy DAX only</button><button class="btn primary" type="button" id="copyTmdl">Copy TMDL</button></span></div>
+            <pre class="short" id="tmdlView"></pre>
+          </div>
+          <p class="note small">The DAX-only copy is for <b>New measure</b> in Power BI Desktop. The measure replaces any measure with the same name in that table.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your model export is saved only in this browser.</footer>
+</div>

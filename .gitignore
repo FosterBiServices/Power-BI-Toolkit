@@ -1,0 +1,10 @@
+# test tooling and output (src/tests)
+node_modules/
+src/tests/*.png
+src/tests/*.pptx
+src/tests/*.zip
+src/tests/*.svg
+src/tests/ab_tmdl.txt
+src/tests/dl_*
+src/tests/lo_dl_*
+__pycache__/

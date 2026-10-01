@@ -1,0 +1,108 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Power Query Writer</h1>
+        <p class="lede">Say what the query should do and get a Copilot prompt that writes it: working first time, easy to maintain and as short as possible, with one-word step names, short comments only where needed, and formatting in the style of powerqueryformatter.com. Then paste Copilot&rsquo;s reply here to check it before it goes into Power BI.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties the request, source details, columns, parameters and Copilot&rsquo;s reply, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Describe your query in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> A sales lines query from a SQL data warehouse, with Copilot&rsquo;s reply already checked. Type your own request in Step 1 to start yours.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">What should the query do?</h2>
+        <p>In plain words: which rows to keep, which columns, what to add or combine, and anything to watch out for.</p>
+      </div>
+      <textarea id="goal" class="req" aria-label="What the query should do" placeholder="For example: sales lines from 2023 onwards without cancelled orders; keep order, customer, product and amount; add a Year column; bring in the customer's region from the Customers query."></textarea>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Where the data comes from</h2>
+        <p>The more Copilot knows about the starting point, the less it guesses.</p>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="Starting point"><label><input type="radio" name="start" value="new"><span>A new query</span></label><label><input type="radio" name="start" value="existing"><span>Build on an existing query</span></label></div>
+      <div id="newBox" class="grid2">
+        <div class="field"><label for="source">Source</label><select id="source"></select></div>
+        <div class="field"><label for="sourceDetail">Details</label><input type="text" id="sourceDetail" class="txt"></div>
+      </div>
+      <div id="existingBox" hidden>
+        <textarea id="existing" class="mid" spellcheck="false" aria-label="Existing query" placeholder="Paste the query from the Advanced Editor (Home > Advanced Editor), starting with let"></textarea>
+        <div id="existingMsg"></div>
+      </div>
+
+      <h3 class="sub">The columns at the start <span class="muted">(strongly recommended)</span></h3>
+      <p class="note small">In the Power Query preview, select the table icon at the top left of the grid, then <b>Copy Entire Table</b>, and paste the header and a few rows. Or type the names, one per line. Copilot then uses your exact column names, and the reply is checked against them.</p>
+      <textarea id="columns" class="short" spellcheck="false" aria-label="Columns" placeholder="Paste the header row and a few rows, or one column name per line"></textarea>
+      <div class="chips" id="colChips"></div>
+
+      <details class="extra" id="moreBox">
+        <summary>Other queries, parameters and culture <span class="muted">(optional)</span></summary>
+        <div class="extra-body">
+          <label class="lab" for="merges">Other queries it may merge or append with <span class="hint">One per line: Query name: column, column</span></label>
+          <textarea id="merges" class="short" spellcheck="false" placeholder="Customers: CustomerKey, CustomerName, Region"></textarea>
+          <label class="lab" for="params">Parameters that already exist <span class="hint">One per line: Name = value</span></label>
+          <textarea id="params" class="short" spellcheck="false" placeholder="ServerName = &quot;sql-prod&quot;"></textarea>
+          <div class="field"><label for="culture">Culture for types and dates <span class="muted">(if the source isn&rsquo;t in your own format, for example en-GB)</span></label><input type="text" id="culture" class="txt" placeholder="for example en-US"></div>
+          <label class="opts"><span><input type="checkbox" id="makeParams"> Use parameters for servers, databases, file paths and URLs</span></label>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Send the prompt to Copilot</h2>
+        <p>Copy it into Copilot, or download it as a file and attach it. It asks for one reply in a set format the page can check.</p>
+      </div>
+      <div class="codebox">
+        <div class="codebox-bar"><span class="t" id="promptTitle">Prompt for Copilot</span><span class="r"><button class="btn primary" type="button" data-copy="prompt">Copy prompt</button></span></div>
+        <pre class="tall" id="pwPromptView" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+      </div>
+      <div id="promptMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Paste Copilot&rsquo;s reply</h2>
+        <p>The query is read and checked here: step references, the naming rule, repeated steps, column names, parameters and formatting.</p>
+      </div>
+      <textarea id="pwReply" class="mid" spellcheck="false" aria-label="Copilot's reply" placeholder="Paste Copilot's whole reply here"></textarea>
+      <div id="replyMsg"></div>
+      <div id="result" class="result" hidden>
+        <ul class="flist" id="checkList"></ul>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">The query: paste into Home &gt; Advanced Editor</span><span class="r"><a class="btn" href="https://www.powerqueryformatter.com/" target="_blank" rel="noopener">powerqueryformatter.com</a><button class="btn primary" type="button" data-copy="query">Copy query</button></span></div>
+          <pre class="tall" id="queryView"></pre>
+        </div>
+        <div id="stepsBox"></div>
+        <div id="paramsBox"></div>
+        <div id="questionsBox"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your entries are saved only in this browser.</footer>
+</div>

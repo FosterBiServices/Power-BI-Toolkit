@@ -1,0 +1,107 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Model Documenter</h1>
+        <p class="lede">Turn a Power BI project into one HTML document: tables, measures, lineage, relationships, sources, model checks and report pages. It reads your PBIP folder right here in the browser, or works from the saved model export.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This unloads the project, empties the export box and resets the options on this page. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Choose a folder or paste an export in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> A sample customers and sales project is documented below. Choose your own project folder or use your model export in Step 1.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Choose what to document</h2>
+        <p>A PBIP project folder gives the full document. The model export needs no files, but has no Power Query, data sources or report pages.</p>
+      </div>
+      <div class="tabbar" role="tablist" aria-label="Source">
+        <button type="button" role="tab" id="tabFolder" aria-controls="paneFolder" aria-selected="true"><span class="tn">PBIP project folder</span><span class="td">Everything, including Power Query, sources and report pages</span></button>
+        <button type="button" role="tab" id="tabExport" aria-controls="paneExport" aria-selected="false"><span class="tn">Saved model export</span><span class="td">Tables, measures, relationships, lineage and checks</span></button>
+      </div>
+
+      <div class="pane" id="paneFolder" role="tabpanel" aria-labelledby="tabFolder">
+        <div class="drop" id="drop">
+          <button type="button" class="btn primary" id="pickFolder">Choose a folder</button>
+          <span class="muted">or drop the project folder here</span>
+          <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
+        </div>
+        <p class="note">Choose the folder that holds your <b>.pbip</b> file, or a <b>.SemanticModel</b> folder. The project must be saved as a Power BI Project (PBIP) with the TMDL format. The files are read on this page and never leave your computer, even if the browser&rsquo;s prompt says &ldquo;upload&rdquo;.</p>
+        <div class="field" id="projWrap" hidden><label for="projPick">This folder has more than one model or report. Document:</label><select id="projPick"></select></div>
+        <div id="folderMsg"></div>
+      </div>
+
+      <div class="pane" id="paneExport" role="tabpanel" aria-labelledby="tabExport" hidden>
+        <details class="extra" id="exportHow">
+          <summary>How to get the model export <span class="muted">(the same query as the other toolkit pages)</span></summary>
+          <div class="extra-body">
+            <ol class="how">
+              <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+              <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+            </ol>
+            <div class="codebox">
+              <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+              <pre class="short" id="exportView"></pre>
+            </div>
+          </div>
+        </details>
+        <div class="field"><label for="exName">Model name <span class="muted">(shown in the document title)</span></label><input type="text" id="exName" placeholder="Sales model" autocomplete="off"></div>
+        <textarea id="exInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+        <div id="exportMsg"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Choose what goes in</h2>
+        <p>Business documentation keeps formulas and technical detail out. Developer documentation includes everything. Change any box to make your own mix.</p>
+      </div>
+      <div class="field"><label for="preset">Documentation type</label>
+        <select id="preset"><option>Business Documentation</option><option>Developer Documentation</option><option>Custom</option></select></div>
+      <div class="opts-grid" id="opts">
+        <label><input type="checkbox" data-opt="include_report"> Report pages and visual usage <span class="hint" data-only="folder">needs a PBIP folder</span></label>
+        <label><input type="checkbox" data-opt="include_dax"> DAX formulas</label>
+        <label><input type="checkbox" data-opt="include_power_query"> Power Query <span class="hint" data-only="folder">needs a PBIP folder</span></label>
+        <label><input type="checkbox" data-opt="include_hidden"> Hidden tables, columns and measures</label>
+        <label><input type="checkbox" data-opt="include_measures_tables"> Measures tables (tables that only hold measures)</label>
+        <label><input type="checkbox" data-opt="show_auto_date_tables"> Auto date tables in the diagram</label>
+      </div>
+      <p class="note">Model checks are included in Developer and Custom documentation. Passwords, tokens and keys in connection strings are replaced with [REDACTED].</p>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Preview and download</h2>
+        <p>The document is a single HTML file: open it in any browser, share it, or print it to PDF.</p>
+      </div>
+      <div id="outWait" class="msg info">Choose a project folder or paste a model export in Step 1.</div>
+      <div id="outBox" hidden>
+        <div class="stats" id="outStats"></div>
+        <div class="out-head">
+          <span class="fname" id="fileName"></span>
+          <span class="btns"><button type="button" class="btn" id="openTab">Open in a new tab</button><button type="button" class="btn primary" id="download">Download HTML</button></span>
+        </div>
+        <iframe id="preview" title="Documentation preview" sandbox="allow-scripts"></iframe>
+      </div>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your project files and model export stay on your computer.</footer>
+</div>

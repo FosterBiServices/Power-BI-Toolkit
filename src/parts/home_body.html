@@ -1,0 +1,104 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>SF Power BI Toolkit</h1>
+        <p class="lede">Tools for designing, building and checking Power BI reports and models, with or without Copilot. Some work on their own; the rest read your model once you export it below.</p>
+      </div>
+    </div>
+  </header>
+
+  <nav class="paths" aria-label="Two ways to start">
+    <a class="path" href="#freeH"><span class="pn">No model needed</span><span class="pd">Themes, layouts, date tables, Power Query and DAX reviews. Open and start.</span></a>
+    <a class="path" href="#modelH"><span class="pn">Uses your model</span><span class="pd">Export your model once in two steps, then every tool below picks it up.</span></a>
+  </nav>
+
+  <div class="msg warn disc-top" role="note"><b>Check everything before you use it.</b> AI can make mistakes, and generated output can be wrong. The toolkit is provided as is, without warranty, and you use it at your own risk. <a href="#disclaimer">Read the full disclaimer</a>.</div>
+
+  <section class="tools-sec" aria-labelledby="freeH">
+    <h2 id="freeH">Start right away: no model needed</h2>
+    <p class="muted">These tools work on their own. Tools marked <span class="tag opt">Export optional</span> also use your saved model export if there is one.</p>
+    <div class="tools" id="toolsFree"></div>
+  </section>
+
+  <div class="group-head" id="modelH">
+    <h2>Tools that use your model</h2>
+    <p class="muted">Export your model once from Power BI Desktop and paste it here. It&rsquo;s saved in this browser, and each of these tools loads it as it opens.</p>
+  </div>
+
+  <section class="step" aria-labelledby="h1s">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="h1s">Export your model from Power BI Desktop</h2>
+        <p>One DAX query lists the model&rsquo;s tables, columns, measures (with their formulas and descriptions) and relationships. It reads the model&rsquo;s definition only, not your data.</p>
+      </div>
+      <ol class="how">
+        <li>Open your report in Power BI Desktop and select <b>DAX query view</b> on the left rail.</li>
+        <li>Paste the query below into a new query tab and select <b>Run</b>.</li>
+        <li>Above the results grid, select <b>Copy</b>. It copies every row with the column headers.</li>
+      </ol>
+      <div class="codebox">
+        <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" id="copyQuery">Copy query</button></span></div>
+        <pre class="short" id="queryView"></pre>
+      </div>
+      <p class="note">Tip: rename the query tab to <i>Toolkit export</i> and keep it. DAX query view saves it in the file, so next time you only select Run and Copy.</p>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="h2s">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="h2s">Paste it once</h2>
+        <p>It&rsquo;s saved in this browser and shared by every tool on this site. Paste a new export whenever the model changes.</p>
+      </div>
+      <div class="field"><label for="modelName">Model name <span class="muted">(optional, shown in each tool)</span></label><input type="text" id="modelName" placeholder="Sales model" autocomplete="off"></div>
+      <textarea id="exportInput" class="big" spellcheck="false" aria-label="Model export" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
+      <div id="saveMsg"></div>
+      <div class="saved" id="saved" hidden>
+        <div class="saved-head"><span class="saved-title">&#10003; Saved model export</span><span id="savedWhen" class="muted"></span></div>
+        <div class="stats" id="savedStats"></div>
+        <p class="note small" id="savedHist" hidden></p>
+        <div class="reply-actions"><button type="button" class="btn" id="clearSaved">Remove the saved export</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="h3s">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="h3s">Choose a tool</h2>
+        <p>Each one reads the export you saved in Step 2. Tools marked <span class="tag ai">Copilot</span> write a prompt you paste into Copilot, then check its reply.</p>
+      </div>
+      <div class="tools" id="tools"></div>
+    </div>
+  </section>
+
+
+  <section class="about">
+    <h2>Good to know</h2>
+    <ul>
+      <li><b>Nothing leaves your browser.</b> The pages don&rsquo;t send data anywhere. Prompts only reach Copilot when you paste them yourself.</li>
+      <li><b>Where the export is kept:</b> in this browser&rsquo;s storage for this site, so it&rsquo;s there next time on this computer, but not on another computer or in another browser.</li>
+      <li><b>One export at a time.</b> Pasting a model export into any tool also replaces the saved one, so every tool stays on the same model.</li>
+      <li><b>Each tool keeps its own work</b> (requests, replies, settings). Its <b>Clear entries</b> button empties that tool only; the saved export stays until you remove it here.</li>
+      <li><b>The Power Query Explainer</b> reads Power Query code, so its whole-model mode has its own export query. The <b>Date Table Generator</b> fills its date-column list from the saved export.</li>
+      <li><b>The Model Documenter</b> uses the saved export for a quick document, or reads a PBIP project folder in the browser for the full one (Power Query, sources and report pages). The folder&rsquo;s files are read on the page and never uploaded.</li>
+    </ul>
+  </section>
+
+  <section class="about disclaimer" id="disclaimer" aria-labelledby="discH">
+    <h2 id="discH">Disclaimer: use at your own risk</h2>
+    <ul>
+      <li><b>AI can make mistakes.</b> Copilot replies can be wrong, incomplete or out of date, and can refer to tables, columns or measures that don&rsquo;t exist. The pages check what they can (names, syntax, some results), but they can&rsquo;t catch every error in logic or meaning. Read every reply before you use it.</li>
+      <li><b>Check all of the work.</b> Everything the toolkit produces, with or without AI (DAX, Power Query, TMDL scripts, descriptions, themes, documents and lint findings), is a starting point to review, not a finished answer. Confirm results against figures you trust before anyone relies on them.</li>
+      <li><b>Test on a copy first.</b> Scripts can add, replace or change objects in your model. Back up the report or keep it under version control (PBIP and Git), and apply changes to a copy before a production model.</li>
+      <li><b>No warranty, no liability.</b> The toolkit is provided free and &ldquo;as is&rdquo;, without warranty of any kind, express or implied. Foster BI Services accepts no liability for incorrect information, errors, data loss, downtime, or any other loss or damage arising from using it or relying on its output. You use it at your own discretion and risk.</li>
+      <li><b>Follow your organization&rsquo;s policies.</b> Only paste prompts into AI tools your organization approves. A model export holds no data rows, but table, column and measure names, formulas and descriptions can still be confidential; treat them the way your data policies require.</li>
+      <li><b>Shared computers.</b> Exports and work are saved in this browser. On a shared or public computer, use <b>Clear entries</b> on each tool and remove the saved export here when you finish.</li>
+      <li><b>Not a Microsoft product.</b> This toolkit isn&rsquo;t affiliated with or endorsed by Microsoft. Power BI and Copilot are trademarks of Microsoft Corporation.</li>
+    </ul>
+  </section>
+
+  <footer>Everything runs in this page. Your model export is saved only in this browser.</footer>
+</div>
