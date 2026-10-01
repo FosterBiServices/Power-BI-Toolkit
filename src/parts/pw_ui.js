@@ -93,6 +93,13 @@ function renderReply(){
 function renderAll(){ renderStart(); renderCols(); renderPrompt(); renderReply(); }
 
 /* ---------- persistence ---------- */
+// what was typed or pasted into an example field, without the example text around it
+function ownText(val, ex){
+  if (!ex) return val;
+  let p = 0; while (p < val.length && p < ex.length && val[p] === ex[p]) p++;
+  let q = 0; while (q < val.length - p && q < ex.length - p && val[val.length - 1 - q] === ex[ex.length - 1 - q]) q++;
+  return val.slice(p, val.length - q).trim();
+}
 function persist(){ store.set('v', state.example ? '' : JSON.stringify(state.v)); }
 function setExample(on){ state.example = on; $('exampleBanner').hidden = !on; }
 function leaveExample(keep){
@@ -112,7 +119,7 @@ function init(){
 
   FIELDS.forEach(k => $(k).addEventListener('input', () => {
     // typing anything of your own replaces the whole example
-    if (state.example) { const val = $(k).value; leaveExample(); state.v[k] = val; $(k).value = val; }
+    if (state.example) { const val = ownText($(k).value, state.v[k] || ''); leaveExample(); state.v[k] = val; $(k).value = val; }
     else state.v[k] = $(k).value;
     try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
     if (k === 'pwReply') renderReply(); else if (k === 'columns') { renderCols(); renderPrompt(); renderReply(); } else if (k === 'existing') { renderStart(); renderPrompt(); } else { renderPrompt(); if (k === 'params' || k === 'merges') renderReply(); }

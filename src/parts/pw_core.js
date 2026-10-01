@@ -50,13 +50,21 @@ const PW = (() => {
     return (text || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean).map(l => { const m = l.match(/^#?"?([^"=:]+?)"?\s*[=:]\s*(.*)$/); return m ? { name: m[1].trim(), value: m[2].trim() } : { name: l, value: '' }; }).filter(p => p.name);
   }
   function parseMerges(text){
-    return (text || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean).map(l => { const m = l.match(/^([^:]+):\s*(.*)$/); return m ? { query: m[1].trim(), columns: m[2].split(/[,;\t]/).map(s => s.trim()).filter(Boolean) } : { query: l, columns: [] }; });
+    const out = [];
+    (text || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
+      const m = l.match(/^([^:\t]+):\s*(.*)$/), prev = out[out.length - 1];
+      // a pasted header row (tab-separated) under a query name: that query's columns
+      if (!m && /\t/.test(l) && prev && !prev.columns.length) { prev.columns = l.split('\t').map(s => s.trim()).filter(Boolean); return; }
+      out.push(m ? { query: m[1].trim(), columns: m[2].split(/[,;\t]/).map(s => s.trim()).filter(Boolean) } : { query: l, columns: [] });
+    });
+    return out;
   }
 
   function prompt(inp){
     const L = [];
     const src = SOURCES.find(s => s[0] === inp.source) || SOURCES[SOURCES.length - 1];
-    const db = DB.has(inp.source) || (inp.start === 'existing' && inp.existingDb);
+    const fromExisting = inp.start === 'existing' && !!(inp.existing || '').trim();
+    const db = fromExisting ? !!inp.existingDb : DB.has(inp.source);
     const cols = parseColumns(inp.columns), params = parseParams(inp.params), merges = parseMerges(inp.merges);
     L.push('You are an expert in Power Query M. Write one Power Query query for Power BI that does what is asked below.');
     L.push('The query must work first time, be easy for another developer to maintain, and be as short as it can be while still doing everything asked. Leave out anything that isn’t asked for.');
@@ -88,7 +96,7 @@ const PW = (() => {
     L.push('- Each step builds on an earlier step, and the query returns its last step after "in".');
     L.push('- Set the types of the columns the query keeps in one Table.TransformColumnTypes step' + ((inp.culture || '').trim() ? ' with the culture above' : '') + '. Give each new column its type in the fourth argument of Table.AddColumn instead of another type step.');
     L.push('- Handle nulls and errors only where the request says to expect them. Don’t wrap everything in try … otherwise.');
-    L.push('- ' + (inp.makeParams ? 'Don’t type a server, database, file path or URL into the query. Use an existing parameter, or add a new parameter under PARAMETERS and use its name.' : 'Keep the source values as given.'));
+    L.push('- ' + (!inp.makeParams ? 'Keep the source values as given.' : fromExisting ? 'Keep the existing source step as it is. Don’t type a server, database, file path or URL into any step you add: use an existing parameter, or add a new parameter under PARAMETERS and use its name.' : 'Don’t type a server, database, file path or URL into the query. Use an existing parameter, or add a new parameter under PARAMETERS and use its name.'));
     L.push('It must be easy to maintain:');
     L.push('- Name every step with a single descriptive word, no spaces and no #"..." quoting (PascalCase when it needs two words, for example Source, Filtered, Typed, RecentOrders). Say what the step achieves, not which button made it.');
     L.push('- Keep columns with Table.SelectColumns and an explicit list, not Table.RemoveColumns, so new source columns don’t flow through and a missing one is caught early.');
