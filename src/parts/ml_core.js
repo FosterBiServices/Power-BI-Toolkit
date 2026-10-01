@@ -429,7 +429,7 @@ const ML = (() => {
     m.tables.forEach(t => { if (t.expression && hit(t.expression)) out.push({ kind: 'Calculated table or field parameter', where: qName(t.name) }); });
     const rep = cfg.report;
     ((rep && rep.modelExprs) || []).forEach(x => { if (hit(x.expr) && !out.some(o => o.where === qName(x.table))) out.push({ kind: x.calcGroup ? 'Calculation group' : 'Calculated table or field parameter', where: qName(x.table) + ' (from the semantic model files)' }); });
-    (cfg.deps || []).forEach(d => { if (low(d.ref) === n && !(low(d.object) === n)) out.push({ kind: 'Power BI dependency', where: (d.type || '').replace(/_/g, ' ').toLowerCase() + ' ' + (d.table ? qName(d.table) : '') + bracket(d.object || '') }); });
+    (cfg.deps || []).forEach(d => { if (low(d.ref) === n && !(low(d.object) === n)) { const rel = /relationship/i.test(d.type || ''); out.push({ kind: 'Power BI dependency', where: (d.type || '').replace(/_/g, ' ').toLowerCase() + ' ' + (d.table ? qName(d.table) : '') + (rel ? '' : bracket(d.object || '')) }); } });
     if (rep && rep.detail) rep.detail.pages.forEach(p => p.visuals.forEach(v => { if ((v.fields || []).includes(n)) out.push({ kind: 'Report visual', where: p.name + ' \u203a ' + v.label + (v.hidden ? ' (hidden)' : '') }); }));
     else if (rep && rep.refs.some(r => low(r[1]) === n)) out.push({ kind: 'Report', where: 'Used on the report pages checked' });
     ((rep && rep.exprs) || []).forEach(e => { if (hit(e)) out.push({ kind: 'Report-level measure', where: 'reportExtensions.json' }); });
