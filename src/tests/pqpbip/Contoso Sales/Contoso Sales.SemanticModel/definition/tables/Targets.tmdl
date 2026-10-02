@@ -1,0 +1,13 @@
+table Targets
+	refreshPolicy
+		policyType: basic
+		sourceExpression =
+				let
+				    Source = Csv.Document(File.Contents("C:\Users\analyst\Documents\targets.csv"),[Delimiter=","]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source)
+				in
+				    #"Promoted Headers"
+
+	partition Targets-2024 = policyRange
+		mode: import
+		start: 2024-01-01T00:00:00

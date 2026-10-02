@@ -1,0 +1,46 @@
+{
+  "name": "Legacy",
+  "compatibilityLevel": 1567,
+  "model": {
+    "tables": [
+      {
+        "name": "Region",
+        "partitions": [
+          {
+            "name": "Region",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Sql.Database(\"sql-prod-01\", \"SalesDW\"),",
+                "    dbo_Region = Source{[Schema=\"dbo\",Item=\"DimRegion\"]}[Data]",
+                "in",
+                "    dbo_Region"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "Calendar",
+        "partitions": [
+          {
+            "name": "Calendar",
+            "source": {
+              "type": "calculated",
+              "expression": "CALENDARAUTO()"
+            }
+          }
+        ]
+      }
+    ],
+    "expressions": [
+      {
+        "name": "Mode",
+        "kind": "m",
+        "expression": "\"Live\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]"
+      }
+    ]
+  }
+}
