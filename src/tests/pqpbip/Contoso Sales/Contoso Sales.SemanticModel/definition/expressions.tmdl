@@ -1,0 +1,25 @@
+expression ServerName = "sql-prod-01" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: a
+	queryGroup: Parameters
+
+	annotation PBI_ResultType = Text
+
+expression StartDate = #date(2023, 1, 1) meta [IsParameterQuery=true, Type="Date", IsParameterQueryRequired=true]
+	lineageTag: b
+
+/// Product lookup
+expression Products =
+		let
+		    Source = Sql.Database(ServerName, "SalesDW"),
+		    dbo_DimProduct = Source{[Schema="dbo",Item="DimProduct"]}[Data]
+		in
+		    dbo_DimProduct
+	lineageTag: c
+
+	annotation PBI_ResultType = Table
+
+expression fnTrim =
+		(t as text) => Text.Trim(t)
+	lineageTag: d
+
+	annotation PBI_ResultType = Function

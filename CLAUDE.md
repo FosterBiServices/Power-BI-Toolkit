@@ -114,7 +114,7 @@ Things to know:
 | model-documenter | kmdoc. | yes | no |
 | about-this-report | kab. | yes | optional |
 | power-query-writer | kpw. | no | yes |
-| power-query-explainer | kpq. | no | yes |
+| power-query-explainer | kpq. | no (own export, or a PBIP folder) | yes |
 | date-table-generator | kdt. | optional | no |
 | theme-builder | ktb. | no | no |
 | layout-designer | klo. | no | no |

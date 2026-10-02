@@ -1,0 +1,13 @@
+table 'Customer List'
+
+	partition 'Customer List' = m
+		mode: import
+		source = ```
+				let
+				    Source = Excel.Workbook(File.Contents("\\fileserver\finance\Customers.xlsx"), null, true),
+				    Customers_Sheet = Source{[Item="Customers",Kind="Sheet"]}[Data],
+				    #"Promoted Headers" = Table.PromoteHeaders(Customers_Sheet, [PromoteAllScalars=true]),
+				    #"Trimmed" = Table.TransformColumns(#"Promoted Headers", {{"Name", fnTrim, type text}})
+				in
+				    #"Trimmed"
+				```

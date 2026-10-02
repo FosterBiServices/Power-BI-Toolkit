@@ -101,6 +101,12 @@ const EX_MODEL_REPLY = '```\n'
     ['Returns', 'Filtered Rows', 'Keeps returns on or after the ReportStartDate parameter.', '']]
    .map(([q, n, c, x]) => '@@@ STEP @@@\nQUERY: ' + q + '\nNAME: ' + n + '\nCOMMENT: ' + c + (x ? '\nNOTE: ' + x : '') + '\n@@@ END @@@').join('\n') + '\n```';
 
+const EX_BIZ_TITLE = 'Sales model';
+const EX_BIZ_REPLY = '```\n'
+ + '@@@ TABLE @@@\nTABLE: Customers\nPURPOSE: The list of customers, used to show sales by customer, segment and region.\nSOURCE: The Customer table in the Retail database.\nROW: One customer.\nSTEPS:\n- Keeps only the customer number, name, region and segment.\n- Looks up each customer\'s region name from the Regions list.\n- Tidies customer names: extra spaces removed, each word starting with a capital.\nCHECK: Customers without a region show a blank region.\n@@@ END @@@\n'
+ + '@@@ TABLE @@@\nTABLE: Returns\nPURPOSE: Returned order lines, used to report returns and return reasons.\nSOURCE: The Returns sheet of the Sales 2025 Excel workbook, kept in a personal folder.\nROW: One returned order line.\nSTEPS:\n- Keeps only returns made on or after the report start date (1 February 2024).\nCHECK: Returns before the report start date are left out of every report.\n@@@ END @@@\n'
+ + '@@@ TABLE @@@\nTABLE: Sales\nPURPOSE: Order lines, the basis of every sales figure in the reports.\nSOURCE: The Orders sheet of the Sales 2025 Excel workbook, kept in a personal folder.\nROW: One order line.\nSTEPS:\n- Leaves out lines without an order date.\n- Leaves out orders from the region named "Test".\n- Leaves out the Notes column.\n- Works out Net Amount as quantity times unit price, less the discount.\n- Renames Customer to Customer Name.\nCHECK: Confirm that the "Test" region only holds test orders.\n@@@ END @@@\n```';
+
 /* ---------- state + UI ---------- */
 const $ = id => document.getElementById(id);
 const PREFIX = 'kpq.';
@@ -113,7 +119,8 @@ const state = {
   example: false, tab: 'ex', audience: 'mixed', opts: DEFAULT_OPTS(), exNotes: true, exSummary: true,
   exReply: '', clReply: '', q: null, checks: [],
   mode: 'one', m: null, mDone: {}, mAsked: {}, mPick: {}, mLastBatch: [], mBatch: '3', mNotes: true, mSummary: true,
-  out: { exPrompt: '', exFollow: '', commented: '', clPrompt: '', clean: '', mExport: '', mPrompt: '', mAll: '' }
+  bDone: {}, bAsked: {}, bLast: [], bBatch: '3', bTitle: '', bBehind: true, bSteps: false, pbip: null, doc: null,
+  out: { exPrompt: '', exFollow: '', commented: '', clPrompt: '', clean: '', mExport: '', mPrompt: '', mAll: '', mTmdl: '', bPrompt: '' }
 };
 const LONG_PROMPT = 14000;
 
@@ -149,7 +156,8 @@ function persist(){
   store.set('query', $('qInput').value);
   store.set('model', $('mInput').value);
   store.set('state', JSON.stringify({ name: $('qName').value, tab: state.tab, audience: state.audience, opts: state.opts, exNotes: state.exNotes, exSummary: state.exSummary, exReply: state.exReply, clReply: state.clReply,
-    mode: state.mode, mDone: state.mDone, mAsked: state.mAsked, mPick: state.mPick, mLastBatch: state.mLastBatch, mBatch: state.mBatch, mNotes: state.mNotes, mSummary: state.mSummary }));
+    mode: state.mode, mDone: state.mDone, mAsked: state.mAsked, mPick: state.mPick, mLastBatch: state.mLastBatch, mBatch: state.mBatch, mNotes: state.mNotes, mSummary: state.mSummary,
+    bDone: state.bDone, bAsked: state.bAsked, bLast: state.bLast, bBatch: state.bBatch, bTitle: state.bTitle, bBehind: state.bBehind, bSteps: state.bSteps }));
 }
 function src(){ return $('qInput').value; }
 function optName(){ return $('qName').value.trim(); }
@@ -311,10 +319,12 @@ function renderModel(){
   const text = $('mInput').value;
   const ex = parseMExport(text);
   state.m = null;
-  $('mMsg').innerHTML = ex.error ? msg('err', esc(ex.error)) : '';
+  const sk = ex.skipped || [], one = sk.length === 1;
+  const skipped = sk.length ? msg('info', 'Left out ' + (one ? 'a measures table' : sk.length + ' measures tables') + ': ' + sk.map(n => '<code>' + esc(n) + '</code>').join(', ') + '. ' + (one ? 'It only holds measures, so its query has' : 'They only hold measures, so their queries have') + ' nothing to explain.') : '';
+  $('mMsg').innerHTML = (ex.error ? msg('err', esc(ex.error)) : '') + skipped;
   if (!ex.error && ex.queries.length) state.m = analyzeModel(ex.queries);
   const ok = !!state.m;
-  $('mCheck').hidden = !ok; $('mStep3').hidden = !ok; $('mStep4').hidden = !ok;
+  $('mStep2').hidden = !ok; $('mCheck').hidden = !ok; $('mStep3').hidden = !ok; $('mStep4').hidden = !ok; $('mStep5').hidden = !ok;
   if (!ok) return;
   const m = state.m, it = m.items;
   const cnt = t => it.filter(i => i.type === t).length;
@@ -342,7 +352,7 @@ function renderModel(){
       + '<td>' + find + '</td>'
       + '<td class="act">' + (i.type !== 'parameter' ? '<button type="button" class="btn" data-act="open">Open</button>' : '') + '</td></tr>';
   }).join('');
-  renderMQueue(); renderMResults();
+  renderMQueue(); renderMResults(); renderBiz();
 }
 function renderMQueue(){
   if (!state.m) return;
@@ -412,7 +422,159 @@ function renderMResults(){
       + '</div></details>';
   }).join('');
   state.out.mAll = all.join('\n\n');
+  // TMDL script: only for queries read from TMDL, where the rest of each partition or expression is known
+  const forScript = list.map(i => ({ item: i, code: state.out['mq' + state.m.items.indexOf(i)] }));
+  const ok = forScript.filter(x => x.item.tmdl), left = forScript.filter(x => !x.item.tmdl);
+  state.out.mTmdl = ok.length ? tmdlScript(ok) : '';
+  $('mTmdlBox').hidden = !ok.length;
+  if (ok.length) {
+    $('mTmdlTitle').textContent = 'TMDL script (' + ok.length + ' quer' + (ok.length === 1 ? 'y' : 'ies') + ')';
+    $('mTmdlView').textContent = state.out.mTmdl;
+    $('mTmdlMsg').innerHTML = left.length ? msg('info', 'Not in the script: ' + left.map(x => '<code>' + esc(x.item.name) + '</code>').join(', ') + '. Paste those in the Advanced Editor.') : '';
+  }
 }
+/* ---------- whole model: business-friendly document ---------- */
+function bTables(){ return state.m ? state.m.items.filter(i => i.type === 'table') : []; }
+function bDoneFor(i){ const d = state.bDone[i.name]; return d && d.h === codeHash(i.code) ? d : null; }
+function bUses(i, byName){
+  return i.deps.map(d => {
+    const y = byName.get(d); if (!y) return d;
+    if (y.type === 'parameter') return d + ' (a setting, now ' + paramDisplay(y) + ')';
+    if (y.type === 'function') return d + ' (a reusable rule)';
+    if (y.type === 'table') return d + ' (another table in the model)';
+    const s = querySources(y, byName).map(x => x.label + (x.where ? ' on ' + x.where : '')).join('; ');
+    return d + ' (not loaded' + (s ? '; reads ' + s : '') + ')';
+  });
+}
+function bBatchList(){
+  const byName = new Map(state.m.items.map(i => [i.name, i]));
+  const queue = bTables().filter(i => !bDoneFor(i) && (state.bAsked[i.name] || 0) < 2);
+  const max = +state.bBatch || 3, out = [];
+  for (const i of queue) {
+    const b = { name: i.name, code: i.code, sources: tableSources(i, byName).map(s => s.label + (s.where ? ' (' + s.where + ')' : '') + (s.via ? ', through ' + s.via : '')), uses: bUses(i, byName) };
+    if (out.length && (out.length >= max || businessPrompt(out.concat(b), { title: state.bTitle }).length > LONG_PROMPT)) break;
+    out.push(b);
+  }
+  return out;
+}
+function bDocBlocks(){
+  const biz = {}, comments = state.bSteps ? {} : null;
+  bTables().forEach(i => {
+    const d = bDoneFor(i); if (d) biz[i.name] = d;
+    if (comments && i.q) { const md = mDoneFor(i); if (md) comments[i.name] = i.q.steps.map(s => md.steps[lc(s.name)]).filter(Boolean); }
+  });
+  let date = ''; try { date = 'Written ' + new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); } catch (e) {}
+  return businessDoc(state.m, { title: state.bTitle, date, biz, comments, behind: state.bBehind });
+}
+function renderBiz(){
+  if (!state.m) return;
+  const all = bTables(), done = all.filter(bDoneFor);
+  const pct = all.length ? Math.round(done.length / all.length * 100) : 0;
+  $('bProgress').innerHTML = '<div class="cov-head"><span class="cov-num">' + done.length + ' of ' + all.length + '</span><span class="cov-label">tables explained in plain words</span></div><div class="cov-bar"><span style="width:' + pct + '%"></span></div>';
+  const batch = bBatchList();
+  state.bLast = batch.map(b => b.name);
+  const gaveUp = all.filter(i => !bDoneFor(i) && (state.bAsked[i.name] || 0) >= 2);
+  const notes = [];
+  if (gaveUp.length) notes.push(msg('warn', 'Copilot was asked twice and still didn&rsquo;t explain ' + gaveUp.map(i => '<code>' + esc(i.name) + '</code>').join(', ') + '. <button type="button" class="linkbtn" id="bRetry">Ask again</button>'));
+  if (!batch.length) {
+    state.out.bPrompt = ''; $('bPromptBox').hidden = true;
+    notes.push(all.length ? msg('ok', 'Every table has a plain-language explanation. Download the document below.') : msg('info', 'No loaded tables were found, so there is nothing to explain to report users.'));
+  } else {
+    state.out.bPrompt = businessPrompt(batch, { title: state.bTitle });
+    $('bPromptBox').hidden = false;
+    $('bPromptTitle').textContent = 'Prompt for ' + batch.map(b => b.name).join(', ');
+    $('bPromptView').textContent = state.out.bPrompt;
+    $('bCount').textContent = state.out.bPrompt.length.toLocaleString() + ' characters';
+  }
+  $('bQueueMsg').innerHTML = notes.join('');
+  state.doc = bDocBlocks();
+  $('bDocMsg').innerHTML = done.length < all.length ? msg('info', (done.length ? 'Tables without Copilot&rsquo;s explanation yet' : 'Until you add Copilot&rsquo;s replies, the tables') + ' are described from the code only. Add the replies above for a better read.') : '';
+  if ($('bPreviewBox').open) $('bPreview').srcdoc = docHtml(state.doc);
+}
+function addBReply(text){
+  const r = parseBusiness(text);
+  if (r.error) { $('bReplyMsg').innerHTML = msg('err', esc(r.error)); return false; }
+  const byName = new Map(bTables().map(i => [lc(i.name), i]));
+  const lone = state.bLast.length === 1 ? state.bLast[0] : '';
+  const added = [], unknown = [];
+  r.tables.forEach(t => {
+    const i = byName.get(lc(t.table || lone));
+    if (!i) { unknown.push(t.table || '(no table name)'); return; }
+    state.bDone[i.name] = Object.assign({ h: codeHash(i.code) }, t); added.push(i.name);
+  });
+  state.bLast.forEach(n => { state.bAsked[n] = (state.bAsked[n] || 0) + 1; });
+  const m = [];
+  m.push(added.length ? msg('ok', 'Added the explanation for ' + added.map(n => '<code>' + esc(n) + '</code>').join(', ') + '.') : msg('warn', 'Nothing in this reply matched the tables in this model.'));
+  if (unknown.length) m.push(msg('info', 'Skipped blocks for tables that aren&rsquo;t in this model: ' + unknown.map(n => '<code>' + esc(n) + '</code>').join(', ') + '.'));
+  $('bReplyMsg').innerHTML = m.join('');
+  return true;
+}
+function docFileName(ext){
+  const t = (state.bTitle.trim() || 'Data guide').replace(/[\\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return t + ' - how the data is prepared.' + ext;
+}
+function saveBlob(blob, name){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+/* ---------- whole model: read a PBIP folder ---------- */
+const PBIP_SKIP = new Set(['.git', 'node_modules', '.pbi', '.vs', 'StaticResources', 'RegisteredResources']);
+const pbipSkip = n => PBIP_SKIP.has(n) || /\.Report$/i.test(n);
+const pbipWanted = n => /\.tmdl$/i.test(n) || /^model\.bim$/i.test(n);
+async function pbipDecode(file){
+  const buf = await file.arrayBuffer();
+  let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { t = new TextDecoder('windows-1252').decode(buf); }
+  return t.replace(/^﻿/, '');
+}
+async function pbipWalkHandle(dir, prefix, out){
+  for await (const [name, h] of dir.entries()) {
+    if (h.kind === 'directory') { if (!pbipSkip(name)) await pbipWalkHandle(h, prefix + '/' + name, out); }
+    else if (pbipWanted(name)) out.push({ path: prefix + '/' + name, file: await h.getFile() });
+  }
+}
+function pbipWalkEntry(entry, prefix, out){
+  return new Promise(resolve => {
+    if (entry.isFile) { if (pbipWanted(entry.name)) entry.file(f => { out.push({ path: prefix + '/' + entry.name, file: f }); resolve(); }, () => resolve()); else resolve(); return; }
+    if (pbipSkip(entry.name)) { resolve(); return; }
+    const reader = entry.createReader(); const all = [];
+    const next = () => reader.readEntries(batch => { if (!batch.length) { Promise.all(all.map(e => pbipWalkEntry(e, prefix + '/' + entry.name, out))).then(resolve); return; } all.push(...batch); next(); }, () => resolve());
+    next();
+  });
+}
+async function loadPbip(root, list){
+  $('pbipMsg').innerHTML = msg('info', 'Reading &ldquo;' + esc(root) + '&rdquo;&hellip;');
+  const files = new Map();
+  for (const { path, file } of list) {
+    if (file.size > 60 * 1024 * 1024) continue;
+    // drop the chosen folder's own name, so a chosen .SemanticModel folder reads like one inside a project
+    let rel = path.replace(/^\/+/, '').split('/').slice(1).join('/');
+    if (/^definition$/i.test(root)) rel = 'definition/' + rel;
+    try { files.set(/\.(SemanticModel|Dataset)$/i.test(root) ? root + '/' + rel : rel, await pbipDecode(file)); } catch (e) {}
+  }
+  const models = readPbip(files).filter(x => x.queries.length || x.error);
+  if (!models.length) {
+    $('pbipMsg').innerHTML = msg('warn', 'No Power Query code was found in &ldquo;' + esc(root) + '&rdquo;. Choose the folder of a report saved as a Power BI Project, or its <b>.SemanticModel</b> folder.');
+    $('pbipPickWrap').hidden = true; state.pbip = null; return;
+  }
+  state.pbip = { root, models };
+  $('pbipPick').innerHTML = models.map((x, k) => '<option value="' + k + '">' + esc(x.name) + '</option>').join('');
+  $('pbipPickWrap').hidden = models.length < 2;
+  usePbipModel(0);
+}
+function usePbipModel(k){
+  const x = state.pbip.models[k]; if (!x) return;
+  if (x.error) { $('pbipMsg').innerHTML = msg('err', esc(x.error)); return; }
+  dropExample();
+  $('mInput').value = queriesToExport(x.queries);
+  if (!state.bTitle.trim()) { state.bTitle = x.name; $('bTitle').value = x.name; }
+  try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
+  $('mReplyMsg').innerHTML = ''; $('bReplyMsg').innerHTML = '';
+  const qs = x.queries.filter(q => !q.measuresTable), t = qs.filter(q => q.loaded).length;
+  $('pbipMsg').innerHTML = msg('ok', 'Read ' + qs.length + ' quer' + (qs.length === 1 ? 'y' : 'ies') + ' from &ldquo;' + esc(x.name) + '&rdquo; (' + x.format + '): ' + t + ' loaded table' + (t === 1 ? '' : 's') + ' and ' + (qs.length - t) + ' other' + (qs.length - t === 1 ? '' : 's') + '.');
+  renderModel(); persist();
+}
+
 function openInOne(i){
   leaveExample();
   $('qInput').value = i.code; $('qName').value = i.name;
@@ -433,6 +595,7 @@ function syncControls(){
   $('exNotes').checked = state.exNotes; $('exSummary').checked = state.exSummary;
   $('mNotes').checked = state.mNotes; $('mSummary').checked = state.mSummary; $('mBatch').value = state.mBatch;
   $('exReply').value = state.exReply; $('clReply').value = state.clReply;
+  $('bBatch').value = state.bBatch; $('bTitle').value = state.bTitle; $('bBehind').checked = state.bBehind; $('bSteps').checked = state.bSteps;
 }
 function loadExample(){
   $('qInput').value = EX_QUERY; $('qName').value = EX_NAME;
@@ -441,6 +604,8 @@ function loadExample(){
   state.m = analyzeModel(parseMExport(EX_MODEL_EXPORT).queries);
   state.mLastBatch = ['Customers', 'Returns'];
   addMReply(EX_MODEL_REPLY); $('mReplyMsg').innerHTML = '';
+  state.bTitle = EX_BIZ_TITLE; state.bLast = ['Customers', 'Returns', 'Sales'];
+  addBReply(EX_BIZ_REPLY); state.bAsked = {}; $('bReplyMsg').innerHTML = '';
   setExample(true);
 }
 // Drop every sample value except the one the person just typed into
@@ -451,15 +616,17 @@ function dropExample(keep){
   if ($('qName').value === EX_NAME || keep === 'qName') $('qName').value = '';
   if (keep) $(keep).value = v;
   if ($('mInput').value === EX_MODEL_EXPORT) $('mInput').value = '';
-  Object.assign(state, { exReply: '', clReply: '', mDone: {}, mAsked: {}, mPick: {}, mLastBatch: [] });
-  $('mReplyMsg').innerHTML = '';
+  Object.assign(state, { exReply: '', clReply: '', mDone: {}, mAsked: {}, mPick: {}, mLastBatch: [], bDone: {}, bAsked: {}, bLast: [] });
+  if (state.bTitle === EX_BIZ_TITLE) state.bTitle = '';
+  $('mReplyMsg').innerHTML = ''; $('bReplyMsg').innerHTML = '';
   setExample(false); syncControls();
 }
 function resetAll(){
   Object.assign(state, { tab: 'ex', audience: 'mixed', opts: DEFAULT_OPTS(), exNotes: true, exSummary: true, exReply: '', clReply: '',
-    mDone: {}, mAsked: {}, mPick: {}, mLastBatch: [], mBatch: '3', mNotes: true, mSummary: true });
-  ['qInput', 'qName', 'exAdd', 'mInput', 'mReply'].forEach(id => { $(id).value = ''; });
-  $('mReplyMsg').innerHTML = '';
+    mDone: {}, mAsked: {}, mPick: {}, mLastBatch: [], mBatch: '3', mNotes: true, mSummary: true,
+    bDone: {}, bAsked: {}, bLast: [], bBatch: '3', bTitle: '', bBehind: true, bSteps: false, pbip: null });
+  ['qInput', 'qName', 'exAdd', 'mInput', 'mReply', 'bReply'].forEach(id => { $(id).value = ''; });
+  $('mReplyMsg').innerHTML = ''; $('bReplyMsg').innerHTML = ''; $('pbipMsg').innerHTML = ''; $('pbipPickWrap').hidden = true;
   setExample(false); syncControls(); setTab('ex'); renderAll(); renderModel();
 }
 
@@ -472,15 +639,19 @@ function init(){
     $('qInput').value = saved || ''; $('mInput').value = savedModel || '';
     if (st) {
       $('qName').value = st.name || '';
-      ['tab', 'audience', 'exReply', 'clReply', 'mode', 'mBatch'].forEach(k => { if (typeof st[k] === 'string') state[k] = st[k]; });
-      ['mDone', 'mAsked', 'mPick'].forEach(k => { if (st[k] && typeof st[k] === 'object') state[k] = st[k]; });
+      ['tab', 'audience', 'exReply', 'clReply', 'mode', 'mBatch', 'bBatch', 'bTitle'].forEach(k => { if (typeof st[k] === 'string') state[k] = st[k]; });
+      ['mDone', 'mAsked', 'mPick', 'bDone', 'bAsked'].forEach(k => { if (st[k] && typeof st[k] === 'object') state[k] = st[k]; });
       if (Array.isArray(st.mLastBatch)) state.mLastBatch = st.mLastBatch;
+      if (Array.isArray(st.bLast)) state.bLast = st.bLast;
       if (st.opts) state.opts = Object.assign(DEFAULT_OPTS(), st.opts);
-      ['exNotes', 'exSummary', 'mNotes', 'mSummary'].forEach(k => { if (typeof st[k] === 'boolean') state[k] = st[k]; });
+      ['exNotes', 'exSummary', 'mNotes', 'mSummary', 'bBehind', 'bSteps'].forEach(k => { if (typeof st[k] === 'boolean') state[k] = st[k]; });
     }
     // never carry the sample replies into real work
     if ((saved || '').trim() !== EX_QUERY) { if (state.exReply === EX_EXPLAIN) state.exReply = ''; if (state.clReply === EX_CLEAN) state.clReply = ''; }
-    if (savedModel !== EX_MODEL_EXPORT) { EX_MODEL_QUERIES.forEach(x => { const d = state.mDone[x.name]; if (d && d.h === codeHash(x.code)) delete state.mDone[x.name]; }); }
+    if (savedModel !== EX_MODEL_EXPORT) {
+      EX_MODEL_QUERIES.forEach(x => { ['mDone', 'bDone'].forEach(k => { const d = state[k][x.name]; if (d && d.h === codeHash(x.code)) delete state[k][x.name]; }); });
+      if (state.bTitle === EX_BIZ_TITLE) state.bTitle = '';
+    }
   } else if (store.get('blank') !== '1') loadExample();
   syncControls(); setTab(state.tab); setMode(state.mode); renderAll(); renderModel();
 
@@ -553,6 +724,52 @@ function init(){
   };
   $('mAdd').addEventListener('click', submitM);
   $('mReply').addEventListener('paste', () => setTimeout(submitM, 0));
+
+
+  // business document
+  $('bTitle').addEventListener('input', () => { leaveExample(); state.bTitle = $('bTitle').value; renderBiz(); persist(); });
+  $('bBatch').addEventListener('change', () => { state.bBatch = $('bBatch').value; renderBiz(); persist(); });
+  $('bBehind').addEventListener('change', () => { state.bBehind = $('bBehind').checked; renderBiz(); persist(); });
+  $('bSteps').addEventListener('change', () => { state.bSteps = $('bSteps').checked; renderBiz(); persist(); });
+  const submitB = () => {
+    const t = $('bReply').value; if (!t.trim() || !state.m) return;
+    leaveExample();
+    if (addBReply(t)) $('bReply').value = '';
+    renderBiz(); persist();
+  };
+  $('bAdd').addEventListener('click', submitB);
+  $('bReply').addEventListener('paste', () => setTimeout(submitB, 0));
+  $('bReply').addEventListener('change', submitB);
+  $('bQueueMsg').addEventListener('click', e => { if (e.target.id !== 'bRetry') return; leaveExample(); bTables().forEach(i => { if (!bDoneFor(i)) state.bAsked[i.name] = 0; }); renderBiz(); persist(); });
+  $('bPreviewBox').addEventListener('toggle', () => { if ($('bPreviewBox').open && state.doc) $('bPreview').srcdoc = docHtml(state.doc); });
+  $('bDocx').addEventListener('click', () => { if (state.doc) saveBlob(docxBlob(state.doc), docFileName('docx')); });
+  $('bHtml').addEventListener('click', () => { if (state.doc) saveBlob(new Blob([docHtml(state.doc)], { type: 'text/html;charset=utf-8' }), docFileName('html')); });
+
+  // PBIP folder
+  $('pickPbip').addEventListener('click', async () => {
+    if (window.showDirectoryPicker) {
+      let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-pq-explainer', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; $('pbipInput').click(); return; }
+      const list = []; try { await pbipWalkHandle(dir, dir.name, list); await loadPbip(dir.name, list); } catch (e) { $('pbipMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(e.message || e)); }
+    } else $('pbipInput').click();
+  });
+  $('pbipInput').addEventListener('change', async e => {
+    const fl = [...e.target.files]; if (!fl.length) return;
+    const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
+    const list = fl.filter(f => pbipWanted(f.name) && !(f.webkitRelativePath || '').split('/').slice(0, -1).some(pbipSkip)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }));
+    try { await loadPbip(root, list); } catch (err) { $('pbipMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
+    e.target.value = '';
+  });
+  const drop = $('pbipDrop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
+  drop.addEventListener('drop', async e => {
+    e.preventDefault();
+    const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
+    if (!item || !item.isDirectory) { $('pbipMsg').innerHTML = msg('warn', 'Drop the project <b>folder</b>, not a file inside it.'); return; }
+    const list = []; await pbipWalkEntry(item, '', list);
+    try { await loadPbip(item.name, list); } catch (err) { $('pbipMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
+  });
+  $('pbipPick').addEventListener('change', () => usePbipModel(+$('pbipPick').value));
 
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); });
   document.addEventListener('click', e => {

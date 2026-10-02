@@ -42,7 +42,7 @@ function mUnquoteCell(s){
   return s;
 }
 function parseMExport(text){
-  const res = { queries: [], error: null };
+  const res = { queries: [], error: null, skipped: [] };
   const raw = (text || '').replace(/\r/g, '');
   if (!raw.trim()) return res;
   const lines = raw.split('\n');
@@ -50,6 +50,13 @@ function parseMExport(text){
   for (let i = 0; i < Math.min(lines.length, 10); i++) {
     const cells = lines[i].split('\t').map(c => lc(mUnquoteCell(c.trim())).replace(/^.*\[|\]$/g, ''));
     if (cells.includes('kind') && cells.includes('name') && cells.includes('code')) { h = i; cells.forEach((c, j) => { map[c] = j; }); break; }
+  }
+  if (h < 0 && looksTmdl(raw)) {
+    const r = pbipTmdlQueries(raw);
+    pbipQueryList(r.tables, r.exprs, true).forEach(q => { if (q.measuresTable) res.skipped.push(q.name); else res.queries.push(q); });
+    res.tmdl = true;
+    if (!res.queries.length) res.error = 'No Power Query code was found in this TMDL. Script the tables whose queries you want (or the whole semantic model) in TMDL view, and copy all of it.';
+    return res;
   }
   if (h < 0) {
     res.error = /\bkind\b.*\btable\b.*\bname\b/i.test(lines[0] || '')
@@ -65,9 +72,13 @@ function parseMExport(text){
     const name = get('name'), code = get('code').split(NL_MARK).join('\n');
     if (!name || !code.trim() || seen.has(lc(name))) continue;
     seen.add(lc(name));
-    res.queries.push({ name, loaded: lc(get('kind')) === 'table', code, resultType: get('resulttype') });
+    // dedicated measures tables are always left out: their query only makes a placeholder
+    const kind = lc(get('kind'));
+    if (kind === 'measurestable' || (kind === 'table' && looksMeasuresTable(name, code))) { res.skipped.push(name); continue; }
+    res.queries.push({ name, loaded: lc(get('kind')) === 'table', code, resultType: get('resulttype'), table: get('table'), partition: get('partition'),
+      props: get('props').split(NL_MARK).join('\n').split(TAB_MARK).join('\t'), tmdl: lc(get('from')) === 'tmdl' });
   }
-  if (!res.queries.length) res.error = 'No queries were found under the header row.';
+  if (!res.queries.length) res.error = 'No queries were found under the header row' + (res.skipped.length ? ', other than measures tables' : '') + '.';
   return res;
 }
 
@@ -127,7 +138,7 @@ function analyzeModel(list){
   const names = new Map(list.map(x => [x.name, x]));
   const items = list.map(x => {
     const type = queryType(x.code, x.loaded, x.name, x.resultType);
-    const it = { name: x.name, code: x.code, loaded: x.loaded, type, fnWhy: type === 'function' ? functionReason(x.code, x.name, x.resultType) : '', q: null, error: null, checks: [], deps: [], usedBy: [], literals: [], paramValue: '' };
+    const it = { name: x.name, code: x.code, loaded: x.loaded, table: x.table || '', partition: x.partition || '', props: x.props || '', tmdl: !!x.tmdl, type, fnWhy: type === 'function' ? functionReason(x.code, x.name, x.resultType) : '', q: null, error: null, checks: [], deps: [], usedBy: [], literals: [], paramValue: '' };
     if (type === 'parameter') {
       const tk = mTokenize(x.code); const s = !tk.error && tk.toks.find(t => t.t === 'str');
       it.paramValue = s ? s.v.slice(1, -1).replace(/""/g, '"') : '';

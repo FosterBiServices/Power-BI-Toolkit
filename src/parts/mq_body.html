@@ -1,7 +1,7 @@
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>Power Query Explainer</h1>
-        <p class="lede">Get a comment on every step of your Power Query queries, or a cleaner version that returns the same data, checked before you paste it back. One query at a time, or the whole model at once.</p>
+        <p class="lede">Get a comment on every step of your Power Query queries, or a cleaner version that returns the same data, checked before you paste it back. One query at a time, or the whole model at once, read straight from a PBIP folder, with a plain-language document for business readers.</p>
       </div>
       <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
@@ -18,7 +18,7 @@
 
   <div class="modebar" role="tablist" aria-label="How many queries">
     <button type="button" role="tab" id="modeOneBtn" aria-selected="true" aria-controls="modeOne"><span class="tn">One query</span><span class="td">Paste from the Advanced Editor. Explain it or clean it up.</span></button>
-    <button type="button" role="tab" id="modeModelBtn" aria-selected="false" aria-controls="modeModel"><span class="tn">Whole model</span><span class="td">Export every query at once. Check them all and explain them in batches.</span></button>
+    <button type="button" role="tab" id="modeModelBtn" aria-selected="false" aria-controls="modeModel"><span class="tn">Whole model</span><span class="td">Read every query from a PBIP folder. Check them, comment them and explain them to the business.</span></button>
   </div>
 
   <div id="modeOne" role="tabpanel" aria-labelledby="modeOneBtn" class="mode">
@@ -200,30 +200,55 @@
       <div class="step-num">Step<b>1</b></div>
       <div class="step-body">
         <div class="step-head">
-          <h2 id="m1">Export every query from Power BI Desktop</h2>
-          <p>This query returns the Power Query code behind every loaded table, plus queries that aren&rsquo;t loaded, functions and parameters.</p>
+          <h2 id="m1">Get every query from your model</h2>
+          <p>The Power Query code behind every loaded table, plus queries that aren&rsquo;t loaded, functions and parameters. Read it from a PBIP folder, or run one DAX query in Power BI Desktop.</p>
         </div>
-        <ol class="how">
-          <li>Open your report in Power BI Desktop and select <b>DAX query view</b> on the left rail.</li>
-          <li>Paste the query below into a new query tab and select <b>Run</b>.</li>
-          <li>Above the results grid, select <b>Copy</b>. It copies every row with the column headers.</li>
-        </ol>
-        <div class="codebox">
-          <div class="codebox-bar"><span class="t">DAX query</span><span class="r"><button class="btn primary" type="button" data-copy="mExport">Copy query</button></span></div>
-          <pre class="short" id="mExportView"></pre>
+        <div class="repbox" id="pbipBox">
+          <div class="rep-head"><h3>From a PBIP folder</h3>
+            <span class="btns"><button type="button" class="btn primary" id="pickPbip">Choose a PBIP folder</button></span></div>
+          <p class="note small">For a report saved as a Power BI Project (<b>File &gt; Save as &gt; Power BI project files</b>). Choose the project folder or its <b>.SemanticModel</b> folder. The queries are read from the model&rsquo;s TMDL files, or from <b>model.bim</b> in older projects. Files are read on this page; nothing is uploaded.</p>
+          <div class="drop" id="pbipDrop">or drop the folder here</div>
+          <input type="file" id="pbipInput" webkitdirectory multiple hidden>
+          <div id="pbipMsg"></div>
+          <div class="field" id="pbipPickWrap" hidden><label for="pbipPick">Semantic model</label><select id="pbipPick"></select></div>
         </div>
+        <details class="extra" id="daxBox">
+          <summary>Or export them from Power BI Desktop</summary>
+          <div class="extra-body">
+            <ol class="how">
+              <li>Open your report in Power BI Desktop and select <b>DAX query view</b> on the left rail.</li>
+              <li>Paste the query below into a new query tab and select <b>Run</b>.</li>
+              <li>Above the results grid, select <b>Copy</b>. It copies every row with the column headers. Paste it in the box below.</li>
+            </ol>
+            <div class="codebox">
+              <div class="codebox-bar"><span class="t">DAX query</span><span class="r"><button class="btn primary" type="button" data-copy="mExport">Copy query</button></span></div>
+              <pre class="short" id="mExportView"></pre>
+            </div>
+          </div>
+        </details>
+        <details class="extra" id="tmdlBox">
+          <summary>Or copy them from TMDL view</summary>
+          <div class="extra-body">
+            <ol class="how">
+              <li>In Power BI Desktop, select <b>TMDL view</b> on the left rail.</li>
+              <li>From the <b>Data</b> pane, drag the semantic model (or the tables and queries you want) into the editor. It writes them as a script.</li>
+              <li>Click in the script, press <b>Ctrl+A</b> then <b>Ctrl+C</b>, and paste it in the box below.</li>
+            </ol>
+          </div>
+        </details>
+        <label class="lab" for="mInput">Queries <span class="hint">Filled in from the folder, or paste the DAX query results or TMDL here.</span></label>
+        <textarea id="mInput" class="mid" spellcheck="false" aria-label="Queries" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
+        <div id="mMsg"></div>
       </div>
     </section>
 
-    <section class="step" aria-labelledby="m2">
+    <section class="step" aria-labelledby="m2" id="mStep2" hidden>
       <div class="step-num">Step<b>2</b></div>
       <div class="step-body">
         <div class="step-head">
-          <h2 id="m2">Paste the results and check every query</h2>
+          <h2 id="m2">Check every query</h2>
           <p>These checks run without AI, across all queries at once. To clean up a query, select <b>Open</b> on its row.</p>
         </div>
-        <textarea id="mInput" class="big" spellcheck="false" aria-label="Query results" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
-        <div id="mMsg"></div>
         <div id="mCheck" class="mcheck" hidden>
           <div class="stats" id="mStats"></div>
           <div id="mFindings" class="findings"></div>
@@ -286,7 +311,58 @@
               <li><b>Copy all as one document</b> is for keeping a record; don&rsquo;t paste it into a query.</li>
             </ol>
           </div>
+          <div id="mTmdlBox" class="more" hidden>
+            <div class="codebox">
+              <div class="codebox-bar"><span class="t" id="mTmdlTitle">TMDL script</span><span class="r"><button class="btn primary" type="button" data-copy="mTmdl">Copy script</button></span></div>
+              <pre class="short" id="mTmdlView"></pre>
+            </div>
+            <div class="apply">
+              <b>Or put them all back at once, in TMDL view</b>
+              <ol>
+                <li>Save a copy of the report first, so you can go back.</li>
+                <li>In Power BI Desktop, select <b>TMDL view</b> on the left rail, open a new tab, paste the script and select <b>Apply</b>.</li>
+                <li>It replaces each listed query with its commented version, keeping its other settings. Refresh the tables if Power BI asks; only <code>//</code> comment lines were added.</li>
+              </ol>
+            </div>
+            <div id="mTmdlMsg"></div>
+          </div>
           <div id="mList" class="mlist2"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="m5" id="mStep5" hidden>
+      <div class="step-num">Step<b>5</b></div>
+      <div class="step-body">
+        <div class="step-head">
+          <h2 id="m5">Explain it to the business</h2>
+          <p>A document for people who use the reports but don&rsquo;t work in Power BI: where each table&rsquo;s data comes from, what is kept, left out or worked out, and what one row means. Copilot writes the plain-language part; the sources, settings and links between tables are read from the code.</p>
+        </div>
+        <div class="field"><label for="bTitle">Report or model name <span class="muted">(for the title)</span></label><input type="text" id="bTitle" placeholder="Sales Overview" autocomplete="off"></div>
+        <div class="filters">
+          <div class="field"><label for="bBatch">Tables per prompt</label><select id="bBatch"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>8</option></select></div>
+        </div>
+        <div class="progress" id="bProgress"></div>
+        <div id="bQueueMsg"></div>
+        <div class="codebox" id="bPromptBox">
+          <div class="codebox-bar"><span class="t" id="bPromptTitle">Prompt for Copilot</span><span class="r"><span class="count" id="bCount"></span><button class="btn primary" type="button" data-copy="bPrompt">Copy prompt</button></span></div>
+          <pre class="short" id="bPromptView"></pre>
+        </div>
+        <textarea id="bReply" class="mid" spellcheck="false" aria-label="Copilot reply for the business explanation" placeholder="Paste Copilot's reply here. It's added as soon as you paste."></textarea>
+        <div class="reply-actions"><button type="button" class="btn" id="bAdd">Add reply</button></div>
+        <div id="bReplyMsg"></div>
+        <div class="docbox">
+          <h3>The document</h3>
+          <div class="opts">
+            <label><input type="checkbox" id="bBehind" checked> Settings and queries behind the scenes</label>
+            <label><input type="checkbox" id="bSteps"> Step-by-step comments from Step 4</label>
+          </div>
+          <div id="bDocMsg"></div>
+          <div class="btnrow"><button type="button" class="btn primary" id="bDocx">Download Word document</button><button type="button" class="btn" id="bHtml">Download web page</button></div>
+          <details class="extra" id="bPreviewBox">
+            <summary>Preview</summary>
+            <div class="extra-body"><iframe id="bPreview" title="Document preview" sandbox=""></iframe></div>
+          </details>
         </div>
       </div>
     </section>

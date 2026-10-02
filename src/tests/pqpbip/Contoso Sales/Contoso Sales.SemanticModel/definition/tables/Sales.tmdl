@@ -1,0 +1,26 @@
+table Sales
+	lineageTag: 1a2b
+
+	column 'Order ID'
+		dataType: string
+		sourceColumn: Order ID
+
+		annotation SummarizationSetBy = Automatic
+
+	measure 'Total Sales' = SUM(Sales[Amount])
+		formatString: 0
+
+	partition Sales-7d3e = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database(ServerName, "SalesDW"),
+				    dbo_FactSales = Source{[Schema="dbo",Item="FactSales"]}[Data],
+
+				    #"Filtered Rows" = Table.SelectRows(dbo_FactSales, each [OrderDate] >= StartDate),
+				    #"Merged Queries" = Table.NestedJoin(#"Filtered Rows", {"ProductKey"}, Products, {"ProductKey"}, "Products", JoinKind.LeftOuter),
+				    #"Expanded Products" = Table.ExpandTableColumn(#"Merged Queries", "Products", {"Category"}, {"Category"})
+				in
+				    #"Expanded Products"
+
+	annotation PBI_ResultType = Table

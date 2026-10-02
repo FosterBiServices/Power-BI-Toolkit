@@ -1,0 +1,4 @@
+table Date
+	partition Date = calculated
+		mode: import
+		source = CALENDARAUTO()
