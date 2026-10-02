@@ -120,7 +120,7 @@ const state = {
   exReply: '', clReply: '', q: null, checks: [],
   mode: 'one', m: null, mDone: {}, mAsked: {}, mPick: {}, mLastBatch: [], mBatch: '3', mNotes: true, mSummary: true,
   bDone: {}, bAsked: {}, bLast: [], bBatch: '3', bTitle: '', bBehind: true, bSteps: false, pbip: null, doc: null,
-  out: { exPrompt: '', exFollow: '', commented: '', clPrompt: '', clean: '', mExport: '', mPrompt: '', mAll: '', bPrompt: '' }
+  out: { exPrompt: '', exFollow: '', commented: '', clPrompt: '', clean: '', mExport: '', mPrompt: '', mAll: '', mTmdl: '', bPrompt: '' }
 };
 const LONG_PROMPT = 14000;
 
@@ -420,6 +420,16 @@ function renderMResults(){
       + '</div></details>';
   }).join('');
   state.out.mAll = all.join('\n\n');
+  // TMDL script: only for queries read from TMDL, where the rest of each partition or expression is known
+  const forScript = list.map(i => ({ item: i, code: state.out['mq' + state.m.items.indexOf(i)] }));
+  const ok = forScript.filter(x => x.item.tmdl), left = forScript.filter(x => !x.item.tmdl);
+  state.out.mTmdl = ok.length ? tmdlScript(ok) : '';
+  $('mTmdlBox').hidden = !ok.length;
+  if (ok.length) {
+    $('mTmdlTitle').textContent = 'TMDL script (' + ok.length + ' quer' + (ok.length === 1 ? 'y' : 'ies') + ')';
+    $('mTmdlView').textContent = state.out.mTmdl;
+    $('mTmdlMsg').innerHTML = left.length ? msg('info', 'Not in the script: ' + left.map(x => '<code>' + esc(x.item.name) + '</code>').join(', ') + '. Paste those in the Advanced Editor.') : '';
+  }
 }
 /* ---------- whole model: business-friendly document ---------- */
 function bTables(){ return state.m ? state.m.items.filter(i => i.type === 'table') : []; }

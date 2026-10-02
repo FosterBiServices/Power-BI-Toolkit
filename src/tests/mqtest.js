@@ -44,6 +44,21 @@ const { chromium } = require('playwright'); const fs = require('fs'); const path
   await p.click('#bPreviewBox summary'); await p.click('#bPreviewBox summary');
   const ft2 = await fr.locator('body').innerText();
   console.log('doc uses reply:', /Every sale since the start date/.test(ft2), '| template CHECK dropped:', !/Only if readers/.test(ft2), '| template block skipped:', !/What this table is for/.test(ft2));
+  // comments back in one go: a TMDL script for queries read from TMDL
+  const mr = '```\n@@@ SUMMARY @@@\nQUERY: Sales\nTEXT: Sales from SalesDW.\n@@@ END @@@\n' + ['Source', 'dbo_FactSales', 'Filtered Rows', 'Merged Queries', 'Expanded Products'].map(n => '@@@ STEP @@@\nQUERY: Sales\nNAME: ' + n + '\nCOMMENT: Does ' + n + '.\n@@@ END @@@').join('\n')
+    + '\n@@@ STEP @@@\nQUERY: Products\nNAME: Source\nCOMMENT: Connects.\n@@@ END @@@\n```';
+  await p.fill('#mReply', mr); await p.click('#mAdd');
+  console.log('tmdl box', await p.locator('#mTmdlBox').isVisible(), '|', await p.locator('#mTmdlTitle').innerText(), '(expect 2 queries)');
+  const script = await p.locator('#mTmdlView').innerText();
+  console.log(script.split('\n').slice(0, 14).map(l => l.replace(/\t/g, '→')).join('\n'));
+  // the script read back gives the same queries, with the comments, and keeps each object's other lines
+  const back = await p.evaluate(sc => { const r = pbipTmdlQueries(sc); return r.tables.map(t => t.name + ':' + t.parts.map(x => x.name + '[' + x.props.join('|') + '] comments=' + (x.code.match(/\/\/ /g) || []).length).join()).concat(r.exprs.map(e => e.name + '[' + e.props.join('|') + ']')).join(' || '); }, script);
+  console.log('round trip:', back);
+  // TMDL copied from TMDL view, pasted in the box
+  const tv = 'createOrReplace\n\n\ttable Orders\n\t\tlineageTag: 9\n\n\t\tpartition Orders = m\n\t\t\tmode: import\n\t\t\tsource =\n\t\t\t\t\tlet\n\t\t\t\t\t    Source = Csv.Document(File.Contents("\\\\share\\orders.csv"))\n\t\t\t\t\tin\n\t\t\t\t\t    Source\n\n\texpression Region = "West" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]\n\t\tlineageTag: 7\n';
+  await p.fill('#mInput', tv);
+  console.log('pasted TMDL:', (await p.locator('#mBody tr').evaluateAll(tr => tr.map(r => r.querySelector('.nm').textContent.trim() + '=' + r.querySelector('.fmt').textContent.trim()))).join(' | '), '| msg', JSON.stringify(await p.locator('#mMsg').innerText()));
+  await p.setInputFiles('#pbipInput', path.join(__dirname, 'pqpbip')); await p.waitForSelector('#pbipMsg .msg.ok');
   // second model in the folder
   await p.selectOption('#pbipPick', '1'); await p.waitForTimeout(200);
   console.log('legacy:', await p.locator('#pbipMsg').innerText(), '| rows', (await p.locator('#mBody tr .nm').allInnerTexts()).join(', '));

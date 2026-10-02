@@ -226,7 +226,17 @@
             </div>
           </div>
         </details>
-        <label class="lab" for="mInput">Queries <span class="hint">Filled in from the folder, or paste the DAX query results here.</span></label>
+        <details class="extra" id="tmdlBox">
+          <summary>Or copy them from TMDL view</summary>
+          <div class="extra-body">
+            <ol class="how">
+              <li>In Power BI Desktop, select <b>TMDL view</b> on the left rail.</li>
+              <li>From the <b>Data</b> pane, drag the semantic model (or the tables and queries you want) into the editor. It writes them as a script.</li>
+              <li>Click in the script, press <b>Ctrl+A</b> then <b>Ctrl+C</b>, and paste it in the box below.</li>
+            </ol>
+          </div>
+        </details>
+        <label class="lab" for="mInput">Queries <span class="hint">Filled in from the folder, or paste the DAX query results or TMDL here.</span></label>
         <textarea id="mInput" class="mid" spellcheck="false" aria-label="Queries" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
         <div id="mMsg"></div>
       </div>
@@ -300,6 +310,21 @@
               <li>Select <b>Done</b>. Only <code>//</code> comment lines were added, so the data doesn&rsquo;t change.</li>
               <li><b>Copy all as one document</b> is for keeping a record; don&rsquo;t paste it into a query.</li>
             </ol>
+          </div>
+          <div id="mTmdlBox" class="more" hidden>
+            <div class="codebox">
+              <div class="codebox-bar"><span class="t" id="mTmdlTitle">TMDL script</span><span class="r"><button class="btn primary" type="button" data-copy="mTmdl">Copy script</button></span></div>
+              <pre class="short" id="mTmdlView"></pre>
+            </div>
+            <div class="apply">
+              <b>Or put them all back at once, in TMDL view</b>
+              <ol>
+                <li>Save a copy of the report first, so you can go back.</li>
+                <li>In Power BI Desktop, select <b>TMDL view</b> on the left rail, open a new tab, paste the script and select <b>Apply</b>.</li>
+                <li>It replaces each listed query with its commented version, keeping its other settings. Refresh the tables if Power BI asks; only <code>//</code> comment lines were added.</li>
+              </ol>
+            </div>
+            <div id="mTmdlMsg"></div>
           </div>
           <div id="mList" class="mlist2"></div>
         </div>
