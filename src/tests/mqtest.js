@@ -24,6 +24,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const path
   await p.setInputFiles('#pbipInput', path.join(__dirname, 'pqpbip'));
   await p.waitForSelector('#pbipMsg .msg.ok');
   console.log('pbip:', await p.locator('#pbipMsg').innerText());
+  console.log('measures table:', await p.locator('#mMsg').innerText(), '(expect _Measures left out)');
   console.log('pick visible', await p.locator('#pbipPickWrap').isVisible(), '| options', (await p.locator('#pbipPick option').allInnerTexts()).join(', '), '| banner', await p.locator('#exampleBanner').isVisible());
   const rows = await p.locator('#mBody tr').evaluateAll(tr => tr.map(r => r.querySelector('.nm').textContent.trim() + '=' + r.querySelector('.fmt').textContent.trim()));
   console.log('queries:', rows.join(' | '), '(expect Customer List, Sales, Targets tables; Products not loaded; fnTrim function; ServerName, StartDate parameters; no Date, no ShouldNotLoad)');
@@ -55,6 +56,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const path
   const back = await p.evaluate(sc => { const r = pbipTmdlQueries(sc); return r.tables.map(t => t.name + ':' + t.parts.map(x => x.name + '[' + x.props.join('|') + '] comments=' + (x.code.match(/\/\/ /g) || []).length).join()).concat(r.exprs.map(e => e.name + '[' + e.props.join('|') + ']')).join(' || '); }, script);
   console.log('round trip:', back);
   // TMDL copied from TMDL view, pasted in the box
+  await p.fill('#mInput', 'Kind\tName\tCode\nTable\tKey Measures\tlet Source = #table({"x"}, {}) in Source\nTable\tOrders\tlet Source = Sql.Database("s", "d") in Source');
+  console.log('DAX export measures table:', await p.locator('#mMsg').innerText(), '| rows', (await p.locator('#mBody tr .nm').allInnerTexts()).join(', '), '(expect Key Measures left out, Orders kept)');
   const tv = 'createOrReplace\n\n\ttable Orders\n\t\tlineageTag: 9\n\n\t\tpartition Orders = m\n\t\t\tmode: import\n\t\t\tsource =\n\t\t\t\t\tlet\n\t\t\t\t\t    Source = Csv.Document(File.Contents("\\\\share\\orders.csv"))\n\t\t\t\t\tin\n\t\t\t\t\t    Source\n\n\texpression Region = "West" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]\n\t\tlineageTag: 7\n';
   await p.fill('#mInput', tv);
   console.log('pasted TMDL:', (await p.locator('#mBody tr').evaluateAll(tr => tr.map(r => r.querySelector('.nm').textContent.trim() + '=' + r.querySelector('.fmt').textContent.trim()))).join(' | '), '| msg', JSON.stringify(await p.locator('#mMsg').innerText()));

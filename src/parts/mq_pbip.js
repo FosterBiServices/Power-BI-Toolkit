@@ -42,7 +42,7 @@ const SOURCE_MARK = '\u00A7source';
 function pbipTmdlQueries(text){
   const lines = pbipUnscript(text);
   const tables = [], exprs = [];
-  let table = null, part = null, desc = [];
+  let table = null, part = null, col = null, desc = [];
   // keep a partition's or expression's other lines as they are, so a script can put it back unchanged
   const strip = (l, n) => l.slice(Math.min(n, pbipTabs(l)));
   for (let i = 0; i < lines.length; ) {
@@ -50,7 +50,7 @@ function pbipTmdlQueries(text){
     let m;
     if (t.startsWith('///')) { desc.push(strip(line, d)); i++; continue; }
     const before = desc; desc = [];
-    if (d === 0 && (m = /^(?:ref\s+)?table\s+(.+?)\s*$/.exec(t))) { table = { name: pbipUnquote(m[1]), parts: [], policy: '' }; tables.push(table); part = null; i++; continue; }
+    if (d === 0 && (m = /^(?:ref\s+)?table\s+(.+?)\s*$/.exec(t))) { table = { name: pbipUnquote(m[1]), parts: [], policy: '', measures: 0, columns: [] }; tables.push(table); part = null; col = null; i++; continue; }
     if (d === 0 && (m = /^expression\s+(.+?)\s*=(.*)$/.exec(t))) {
       table = null; part = null;
       const e = pbipExpr(lines, i, m[2], 2);
@@ -72,7 +72,12 @@ function pbipTmdlQueries(text){
       if (part.type === 'm') table.parts.push(part);
       i++; continue;
     }
-    if (table && d === 1 && t) part = null;
+    if (table && d === 1 && t) {
+      part = null; col = null;
+      if (/^measure\s/.test(t)) table.measures++;
+      if (/^column\s/.test(t)) { col = { hidden: false }; table.columns.push(col); }
+    }
+    if (table && col && d === 2 && /^isHidden(\s*:\s*true)?\s*$/.test(t)) col.hidden = true;
     if (table && part && part.type === 'm' && d > part.depth && (m = /^source\s*=(.*)$/.exec(t))) {
       const e = pbipExpr(lines, i, m[1], d + 1);
       part.code = e.code; part.props.push(SOURCE_MARK);
@@ -94,7 +99,8 @@ function pbipBimQueries(text){
   const tables = (model.tables || []).map(t => ({
     name: t.name || '',
     parts: (t.partitions || []).filter(p => p.source && /^m$/i.test(p.source.type || '')).map(p => ({ name: p.name || '', code: pbipJoin(p.source.expression).trim() })).filter(p => p.code),
-    policy: t.refreshPolicy ? pbipJoin(t.refreshPolicy.sourceExpression).trim() : ''
+    policy: t.refreshPolicy ? pbipJoin(t.refreshPolicy.sourceExpression).trim() : '',
+    measures: (t.measures || []).length, columns: (t.columns || []).filter(c => c.type !== 'rowNumber').map(c => ({ hidden: !!c.isHidden }))
   }));
   const exprs = (model.expressions || []).filter(e => !e.kind || /^m$/i.test(e.kind)).map(e => ({
     name: e.name || '', code: pbipJoin(e.expression).trim(),
@@ -102,16 +108,30 @@ function pbipBimQueries(text){
   }));
   return { tables, exprs };
 }
+// A dedicated measures table: it holds measures, its query reads no data source (Enter data or #table), and it has
+// at most one column or only hidden ones (the placeholder Enter data leaves behind). There is nothing to explain.
+function readsNoSource(code){
+  // Enter data keeps its rows in the code itself: Json.Document(Binary.Decompress(Binary.FromText("...")))
+  const c = (code || '').replace(/Json\.Document\s*\(\s*Binary\.Decompress/g, '');
+  return !CONNECTOR_RE.test(c) && !/\b(File|Folder|Web|SharePoint|Sql|Odbc|OData)\.\w+\s*\(/.test(c);
+}
+function isMeasuresTable(t){
+  const code = t.parts.map(p => p.code).join('\n') + (t.policy || '');
+  return t.measures > 0 && readsNoSource(code) && (t.columns.length <= 1 || t.columns.every(c => c.hidden));
+}
+// From code alone (the DAX export): named as a measures table, and reads no data source
+function looksMeasuresTable(name, code){ return /measure/i.test(name || '') && readsNoSource(code); }
 // tmdl: read from TMDL, with each partition's and expression's other lines kept, so a TMDL script can put it back
 function pbipQueryList(tables, exprs, tmdl){
   const out = [];
   tables.forEach(t => {
     const parts = t.parts.length ? t.parts : t.policy ? [{ name: t.name, code: t.policy }] : [];
     const seen = new Set();
+    const mt = isMeasuresTable(t);
     parts.forEach((p, k) => {
       if (seen.has(p.code)) return; seen.add(p.code);
       out.push({ name: k === 0 ? t.name : t.name + ' (' + p.name + ')', loaded: true, code: p.code, resultType: 'Table',
-        table: t.parts.length ? t.name : '', partition: t.parts.length ? p.name : '', props: p.props ? (p.desc || []).map(l => '@' + l).concat(p.props).join('\n') : '', tmdl: !!tmdl && !!t.parts.length });
+        table: t.parts.length ? t.name : '', partition: t.parts.length ? p.name : '', props: p.props ? (p.desc || []).map(l => '@' + l).concat(p.props).join('\n') : '', tmdl: !!tmdl && !!t.parts.length, measuresTable: mt });
     });
   });
   exprs.filter(e => e.name && e.code.trim()).forEach(e => out.push({ name: e.name, loaded: false, code: e.code, resultType: e.resultType,
@@ -150,7 +170,7 @@ const TAB_MARK = '\u21E5';
 function queriesToExport(list){
   const cell = s => '"' + String(s).replace(/"/g, '""') + '"';
   const code = c => c.replace(/\r/g, '').replace(/\t/g, '    ').split('\n').join(NL_MARK);
-  return 'Kind\tName\tResultType\tFrom\tTable\tPartition\tProps\tCode\n' + list.map(q => [q.loaded ? 'Table' : 'Query', cell(q.name), cell(q.resultType || ''), q.tmdl ? 'TMDL' : '', cell(q.table || ''), cell(q.partition || ''), cell((q.props || '').replace(/\t/g, TAB_MARK).split('\n').join(NL_MARK)), cell(code(q.code))].join('\t')).join('\n');
+  return 'Kind\tName\tResultType\tFrom\tTable\tPartition\tProps\tCode\n' + list.map(q => [q.measuresTable ? 'MeasuresTable' : q.loaded ? 'Table' : 'Query', cell(q.name), cell(q.resultType || ''), q.tmdl ? 'TMDL' : '', cell(q.table || ''), cell(q.partition || ''), cell((q.props || '').replace(/\t/g, TAB_MARK).split('\n').join(NL_MARK)), cell(code(q.code))].join('\t')).join('\n');
 }
 
 /* ---------- TMDL script: put commented queries back in one go, in TMDL view ---------- */

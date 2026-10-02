@@ -42,7 +42,7 @@ function mUnquoteCell(s){
   return s;
 }
 function parseMExport(text){
-  const res = { queries: [], error: null };
+  const res = { queries: [], error: null, skipped: [] };
   const raw = (text || '').replace(/\r/g, '');
   if (!raw.trim()) return res;
   const lines = raw.split('\n');
@@ -53,7 +53,7 @@ function parseMExport(text){
   }
   if (h < 0 && looksTmdl(raw)) {
     const r = pbipTmdlQueries(raw);
-    res.queries = pbipQueryList(r.tables, r.exprs, true);
+    pbipQueryList(r.tables, r.exprs, true).forEach(q => { if (q.measuresTable) res.skipped.push(q.name); else res.queries.push(q); });
     res.tmdl = true;
     if (!res.queries.length) res.error = 'No Power Query code was found in this TMDL. Script the tables whose queries you want (or the whole semantic model) in TMDL view, and copy all of it.';
     return res;
@@ -72,10 +72,13 @@ function parseMExport(text){
     const name = get('name'), code = get('code').split(NL_MARK).join('\n');
     if (!name || !code.trim() || seen.has(lc(name))) continue;
     seen.add(lc(name));
+    // dedicated measures tables are always left out: their query only makes a placeholder
+    const kind = lc(get('kind'));
+    if (kind === 'measurestable' || (kind === 'table' && looksMeasuresTable(name, code))) { res.skipped.push(name); continue; }
     res.queries.push({ name, loaded: lc(get('kind')) === 'table', code, resultType: get('resulttype'), table: get('table'), partition: get('partition'),
       props: get('props').split(NL_MARK).join('\n').split(TAB_MARK).join('\t'), tmdl: lc(get('from')) === 'tmdl' });
   }
-  if (!res.queries.length) res.error = 'No queries were found under the header row.';
+  if (!res.queries.length) res.error = 'No queries were found under the header row' + (res.skipped.length ? ', other than measures tables' : '') + '.';
   return res;
 }
 

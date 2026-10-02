@@ -319,7 +319,9 @@ function renderModel(){
   const text = $('mInput').value;
   const ex = parseMExport(text);
   state.m = null;
-  $('mMsg').innerHTML = ex.error ? msg('err', esc(ex.error)) : '';
+  const sk = ex.skipped || [], one = sk.length === 1;
+  const skipped = sk.length ? msg('info', 'Left out ' + (one ? 'a measures table' : sk.length + ' measures tables') + ': ' + sk.map(n => '<code>' + esc(n) + '</code>').join(', ') + '. ' + (one ? 'It only holds measures, so its query has' : 'They only hold measures, so their queries have') + ' nothing to explain.') : '';
+  $('mMsg').innerHTML = (ex.error ? msg('err', esc(ex.error)) : '') + skipped;
   if (!ex.error && ex.queries.length) state.m = analyzeModel(ex.queries);
   const ok = !!state.m;
   $('mStep2').hidden = !ok; $('mCheck').hidden = !ok; $('mStep3').hidden = !ok; $('mStep4').hidden = !ok; $('mStep5').hidden = !ok;
@@ -568,8 +570,8 @@ function usePbipModel(k){
   if (!state.bTitle.trim()) { state.bTitle = x.name; $('bTitle').value = x.name; }
   try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
   $('mReplyMsg').innerHTML = ''; $('bReplyMsg').innerHTML = '';
-  const t = x.queries.filter(q => q.loaded).length;
-  $('pbipMsg').innerHTML = msg('ok', 'Read ' + x.queries.length + ' quer' + (x.queries.length === 1 ? 'y' : 'ies') + ' from &ldquo;' + esc(x.name) + '&rdquo; (' + x.format + '): ' + t + ' loaded table' + (t === 1 ? '' : 's') + ' and ' + (x.queries.length - t) + ' other' + (x.queries.length - t === 1 ? '' : 's') + '.');
+  const qs = x.queries.filter(q => !q.measuresTable), t = qs.filter(q => q.loaded).length;
+  $('pbipMsg').innerHTML = msg('ok', 'Read ' + qs.length + ' quer' + (qs.length === 1 ? 'y' : 'ies') + ' from &ldquo;' + esc(x.name) + '&rdquo; (' + x.format + '): ' + t + ' loaded table' + (t === 1 ? '' : 's') + ' and ' + (qs.length - t) + ' other' + (qs.length - t === 1 ? '' : 's') + '.');
   renderModel(); persist();
 }
 
