@@ -29,7 +29,8 @@ prompt the user takes to Copilot, then check the reply pasted back. Nothing call
 - Home link and **Switch tool** menu on every page (added by suite.js).
 - The disclaimer on the home page stays.
 - No green, red or amber in **suggested colors** (palettes, themes, wireframes); they read as
-  good, bad and warning. UI status colors for ok, error and warning are fine.
+  good, bad and warning. UI status colors for ok, error and warning are fine. KPI Visualizer's
+  KPI status colors default to Excel's good, neutral and bad styles (the owner's choice).
 - Leave out anything Power BI already does well by default. Two tools were dropped for this
   reason: Visual Interactions (there's a default setting) and a Performance Analyzer reader.
 - Ask before changing anything when the owner says to confirm first.
@@ -116,6 +117,7 @@ Things to know:
 | power-query-writer | kpw. | no | yes |
 | power-query-explainer | kpq. | no (own export, or a PBIP folder) | yes |
 | date-table-generator | kdt. | optional | no |
+| kpi-visualizer | kkv. | optional | no |
 | theme-builder | ktb. | no | no |
 | layout-designer | klo. | no | no |
 | sheet-recon | ksr. (Clear entries flag only; files are never stored) | no | no |

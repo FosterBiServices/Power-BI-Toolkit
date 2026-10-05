@@ -17,6 +17,7 @@ const TOOLS = [
   { free: true, file: 'power-query-writer.html', name: 'Power Query Writer', desc: 'Describe a query in plain words and get a Copilot prompt that writes it: working, easy to maintain and short, with one-word step names and tidy formatting. Copilot\u2019s reply is checked before you use it.', tags: ['ai'] },
   { free: true, file: 'date-table-generator.html', name: 'Date Table Generator', desc: 'A date table with your fiscal year, weeks and holidays, as DAX, Power Query or a TMDL script. Can start and end with your data.', tags: ['dates', 'noai'] },
   { free: true, file: 'layout-designer.html', name: 'Layout Designer', desc: 'Plan a page on an even grid, or get three 3-30-3 layout suggestions from a few questions. Wireframe with sample visuals, exact positions, a designed background image, and Figma and PowerPoint exports.', tags: ['noai'] },
+  { free: true, file: 'kpi-visualizer.html', name: 'KPI Visualizer', desc: 'Compare ways to show a KPI or a row of them: cards with variance, bullet charts, sparklines, progress bars, waffles and a scorecard table, each with when to use it, build steps and SVG measures in Excel-style status colors.', tags: ['opt', 'noai'] },
   { free: true, file: 'theme-builder.html', name: 'Theme Builder', desc: 'A full report theme from one brand color: data palette, text, background, good and bad colors, font and styles for every common visual, checked for readability and color blindness.', tags: ['noai'] },
   { free: true, file: 'sheet-recon.html', name: 'Sheet Recon', desc: 'Compare two tables from Excel or CSV by key: rows found on only one side and every changed value. Cleans DAX column names, dates, numbers and blanks first.', tags: ['files', 'noai'] },
 ];
@@ -44,7 +45,7 @@ function renderSaved(){
 }
 function renderTools(){
   const card = t => '<a class="tool" href="' + t.file + '"><span class="tn">' + esc(t.name) + '</span><span class="td">' + esc(t.desc) + '</span><span class="tags">' + (t.free ? t.tags.map(x => x === 'exp' || x === 'dates' ? 'opt' : x) : t.tags.filter(x => x !== 'exp')).map(x => TAG[x]).join('') + '</span></a>';
-  const FREE_ORDER = ['theme-builder.html', 'layout-designer.html', 'date-table-generator.html', 'power-query-writer.html', 'power-query-explainer.html', 'dax-reviewer.html', 'sheet-recon.html'];
+  const FREE_ORDER = ['theme-builder.html', 'layout-designer.html', 'kpi-visualizer.html', 'date-table-generator.html', 'power-query-writer.html', 'power-query-explainer.html', 'dax-reviewer.html', 'sheet-recon.html'];
   $('toolsFree').innerHTML = TOOLS.filter(t => t.free).sort((a, b) => FREE_ORDER.indexOf(a.file) - FREE_ORDER.indexOf(b.file)).map(card).join('');
   $('tools').innerHTML = TOOLS.filter(t => !t.free).map(card).join('');
   return;

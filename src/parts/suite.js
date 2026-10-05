@@ -102,6 +102,7 @@
     ['power-query-writer.html', 'Power Query Writer'],
     ['power-query-explainer.html', 'Power Query Explainer'],
     ['date-table-generator.html', 'Date Table Generator'],
+    ['kpi-visualizer.html', 'KPI Visualizer'],
     ['theme-builder.html', 'Theme Builder'],
     ['layout-designer.html', 'Layout Designer'],
     ['sheet-recon.html', 'Sheet Recon']

@@ -1,0 +1,139 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>KPI Visualizer</h1>
+        <p class="lede">Describe a KPI, or a row of them, and compare ways to show it: cards, bullet charts, sparklines, progress bars, waffles and more, each with when to use it and how to build it. SVG measures come as a TMDL script. No AI needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This removes your KPIs, the model export and your color choices, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Add a KPI in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> The four KPIs are samples. Type in any field, add a KPI or load your model export to start with your own.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Your KPIs</h2>
+        <p>A KPI needs a <b>number</b>, a <b>meaning</b> (is it good or bad?) and some <b>context</b>. A target or a comparison such as last year gives it meaning. The numbers are only for the previews; the DAX uses your measures.</p>
+      </div>
+      <div class="kv-modes">
+        <span class="lbl" id="modeLbl">Show</span>
+        <div class="seg" role="radiogroup" aria-labelledby="modeLbl">
+          <label><input type="radio" name="mode" value="one" id="modeOne"><span>One KPI</span></label>
+          <label><input type="radio" name="mode" value="row" id="modeRow"><span>A row of KPIs</span></label>
+        </div>
+      </div>
+      <div id="kpis" class="kv-kpis"></div>
+      <div class="reply-actions"><button type="button" class="btn" id="addKpi">+ Add a KPI</button><span class="small muted" id="kpiMax"></span></div>
+      <details class="extra" id="modelBox">
+        <summary>Pick measures from your model export <span class="muted">(optional)</span></summary>
+        <div class="extra-body">
+          <p class="note small">With the export, you can add KPIs from your measures, and the page checks every name before you copy the script. Measures in a measures table are listed too.</p>
+          <details class="extra">
+            <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+            <div class="extra-body">
+              <ol class="how">
+                <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+                <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+              </ol>
+              <div class="codebox">
+                <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+                <pre class="short" id="exportView"></pre>
+              </div>
+            </div>
+          </details>
+          <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+          <div class="stats" id="modelStats"></div>
+          <div id="modelMsg"></div>
+          <div id="pickBox" hidden>
+            <input type="text" id="search" class="search" placeholder="Search measures" aria-label="Search measures" autocomplete="off">
+            <div class="mlist" id="avail" role="list" aria-label="Measures in the model"></div>
+          </div>
+        </div>
+      </details>
+      <datalist id="measureNames"></datalist>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Status colors</h2>
+        <p>Good, neutral and bad, the way Excel&rsquo;s conditional formatting shows them. Change any color, or take them from your theme. An arrow always goes with the color, so it never relies on color alone.</p>
+      </div>
+      <div class="chips" id="colorPresets" role="group" aria-label="Color presets">
+        <button type="button" class="chip" data-preset="excel">Excel styles</button>
+        <button type="button" class="chip" data-preset="scale">Excel color scale</button>
+        <button type="button" class="chip" data-preset="tb">From Theme Builder</button>
+        <button type="button" class="chip" data-preset="json">From a theme file</button>
+      </div>
+      <div id="presetMsg"></div>
+      <div id="jsonBox" hidden>
+        <textarea id="themeJson" class="short" spellcheck="false" aria-label="Theme JSON" placeholder="Paste your report theme JSON (it reads good, neutral and bad)"></textarea>
+        <div class="reply-actions"><button type="button" class="btn" id="openTheme">Open a theme file</button><input type="file" id="themeFile" accept=".json,application/json" hidden></div>
+      </div>
+      <div class="kv-colors" id="colorRows"></div>
+      <div class="field inline-f"><label for="band">Counts as neutral when within</label><span><input type="number" id="band" min="0" max="50" step="0.5" style="width:80px"> % of the target or comparison</span></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Ways to show it</h2>
+        <p id="s3note">Best fit first, based on what your KPI has. Pick one to see how to build it.</p>
+      </div>
+      <div class="field" id="kpiPickWrap"><label for="kpiPick">Options for</label><select id="kpiPick"></select></div>
+      <div id="sampleMsg"></div>
+      <div class="kv-grid" id="options"></div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Build it: <span id="buildName"></span></h2>
+        <p id="buildKind"></p>
+      </div>
+      <div class="cfg" id="buildCfg">
+        <div class="field"><label for="homeTable">Table for the new measures</label><input type="text" id="homeTable" list="tableNames" autocomplete="off" placeholder="_Measures"></div>
+        <div class="field"><label for="folder">Display folder <span class="muted">(each KPI gets a subfolder)</span></label><input type="text" id="folder" autocomplete="off" placeholder="KPI Visuals"></div>
+        <div class="field" id="trendWrap"><label for="trendCol">Trend by <span class="muted">(a date or number column)</span></label><input type="text" id="trendCol" list="trendCols" autocomplete="off" spellcheck="false" placeholder="'Date'[Month Start]"></div>
+        <div class="field" id="periodsWrap"><label for="periods">Periods</label><input type="number" id="periods" min="2" max="36" style="width:80px"></div>
+        <div class="field" id="scoreWrap"><label for="scoreTable">Scorecard table name</label><input type="text" id="scoreTable" autocomplete="off" placeholder="KPI Scorecard"></div>
+      </div>
+      <datalist id="tableNames"></datalist><datalist id="trendCols"></datalist>
+      <ol class="kv-steps" id="steps"></ol>
+      <div id="checks"></div>
+      <div id="outBox">
+        <h3>1. Check the measures first <span class="muted">(DAX query view, optional)</span></h3>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">DAX query: test</span><span class="r"><button class="btn primary" type="button" data-copy="test">Copy query</button></span></div>
+          <pre class="short" id="testView"></pre>
+        </div>
+        <h3>2. Add them to your model <span class="muted">(TMDL view)</span></h3>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">TMDL script</span><span class="r"><button class="btn primary" type="button" data-copy="tmdl">Copy script</button></span></div>
+          <pre class="tall" id="tmdlView"></pre>
+        </div>
+      </div>
+      <p class="note small">Ideas behind the options: <a href="https://data-goblins.com/power-bi/kpi-templates" target="_blank" rel="noopener">KPIs and cards in Power BI</a> by Data Goblins (number, meaning and context; SVG and core-visual KPI templates).</p>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your KPIs and choices are saved only in this browser.</footer>
+</div>
