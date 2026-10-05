@@ -22,7 +22,7 @@ HOOKS={
  'about-this-report':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kab.', open: 'modelBox' });",
  'model-compare':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kmc.', open: 'modelBox' }); window.mcSuite && window.mcSuite(SF_SUITE);",
  'model-documenter':"SF_SUITE.hook({ input: 'exInput', prefix: 'kmdoc.' });",
- 'kpi-visualizer':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kkv.', open: 'modelBox' });",
+ 'kpi-visualizer':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kkv.' });",
  'theme-builder':"",
  'layout-designer':"",
  'power-query-explainer':"",

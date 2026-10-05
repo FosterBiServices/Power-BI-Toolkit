@@ -396,10 +396,10 @@ function kvTestQuery(kpis, cfg, optionId){
 }
 function kvChecks(kpis, cfg, optionId, model){
   const out = [], add = (level, text) => out.push({ level, text });
-  if (!kpis.length) { add('info', 'Add a KPI in Step 1.'); return out; }
+  if (!kpis.length) { add('info', 'Add a KPI in Step 2.'); return out; }
   kpis.forEach((k, i) => { if (!(k.measure || '').trim()) add('err', 'KPI ' + (i + 1) + (k.label ? ' (' + k.label + ')' : '') + ' has no measure. Type the measure’s name so the DAX can use it.'); });
   const plan = kvPlan(kpis, cfg, optionId);
-  if (plan.length && !(cfg.table || '').trim()) add('err', 'Type the table the new measures go in (Step 4).');
+  if (plan.length && !(cfg.table || '').trim()) add('err', 'Type the table the new measures go in (Step 5).');
   const names = kpis.map(k => lc(kvName(k))), dup = names.filter((x, i) => names.indexOf(x) !== i);
   if (dup.length) add('err', 'Two KPIs have the same name: ' + [...new Set(dup)].join(', ') + '. Give each its own label; the new measures are named after it.');
   if (model) {

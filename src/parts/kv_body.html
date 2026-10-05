@@ -6,12 +6,12 @@
       <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
     <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
-      <span id="clearMsg"><b>Clear all entries?</b> This removes your KPIs, the model export and your color choices, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span id="clearMsg"><b>Clear all entries?</b> This removes your KPIs, the model you connected and your color choices, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
       <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
     </div>
-    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Add a KPI in Step 1 to start again.</div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Connect your model or add a KPI to start again.</div>
     <div class="banner" id="exampleBanner" hidden>
-      <span><strong>Example loaded.</strong> The four KPIs are samples. Type in any field, add a KPI or load your model export to start with your own.</span>
+      <span><strong>Example loaded.</strong> The four KPIs are samples. Connect your model, type in any field or add a KPI to start with your own.</span>
       <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
     </div>
   </header>
@@ -21,7 +21,46 @@
     <div class="step-num">Step<b>1</b></div>
     <div class="step-body">
       <div class="step-head">
-        <h2 id="s1">Your KPIs</h2>
+        <h2 id="s1">Connect your model</h2>
+        <p>With your model, you pick KPIs from your measures and every name is checked before you copy the script. Measures in a measures table are listed too. Nothing leaves this page.</p>
+      </div>
+      <div class="tabbar kv-src" role="radiogroup" aria-label="How to connect">
+        <button type="button" role="radio" data-src="pbip" aria-checked="false"><span class="tn">PBIP folder</span><span class="td">Choose the folder with your .pbip file. The page reads the semantic model&rsquo;s tables and measures.</span></button>
+        <button type="button" role="radio" data-src="export" aria-checked="false"><span class="tn">Model export</span><span class="td">Run the toolkit&rsquo;s export query in DAX query view and paste the results. Saved for the other tools too.</span></button>
+        <button type="button" role="radio" data-src="none" aria-checked="false"><span class="tn">No model</span><span class="td">Type your KPIs&rsquo; measure names yourself. Names aren&rsquo;t checked.</span></button>
+      </div>
+      <div id="srcPbip" class="kv-panel" hidden>
+        <div class="reply-actions"><button type="button" class="btn primary" id="pickPbip">Choose a PBIP folder</button><span class="small muted">or drop the folder below</span></div>
+        <div class="drop" id="pbipDrop">Drop the project folder here</div>
+        <input type="file" id="pbipInput" webkitdirectory multiple hidden>
+      </div>
+      <div id="srcExport" class="kv-panel" hidden>
+        <details class="extra" id="queryBox">
+          <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+          <div class="extra-body">
+            <ol class="how">
+              <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+              <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+            </ol>
+            <div class="codebox">
+              <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+              <pre class="short" id="exportView"></pre>
+            </div>
+          </div>
+        </details>
+        <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+      </div>
+      <div class="stats" id="modelStats"></div>
+      <div id="modelMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2k">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2k">Your KPIs</h2>
         <p>A KPI needs a <b>number</b>, a <b>meaning</b> (is it good or bad?) and some <b>context</b>. A target or a comparison such as last year gives it meaning. The numbers are only for the previews; the DAX uses your measures.</p>
       </div>
       <div class="kv-modes">
@@ -31,41 +70,20 @@
           <label><input type="radio" name="mode" value="row" id="modeRow"><span>A row of KPIs</span></label>
         </div>
       </div>
+      <div id="pickBox" hidden>
+        <h3 class="kv-h3">Add from your measures</h3>
+        <input type="text" id="search" class="search" placeholder="Search measures" aria-label="Search measures" autocomplete="off">
+        <div class="mlist" id="avail" role="list" aria-label="Measures in the model"></div>
+      </div>
       <div id="kpis" class="kv-kpis"></div>
       <div class="reply-actions"><button type="button" class="btn" id="addKpi">+ Add a KPI</button><span class="small muted" id="kpiMax"></span></div>
-      <details class="extra" id="modelBox">
-        <summary>Pick measures from your model export <span class="muted">(optional)</span></summary>
-        <div class="extra-body">
-          <p class="note small">With the export, you can add KPIs from your measures, and the page checks every name before you copy the script. Measures in a measures table are listed too.</p>
-          <details class="extra">
-            <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
-            <div class="extra-body">
-              <ol class="how">
-                <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
-                <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
-              </ol>
-              <div class="codebox">
-                <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
-                <pre class="short" id="exportView"></pre>
-              </div>
-            </div>
-          </details>
-          <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
-          <div class="stats" id="modelStats"></div>
-          <div id="modelMsg"></div>
-          <div id="pickBox" hidden>
-            <input type="text" id="search" class="search" placeholder="Search measures" aria-label="Search measures" autocomplete="off">
-            <div class="mlist" id="avail" role="list" aria-label="Measures in the model"></div>
-          </div>
-        </div>
-      </details>
       <datalist id="measureNames"></datalist>
     </div>
   </section>
 
-  <!-- STEP 2 -->
+  <!-- STEP 3 -->
   <section class="step" aria-labelledby="s2">
-    <div class="step-num">Step<b>2</b></div>
+    <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s2">Status colors</h2>
@@ -87,9 +105,9 @@
     </div>
   </section>
 
-  <!-- STEP 3 -->
+  <!-- STEP 4 -->
   <section class="step" aria-labelledby="s3">
-    <div class="step-num">Step<b>3</b></div>
+    <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">Ways to show it</h2>
@@ -101,9 +119,9 @@
     </div>
   </section>
 
-  <!-- STEP 4 -->
+  <!-- STEP 5 -->
   <section class="step" aria-labelledby="s4">
-    <div class="step-num">Step<b>4</b></div>
+    <div class="step-num">Step<b>5</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s4">Build it: <span id="buildName"></span></h2>

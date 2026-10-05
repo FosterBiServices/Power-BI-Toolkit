@@ -20,7 +20,7 @@ function hl(code){
   }).join('\n');
 }
 const clone = o => JSON.parse(JSON.stringify(o));
-const blankCfg = () => ({ mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard' });
+const blankCfg = () => ({ source: '', modelFrom: '', pbipName: '', mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard' });
 const state = { example: false, model: null, kpis: [], cfg: blankCfg(), out: {} };
 const FIELDS = ['label', 'measure', 'format', 'better', 'target', 'compare', 'compareLabel', 'pv.value', 'pv.target', 'pv.compare', 'pv.trend'];
 const getF = (k, f) => f.startsWith('pv.') ? k.pv[f.slice(3)] : k[f];
@@ -35,7 +35,7 @@ function persist(){
 function setExample(on){ state.example = on; $('exampleBanner').hidden = !on; }
 function leaveExample(){ if (state.example) { state.kpis = []; state.cfg.table = ''; state.cfg.sel = 0; setExample(false); } }
 
-/* ---------- Step 1: KPIs ---------- */
+/* ---------- Step 2: KPIs ---------- */
 function kpiEditor(k, i){
   const f = (field, label, ph, extra) => '<div class="field' + (extra || '') + '"><label for="k' + i + '_' + field + '">' + label + '</label><input type="text" id="k' + i + '_' + field + '" data-f="' + field + '" value="' + esc(getF(k, field) || '') + '" placeholder="' + esc(ph) + '" autocomplete="off" spellcheck="false"' + (/measure|target|compare$/.test(field) ? ' list="measureNames"' : field === 'format' ? ' list="formats"' : '') + '></div>';
   return '<div class="kv-ed" data-i="' + i + '">'
@@ -61,12 +61,21 @@ function renderKpis(){
   $('kpiMax').textContent = state.kpis.length >= KV_MAX ? 'Up to ' + KV_MAX + ' KPIs.' : state.kpis.length ? '' : 'No KPIs yet. Add one, or pick measures from your model export below.';
   $('modeOne').checked = state.cfg.mode !== 'row'; $('modeRow').checked = state.cfg.mode === 'row';
 }
+/* ---------- Step 1: connect ---------- */
+function renderSource(){
+  const c = state.cfg;
+  document.querySelectorAll('.kv-src [data-src]').forEach(b => b.setAttribute('aria-checked', b.dataset.src === c.source));
+  $('srcPbip').hidden = c.source !== 'pbip'; $('srcExport').hidden = c.source !== 'export';
+}
 function renderModel(){
-  const text = $('modelInput').value;
-  const m = text.trim() ? parseModel(text) : null;
+  renderSource();
+  const c = state.cfg, text = $('modelInput').value;
+  const active = c.source && c.source !== 'none' && c.source === c.modelFrom;
+  const m = active && text.trim() ? parseModel(text) : null;
   state.model = m && !m.error ? m : null;
-  $('modelMsg').innerHTML = m && m.error ? '<div class="msg err">' + esc(m.error) + '</div>' : '';
-  $('modelStats').innerHTML = state.model ? '<span class="stat"><b>' + state.model.measures.length + '</b> measures</span><span class="stat"><b>' + state.model.tables.length + '</b> tables</span>' : '';
+  if (c.source !== 'pbip' || !state.pbipMsg) $('modelMsg').innerHTML = m && m.error ? '<div class="msg err">' + esc(m.error) + '</div>' : c.source === 'none' ? '<div class="msg info">Type each KPI&rsquo;s measure name in Step 2.</div>' : !c.source ? '<div class="msg info">Choose how to connect. The example below uses no model.</div>' : '';
+  if (c.source === 'pbip' && state.pbipMsg) $('modelMsg').innerHTML = state.pbipMsg;
+  $('modelStats').innerHTML = state.model ? (c.modelFrom === 'pbip' ? '<span class="stat ok">&#10003; ' + esc(c.pbipName || 'PBIP folder') + '</span>' : '') + '<span class="stat"><b>' + state.model.measures.length + '</b> measures</span><span class="stat"><b>' + state.model.tables.length + '</b> tables</span>' : '';
   $('pickBox').hidden = !state.model;
   const ms = state.model ? state.model.measures : [];
   $('measureNames').innerHTML = ms.map(x => '<option value="' + esc(x.name) + '">').join('');
@@ -102,7 +111,7 @@ function kpiFromMeasure(x){
   return k;
 }
 
-/* ---------- Step 2: colors ---------- */
+/* ---------- Step 3: colors ---------- */
 function tbColors(){
   try { if (localStorage.getItem('ktb.blank') === '1') return null; return kvThemeColors(JSON.parse(localStorage.getItem('ktb.cfg') || 'null')); } catch (e) { return null; }
 }
@@ -134,7 +143,7 @@ function readThemeJson(){
   else $('presetMsg').innerHTML = '<div class="msg err">' + (o ? 'This theme has no good and bad colors. Theme files list them as "good", "neutral" and "bad".' : 'This isn’t valid JSON. Paste the whole theme file.') + '</div>';
 }
 
-/* ---------- Step 3: options ---------- */
+/* ---------- Step 4: options ---------- */
 const KIND = { native: 'Power BI visual', svg: 'SVG measure', core: 'Core visuals' };
 function currentKpi(){ return state.kpis[Math.min(state.cfg.sel, state.kpis.length - 1)] || null; }
 function chosenOption(){
@@ -147,10 +156,10 @@ function renderOptions(){
   const row = state.cfg.mode === 'row', k = currentKpi();
   $('kpiPickWrap').hidden = row || state.kpis.length < 2;
   $('kpiPick').innerHTML = state.kpis.map((x, i) => '<option value="' + i + '"' + (i === state.cfg.sel ? ' selected' : '') + '>' + esc(kvName(x)) + '</option>').join('');
-  if (!state.kpis.length) { $('options').innerHTML = '<p class="note">Add a KPI in Step 1 to see the options.</p>'; $('sampleMsg').innerHTML = ''; return; }
+  if (!state.kpis.length) { $('options').innerHTML = '<p class="note">Add a KPI in Step 2 to see the options.</p>'; $('sampleMsg').innerHTML = ''; return; }
   const chosen = chosenOption();
   const sample = row ? state.kpis.some(x => kvNums(x).sample) : kvNums(k).sample;
-  $('sampleMsg').innerHTML = sample ? '<div class="msg info">Some preview numbers are made up because none were typed. Add yours under &ldquo;Numbers for the preview&rdquo; in Step 1.</div>' : '';
+  $('sampleMsg').innerHTML = sample ? '<div class="msg info">Some preview numbers are made up because none were typed. Add yours under &ldquo;Numbers for the preview&rdquo; in Step 2.</div>' : '';
   $('s3note').textContent = row ? 'Each layout shows all your KPIs. Pick one to see how to build it.' : 'Best fit first, based on what your KPI has. Pick one to see how to build it.';
   if (row) {
     $('options').innerHTML = KV_ROW_OPTIONS.map(o => '<article class="kv-opt wide' + (o === chosen ? ' on' : '') + '">'
@@ -173,7 +182,7 @@ function renderOptions(){
   }).join('');
 }
 
-/* ---------- Step 4: build ---------- */
+/* ---------- Step 5: build ---------- */
 const B = n => '<b>' + esc(bracket(n)) + '</b>';
 function kvSteps(id, kpis, cfg){
   const k = kpis[0], h = kvHas(k), m = kvRef(k.measure), mn = (k.measure || '').replace(/^\[|\]$/g, '');
@@ -204,7 +213,7 @@ function renderBuild(){
   const o = chosenOption(), row = state.cfg.mode === 'row';
   const kpis = row ? state.kpis : (currentKpi() ? [currentKpi()] : []);
   $('buildName').textContent = o ? o.name : '';
-  if (!o || !kpis.length) { $('buildKind').textContent = 'Add a KPI in Step 1 first.'; $('steps').innerHTML = ''; $('checks').innerHTML = ''; $('outBox').hidden = true; $('buildCfg').hidden = true; state.out = {}; return; }
+  if (!o || !kpis.length) { $('buildKind').textContent = 'Add a KPI in Step 2 first.'; $('steps').innerHTML = ''; $('checks').innerHTML = ''; $('outBox').hidden = true; $('buildCfg').hidden = true; state.out = {}; return; }
   const plan = kvPlan(kpis, state.cfg, o.id);
   $('buildKind').textContent = plan.length ? 'The script adds ' + plan.length + ' measure' + (plan.length > 1 ? 's' : '') + (o.id === 'rtable' ? ' and the scorecard table' : '') + ' to your model. The steps say where each one goes.' : 'Nothing to add to your model: it’s all set in the visual.';
   $('buildCfg').hidden = !plan.length;
@@ -232,7 +241,7 @@ function renderAll(){ renderKpis(); renderModel(); renderColors(); renderLive();
 /* ---------- init ---------- */
 function resetAll(){
   $('modelInput').value = ''; $('search').value = ''; $('themeJson').value = '';
-  state.kpis = []; state.cfg = blankCfg(); setExample(false); $('modelBox').open = false; $('presetMsg').innerHTML = '';
+  state.kpis = []; state.cfg = blankCfg(); state.pbipMsg = ''; setExample(false); $('queryBox').open = false; $('presetMsg').innerHTML = '';
   renderAll();
 }
 function init(){
@@ -240,13 +249,57 @@ function init(){
   const saved = store.get('model');
   let kpis = null, cfg = null; try { kpis = JSON.parse(store.get('kpis') || 'null'); cfg = JSON.parse(store.get('cfg') || 'null'); } catch (e) {}
   if (cfg) state.cfg = Object.assign(blankCfg(), cfg);
-  if (saved && saved.trim()) $('modelInput').value = saved;
+  if (saved && saved.trim()) { $('modelInput').value = saved; if (!state.cfg.modelFrom) state.cfg.modelFrom = state.cfg.source = 'export'; }
   if (kpis && kpis.length) state.kpis = kpis.map(k => Object.assign(kvBlankKpi(), k, { pv: Object.assign(kvBlankKpi().pv, k.pv || {}) }));
   else if (!(saved && saved.trim()) && store.get('blank') !== '1') { state.kpis = clone(KV_EX_KPIS); Object.assign(state.cfg, KV_EX_CFG); setExample(true); }
   renderAll();
 
   const touch = () => { try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {} };
-  $('modelInput').addEventListener('input', () => { leaveExample(); touch(); renderKpis(); renderModel(); renderLive(); persist(); });
+  $('modelInput').addEventListener('input', () => {
+    if (!state.loadingPbip) { state.cfg.modelFrom = 'export'; if (state.cfg.source !== 'export') state.cfg.source = 'export'; }
+    if ($('modelInput').value.trim()) leaveExample();
+    touch(); renderKpis(); renderModel(); renderLive(); persist();
+  });
+  document.querySelector('.kv-src').addEventListener('click', e => {
+    const b = e.target.closest('[data-src]'); if (!b) return;
+    state.cfg.source = b.dataset.src; renderKpis(); renderModel(); renderLive(); persist();
+    if (b.dataset.src === 'export' && !$('modelInput').value.trim()) $('queryBox').open = true;
+  });
+  // PBIP folder: read the semantic model and use it like an export
+  const loadPbip = async (root, list) => {
+    state.pbipMsg = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>'; renderModel();
+    const files = [];
+    for (const { path, file } of list) { if (kvWanted(path) && file.size < 30 * 1024 * 1024) files.push({ path, text: await kvDecode(file) }); }
+    const r = kvReadPbip(files);
+    if (r.error) { state.pbipMsg = '<div class="msg err">' + esc(r.error) + '</div>'; renderModel(); return; }
+    state.pbipMsg = r.others.length ? '<div class="msg info">This folder has more than one semantic model; using ' + esc(r.name) + '. Choose a project folder to use another.</div>' : '';
+    state.cfg.source = 'pbip'; state.cfg.modelFrom = 'pbip'; state.cfg.pbipName = r.name;
+    state.loadingPbip = true; $('modelInput').value = r.text; $('modelInput').dispatchEvent(new Event('input', { bubbles: true })); state.loadingPbip = false;
+  };
+  const fail = e => { state.pbipMsg = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(e.message || e) + '</div>'; renderModel(); };
+  $('pickPbip').addEventListener('click', async () => {
+    if (window.showDirectoryPicker) {
+      let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-kpi-visualizer', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; $('pbipInput').click(); return; }
+      const list = []; try { await kvWalkHandle(dir, dir.name, list); await loadPbip(dir.name, list); } catch (e) { fail(e); }
+    } else $('pbipInput').click();
+  });
+  $('pbipInput').addEventListener('change', async e => {
+    const fl = [...e.target.files]; if (!fl.length) return;
+    const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
+    const list = fl.filter(f => /\.(tmdl|bim)$/i.test(f.name)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }));
+    try { await loadPbip(root, list); } catch (err) { fail(err); }
+    e.target.value = '';
+  });
+  const drop = $('pbipDrop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
+  drop.addEventListener('drop', async e => {
+    e.preventDefault();
+    const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
+    if (!item || !item.isDirectory) { state.pbipMsg = '<div class="msg warn">Drop the project <b>folder</b>, not a file inside it.</div>'; renderModel(); return; }
+    const list = []; await kvWalkEntry(item, '', list);
+    try { await loadPbip(item.name, list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file }))); } catch (err) { fail(err); }
+  });
   $('modeOne').addEventListener('change', () => { state.cfg.mode = 'one'; renderLive(); persist(); });
   $('modeRow').addEventListener('change', () => { state.cfg.mode = 'row'; renderLive(); persist(); });
   $('addKpi').addEventListener('click', () => {

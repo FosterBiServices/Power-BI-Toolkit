@@ -24,6 +24,9 @@ prompt the user takes to Copilot, then check the reply pasted back. Nothing call
 - A **Clear entries** button in the banner, with a confirm step. It empties the page, removes
   everything the page saved in the browser (its own `localStorage` prefix), and leaves a flag
   (`<prefix>blank`) so a reload stays empty instead of bringing the example back.
+- **Connect first.** A tool that reads the model starts with "Connect your model" as Step 1 (a PBIP
+  folder, the model export, or no model where that works), then the task. Don't ask about
+  measures or tables before the user has chosen how to connect.
 - Tools that read the model use the **shared model export**: one DAX query the user runs once
   in DAX query view. It's saved on the home page and every tool picks it up (see suite.js).
 - Home link and **Switch tool** menu on every page (added by suite.js).
@@ -117,7 +120,7 @@ Things to know:
 | power-query-writer | kpw. | no | yes |
 | power-query-explainer | kpq. | no (own export, or a PBIP folder) | yes |
 | date-table-generator | kdt. | optional | no |
-| kpi-visualizer | kkv. | optional | no |
+| kpi-visualizer | kkv. | optional, or a PBIP folder | no |
 | theme-builder | ktb. | no | no |
 | layout-designer | klo. | no | no |
 | sheet-recon | ksr. (Clear entries flag only; files are never stored) | no | no |
