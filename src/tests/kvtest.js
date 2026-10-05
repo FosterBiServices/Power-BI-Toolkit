@@ -53,13 +53,13 @@ const { chromium } = require('playwright'); const fs = require('fs');
   console.log('with saved export: banner', await p.locator('#exampleBanner').isVisible(), '| kpis', await p.locator('.kv-ed').count(), '| measures listed', await p.locator('#avail .mrow2').count());
   await p.locator('#avail .mrow2').first().click();
   console.log('picked:', await p.locator('#k0_measure').inputValue(), '| table', await p.locator('#homeTable').inputValue(), '| trend', await p.locator('#trendCol').inputValue(), '| checks', (await p.locator('#checks').innerText()).slice(0, 120));
-  console.log('source after export:', await p.locator('.kv-src [aria-checked=true] .tn').innerText(), '(expect Model export)');
+  console.log('source after export:', await p.locator('.sc-choose [aria-checked=true] .tn').innerText(), '(expect Model export)');
   // PBIP folder: measures from the semantic model, including the measures table
-  await p.click('.kv-src [data-src=pbip]');
-  await p.setInputFiles('#pbipInput', 'pqpbip/Contoso Sales'); await p.waitForTimeout(300);
+  await p.click('.sc-choose [data-sc=pbip]');
+  await p.setInputFiles('.sc-pbip input[type=file]', 'pqpbip/Contoso Sales'); await p.waitForTimeout(300);
   console.log('pbip stats:', (await p.locator('#modelStats').innerText()).replace(/\n/g, ' '), '| listed', (await p.locator('#avail .mname').allInnerTexts()).join(', '), '| msg', await p.locator('#modelMsg').innerText());
-  await p.reload(); console.log('pbip after reload:', (await p.locator('#modelStats').innerText()).replace(/\n/g, ' '), '| source', await p.locator('.kv-src [aria-checked=true] .tn').innerText());
-  await p.click('.kv-src [data-src=none]'); console.log('no model: listed', await p.locator('#avail .mrow2').count(), '| pick hidden', await p.locator('#pickBox').isHidden());
+  await p.reload(); console.log('pbip after reload:', (await p.locator('#modelStats').innerText()).replace(/\n/g, ' '), '| source', await p.locator('.sc-choose [aria-checked=true] .tn').innerText());
+  await p.click('.sc-choose [data-sc=none]'); console.log('no model: listed', await p.locator('#avail .mrow2').count(), '| pick hidden', await p.locator('#pickBox').isHidden());
   // clear entries
   await p.click('#clearEntries'); await p.click('#clearYes');
   console.log('cleared: kpis', await p.locator('.kv-ed').count(), '| banner', await p.locator('#exampleBanner').isVisible());

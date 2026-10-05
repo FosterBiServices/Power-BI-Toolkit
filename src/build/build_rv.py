@@ -5,6 +5,7 @@ L=lambda a,b:'\n'.join(p[a-1:b])
 core=open(S+'builder_core.js').read(); rv=open(S+'rv_core.js').read(); ex=open(S+'ex_rows.js').read(); ui=open(S+'rv_ui.js').read(); body=open(S+'rv_body.html').read()
 head='<title>DAX Reviewer</title>\n<meta name="description" content="Review a Power BI DAX measure against your own checklist: instant checks on the page, a full review from Copilot, and a tested rewrite.">\n'+L(3,6)
 css=L(7,217)+'\n'+L(145,149)+'\n'+L(175,176)+'\n'+L(219,265)+'\n'+L(303,312)+'''
+.dr-model{display:flex;flex-direction:column;gap:10px}
 /* ---------- DAX Reviewer ---------- */
 .cfg{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end}
 .rules{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}

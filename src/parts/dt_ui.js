@@ -125,7 +125,7 @@ function render(){
   $('holPick').innerHTML = US_HOLIDAYS.map(h => '<label class="c"><input type="checkbox" data-hol="' + h.key + '"' + ((cfg.holidays[h.key] !== undefined ? cfg.holidays[h.key] : h.on) ? ' checked' : '') + '> ' + esc(h.name) + '</label>').join('');
   const pc = parseCustomHolidays(cfg.custom);
   $('customMsg').innerHTML = pc.errors.length ? msg('warn', 'These lines are skipped:<ul>' + pc.errors.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>') : (pc.list.length ? msg('ok', pc.list.length + ' holiday' + (pc.list.length > 1 ? 's' : '') + ' of your own added.') : '');
-  if (!ok) { $('outView').textContent = ''; out.text = ''; $('outMsg').innerHTML = msg('err', 'Fix the date range in Step 1 first.'); return; }
+  if (!ok) { $('outView').textContent = ''; out.text = ''; $('outMsg').innerHTML = msg('err', 'Fix the date range in Step 2 first.'); return; }
 
   const y0 = r.start.getUTCFullYear(), y1 = r.end.getUTCFullYear();
   if (!ui.holYear || ui.holYear < y0 || ui.holYear > y1) ui.holYear = Math.min(Math.max(TODAY.getUTCFullYear(), y0), y1);
@@ -141,7 +141,7 @@ function render(){
   document.querySelectorAll('[data-col]').forEach(cb => {
     const c = DT_COLUMNS.find(x => x.key === cb.dataset.col);
     cb.disabled = !!(c.needsHol && !allHol.length);
-    cb.closest('label').title = cb.disabled ? 'Add some holidays in Step 2 first' : '';
+    cb.closest('label').title = cb.disabled ? 'Add some holidays in Step 3 first' : '';
   });
   $('fiscalOrderEx').textContent = MONTHS[cfg.fyStart - 1].slice(0, 3) + ' first, sorted by Fiscal Month Number';
   $('mfStyleWrap').hidden = !cols.some(c => c.key === 'monthFilter');
@@ -205,7 +205,7 @@ const state = { ok: true };
 /* ---------- date column finder ---------- */
 function renderFinder(){
   const p = parseDateCols(cfg.dcPaste);
-  $('dcMsg').innerHTML = p.error ? msg('err', esc(p.error)) : p.cols.length ? msg('ok', p.cols.length + ' date column' + (p.cols.length === 1 ? '' : 's') + ' found. Tick the ones that hold real business dates, such as order or invoice dates.') : '';
+  $('dcMsg').innerHTML = p.error ? msg('err', esc(p.error)) : p.cols.length ? msg('ok', p.cols.length + ' date column' + (p.cols.length === 1 ? '' : 's') + ' found. Tick the ones that hold real business dates, such as order or invoice dates.') + (cfg.startMode !== 'data' && cfg.endMode !== 'data' && parseStartCols(cfg.startCols).cols.length ? msg('info', 'To use the ticked columns, set Start to <b>Earliest date in my data</b> or End to <b>Latest date in my data</b> in Step 2.') : '') : '';
   const cur = new Set(parseStartCols(cfg.startCols).cols.map(x => (x.table + '[' + x.column + ']').toLowerCase()));
   let last = '';
   $('dcList').innerHTML = p.cols.map((c, i) => {
@@ -216,7 +216,7 @@ function renderFinder(){
   const use = ticked.length ? ticked : p.cols;
   $('dcRange').hidden = !use.length;
   ui.rangeQuery = use.length ? dateRangeQuery(use) : '';
-  $('dcRangeTitle').textContent = 'DAX query: date ranges for ' + (ticked.length ? ticked.length + ' ticked' : 'all ' + use.length) + ' column' + (use.length === 1 ? '' : 's');
+  $('dcRangeTitle').textContent = 'DAX query: date ranges for ' + (ticked.length ? ticked.length + ' listed' : 'all ' + use.length) + ' column' + (use.length === 1 ? '' : 's');
   $('dcRangeView').textContent = ui.rangeQuery;
 }
 

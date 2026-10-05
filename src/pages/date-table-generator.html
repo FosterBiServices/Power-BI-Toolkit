@@ -275,6 +275,7 @@ label.lab .hint{font-weight:400;color:var(--muted)}
 .btn.danger{background:var(--err);border-color:var(--err);color:#fff}
 .btn.danger:hover{filter:brightness(1.08);color:#fff}
 @media (max-width:520px){.brandbar{flex-wrap:wrap}.clear-btn{margin-left:0}}
+.dt-finder{display:flex;flex-direction:column;gap:10px}
 /* ---------- Date Table Generator ---------- */
 .cfg{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end}
 .cfg[hidden],.field[hidden],.chk[hidden],.hpick[hidden]{display:none!important}
@@ -330,8 +331,32 @@ table.prev tr.hol td{background:var(--warn-soft)}
   </header>
 
   <!-- STEP 1 -->
-  <section class="step" aria-labelledby="s1">
+  <section class="step" aria-labelledby="s0">
     <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s0">Connect your model</h2>
+        <p>Optional. With your model, tick the date columns your data uses, and the table can start and end with your data.</p>
+      </div>
+      <div class="dt-finder" id="finder">
+        <ol class="how">
+          <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query into a new tab and select <b>Run</b>.</li>
+          <li>Select <b>Copy</b> above the results grid and paste below. Then tick the columns that hold real business dates.</li>
+        </ol>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">DAX query: list date columns</span><span class="r"><button class="btn primary" type="button" id="copyDcQuery">Copy query</button></span></div>
+          <pre class="short" id="dcQueryView"></pre>
+        </div>
+        <textarea id="dcInput" class="short-ta" spellcheck="false" aria-label="Date column results" placeholder="Paste the results here (with headers)"></textarea>
+        <div id="dcMsg"></div>
+        <div class="dclist" id="dcList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>2</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s1">Fiscal year and date range</h2>
@@ -363,32 +388,16 @@ table.prev tr.hol td{background:var(--warn-soft)}
           </span></div>
         <div class="field"><label for="startYear" id="startYearLbl">First year</label><input type="number" id="startYear" min="1900" max="2200" class="num"></div>
       </div>
-      <div class="field" id="startColsWrap"><label for="startCols">Date columns to look at <span class="muted">(one per line, as Table[Column])</span></label>
+      <div class="field" id="startColsWrap"><label for="startCols">Date columns to look at <span class="muted">(one per line, as Table[Column], or tick them in Step 1)</span></label>
         <textarea id="startCols" class="short-ta" spellcheck="false" placeholder="Sales[Order Date]&#10;Returns[Return Date]"></textarea>
         <p class="note" id="startColsNote"></p>
-        <details class="extra" id="finder">
-          <summary>Find your date columns</summary>
-          <div class="extra-body">
-            <ol class="how">
-              <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query into a new tab and select <b>Run</b>.</li>
-              <li>Select <b>Copy</b> above the results grid and paste below. Then tick the columns to use.</li>
-            </ol>
-            <div class="codebox">
-              <div class="codebox-bar"><span class="t">DAX query: list date columns</span><span class="r"><button class="btn primary" type="button" id="copyDcQuery">Copy query</button></span></div>
-              <pre class="short" id="dcQueryView"></pre>
-            </div>
-            <textarea id="dcInput" class="short-ta" spellcheck="false" aria-label="Date column results" placeholder="Paste the results here (with headers)"></textarea>
-            <div id="dcMsg"></div>
-            <div class="dclist" id="dcList"></div>
-            <div id="dcRange" hidden>
-              <p class="note">To see how far back and forward each column goes, and how many rows are blank, run this second query. It covers the ticked columns, or every column in your list if none are ticked. Leave out columns whose earliest or latest date is a placeholder such as 1900-01-01 or 9999-12-31.</p>
-              <div class="codebox">
-                <div class="codebox-bar"><span class="t" id="dcRangeTitle">DAX query: date ranges</span><span class="r"><button class="btn primary" type="button" id="copyDcRange">Copy query</button></span></div>
-                <pre class="short" id="dcRangeView"></pre>
-              </div>
-            </div>
+        <div id="dcRange" hidden>
+          <p class="note">To see how far back and forward each column goes, and how many rows are blank, run this query. It covers the columns above, or every date column found in Step 1 if none are listed. Leave out columns whose earliest or latest date is a placeholder such as 1900-01-01 or 9999-12-31.</p>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t" id="dcRangeTitle">DAX query: date ranges</span><span class="r"><button class="btn primary" type="button" id="copyDcRange">Copy query</button></span></div>
+            <pre class="short" id="dcRangeView"></pre>
           </div>
-        </details>
+        </div>
       </div>
       <div class="cfg">
         <div class="field"><span class="flabel">End</span>
@@ -407,9 +416,9 @@ table.prev tr.hol td{background:var(--warn-soft)}
     </div>
   </section>
 
-  <!-- STEP 2 -->
+  <!-- STEP 3 -->
   <section class="step" aria-labelledby="s2">
-    <div class="step-num">Step<b>2</b></div>
+    <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s2">Weeks, weekends and holidays</h2>
@@ -438,9 +447,9 @@ table.prev tr.hol td{background:var(--warn-soft)}
     </div>
   </section>
 
-  <!-- STEP 3 -->
+  <!-- STEP 4 -->
   <section class="step" aria-labelledby="s3">
-    <div class="step-num">Step<b>3</b></div>
+    <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">Choose the columns</h2>
@@ -452,9 +461,9 @@ table.prev tr.hol td{background:var(--warn-soft)}
     </div>
   </section>
 
-  <!-- STEP 4 -->
+  <!-- STEP 5 -->
   <section class="step" aria-labelledby="s4">
-    <div class="step-num">Step<b>4</b></div>
+    <div class="step-num">Step<b>5</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s4">Check some rows</h2>
@@ -468,9 +477,9 @@ table.prev tr.hol td{background:var(--warn-soft)}
     </div>
   </section>
 
-  <!-- STEP 5 -->
+  <!-- STEP 6 -->
   <section class="step" aria-labelledby="s5">
-    <div class="step-num">Step<b>5</b></div>
+    <div class="step-num">Step<b>6</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s5">Copy the date table</h2>
@@ -1221,7 +1230,7 @@ function render(){
   $('holPick').innerHTML = US_HOLIDAYS.map(h => '<label class="c"><input type="checkbox" data-hol="' + h.key + '"' + ((cfg.holidays[h.key] !== undefined ? cfg.holidays[h.key] : h.on) ? ' checked' : '') + '> ' + esc(h.name) + '</label>').join('');
   const pc = parseCustomHolidays(cfg.custom);
   $('customMsg').innerHTML = pc.errors.length ? msg('warn', 'These lines are skipped:<ul>' + pc.errors.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>') : (pc.list.length ? msg('ok', pc.list.length + ' holiday' + (pc.list.length > 1 ? 's' : '') + ' of your own added.') : '');
-  if (!ok) { $('outView').textContent = ''; out.text = ''; $('outMsg').innerHTML = msg('err', 'Fix the date range in Step 1 first.'); return; }
+  if (!ok) { $('outView').textContent = ''; out.text = ''; $('outMsg').innerHTML = msg('err', 'Fix the date range in Step 2 first.'); return; }
 
   const y0 = r.start.getUTCFullYear(), y1 = r.end.getUTCFullYear();
   if (!ui.holYear || ui.holYear < y0 || ui.holYear > y1) ui.holYear = Math.min(Math.max(TODAY.getUTCFullYear(), y0), y1);
@@ -1237,7 +1246,7 @@ function render(){
   document.querySelectorAll('[data-col]').forEach(cb => {
     const c = DT_COLUMNS.find(x => x.key === cb.dataset.col);
     cb.disabled = !!(c.needsHol && !allHol.length);
-    cb.closest('label').title = cb.disabled ? 'Add some holidays in Step 2 first' : '';
+    cb.closest('label').title = cb.disabled ? 'Add some holidays in Step 3 first' : '';
   });
   $('fiscalOrderEx').textContent = MONTHS[cfg.fyStart - 1].slice(0, 3) + ' first, sorted by Fiscal Month Number';
   $('mfStyleWrap').hidden = !cols.some(c => c.key === 'monthFilter');
@@ -1301,7 +1310,7 @@ const state = { ok: true };
 /* ---------- date column finder ---------- */
 function renderFinder(){
   const p = parseDateCols(cfg.dcPaste);
-  $('dcMsg').innerHTML = p.error ? msg('err', esc(p.error)) : p.cols.length ? msg('ok', p.cols.length + ' date column' + (p.cols.length === 1 ? '' : 's') + ' found. Tick the ones that hold real business dates, such as order or invoice dates.') : '';
+  $('dcMsg').innerHTML = p.error ? msg('err', esc(p.error)) : p.cols.length ? msg('ok', p.cols.length + ' date column' + (p.cols.length === 1 ? '' : 's') + ' found. Tick the ones that hold real business dates, such as order or invoice dates.') + (cfg.startMode !== 'data' && cfg.endMode !== 'data' && parseStartCols(cfg.startCols).cols.length ? msg('info', 'To use the ticked columns, set Start to <b>Earliest date in my data</b> or End to <b>Latest date in my data</b> in Step 2.') : '') : '';
   const cur = new Set(parseStartCols(cfg.startCols).cols.map(x => (x.table + '[' + x.column + ']').toLowerCase()));
   let last = '';
   $('dcList').innerHTML = p.cols.map((c, i) => {
@@ -1312,7 +1321,7 @@ function renderFinder(){
   const use = ticked.length ? ticked : p.cols;
   $('dcRange').hidden = !use.length;
   ui.rangeQuery = use.length ? dateRangeQuery(use) : '';
-  $('dcRangeTitle').textContent = 'DAX query: date ranges for ' + (ticked.length ? ticked.length + ' ticked' : 'all ' + use.length) + ' column' + (use.length === 1 ? '' : 's');
+  $('dcRangeTitle').textContent = 'DAX query: date ranges for ' + (ticked.length ? ticked.length + ' listed' : 'all ' + use.length) + ' column' + (use.length === 1 ? '' : 's');
   $('dcRangeView').textContent = ui.rangeQuery;
 }
 

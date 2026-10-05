@@ -280,6 +280,7 @@ label.lab .hint{font-weight:400;color:var(--muted)}
 .btn.danger{background:var(--err);border-color:var(--err);color:#fff}
 .btn.danger:hover{filter:brightness(1.08);color:#fff}
 @media (max-width:520px){.brandbar{flex-wrap:wrap}.clear-btn{margin-left:0}}
+.dr-model{display:flex;flex-direction:column;gap:10px}
 /* ---------- DAX Reviewer ---------- */
 .cfg{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end}
 .rules{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
@@ -352,16 +353,35 @@ table.scan td.nm{white-space:normal;overflow-wrap:anywhere}
       <span id="clearMsg"><b>Clear all entries?</b> This empties every box on this page and removes what this page saved in your browser, including your own checklist rules. It can&rsquo;t be undone.</span>
       <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
     </div>
-    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste a measure in Step 1 to start again.</div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste a measure in Step 2 to start again.</div>
     <div class="banner" id="exampleBanner" hidden>
-      <span><strong>Example loaded.</strong> The measure, model, extra rule and Copilot reply are samples. Paste your own measure in Step 1 to start.</span>
+      <span><strong>Example loaded.</strong> The measure, model, extra rule and Copilot reply are samples. Paste your own measure in Step 2 to start.</span>
       <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
     </div>
   </header>
 
   <!-- STEP 1 -->
-  <section class="step" aria-labelledby="s1">
+  <section class="step" aria-labelledby="s0">
     <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s0">Connect your model</h2>
+        <p>Optional. With the model, the page can tell columns from measures, check every name exists, give Copilot the formulas of the measures this one uses, and put the test query in the right table.</p>
+      </div>
+      <div class="dr-model" id="modelBox">
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+          <pre class="short" id="exportView"></pre>
+        </div>
+        <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+      </div>
+      <div id="modelMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>2</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s1">Paste the measure</h2>
@@ -370,24 +390,12 @@ table.scan td.nm{white-space:normal;overflow-wrap:anywhere}
       <div class="field" id="pickWrap" hidden><label for="pickM">Pick a measure from your model</label><select id="pickM"></select></div>
       <textarea id="mInput" class="big" spellcheck="false" aria-label="Measure" placeholder="Total Sales = SUM ( Sales[Net Amount] )"></textarea>
       <div class="stats" id="mStats"></div>
-      <details class="extra" id="modelBox">
-        <summary>Add your model export <span class="muted">(optional: pick measures from it, scan them all, and check names)</span></summary>
-        <div class="extra-body">
-          <p class="note">With the model, the page can tell columns from measures, check every name exists, give Copilot the formulas of the measures this one uses, and put the test query in the right table. Use the same export as the other toolkit pages.</p>
-          <div class="codebox">
-            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
-            <pre class="short" id="exportView"></pre>
-          </div>
-          <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
-          <div id="modelMsg"></div>
-        </div>
-      </details>
     </div>
   </section>
 
-  <!-- STEP 2 -->
+  <!-- STEP 3 -->
   <section class="step" aria-labelledby="s2">
-    <div class="step-num">Step<b>2</b></div>
+    <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s2">Your checklist</h2>
@@ -407,9 +415,9 @@ table.scan td.nm{white-space:normal;overflow-wrap:anywhere}
     </div>
   </section>
 
-  <!-- STEP 3 -->
+  <!-- STEP 4 -->
   <section class="step" aria-labelledby="s3">
-    <div class="step-num">Step<b>3</b></div>
+    <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">What the page found</h2>
@@ -419,7 +427,7 @@ table.scan td.nm{white-space:normal;overflow-wrap:anywhere}
       <details class="extra" id="scanBox" hidden>
         <summary>Page checks on every measure in the model <span class="muted" id="scanStat"></span></summary>
         <div class="extra-body">
-          <p class="note">The same checks, run on each measure with your checklist settings. Select <b>Review</b> to load one into Step 1 for the full Copilot review.</p>
+          <p class="note">The same checks, run on each measure with your checklist settings. Select <b>Review</b> to load one into Step 2 for the full Copilot review.</p>
           <div class="field"><input type="text" id="scanFilter" placeholder="Search measures" aria-label="Search measures"></div>
           <div class="tablewrap scanwrap"><table class="scan"><thead><tr><th>Measure</th><th>Table</th><th>High</th><th>Medium</th><th>Low</th><th>Rules</th><th><span class="sr">Review</span></th></tr></thead><tbody id="scanBody"></tbody></table></div>
         </div>
@@ -431,9 +439,9 @@ table.scan td.nm{white-space:normal;overflow-wrap:anywhere}
     </div>
   </section>
 
-  <!-- STEP 4 -->
+  <!-- STEP 5 -->
   <section class="step" aria-labelledby="s4">
-    <div class="step-num">Step<b>4</b></div>
+    <div class="step-num">Step<b>5</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s4">Ask Copilot for the full review</h2>
@@ -449,9 +457,9 @@ table.scan td.nm{white-space:normal;overflow-wrap:anywhere}
     </div>
   </section>
 
-  <!-- STEP 5 -->
+  <!-- STEP 6 -->
   <section class="step" aria-labelledby="s5">
-    <div class="step-num">Step<b>5</b></div>
+    <div class="step-num">Step<b>6</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s5">Paste Copilot&rsquo;s reply</h2>
@@ -2042,12 +2050,12 @@ function renderAll(){
   }
   state.refIssues = refIssues;
   renderPicker(); renderScan();
-  $('autoOut').innerHTML = !has ? msg('info', state.model && state.model.measures.length ? 'Pick a measure from your model in Step 1 (or paste one), or open the list below to see which measures need attention.' : 'Paste a measure in Step 1.') : (found.length || refIssues.length ? '<p class="note">' + found.length + ' finding' + (found.length === 1 ? '' : 's') + (state.model ? '' : '. Add your model in Step 1 to also check names and tell columns from measures') + '.</p>' + findingList(found.map(f => Object.assign({ sev: ruleSev(f.rule) }, f)), true) + refIssues.map(x => msg('warn', '<b>Name check:</b> ' + esc(x))).join('') : msg('ok', 'No problems found by the page’s checks. Copilot can still review it against the full checklist.'));
+  $('autoOut').innerHTML = !has ? msg('info', state.model && state.model.measures.length ? 'Pick a measure from your model in Step 2 (or paste one), or open the list below to see which measures need attention.' : 'Paste a measure in Step 2.') : (found.length || refIssues.length ? '<p class="note">' + found.length + ' finding' + (found.length === 1 ? '' : 's') + (state.model ? '' : '. Connect your model in Step 1 to also check names and tell columns from measures') + '.</p>' + findingList(found.map(f => Object.assign({ sev: ruleSev(f.rule) }, f)), true) + refIssues.map(x => msg('warn', '<b>Name check:</b> ' + esc(x))).join('') : msg('ok', 'No problems found by the page’s checks. Copilot can still review it against the full checklist.'));
   const lines = new Set(found.map(f => f.line));
   $('codeView').innerHTML = has ? p.expression.split('\n').map((l, i) => '<span class="ln' + (lines.has(i + 1) ? ' hit' : '') + '"><span class="no">' + (i + 1) + '</span>' + hl(l) + '</span>').join('') : '';
   // prompt
   state.out.prompt = has ? reviewPrompt({ name: p.name, expr: p.expression, rules: rules.map(r => ({ id: r.id, name: r.name, check: r.check || r.name, sev: r.sev })), found, related: related(p), notes: $('notes').value, rewrite: state.wantRewrite }) : '';
-  $('promptView').textContent = state.out.prompt || (state.model ? 'Pick or paste a measure in Step 1.' : 'Paste a measure in Step 1.');
+  $('promptView').textContent = state.out.prompt || (state.model ? 'Pick or paste a measure in Step 2.' : 'Paste a measure in Step 2.');
   $('pCount').textContent = state.out.prompt ? state.out.prompt.length.toLocaleString() + ' characters' : '';
   renderReply();
 }
@@ -2102,8 +2110,8 @@ function renderReply(){
     const by = ($('tBy').value || '').trim();
     state.out.compare = compareQuery({ name: p.name, table: tbl, original: p.expression, rewrite: r.rewrite, byCol: by });
     $('cmpView').innerHTML = hl(state.out.compare);
-    if (p.name && tbl) { state.out.save = saveScript({ name: p.name, table: p.table || tbl, rewrite: r.rewrite }); $('saveView').innerHTML = hl(state.out.save); $('saveMsg').innerHTML = p.table ? '' : msg('warn', 'The measure&rsquo;s table isn&rsquo;t known. Add the model export in Step 1, or check the table name in the query matches where the measure lives.'); }
-    else { state.out.save = ''; $('saveView').textContent = ''; $('saveMsg').innerHTML = msg('info', 'Give the measure a name in Step 1 (Name = ...) to get this query.'); }
+    if (p.name && tbl) { state.out.save = saveScript({ name: p.name, table: p.table || tbl, rewrite: r.rewrite }); $('saveView').innerHTML = hl(state.out.save); $('saveMsg').innerHTML = p.table ? '' : msg('warn', 'The measure&rsquo;s table isn&rsquo;t known. Connect your model in Step 1, or check the table name in the query matches where the measure lives.'); }
+    else { state.out.save = ''; $('saveView').textContent = ''; $('saveMsg').innerHTML = msg('info', 'Give the measure a name (Name = ...) in Step 2 to get this query.'); }
     reportText += '\n\nRewrite:\n' + r.rewrite + (r.changes.length ? '\n\nChanges:\n' + r.changes.map(c => '- ' + c).join('\n') : '');
   }
   state.out.report = reportText;

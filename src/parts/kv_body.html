@@ -22,19 +22,8 @@
     <div class="step-body">
       <div class="step-head">
         <h2 id="s1">Connect your model</h2>
-        <p>With your model, you pick KPIs from your measures and every name is checked before you copy the script. Measures in a measures table are listed too. Nothing leaves this page.</p>
+        <p>With your model, you pick KPIs from your measures (including ones in a measures table) and every name is checked before you copy the script.</p>
       </div>
-      <div class="tabbar kv-src" role="radiogroup" aria-label="How to connect">
-        <button type="button" role="radio" data-src="pbip" aria-checked="false"><span class="tn">PBIP folder</span><span class="td">Choose the folder with your .pbip file. The page reads the semantic model&rsquo;s tables and measures.</span></button>
-        <button type="button" role="radio" data-src="export" aria-checked="false"><span class="tn">Model export</span><span class="td">Run the toolkit&rsquo;s export query in DAX query view and paste the results. Saved for the other tools too.</span></button>
-        <button type="button" role="radio" data-src="none" aria-checked="false"><span class="tn">No model</span><span class="td">Type your KPIs&rsquo; measure names yourself. Names aren&rsquo;t checked.</span></button>
-      </div>
-      <div id="srcPbip" class="kv-panel" hidden>
-        <div class="reply-actions"><button type="button" class="btn primary" id="pickPbip">Choose a PBIP folder</button><span class="small muted">or drop the folder below</span></div>
-        <div class="drop" id="pbipDrop">Drop the project folder here</div>
-        <input type="file" id="pbipInput" webkitdirectory multiple hidden>
-      </div>
-      <div id="srcExport" class="kv-panel" hidden>
         <details class="extra" id="queryBox">
           <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
           <div class="extra-body">
@@ -49,7 +38,6 @@
           </div>
         </details>
         <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
-      </div>
       <div class="stats" id="modelStats"></div>
       <div id="modelMsg"></div>
     </div>

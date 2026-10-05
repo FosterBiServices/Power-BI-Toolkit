@@ -13,8 +13,32 @@
   </header>
 
   <!-- STEP 1 -->
-  <section class="step" aria-labelledby="s1">
+  <section class="step" aria-labelledby="s0">
     <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s0">Connect your model</h2>
+        <p>Optional. With your model, tick the date columns your data uses, and the table can start and end with your data.</p>
+      </div>
+      <div class="dt-finder" id="finder">
+        <ol class="how">
+          <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query into a new tab and select <b>Run</b>.</li>
+          <li>Select <b>Copy</b> above the results grid and paste below. Then tick the columns that hold real business dates.</li>
+        </ol>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">DAX query: list date columns</span><span class="r"><button class="btn primary" type="button" id="copyDcQuery">Copy query</button></span></div>
+          <pre class="short" id="dcQueryView"></pre>
+        </div>
+        <textarea id="dcInput" class="short-ta" spellcheck="false" aria-label="Date column results" placeholder="Paste the results here (with headers)"></textarea>
+        <div id="dcMsg"></div>
+        <div class="dclist" id="dcList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>2</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s1">Fiscal year and date range</h2>
@@ -46,32 +70,16 @@
           </span></div>
         <div class="field"><label for="startYear" id="startYearLbl">First year</label><input type="number" id="startYear" min="1900" max="2200" class="num"></div>
       </div>
-      <div class="field" id="startColsWrap"><label for="startCols">Date columns to look at <span class="muted">(one per line, as Table[Column])</span></label>
+      <div class="field" id="startColsWrap"><label for="startCols">Date columns to look at <span class="muted">(one per line, as Table[Column], or tick them in Step 1)</span></label>
         <textarea id="startCols" class="short-ta" spellcheck="false" placeholder="Sales[Order Date]&#10;Returns[Return Date]"></textarea>
         <p class="note" id="startColsNote"></p>
-        <details class="extra" id="finder">
-          <summary>Find your date columns</summary>
-          <div class="extra-body">
-            <ol class="how">
-              <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query into a new tab and select <b>Run</b>.</li>
-              <li>Select <b>Copy</b> above the results grid and paste below. Then tick the columns to use.</li>
-            </ol>
-            <div class="codebox">
-              <div class="codebox-bar"><span class="t">DAX query: list date columns</span><span class="r"><button class="btn primary" type="button" id="copyDcQuery">Copy query</button></span></div>
-              <pre class="short" id="dcQueryView"></pre>
-            </div>
-            <textarea id="dcInput" class="short-ta" spellcheck="false" aria-label="Date column results" placeholder="Paste the results here (with headers)"></textarea>
-            <div id="dcMsg"></div>
-            <div class="dclist" id="dcList"></div>
-            <div id="dcRange" hidden>
-              <p class="note">To see how far back and forward each column goes, and how many rows are blank, run this second query. It covers the ticked columns, or every column in your list if none are ticked. Leave out columns whose earliest or latest date is a placeholder such as 1900-01-01 or 9999-12-31.</p>
-              <div class="codebox">
-                <div class="codebox-bar"><span class="t" id="dcRangeTitle">DAX query: date ranges</span><span class="r"><button class="btn primary" type="button" id="copyDcRange">Copy query</button></span></div>
-                <pre class="short" id="dcRangeView"></pre>
-              </div>
-            </div>
+        <div id="dcRange" hidden>
+          <p class="note">To see how far back and forward each column goes, and how many rows are blank, run this query. It covers the columns above, or every date column found in Step 1 if none are listed. Leave out columns whose earliest or latest date is a placeholder such as 1900-01-01 or 9999-12-31.</p>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t" id="dcRangeTitle">DAX query: date ranges</span><span class="r"><button class="btn primary" type="button" id="copyDcRange">Copy query</button></span></div>
+            <pre class="short" id="dcRangeView"></pre>
           </div>
-        </details>
+        </div>
       </div>
       <div class="cfg">
         <div class="field"><span class="flabel">End</span>
@@ -90,9 +98,9 @@
     </div>
   </section>
 
-  <!-- STEP 2 -->
+  <!-- STEP 3 -->
   <section class="step" aria-labelledby="s2">
-    <div class="step-num">Step<b>2</b></div>
+    <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s2">Weeks, weekends and holidays</h2>
@@ -121,9 +129,9 @@
     </div>
   </section>
 
-  <!-- STEP 3 -->
+  <!-- STEP 4 -->
   <section class="step" aria-labelledby="s3">
-    <div class="step-num">Step<b>3</b></div>
+    <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">Choose the columns</h2>
@@ -135,9 +143,9 @@
     </div>
   </section>
 
-  <!-- STEP 4 -->
+  <!-- STEP 5 -->
   <section class="step" aria-labelledby="s4">
-    <div class="step-num">Step<b>4</b></div>
+    <div class="step-num">Step<b>5</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s4">Check some rows</h2>
@@ -151,9 +159,9 @@
     </div>
   </section>
 
-  <!-- STEP 5 -->
+  <!-- STEP 6 -->
   <section class="step" aria-labelledby="s5">
-    <div class="step-num">Step<b>5</b></div>
+    <div class="step-num">Step<b>6</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s5">Copy the date table</h2>

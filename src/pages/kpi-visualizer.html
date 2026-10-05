@@ -301,13 +301,6 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 .kv-table td{border-bottom:1px solid #EDEBE9;padding:4px 8px;vertical-align:middle;white-space:nowrap}
 .kv-table td.num{text-align:right;font-variant-numeric:tabular-nums}
 .kv-table svg{display:block}
-.kv-src{grid-template-columns:repeat(3,1fr)}
-@media (max-width:760px){.kv-src{grid-template-columns:1fr}}
-.kv-src button[aria-checked="true"]{border:2px solid var(--accent);padding:11px 15px;background:var(--accent-soft);box-shadow:inset 0 -4px 0 var(--gold)}
-.kv-panel{display:flex;flex-direction:column;gap:10px}
-.drop{border:1px dashed var(--line);border-radius:8px;padding:14px;text-align:center;font-size:13px;color:var(--muted)}
-.drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
-.stat.ok{background:var(--ok-soft);color:var(--ok)}
 .kv-h3{margin:0;font-size:15px}
 .kv-nmc{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-size:13px}
 .kv-nmc dt{font-weight:600;color:var(--accent)}
@@ -352,19 +345,8 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
     <div class="step-body">
       <div class="step-head">
         <h2 id="s1">Connect your model</h2>
-        <p>With your model, you pick KPIs from your measures and every name is checked before you copy the script. Measures in a measures table are listed too. Nothing leaves this page.</p>
+        <p>With your model, you pick KPIs from your measures (including ones in a measures table) and every name is checked before you copy the script.</p>
       </div>
-      <div class="tabbar kv-src" role="radiogroup" aria-label="How to connect">
-        <button type="button" role="radio" data-src="pbip" aria-checked="false"><span class="tn">PBIP folder</span><span class="td">Choose the folder with your .pbip file. The page reads the semantic model&rsquo;s tables and measures.</span></button>
-        <button type="button" role="radio" data-src="export" aria-checked="false"><span class="tn">Model export</span><span class="td">Run the toolkit&rsquo;s export query in DAX query view and paste the results. Saved for the other tools too.</span></button>
-        <button type="button" role="radio" data-src="none" aria-checked="false"><span class="tn">No model</span><span class="td">Type your KPIs&rsquo; measure names yourself. Names aren&rsquo;t checked.</span></button>
-      </div>
-      <div id="srcPbip" class="kv-panel" hidden>
-        <div class="reply-actions"><button type="button" class="btn primary" id="pickPbip">Choose a PBIP folder</button><span class="small muted">or drop the folder below</span></div>
-        <div class="drop" id="pbipDrop">Drop the project folder here</div>
-        <input type="file" id="pbipInput" webkitdirectory multiple hidden>
-      </div>
-      <div id="srcExport" class="kv-panel" hidden>
         <details class="extra" id="queryBox">
           <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
           <div class="extra-body">
@@ -379,7 +361,6 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
           </div>
         </details>
         <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
-      </div>
       <div class="stats" id="modelStats"></div>
       <div id="modelMsg"></div>
     </div>
@@ -1880,88 +1861,6 @@ function kvChecks(kpis, cfg, optionId, model){
   return out;
 }
 
-/* ---------- KPI Visualizer: measures and columns from a PBIP folder ----------
-   Reads the semantic model only (*.SemanticModel/definition/tables/*.tmdl, or model.bim) and turns it
-   into the same rows as the model export, so everything else on the page works the same way. */
-const KV_SKIP_DIRS = new Set(['.git', 'node_modules', '.pbi', '.vs', 'StaticResources', 'RegisteredResources']);
-const kvSkipDir = n => KV_SKIP_DIRS.has(n) || /\.(Report|Dataset)$/i.test(n);
-const kvWanted = p => /\.SemanticModel\/(definition\/tables\/[^\/]+\.tmdl|model\.bim)$/i.test(p);
-async function kvDecode(file){
-  const buf = await file.arrayBuffer();
-  let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { t = new TextDecoder('windows-1252').decode(buf); }
-  return t.replace(/^﻿/, '');
-}
-async function kvWalkHandle(dir, prefix, out){
-  for await (const [name, h] of dir.entries()) {
-    if (h.kind === 'directory') { if (!kvSkipDir(name)) await kvWalkHandle(h, prefix + '/' + name, out); }
-    else if (/\.(tmdl|bim)$/i.test(name)) out.push({ path: prefix + '/' + name, file: await h.getFile() });
-  }
-}
-function kvWalkEntry(entry, prefix, out){
-  return new Promise(resolve => {
-    if (entry.isFile) { if (/\.(tmdl|bim)$/i.test(entry.name)) entry.file(f => { out.push({ path: prefix + '/' + entry.name, file: f }); resolve(); }, () => resolve()); else resolve(); return; }
-    if (kvSkipDir(entry.name)) { resolve(); return; }
-    const reader = entry.createReader(); const all = [];
-    const next = () => reader.readEntries(batch => { if (!batch.length) { Promise.all(all.map(e => kvWalkEntry(e, prefix + '/' + entry.name, out))).then(resolve); return; } all.push(...batch); next(); }, () => resolve());
-    next();
-  });
-}
-const kvTmdlUnquote = s => { s = (s || '').trim(); return /^'.*'$/.test(s) ? s.slice(1, -1).replace(/''/g, "'") : /^".*"$/.test(s) ? s.slice(1, -1).replace(/""/g, '"') : s; };
-const kvTabs = l => /^\t*/.exec(l)[0].length;
-const KV_DECL = /^(\t*)(table|column|measure)\s+('(?:[^']|'')*'|[^\s=]+)/;
-// one table file -> { tables, columns, measures }
-function kvParseTmdl(text, out){
-  const lines = text.replace(/\r/g, '').split('\n');
-  let table = null, tIndent = 0, obj = null, oIndent = 0;
-  for (const line of lines) {
-    const m = KV_DECL.exec(line);
-    if (m) {
-      const ind = m[1].length, kind = m[2], name = kvTmdlUnquote(m[3]);
-      if (kind === 'table') { table = name; tIndent = ind; obj = null; out.tables.push({ name, hidden: false }); continue; }
-      if (table && ind > tIndent) { obj = { kind, table, name, type: '', folder: '', hidden: false, key: false }; oIndent = ind; (kind === 'measure' ? out.measures : out.columns).push(obj); continue; }
-    }
-    const t = line.trim(); if (!t || t.startsWith('///')) continue;
-    const ind = kvTabs(line);
-    if (obj && ind <= oIndent) obj = null;
-    if (obj && ind === oIndent + 1) {
-      const p = /^(\w+)\s*:\s*(.*)$/.exec(t);
-      if (p) {
-        const k = p[1].toLowerCase(), v = kvTmdlUnquote(p[2]);
-        if (k === 'formatstring' && obj.kind === 'measure') obj.type = v;
-        else if (k === 'datatype' && obj.kind === 'column') obj.type = v;
-        else if (k === 'displayfolder') obj.folder = v;
-      } else if (/^ishidden$/i.test(t)) obj.hidden = true;
-      else if (/^iskey$/i.test(t)) obj.key = true;
-    } else if (table && !obj && ind === tIndent + 1 && /^ishidden$/i.test(t)) out.tables[out.tables.length - 1].hidden = true;
-  }
-}
-function kvParseBim(text, out){
-  let j; try { j = JSON.parse(text); } catch (e) { return; }
-  ((j.model || {}).tables || []).forEach(t => {
-    out.tables.push({ name: t.name, hidden: !!t.isHidden });
-    (t.columns || []).forEach(c => { if (c.type !== 'rowNumber') out.columns.push({ kind: 'column', table: t.name, name: c.name, type: c.dataType || '', folder: c.displayFolder || '', hidden: !!c.isHidden, key: !!c.isKey }); });
-    (t.measures || []).forEach(m => out.measures.push({ kind: 'measure', table: t.name, name: m.name, type: m.formatString || '', folder: m.displayFolder || '', hidden: !!m.isHidden }));
-  });
-}
-const kvDataType = t => ({ datetime: 'DateTime', int64: 'Int64', string: 'String', double: 'Double', decimal: 'Decimal', boolean: 'Boolean', binary: 'Binary' }[(t || '').toLowerCase()] || t);
-// files: [{ path, text }] -> { text (export rows), measures, tables, model name } or { error }
-function kvReadPbip(files){
-  const out = { tables: [], columns: [], measures: [] };
-  const sm = files.filter(f => kvWanted(f.path));
-  const names = [...new Set(sm.map(f => f.path.match(/([^\/]+)\.SemanticModel\//i)[1]))];
-  if (!sm.length) return { error: 'No semantic model was found. Choose the folder that holds the .pbip file and the .SemanticModel folder.' };
-  const pick = names[0], mine = sm.filter(f => f.path.includes(pick + '.SemanticModel/'));
-  const tm = mine.filter(f => /\.tmdl$/i.test(f.path));
-  if (tm.length) tm.forEach(f => kvParseTmdl(f.text, out)); else mine.forEach(f => kvParseBim(f.text, out));
-  if (!out.measures.length && !out.columns.length) return { error: 'The semantic model in this folder has no tables that could be read.' };
-  const cell = s => String(s || '').replace(/[\t\r\n]+/g, ' ');
-  const rows = [['Kind', 'Table', 'Name', 'Type', 'Folder', 'Flags'].join('\t')];
-  out.tables.forEach(t => rows.push(['Table', t.name, t.name, '', '', t.hidden ? 'hidden' : ''].map(cell).join('\t')));
-  out.columns.forEach(c => rows.push(['Column', c.table, c.name, kvDataType(c.type), c.folder, [c.hidden ? 'hidden' : '', c.key ? 'key' : ''].filter(Boolean).join(' ')].map(cell).join('\t')));
-  out.measures.forEach(m => rows.push(['Measure', m.table, m.name, m.type, m.folder, m.hidden ? 'hidden' : ''].map(cell).join('\t')));
-  return { text: rows.join('\n'), name: pick, measures: out.measures.length, tables: out.tables.length, others: names.slice(1) };
-}
-
 /* ---------- KPI Visualizer: example KPIs (generic sales data) ---------- */
 const KV_EX_KPIS = [
   { label: 'Sales', measure: 'Total Sales', format: '\\$#,0', better: 'higher', target: 'Sales Target', compare: 'Sales LY', compareLabel: 'last year',
@@ -1997,7 +1896,7 @@ function hl(code){
   }).join('\n');
 }
 const clone = o => JSON.parse(JSON.stringify(o));
-const blankCfg = () => ({ source: '', modelFrom: '', pbipName: '', mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard' });
+const blankCfg = () => ({ mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard' });
 const state = { example: false, model: null, kpis: [], cfg: blankCfg(), out: {} };
 const FIELDS = ['label', 'measure', 'format', 'better', 'target', 'compare', 'compareLabel', 'pv.value', 'pv.target', 'pv.compare', 'pv.trend'];
 const getF = (k, f) => f.startsWith('pv.') ? k.pv[f.slice(3)] : k[f];
@@ -2038,21 +1937,13 @@ function renderKpis(){
   $('kpiMax').textContent = state.kpis.length >= KV_MAX ? 'Up to ' + KV_MAX + ' KPIs.' : state.kpis.length ? '' : 'No KPIs yet. Add one, or pick measures from your model export below.';
   $('modeOne').checked = state.cfg.mode !== 'row'; $('modeRow').checked = state.cfg.mode === 'row';
 }
-/* ---------- Step 1: connect ---------- */
-function renderSource(){
-  const c = state.cfg;
-  document.querySelectorAll('.kv-src [data-src]').forEach(b => b.setAttribute('aria-checked', b.dataset.src === c.source));
-  $('srcPbip').hidden = c.source !== 'pbip'; $('srcExport').hidden = c.source !== 'export';
-}
+/* ---------- Step 1: connect (the shared step from the suite) ---------- */
 function renderModel(){
-  renderSource();
-  const c = state.cfg, text = $('modelInput').value;
-  const active = c.source && c.source !== 'none' && c.source === c.modelFrom;
-  const m = active && text.trim() ? parseModel(text) : null;
+  const text = $('modelInput').value;
+  const m = text.trim() ? parseModel(text) : null;
   state.model = m && !m.error ? m : null;
-  if (c.source !== 'pbip' || !state.pbipMsg) $('modelMsg').innerHTML = m && m.error ? '<div class="msg err">' + esc(m.error) + '</div>' : c.source === 'none' ? '<div class="msg info">Type each KPI&rsquo;s measure name in Step 2.</div>' : !c.source ? '<div class="msg info">Choose how to connect. The example below uses no model.</div>' : '';
-  if (c.source === 'pbip' && state.pbipMsg) $('modelMsg').innerHTML = state.pbipMsg;
-  $('modelStats').innerHTML = state.model ? (c.modelFrom === 'pbip' ? '<span class="stat ok">&#10003; ' + esc(c.pbipName || 'PBIP folder') + '</span>' : '') + '<span class="stat"><b>' + state.model.measures.length + '</b> measures</span><span class="stat"><b>' + state.model.tables.length + '</b> tables</span>' : '';
+  $('modelMsg').innerHTML = m && m.error ? '<div class="msg err">' + esc(m.error) + '</div>' : '';
+  $('modelStats').innerHTML = state.model ? '<span class="stat"><b>' + state.model.measures.length + '</b> measures</span><span class="stat"><b>' + state.model.tables.length + '</b> tables</span>' : '';
   $('pickBox').hidden = !state.model;
   const ms = state.model ? state.model.measures : [];
   $('measureNames').innerHTML = ms.map(x => '<option value="' + esc(x.name) + '">').join('');
@@ -2218,7 +2109,7 @@ function renderAll(){ renderKpis(); renderModel(); renderColors(); renderLive();
 /* ---------- init ---------- */
 function resetAll(){
   $('modelInput').value = ''; $('search').value = ''; $('themeJson').value = '';
-  state.kpis = []; state.cfg = blankCfg(); state.pbipMsg = ''; setExample(false); $('queryBox').open = false; $('presetMsg').innerHTML = '';
+  state.kpis = []; state.cfg = blankCfg(); setExample(false); $('queryBox').open = false; $('presetMsg').innerHTML = '';
   renderAll();
 }
 function init(){
@@ -2226,57 +2117,13 @@ function init(){
   const saved = store.get('model');
   let kpis = null, cfg = null; try { kpis = JSON.parse(store.get('kpis') || 'null'); cfg = JSON.parse(store.get('cfg') || 'null'); } catch (e) {}
   if (cfg) state.cfg = Object.assign(blankCfg(), cfg);
-  if (saved && saved.trim()) { $('modelInput').value = saved; if (!state.cfg.modelFrom) state.cfg.modelFrom = state.cfg.source = 'export'; }
+  if (saved && saved.trim()) $('modelInput').value = saved;
   if (kpis && kpis.length) state.kpis = kpis.map(k => Object.assign(kvBlankKpi(), k, { pv: Object.assign(kvBlankKpi().pv, k.pv || {}) }));
   else if (!(saved && saved.trim()) && store.get('blank') !== '1') { state.kpis = clone(KV_EX_KPIS); Object.assign(state.cfg, KV_EX_CFG); setExample(true); }
   renderAll();
 
   const touch = () => { try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {} };
-  $('modelInput').addEventListener('input', () => {
-    if (!state.loadingPbip) { state.cfg.modelFrom = 'export'; if (state.cfg.source !== 'export') state.cfg.source = 'export'; }
-    if ($('modelInput').value.trim()) leaveExample();
-    touch(); renderKpis(); renderModel(); renderLive(); persist();
-  });
-  document.querySelector('.kv-src').addEventListener('click', e => {
-    const b = e.target.closest('[data-src]'); if (!b) return;
-    state.cfg.source = b.dataset.src; renderKpis(); renderModel(); renderLive(); persist();
-    if (b.dataset.src === 'export' && !$('modelInput').value.trim()) $('queryBox').open = true;
-  });
-  // PBIP folder: read the semantic model and use it like an export
-  const loadPbip = async (root, list) => {
-    state.pbipMsg = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>'; renderModel();
-    const files = [];
-    for (const { path, file } of list) { if (kvWanted(path) && file.size < 30 * 1024 * 1024) files.push({ path, text: await kvDecode(file) }); }
-    const r = kvReadPbip(files);
-    if (r.error) { state.pbipMsg = '<div class="msg err">' + esc(r.error) + '</div>'; renderModel(); return; }
-    state.pbipMsg = r.others.length ? '<div class="msg info">This folder has more than one semantic model; using ' + esc(r.name) + '. Choose a project folder to use another.</div>' : '';
-    state.cfg.source = 'pbip'; state.cfg.modelFrom = 'pbip'; state.cfg.pbipName = r.name;
-    state.loadingPbip = true; $('modelInput').value = r.text; $('modelInput').dispatchEvent(new Event('input', { bubbles: true })); state.loadingPbip = false;
-  };
-  const fail = e => { state.pbipMsg = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(e.message || e) + '</div>'; renderModel(); };
-  $('pickPbip').addEventListener('click', async () => {
-    if (window.showDirectoryPicker) {
-      let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-kpi-visualizer', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; $('pbipInput').click(); return; }
-      const list = []; try { await kvWalkHandle(dir, dir.name, list); await loadPbip(dir.name, list); } catch (e) { fail(e); }
-    } else $('pbipInput').click();
-  });
-  $('pbipInput').addEventListener('change', async e => {
-    const fl = [...e.target.files]; if (!fl.length) return;
-    const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
-    const list = fl.filter(f => /\.(tmdl|bim)$/i.test(f.name)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }));
-    try { await loadPbip(root, list); } catch (err) { fail(err); }
-    e.target.value = '';
-  });
-  const drop = $('pbipDrop');
-  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
-  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
-  drop.addEventListener('drop', async e => {
-    e.preventDefault();
-    const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
-    if (!item || !item.isDirectory) { state.pbipMsg = '<div class="msg warn">Drop the project <b>folder</b>, not a file inside it.</div>'; renderModel(); return; }
-    const list = []; await kvWalkEntry(item, '', list);
-    try { await loadPbip(item.name, list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file }))); } catch (err) { fail(err); }
-  });
+  $('modelInput').addEventListener('input', () => { if ($('modelInput').value.trim()) leaveExample(); touch(); renderKpis(); renderModel(); renderLive(); persist(); });
   $('modeOne').addEventListener('change', () => { state.cfg.mode = 'one'; renderLive(); persist(); });
   $('modeRow').addEventListener('change', () => { state.cfg.mode = 'row'; renderLive(); persist(); });
   $('addKpi').addEventListener('click', () => {

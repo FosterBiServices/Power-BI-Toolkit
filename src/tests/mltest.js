@@ -13,7 +13,7 @@ const NEW = fs.readFileSync('ml_ex.tsv', 'utf8'), OLD = fs.readFileSync('ex_expo
   await p.check('#visibleUnused'); console.log('visible unused:', await p.locator('#sumBar .sum-txt').innerText());
   await p.uncheck('[data-rule=unused]'); console.log('unused off:', await p.locator('#sumBar .sum-txt').innerText());
   // paste old export
-  await p.fill('#modelInput', OLD); console.log('old msg:', (await p.locator('#modelMsg').innerText()).slice(0, 80), '| banner', await p.locator('#exampleBanner').isVisible(), '|', await p.locator('#sumBar .sum-txt').innerText());
+  await p.click('.sc-choose [data-sc=export]'); await p.fill('#modelInput', OLD); console.log('old msg:', (await p.locator('#modelMsg').innerText()).slice(0, 80), '| banner', await p.locator('#exampleBanner').isVisible(), '|', await p.locator('#sumBar .sum-txt').innerText());
   await p.screenshot({ path: 'ml_2.png', fullPage: true });
   // every tool with the new-format shared export
   await p.goto(U + 'index.html'); await p.evaluate(() => localStorage.clear()); await p.reload();

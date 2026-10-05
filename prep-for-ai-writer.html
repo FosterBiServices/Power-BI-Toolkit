@@ -2638,6 +2638,7 @@ init();
     const mode = cfg.mode || 'export';
     const bar = document.createElement('div'); bar.className = 'suite-bar'; bar.setAttribute('role', 'status');
     ta.insertAdjacentElement('beforebegin', bar);
+    const conn = cfg.connect && S.connect ? S.connect(cfg, ta, bar) : null;
     const valueFor = v => mode === 'dates' ? S.dateColumns(v.text) : v.text;
     const exampleShowing = () => { const b = document.getElementById('exampleBanner'); return !!(b && !b.hidden); };
     let note = '';
@@ -2659,6 +2660,7 @@ init();
       const v = S.get(); if (!v) return;
       if (exampleShowing()) { const c = document.getElementById('clearAll'); if (c) c.click(); }
       ta.value = valueFor(v);
+      if (conn) conn.set('export');
       if (cfg.open) { const d = document.getElementById(cfg.open); if (d) d.open = true; }
       ta.dispatchEvent(new Event('input', { bubbles: true }));
       try { localStorage.removeItem(cfg.prefix + 'blank'); } catch (e) {}
@@ -2677,14 +2679,270 @@ init();
     const v = S.get();
     let blank = false; try { blank = localStorage.getItem(cfg.prefix + 'blank') === '1'; } catch (e) {}
     // ...or when this page is still on an older saved export it took from the toolkit
-    if (v && valueFor(v) && ta.value.trim() !== valueFor(v).trim() && (exampleShowing() || (!ta.value.trim() && !blank) || (ta.value.trim() && following()))) use();
+    if (v && valueFor(v) && ta.value.trim() !== valueFor(v).trim() && !(conn && ['pbip', 'none'].includes(conn.choice())) && (exampleShowing() || (!ta.value.trim() && !blank) || (ta.value.trim() && following()))) use();
     else render();
     window.addEventListener('storage', e => { if (e.key === KEY) render(); });
   };
 })();
+// ---------- Connect your model: a PBIP folder read into the same rows as the model export ----------
+(function(){
+  const S = window.SF_SUITE;
+  const NL = '↵';
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const SKIP = new Set(['.git', 'node_modules', '.pbi', '.vs', 'StaticResources', 'RegisteredResources']);
+  const skipDir = n => SKIP.has(n) || /\.(Report|Dataset)$/i.test(n);
+  const wanted = p => /\.SemanticModel\/(definition\/.+\.tmdl|model\.bim)$/i.test(p);
+  const decode = async file => {
+    const buf = await file.arrayBuffer();
+    let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { t = new TextDecoder('windows-1252').decode(buf); }
+    return t.replace(/^﻿/, '');
+  };
+  async function walkHandle(dir, prefix, out){
+    for await (const [name, h] of dir.entries()) {
+      if (h.kind === 'directory') { if (!skipDir(name)) await walkHandle(h, prefix + '/' + name, out); }
+      else if (/\.(tmdl|bim)$/i.test(name)) out.push({ path: prefix + '/' + name, file: await h.getFile() });
+    }
+  }
+  function walkEntry(entry, prefix, out){
+    return new Promise(resolve => {
+      if (entry.isFile) { if (/\.(tmdl|bim)$/i.test(entry.name)) entry.file(f => { out.push({ path: prefix + '/' + entry.name, file: f }); resolve(); }, () => resolve()); else resolve(); return; }
+      if (skipDir(entry.name)) { resolve(); return; }
+      const reader = entry.createReader(); const all = [];
+      const next = () => reader.readEntries(batch => { if (!batch.length) { Promise.all(all.map(e => walkEntry(e, prefix + '/' + entry.name, out))).then(resolve); return; } all.push(...batch); next(); }, () => resolve());
+      next();
+    });
+  }
+
+  /* --- TMDL: objects by indentation, with properties, expressions and /// descriptions --- */
+  const OBJ = new Set(['model', 'table', 'column', 'measure', 'partition', 'hierarchy', 'level', 'relationship', 'expression', 'annotation', 'calculationgroup', 'calculationitem', 'role', 'perspective', 'culture', 'querygroup', 'datasource', 'extendedproperty', 'changedproperty', 'tablepermission', 'columnpermission', 'linguisticmetadata', 'variation', 'ref', 'perspectivetable', 'perspectivecolumn', 'perspectivemeasure', 'perspectivehierarchy', 'member', 'function', 'calendar']);
+  const unq = s => { s = (s || '').trim(); return /^'.*'$/.test(s) ? s.slice(1, -1).replace(/''/g, "'") : /^".*"$/.test(s) ? s.slice(1, -1).replace(/""/g, '"') : s; };
+  const tabs = l => /^\t*/.exec(l)[0].length;
+  const DECL = /^(\w+)(?:\s+('(?:[^']|'')*'|[^\s=]+))?\s*(?:=\s*(.*))?$/;
+  function dedent(lines){
+    const ls = lines.map(l => l.replace(/\s+$/, ''));
+    while (ls.length && !ls[0].trim()) ls.shift();
+    while (ls.length && !ls[ls.length - 1].trim()) ls.pop();
+    const ind = Math.min(...ls.filter(l => l.trim()).map(l => /^\s*/.exec(l)[0].length));
+    return ls.map(l => l.slice(isFinite(ind) ? ind : 0)).join('\n');
+  }
+  // reads an expression that starts after "=" on line i; returns [text, next line index]
+  function expr(lines, i, first, minTabs){
+    let v = (first || '').trim(), j = i + 1;
+    if (v.startsWith('```')) {
+      const body = [v.slice(3)];
+      while (j < lines.length && !lines[j].includes('```')) body.push(lines[j++]);
+      if (j < lines.length) body.push(lines[j].slice(0, lines[j].indexOf('```')));
+      return [dedent(body), j + 1];
+    }
+    const body = v ? [v] : [];
+    while (j < lines.length && (!lines[j].trim() || tabs(lines[j]) >= minTabs)) body.push(lines[j++]);
+    return [v ? [v].concat(body.slice(1).length ? [dedent(body.slice(1))] : []).join('\n') : dedent(body), j];
+  }
+  function parseTmdl(text){
+    const lines = text.replace(/\r/g, '').split('\n'), root = { kind: 'root', children: [], props: {}, indent: -1 }, stack = [root];
+    let doc = [];
+    for (let i = 0; i < lines.length;) {
+      const raw = lines[i], t = raw.trim();
+      if (!t) { i++; continue; }
+      if (t.startsWith('///')) { doc.push(t.slice(3).trim()); i++; continue; }
+      if (t.startsWith('//')) { i++; continue; }
+      const d = tabs(raw);
+      while (stack.length > 1 && stack[stack.length - 1].indent >= d) stack.pop();
+      const parent = stack[stack.length - 1];
+      const m = DECL.exec(t), kw = m ? m[1].toLowerCase() : '';
+      if (m && OBJ.has(kw) && !/:/.test(t.split('=')[0])) {
+        let name = m[2] ? unq(m[2]) : '', value = '';
+        if (kw === 'ref') { const r = /^ref\s+(\w+)\s+(.*)$/.exec(t); i++; doc = []; if (r) { const o = { kind: r[1].toLowerCase(), name: unq(r[2]), props: {}, children: [], indent: d, ref: true }; parent.children.push(o); stack.push(o); } continue; }
+        let next = i + 1;
+        if (m[3] !== undefined) [value, next] = expr(lines, i, m[3], d + 2);
+        const o = { kind: kw, name, value, props: {}, children: [], indent: d, doc: doc.join('\n') };
+        doc = []; parent.children.push(o); stack.push(o); i = next; continue;
+      }
+      doc = [];
+      const p = /^(\w+)\s*:\s*(.*)$/.exec(t);
+      if (p) { parent.props[p[1].toLowerCase()] = unq(p[2]); i++; continue; }
+      const e = /^(\w+)\s*=\s*(.*)$/.exec(t);
+      if (e) { const [v, n] = expr(lines, i, e[2], d + 1); parent.props[e[1].toLowerCase()] = v; i = n; continue; }
+      if (/^\w+$/.test(t)) parent.props[t.toLowerCase()] = 'true';
+      i++;
+    }
+    return root;
+  }
+  const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  const TYPES = { string: 'String', int64: 'Int64', double: 'Double', decimal: 'Decimal', datetime: 'DateTime', boolean: 'Boolean', binary: 'Binary', variant: 'Variant' };
+  const yes = v => v != null && !/^false$/i.test(String(v));
+  const colRef = s => { const m = /^('(?:[^']|'')*'|[^.]+)\.(.+)$/.exec((s || '').trim()); return m ? [unq(m[1]), unq(m[2])] : ['', unq(s)]; };
+  const cell = s => String(s == null ? '' : s).replace(/\r/g, '').replace(/\t/g, '    ').replace(/\n/g, NL);
+  const HEAD = ['Kind', 'Table', 'Name', 'Type', 'Folder', 'Flags', 'Description', 'Expression', 'ToTable', 'ToColumn', 'Summarize', 'SortBy', 'Hierarchies', 'Storage', 'Source'];
+  function rowsFrom(m){
+    const rows = [HEAD.join('\t')], r = o => rows.push(HEAD.map(h => cell(o[h])).join('\t'));
+    m.tables.forEach(t => r({ Kind: 'Table', Table: t.name, Name: t.name, Type: t.category, Flags: [t.hidden ? 'hidden' : '', t.private ? 'private' : ''].filter(Boolean).join(' '), Description: t.description, Expression: t.calc, Storage: t.storage, Source: t.source }));
+    m.columns.forEach(c => r({ Kind: 'Column', Table: c.table, Name: c.name, Type: c.type, Folder: c.folder, Flags: [c.hidden ? 'hidden' : '', c.key ? 'key' : ''].filter(Boolean).join(' '), Description: c.description, Expression: c.expression, Summarize: c.summarize, SortBy: c.sortBy, Hierarchies: c.hierarchies }));
+    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
+    m.rels.forEach(x => r({ Kind: 'Relationship', Table: x.fromTable, Name: x.fromColumn, Type: x.fromCard + ':' + x.toCard, Flags: x.cross + (x.active ? '' : ' inactive'), ToTable: x.toTable, ToColumn: x.toColumn }));
+    if (m.model) r({ Kind: 'Model', Name: m.model.name, Flags: m.model.discourage ? 'discourage-implicit' : '' });
+    return rows.join('\n');
+  }
+  function fromTmdl(files){
+    const m = { tables: [], columns: [], measures: [], rels: [], model: null };
+    const roots = files.map(f => parseTmdl(f.text));
+    const all = []; const walk = (o, table) => { o.children.forEach(c => { all.push([c, table]); walk(c, c.kind === 'table' ? c : table); }); };
+    roots.forEach(r => walk(r, null));
+    const exprNames = new Set(all.filter(([o]) => o.kind === 'expression').map(([o]) => o.name));
+    for (const [o, t] of all) {
+      if (o.kind === 'model') m.model = { name: o.name, discourage: yes(o.props.discourageimplicitmeasures) };
+      if (o.kind === 'relationship') {
+        const [ft, fc] = colRef(o.props.fromcolumn), [tt, tc] = colRef(o.props.tocolumn);
+        if (ft && tt) m.rels.push({ fromTable: ft, fromColumn: fc, toTable: tt, toColumn: tc, fromCard: cap(o.props.fromcardinality || 'many'), toCard: cap(o.props.tocardinality || 'one'), cross: cap(o.props.crossfilteringbehavior || 'oneDirection'), active: !/^false$/i.test(o.props.isactive || '') });
+      }
+      if (o.kind !== 'table' || o.ref) continue;
+      const parts = o.children.filter(c => c.kind === 'partition');
+      const p = parts[0] || { props: {}, value: '' }, ptype = (p.value || '').trim().toLowerCase();
+      const levels = {};
+      o.children.filter(c => c.kind === 'hierarchy').forEach(h => h.children.filter(l => l.kind === 'level').forEach(l => { const c = unq(l.props.column || ''); (levels[c] = levels[c] || []).push(h.name); }));
+      const src = ptype === 'entity' && p.props.expressionsource ? unq(p.props.expressionsource) : '';
+      m.tables.push({ name: o.name, category: o.props.datacategory || '', hidden: yes(o.props.ishidden), private: yes(o.props.isprivate), description: o.doc || o.props.description || '',
+        calc: ptype === 'calculated' ? (p.props.source || '') : '', storage: cap(p.props.mode || (ptype === 'calculated' ? 'import' : parts.length ? 'import' : '')).replace(/^Directquery$/i, 'DirectQuery'), source: exprNames.has(src) || src ? src : '' });
+      o.children.forEach(c => {
+        if (c.kind === 'column') {
+          if (/^RowNumber-/i.test(c.name)) return;
+          const num = /int64|double|decimal/i.test(c.props.datatype || '');
+          m.columns.push({ table: o.name, name: c.name, type: TYPES[(c.props.datatype || '').toLowerCase()] || c.props.datatype || '', folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), key: yes(c.props.iskey),
+            description: c.doc || c.props.description || '', expression: c.value || '', summarize: c.props.summarizeby ? cap(c.props.summarizeby) : num ? 'Default' : 'None', sortBy: unq(c.props.sortbycolumn || ''), hierarchies: (levels[c.name] || []).join(', ') });
+        } else if (c.kind === 'measure') {
+          m.measures.push({ table: o.name, name: c.name, format: c.props.formatstring || '', folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), dynamic: 'formatstringdefinition' in c.props || c.children.some(x => x.kind === 'formatstringdefinition'),
+            description: c.doc || c.props.description || '', expression: c.value || '' });
+        }
+      });
+    }
+    return m;
+  }
+  const join = v => Array.isArray(v) ? v.join('\n') : (v || '');
+  function fromBim(text){
+    const j = JSON.parse(text), md = j.model || {}, m = { tables: [], columns: [], measures: [], rels: [], model: { name: j.name || 'Model', discourage: !!md.discourageImplicitMeasures } };
+    (md.tables || []).forEach(t => {
+      const p = (t.partitions || [])[0] || {}, s = p.source || {}, levels = {};
+      (t.hierarchies || []).forEach(h => (h.levels || []).forEach(l => { (levels[l.column] = levels[l.column] || []).push(h.name); }));
+      m.tables.push({ name: t.name, category: t.dataCategory || '', hidden: !!t.isHidden, private: !!t.isPrivate, description: join(t.description), calc: s.type === 'calculated' ? join(s.expression) : '', storage: cap(p.mode || 'import').replace(/^Directquery$/i, 'DirectQuery'), source: s.type === 'entity' ? (s.expressionSource || '') : '' });
+      (t.columns || []).forEach(c => { if (c.type === 'rowNumber') return; const num = /int64|double|decimal/i.test(c.dataType || ''); m.columns.push({ table: t.name, name: c.name, type: TYPES[(c.dataType || '').toLowerCase()] || c.dataType || '', folder: c.displayFolder || '', hidden: !!c.isHidden, key: !!c.isKey, description: join(c.description), expression: c.type === 'calculated' ? join(c.expression) : '', summarize: c.summarizeBy ? cap(c.summarizeBy) : num ? 'Default' : 'None', sortBy: c.sortByColumn || '', hierarchies: (levels[c.name] || []).join(', ') }); });
+      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, description: join(x.description), expression: join(x.expression) }));
+    });
+    (md.relationships || []).forEach(r => m.rels.push({ fromTable: r.fromTable, fromColumn: r.fromColumn, toTable: r.toTable, toColumn: r.toColumn, fromCard: cap(r.fromCardinality || 'many'), toCard: cap(r.toCardinality || 'one'), cross: cap(r.crossFilteringBehavior || 'oneDirection'), active: r.isActive !== false }));
+    return m;
+  }
+  // files: [{ path, text }] -> { text, name, tables, measures, others } or { error }
+  S.pbipExport = files => {
+    const sm = files.filter(f => wanted(f.path));
+    if (!sm.length) return { error: 'No semantic model was found. Choose the folder that holds the .pbip file and the .SemanticModel folder.' };
+    const names = [...new Set(sm.map(f => f.path.match(/([^\/]+)\.SemanticModel\//i)[1]))], pick = names[0];
+    const mine = sm.filter(f => f.path.includes(pick + '.SemanticModel/')), tm = mine.filter(f => /\.tmdl$/i.test(f.path));
+    let m;
+    try { m = tm.length ? fromTmdl(tm) : fromBim((mine.find(f => /model\.bim$/i.test(f.path)) || {}).text || '{}'); }
+    catch (e) { return { error: 'The semantic model couldn’t be read: ' + (e.message || e) }; }
+    if (!m.tables.length) return { error: 'The semantic model in this folder has no tables that could be read.' };
+    if (m.model && !m.model.name) m.model.name = pick;
+    return { text: rowsFrom(m), name: pick, tables: m.tables.length, measures: m.measures.length, others: names.slice(1) };
+  };
+  S.pbipFiles = async list => { const out = []; for (const { path, file } of list) if (wanted(path) && file.size < 30 * 1024 * 1024) out.push({ path, text: await decode(file) }); return out; };
+
+  /* --- the Connect your model step --- */
+  if (!document.getElementById('suiteConnectCss')) {
+    const st = document.createElement('style'); st.id = 'suiteConnectCss';
+    st.textContent = '.sc-choose{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px}'
+      + '.sc-choose button{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:12px 16px;cursor:pointer;font:inherit}'
+      + '.sc-choose button .tn{font-family:var(--cond);font-weight:600;font-size:17px}.sc-choose button .td{font-size:13px;color:var(--muted)}'
+      + '.sc-choose button[aria-checked="true"]{border:2px solid var(--accent);padding:11px 15px;background:var(--accent-soft);box-shadow:inset 0 -4px 0 var(--gold)}'
+      + '.sc-choose button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}'
+      + '.sc-pbip{display:flex;flex-direction:column;gap:10px}.sc-pbip[hidden],.sc-hide{display:none!important}'
+      + '.sc-row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}'
+      + '.sc-drop{border:1px dashed var(--line);border-radius:8px;padding:14px;text-align:center;font-size:13px;color:var(--muted)}.sc-drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}';
+    document.head.appendChild(st);
+  }
+  // cfg (from S.hook): { input, prefix, mode, connect: { step: h2 id of the step that gets the choice, none: text for "No model" or false,
+  //   exportOnly: [selectors shown only for the export], title, lede, retitle: { h2 id: text } } }
+  S.connect = (cfg, ta, bar) => {
+    const c = cfg.connect, h2 = document.getElementById(c.step); if (!h2) return null;
+    const body = h2.closest('.step-body'), head = h2.closest('.step-head') || h2;
+    const key = cfg.prefix + 'connect', get = k => { try { return localStorage.getItem(cfg.prefix + k); } catch (e) { return null; } }, set = (k, v) => { try { localStorage.setItem(cfg.prefix + k, v); } catch (e) {} };
+    if (c.title) h2.textContent = c.title;
+    const lede = c.lede !== undefined ? c.lede : 'Choose where your model comes from: a PBIP folder, read straight from your project, or the export query you run once in DAX query view' + (c.none ? '. The page also works without one.' : '.');
+    if (lede) { const p = head.querySelector('p'); if (p) p.innerHTML = lede; else head.insertAdjacentHTML('beforeend', '<p>' + lede + '</p>'); }
+    // other steps that change with it: { h2 id: [title, lede] }
+    Object.entries(c.retitle || {}).forEach(([id, t]) => { const e = document.getElementById(id); if (!e) return; e.textContent = t[0]; const p = t[1] && e.closest('.step-head') && e.closest('.step-head').querySelector('p'); if (p) p.innerHTML = t[1]; });
+    const opts = [['pbip', 'PBIP folder', 'Choose the folder with your .pbip file. The page reads the semantic model straight from it.'], ['export', 'Model export', 'Run the toolkit’s export query in DAX query view and paste the results.']];
+    if (c.none) opts.push(['none', 'No model', c.none]);
+    const wrap = document.createElement('div'); wrap.className = 'sc-wrap';
+    wrap.innerHTML = '<div class="sc-choose" role="radiogroup" aria-label="How to connect your model">' + opts.map(o => '<button type="button" role="radio" aria-checked="false" data-sc="' + o[0] + '"><span class="tn">' + o[1] + '</span><span class="td">' + o[2] + '</span></button>').join('') + '</div>'
+      + '<div class="sc-pbip" hidden><div class="sc-row"><button type="button" class="btn primary" data-sc-pick>Choose a PBIP folder</button><span class="small muted">or drop the project folder below. The files are read in this page and never uploaded.</span></div>'
+      + '<div class="sc-drop">Drop the project folder here</div><input type="file" webkitdirectory multiple hidden><div class="sc-msg" role="status"></div></div>';
+    head.insertAdjacentElement('afterend', wrap);
+    const pane = wrap.querySelector('.sc-pbip'), msg = wrap.querySelector('.sc-msg'), input = wrap.querySelector('input[type=file]'), drop = wrap.querySelector('.sc-drop');
+    const exportEls = () => [ta, bar].concat((c.exportOnly || []).flatMap(s => [...document.querySelectorAll(s)])).filter(Boolean);
+    let choice = get('connect') || '', stash = '';
+    const exampleShowing = () => { const b = document.getElementById('exampleBanner'); return !!(b && !b.hidden); };
+    if (!choice && ta.value.trim() && !exampleShowing()) choice = 'export';
+    const render = () => {
+      wrap.querySelectorAll('[data-sc]').forEach(b => b.setAttribute('aria-checked', b.dataset.sc === choice));
+      pane.hidden = choice !== 'pbip';
+      exportEls().forEach(e => e.classList.toggle('sc-hide', choice !== 'export'));
+      const name = get('pbipName');
+      if (choice === 'pbip' && name && ta.value.trim() && !msg.innerHTML) msg.innerHTML = '<div class="msg ok">&#10003; Read from <b>' + esc(name) + '</b>. Choose the folder again after you change the model.</div>';
+    };
+    const fire = () => ta.dispatchEvent(new Event('input', { bubbles: true }));
+    const choose = v => {
+      if (v === choice) return;
+      if (choice === 'export') stash = ta.value;
+      if (v === 'none' && ta.value.trim() && !exampleShowing()) { ta.value = ''; fire(); }
+      if (v === 'export' && !ta.value.trim() && stash) { ta.value = stash; fire(); }
+      choice = v; set('connect', v); render();
+      if (v === 'export') { const d = c.open && document.getElementById(c.open); if (d && !ta.value.trim()) d.open = true; }
+    };
+    wrap.querySelector('.sc-choose').addEventListener('click', e => { const b = e.target.closest('[data-sc]'); if (b) choose(b.dataset.sc); });
+    const load = async (root, list) => {
+      msg.innerHTML = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>';
+      const r = S.pbipExport(await S.pbipFiles(list));
+      if (r.error) { msg.innerHTML = '<div class="msg err">' + esc(r.error) + '</div>'; return; }
+      if (exampleShowing()) { const x = document.getElementById('clearAll'); if (x) x.click(); }
+      choice = 'pbip'; set('connect', 'pbip'); set('pbipName', r.name);
+      try { localStorage.removeItem(cfg.prefix + 'blank'); } catch (e) {}
+      ta.value = cfg.mode === 'dates' ? S.dateColumns(r.text) : r.text; fire();
+      const noDates = cfg.mode === 'dates' && !ta.value.trim();
+      msg.innerHTML = '<div class="msg ' + (noDates ? 'warn' : 'ok') + '">' + (noDates ? '' : '&#10003; ') + 'Read <b>' + esc(r.name) + '</b>: ' + r.tables + ' tables, ' + r.measures + ' measures.' + (noDates ? ' It has no date columns, so set the years yourself in the next step.' : '') + (r.others.length ? ' This folder has more models (' + esc(r.others.join(', ')) + '); choose that project&rsquo;s own folder to use one of them.' : '') + ' Choose the folder again after you change the model.</div>';
+      render();
+    };
+    const fail = e => { msg.innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(e.message || e) + '</div>'; };
+    wrap.querySelector('[data-sc-pick]').addEventListener('click', async () => {
+      if (window.showDirectoryPicker) {
+        let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-' + cfg.prefix.replace(/\W/g, ''), mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; input.click(); return; }
+        const list = []; try { await walkHandle(dir, dir.name, list); await load(dir.name, list); } catch (e) { fail(e); }
+      } else input.click();
+    });
+    input.addEventListener('change', async () => {
+      const fl = [...input.files]; if (!fl.length) return;
+      const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
+      try { await load(root, fl.filter(f => /\.(tmdl|bim)$/i.test(f.name)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }))); } catch (e) { fail(e); }
+      input.value = '';
+    });
+    ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
+    drop.addEventListener('drop', async e => {
+      e.preventDefault();
+      const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
+      if (!item || !item.isDirectory) { msg.innerHTML = '<div class="msg warn">Drop the project <b>folder</b>, not a file inside it.</div>'; return; }
+      const list = []; await walkEntry(item, '', list);
+      try { await load(item.name, list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file }))); } catch (err) { fail(err); }
+    });
+    // typing or pasting an export means the export; Clear entries (an empty, flagged page) starts the choice again
+    ta.addEventListener('input', e => { if (e.isTrusted && choice !== 'export' && ta.value.trim()) { choice = 'export'; set('connect', 'export'); render(); } });
+    const clr = document.getElementById('clearYes');
+    if (clr) clr.addEventListener('click', () => { choice = ''; stash = ''; msg.innerHTML = ''; render(); });
+    render();
+    return { choice: () => choice, set: v => { choice = v; set('connect', v); render(); } };
+  };
+})();
 /*SUITE-END*/
 
-SF_SUITE.hook({ input: 'modelInput', prefix: 'kpa.' });
+SF_SUITE.hook({ input: 'modelInput', prefix: 'kpa.', connect: { step: 's1', title: 'Connect your model', exportOnly: ['section[aria-labelledby="s1"] .how', 'section[aria-labelledby="s1"] .codebox', 'section[aria-labelledby="s1"] .note'], retitle: { s2: ['Your model', 'What was read from your model. For the export, paste the results here straight from the Copy button.'] } } });
 </script>
 
 </body>

@@ -9,16 +9,35 @@
       <span id="clearMsg"><b>Clear all entries?</b> This empties every box on this page and removes what this page saved in your browser, including your own checklist rules. It can&rsquo;t be undone.</span>
       <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
     </div>
-    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste a measure in Step 1 to start again.</div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste a measure in Step 2 to start again.</div>
     <div class="banner" id="exampleBanner" hidden>
-      <span><strong>Example loaded.</strong> The measure, model, extra rule and Copilot reply are samples. Paste your own measure in Step 1 to start.</span>
+      <span><strong>Example loaded.</strong> The measure, model, extra rule and Copilot reply are samples. Paste your own measure in Step 2 to start.</span>
       <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
     </div>
   </header>
 
   <!-- STEP 1 -->
-  <section class="step" aria-labelledby="s1">
+  <section class="step" aria-labelledby="s0">
     <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s0">Connect your model</h2>
+        <p>Optional. With the model, the page can tell columns from measures, check every name exists, give Copilot the formulas of the measures this one uses, and put the test query in the right table.</p>
+      </div>
+      <div class="dr-model" id="modelBox">
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+          <pre class="short" id="exportView"></pre>
+        </div>
+        <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+      </div>
+      <div id="modelMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>2</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s1">Paste the measure</h2>
@@ -27,24 +46,12 @@
       <div class="field" id="pickWrap" hidden><label for="pickM">Pick a measure from your model</label><select id="pickM"></select></div>
       <textarea id="mInput" class="big" spellcheck="false" aria-label="Measure" placeholder="Total Sales = SUM ( Sales[Net Amount] )"></textarea>
       <div class="stats" id="mStats"></div>
-      <details class="extra" id="modelBox">
-        <summary>Add your model export <span class="muted">(optional: pick measures from it, scan them all, and check names)</span></summary>
-        <div class="extra-body">
-          <p class="note">With the model, the page can tell columns from measures, check every name exists, give Copilot the formulas of the measures this one uses, and put the test query in the right table. Use the same export as the other toolkit pages.</p>
-          <div class="codebox">
-            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
-            <pre class="short" id="exportView"></pre>
-          </div>
-          <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
-          <div id="modelMsg"></div>
-        </div>
-      </details>
     </div>
   </section>
 
-  <!-- STEP 2 -->
+  <!-- STEP 3 -->
   <section class="step" aria-labelledby="s2">
-    <div class="step-num">Step<b>2</b></div>
+    <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s2">Your checklist</h2>
@@ -64,9 +71,9 @@
     </div>
   </section>
 
-  <!-- STEP 3 -->
+  <!-- STEP 4 -->
   <section class="step" aria-labelledby="s3">
-    <div class="step-num">Step<b>3</b></div>
+    <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">What the page found</h2>
@@ -76,7 +83,7 @@
       <details class="extra" id="scanBox" hidden>
         <summary>Page checks on every measure in the model <span class="muted" id="scanStat"></span></summary>
         <div class="extra-body">
-          <p class="note">The same checks, run on each measure with your checklist settings. Select <b>Review</b> to load one into Step 1 for the full Copilot review.</p>
+          <p class="note">The same checks, run on each measure with your checklist settings. Select <b>Review</b> to load one into Step 2 for the full Copilot review.</p>
           <div class="field"><input type="text" id="scanFilter" placeholder="Search measures" aria-label="Search measures"></div>
           <div class="tablewrap scanwrap"><table class="scan"><thead><tr><th>Measure</th><th>Table</th><th>High</th><th>Medium</th><th>Low</th><th>Rules</th><th><span class="sr">Review</span></th></tr></thead><tbody id="scanBody"></tbody></table></div>
         </div>
@@ -88,9 +95,9 @@
     </div>
   </section>
 
-  <!-- STEP 4 -->
+  <!-- STEP 5 -->
   <section class="step" aria-labelledby="s4">
-    <div class="step-num">Step<b>4</b></div>
+    <div class="step-num">Step<b>5</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s4">Ask Copilot for the full review</h2>
@@ -106,9 +113,9 @@
     </div>
   </section>
 
-  <!-- STEP 5 -->
+  <!-- STEP 6 -->
   <section class="step" aria-labelledby="s5">
-    <div class="step-num">Step<b>5</b></div>
+    <div class="step-num">Step<b>6</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s5">Paste Copilot&rsquo;s reply</h2>

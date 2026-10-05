@@ -20,7 +20,7 @@ function hl(code){
   }).join('\n');
 }
 const clone = o => JSON.parse(JSON.stringify(o));
-const blankCfg = () => ({ source: '', modelFrom: '', pbipName: '', mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard' });
+const blankCfg = () => ({ mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard' });
 const state = { example: false, model: null, kpis: [], cfg: blankCfg(), out: {} };
 const FIELDS = ['label', 'measure', 'format', 'better', 'target', 'compare', 'compareLabel', 'pv.value', 'pv.target', 'pv.compare', 'pv.trend'];
 const getF = (k, f) => f.startsWith('pv.') ? k.pv[f.slice(3)] : k[f];
@@ -61,21 +61,13 @@ function renderKpis(){
   $('kpiMax').textContent = state.kpis.length >= KV_MAX ? 'Up to ' + KV_MAX + ' KPIs.' : state.kpis.length ? '' : 'No KPIs yet. Add one, or pick measures from your model export below.';
   $('modeOne').checked = state.cfg.mode !== 'row'; $('modeRow').checked = state.cfg.mode === 'row';
 }
-/* ---------- Step 1: connect ---------- */
-function renderSource(){
-  const c = state.cfg;
-  document.querySelectorAll('.kv-src [data-src]').forEach(b => b.setAttribute('aria-checked', b.dataset.src === c.source));
-  $('srcPbip').hidden = c.source !== 'pbip'; $('srcExport').hidden = c.source !== 'export';
-}
+/* ---------- Step 1: connect (the shared step from the suite) ---------- */
 function renderModel(){
-  renderSource();
-  const c = state.cfg, text = $('modelInput').value;
-  const active = c.source && c.source !== 'none' && c.source === c.modelFrom;
-  const m = active && text.trim() ? parseModel(text) : null;
+  const text = $('modelInput').value;
+  const m = text.trim() ? parseModel(text) : null;
   state.model = m && !m.error ? m : null;
-  if (c.source !== 'pbip' || !state.pbipMsg) $('modelMsg').innerHTML = m && m.error ? '<div class="msg err">' + esc(m.error) + '</div>' : c.source === 'none' ? '<div class="msg info">Type each KPI&rsquo;s measure name in Step 2.</div>' : !c.source ? '<div class="msg info">Choose how to connect. The example below uses no model.</div>' : '';
-  if (c.source === 'pbip' && state.pbipMsg) $('modelMsg').innerHTML = state.pbipMsg;
-  $('modelStats').innerHTML = state.model ? (c.modelFrom === 'pbip' ? '<span class="stat ok">&#10003; ' + esc(c.pbipName || 'PBIP folder') + '</span>' : '') + '<span class="stat"><b>' + state.model.measures.length + '</b> measures</span><span class="stat"><b>' + state.model.tables.length + '</b> tables</span>' : '';
+  $('modelMsg').innerHTML = m && m.error ? '<div class="msg err">' + esc(m.error) + '</div>' : '';
+  $('modelStats').innerHTML = state.model ? '<span class="stat"><b>' + state.model.measures.length + '</b> measures</span><span class="stat"><b>' + state.model.tables.length + '</b> tables</span>' : '';
   $('pickBox').hidden = !state.model;
   const ms = state.model ? state.model.measures : [];
   $('measureNames').innerHTML = ms.map(x => '<option value="' + esc(x.name) + '">').join('');
@@ -241,7 +233,7 @@ function renderAll(){ renderKpis(); renderModel(); renderColors(); renderLive();
 /* ---------- init ---------- */
 function resetAll(){
   $('modelInput').value = ''; $('search').value = ''; $('themeJson').value = '';
-  state.kpis = []; state.cfg = blankCfg(); state.pbipMsg = ''; setExample(false); $('queryBox').open = false; $('presetMsg').innerHTML = '';
+  state.kpis = []; state.cfg = blankCfg(); setExample(false); $('queryBox').open = false; $('presetMsg').innerHTML = '';
   renderAll();
 }
 function init(){
@@ -249,57 +241,13 @@ function init(){
   const saved = store.get('model');
   let kpis = null, cfg = null; try { kpis = JSON.parse(store.get('kpis') || 'null'); cfg = JSON.parse(store.get('cfg') || 'null'); } catch (e) {}
   if (cfg) state.cfg = Object.assign(blankCfg(), cfg);
-  if (saved && saved.trim()) { $('modelInput').value = saved; if (!state.cfg.modelFrom) state.cfg.modelFrom = state.cfg.source = 'export'; }
+  if (saved && saved.trim()) $('modelInput').value = saved;
   if (kpis && kpis.length) state.kpis = kpis.map(k => Object.assign(kvBlankKpi(), k, { pv: Object.assign(kvBlankKpi().pv, k.pv || {}) }));
   else if (!(saved && saved.trim()) && store.get('blank') !== '1') { state.kpis = clone(KV_EX_KPIS); Object.assign(state.cfg, KV_EX_CFG); setExample(true); }
   renderAll();
 
   const touch = () => { try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {} };
-  $('modelInput').addEventListener('input', () => {
-    if (!state.loadingPbip) { state.cfg.modelFrom = 'export'; if (state.cfg.source !== 'export') state.cfg.source = 'export'; }
-    if ($('modelInput').value.trim()) leaveExample();
-    touch(); renderKpis(); renderModel(); renderLive(); persist();
-  });
-  document.querySelector('.kv-src').addEventListener('click', e => {
-    const b = e.target.closest('[data-src]'); if (!b) return;
-    state.cfg.source = b.dataset.src; renderKpis(); renderModel(); renderLive(); persist();
-    if (b.dataset.src === 'export' && !$('modelInput').value.trim()) $('queryBox').open = true;
-  });
-  // PBIP folder: read the semantic model and use it like an export
-  const loadPbip = async (root, list) => {
-    state.pbipMsg = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>'; renderModel();
-    const files = [];
-    for (const { path, file } of list) { if (kvWanted(path) && file.size < 30 * 1024 * 1024) files.push({ path, text: await kvDecode(file) }); }
-    const r = kvReadPbip(files);
-    if (r.error) { state.pbipMsg = '<div class="msg err">' + esc(r.error) + '</div>'; renderModel(); return; }
-    state.pbipMsg = r.others.length ? '<div class="msg info">This folder has more than one semantic model; using ' + esc(r.name) + '. Choose a project folder to use another.</div>' : '';
-    state.cfg.source = 'pbip'; state.cfg.modelFrom = 'pbip'; state.cfg.pbipName = r.name;
-    state.loadingPbip = true; $('modelInput').value = r.text; $('modelInput').dispatchEvent(new Event('input', { bubbles: true })); state.loadingPbip = false;
-  };
-  const fail = e => { state.pbipMsg = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(e.message || e) + '</div>'; renderModel(); };
-  $('pickPbip').addEventListener('click', async () => {
-    if (window.showDirectoryPicker) {
-      let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-kpi-visualizer', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; $('pbipInput').click(); return; }
-      const list = []; try { await kvWalkHandle(dir, dir.name, list); await loadPbip(dir.name, list); } catch (e) { fail(e); }
-    } else $('pbipInput').click();
-  });
-  $('pbipInput').addEventListener('change', async e => {
-    const fl = [...e.target.files]; if (!fl.length) return;
-    const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
-    const list = fl.filter(f => /\.(tmdl|bim)$/i.test(f.name)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }));
-    try { await loadPbip(root, list); } catch (err) { fail(err); }
-    e.target.value = '';
-  });
-  const drop = $('pbipDrop');
-  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
-  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
-  drop.addEventListener('drop', async e => {
-    e.preventDefault();
-    const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
-    if (!item || !item.isDirectory) { state.pbipMsg = '<div class="msg warn">Drop the project <b>folder</b>, not a file inside it.</div>'; renderModel(); return; }
-    const list = []; await kvWalkEntry(item, '', list);
-    try { await loadPbip(item.name, list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file }))); } catch (err) { fail(err); }
-  });
+  $('modelInput').addEventListener('input', () => { if ($('modelInput').value.trim()) leaveExample(); touch(); renderKpis(); renderModel(); renderLive(); persist(); });
   $('modeOne').addEventListener('change', () => { state.cfg.mode = 'one'; renderLive(); persist(); });
   $('modeRow').addEventListener('change', () => { state.cfg.mode = 'row'; renderLive(); persist(); });
   $('addKpi').addEventListener('click', () => {

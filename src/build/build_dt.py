@@ -11,6 +11,7 @@ ui=open(S+'dt_ui.js').read()
 body=open(S+'dt_body.html').read()
 head='<title>Date Table Generator</title>\n<meta name="description" content="Build a Power BI date table with your fiscal year, weeks and holidays, as DAX, Power Query (M) or a TMDL script.">\n'+L(3,6)
 css=L(7,217)+'\n'+L(175,176)+'\n'+L(219,265)+'\n'+L(303,312)+'''
+.dt-finder{display:flex;flex-direction:column;gap:10px}
 /* ---------- Date Table Generator ---------- */
 .cfg{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end}
 .cfg[hidden],.field[hidden],.chk[hidden],.hpick[hidden]{display:none!important}

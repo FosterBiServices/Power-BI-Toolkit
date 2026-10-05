@@ -91,6 +91,11 @@ Things to know:
   `S.set` keeps the replaced export in `sfpbi.shared.model.history` (up to 5; `S.history()`,
   `S.clearHistory()`), which Model Compare uses as the "before".
 - `S.hook(cfg)` fills a tool's model box from the shared export and saves edits back.
+  With `connect: { step, none, exportOnly, lede, retitle }` it also adds the **Connect your
+  model** choice (PBIP folder, Model export, optionally No model) to the step whose h2 has id
+  `step`, and hides the `exportOnly` elements unless Model export is chosen. `S.pbipExport()`
+  turns a PBIP folder's TMDL (or model.bim) into export rows, so the tool reads it like an
+  export. The choice is saved as `<prefix>connect`. Settings per page are in build_site.py HOOKS.
 - Home link and Switch tool menu (`S.TOOLS`).
 - Prompts as files: for every page in `PROMPTS` (prompt element → reply element) each prompt
   box gets **Download file**, a "Send it to Copilot as a file" note, and "Open a reply file"
@@ -124,6 +129,8 @@ Things to know:
 | theme-builder | ktb. | no | no |
 | layout-designer | klo. | no | no |
 | sheet-recon | ksr. (Clear entries flag only; files are never stored) | no | no |
+
+Every tool that uses the export (yes or optional) also takes a PBIP folder in its Connect your model step.
 
 ## Tests
 

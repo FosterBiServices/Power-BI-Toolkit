@@ -170,12 +170,12 @@ function renderAll(){
   }
   state.refIssues = refIssues;
   renderPicker(); renderScan();
-  $('autoOut').innerHTML = !has ? msg('info', state.model && state.model.measures.length ? 'Pick a measure from your model in Step 1 (or paste one), or open the list below to see which measures need attention.' : 'Paste a measure in Step 1.') : (found.length || refIssues.length ? '<p class="note">' + found.length + ' finding' + (found.length === 1 ? '' : 's') + (state.model ? '' : '. Add your model in Step 1 to also check names and tell columns from measures') + '.</p>' + findingList(found.map(f => Object.assign({ sev: ruleSev(f.rule) }, f)), true) + refIssues.map(x => msg('warn', '<b>Name check:</b> ' + esc(x))).join('') : msg('ok', 'No problems found by the page’s checks. Copilot can still review it against the full checklist.'));
+  $('autoOut').innerHTML = !has ? msg('info', state.model && state.model.measures.length ? 'Pick a measure from your model in Step 2 (or paste one), or open the list below to see which measures need attention.' : 'Paste a measure in Step 2.') : (found.length || refIssues.length ? '<p class="note">' + found.length + ' finding' + (found.length === 1 ? '' : 's') + (state.model ? '' : '. Connect your model in Step 1 to also check names and tell columns from measures') + '.</p>' + findingList(found.map(f => Object.assign({ sev: ruleSev(f.rule) }, f)), true) + refIssues.map(x => msg('warn', '<b>Name check:</b> ' + esc(x))).join('') : msg('ok', 'No problems found by the page’s checks. Copilot can still review it against the full checklist.'));
   const lines = new Set(found.map(f => f.line));
   $('codeView').innerHTML = has ? p.expression.split('\n').map((l, i) => '<span class="ln' + (lines.has(i + 1) ? ' hit' : '') + '"><span class="no">' + (i + 1) + '</span>' + hl(l) + '</span>').join('') : '';
   // prompt
   state.out.prompt = has ? reviewPrompt({ name: p.name, expr: p.expression, rules: rules.map(r => ({ id: r.id, name: r.name, check: r.check || r.name, sev: r.sev })), found, related: related(p), notes: $('notes').value, rewrite: state.wantRewrite }) : '';
-  $('promptView').textContent = state.out.prompt || (state.model ? 'Pick or paste a measure in Step 1.' : 'Paste a measure in Step 1.');
+  $('promptView').textContent = state.out.prompt || (state.model ? 'Pick or paste a measure in Step 2.' : 'Paste a measure in Step 2.');
   $('pCount').textContent = state.out.prompt ? state.out.prompt.length.toLocaleString() + ' characters' : '';
   renderReply();
 }
@@ -230,8 +230,8 @@ function renderReply(){
     const by = ($('tBy').value || '').trim();
     state.out.compare = compareQuery({ name: p.name, table: tbl, original: p.expression, rewrite: r.rewrite, byCol: by });
     $('cmpView').innerHTML = hl(state.out.compare);
-    if (p.name && tbl) { state.out.save = saveScript({ name: p.name, table: p.table || tbl, rewrite: r.rewrite }); $('saveView').innerHTML = hl(state.out.save); $('saveMsg').innerHTML = p.table ? '' : msg('warn', 'The measure&rsquo;s table isn&rsquo;t known. Add the model export in Step 1, or check the table name in the query matches where the measure lives.'); }
-    else { state.out.save = ''; $('saveView').textContent = ''; $('saveMsg').innerHTML = msg('info', 'Give the measure a name in Step 1 (Name = ...) to get this query.'); }
+    if (p.name && tbl) { state.out.save = saveScript({ name: p.name, table: p.table || tbl, rewrite: r.rewrite }); $('saveView').innerHTML = hl(state.out.save); $('saveMsg').innerHTML = p.table ? '' : msg('warn', 'The measure&rsquo;s table isn&rsquo;t known. Connect your model in Step 1, or check the table name in the query matches where the measure lives.'); }
+    else { state.out.save = ''; $('saveView').textContent = ''; $('saveMsg').innerHTML = msg('info', 'Give the measure a name (Name = ...) in Step 2 to get this query.'); }
     reportText += '\n\nRewrite:\n' + r.rewrite + (r.changes.length ? '\n\nChanges:\n' + r.changes.map(c => '- ' + c).join('\n') : '');
   }
   state.out.report = reportText;

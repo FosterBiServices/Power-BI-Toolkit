@@ -2,7 +2,7 @@ from _env import open, S, P, ROOT
 p=open(P+'prep-for-ai-writer.html').read().split('\n')
 if p[3].startswith('<link rel=\"icon\"'): p = p[:2] + [p[2] + '\n' + p[3]] + p[4:]
 L=lambda a,b:'\n'.join(p[a-1:b])
-core=open(S+'builder_core.js').read(); kv=open(S+'kv_core.js').read(); ex=open(S+'kv_ex.js').read(); pb=open(S+'kv_pbip.js').read(); ui=open(S+'kv_ui.js').read(); body=open(S+'kv_body.html').read()
+core=open(S+'builder_core.js').read(); kv=open(S+'kv_core.js').read(); ex=open(S+'kv_ex.js').read(); ui=open(S+'kv_ui.js').read(); body=open(S+'kv_body.html').read()
 head='<title>KPI Visualizer</title>\n<meta name="description" content="Compare ways to show a Power BI KPI: cards, bullet charts, sparklines, progress bars and more, with build steps and SVG measures as a TMDL script.">\n'+L(3,6)
 css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 /* ---------- KPI Visualizer ---------- */
@@ -71,13 +71,6 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 .kv-table td{border-bottom:1px solid #EDEBE9;padding:4px 8px;vertical-align:middle;white-space:nowrap}
 .kv-table td.num{text-align:right;font-variant-numeric:tabular-nums}
 .kv-table svg{display:block}
-.kv-src{grid-template-columns:repeat(3,1fr)}
-@media (max-width:760px){.kv-src{grid-template-columns:1fr}}
-.kv-src button[aria-checked="true"]{border:2px solid var(--accent);padding:11px 15px;background:var(--accent-soft);box-shadow:inset 0 -4px 0 var(--gold)}
-.kv-panel{display:flex;flex-direction:column;gap:10px}
-.drop{border:1px dashed var(--line);border-radius:8px;padding:14px;text-align:center;font-size:13px;color:var(--muted)}
-.drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
-.stat.ok{background:var(--ok-soft);color:var(--ok)}
 .kv-h3{margin:0;font-size:15px}
 .kv-nmc{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-size:13px}
 .kv-nmc dt{font-weight:600;color:var(--accent)}
@@ -92,7 +85,7 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 #kpiPickWrap select{max-width:320px}
 '''
 logo=p[318]
-src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+logo+'\n'+body+'\n<script>\n'+core+'\n'+kv+'\n'+pb+'\n'+ex+'\n'+ui+'</script>\n'
-assert '</script>' not in (core+kv+pb+ex+ui)
+src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+logo+'\n'+body+'\n<script>\n'+core+'\n'+kv+'\n'+ex+'\n'+ui+'</script>\n'
+assert '</script>' not in (core+kv+ex+ui)
 open(P+'kpi-visualizer.html','w').write(src)
 print(len(src))
