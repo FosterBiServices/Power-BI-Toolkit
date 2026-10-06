@@ -21,6 +21,12 @@ const LR = (() => {
       + '<feComposite in2="blur" operator="in" result="shadow"/><feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
   }
 
+  /* Header image (Colored band or Full-width bar): { src, w, h } with the image's own size */
+  function headerImage(st){
+    const i = st.hdrImg;
+    return (st.header === 'band' || st.header === 'bleed') && i && i.src && i.w > 0 && i.h > 0 ? i : null;
+  }
+
   /* ----- the page background: page fill, header, side panel, a card behind each visual ----- */
   function background(L, c, col, st, opts){
     opts = opts || {};
@@ -33,12 +39,22 @@ const LR = (() => {
     const sh = st.shadow ? ' filter="url(#lo-shadow)"' : '';
     const hdr = L.items.find(o => o.id === 'header');
     if (hdr && st.header !== 'none') {
-      if (st.header === 'bleed') out.push(rect('Header', 0, 0, W, hdr.y + hdr.h + (c.margin > 0 ? 0 : 0), col.header, ' rx="0"'));
+      // a header image fills the band like Figma's image fill (cover), as a pattern Figma reads back as an image fill
+      const img = headerImage(st), box = st.header === 'bleed' ? [0, 0, W, hdr.y + hdr.h] : [hdr.x, hdr.y, hdr.w, hdr.h];
+      const fill = img ? 'url(#lo-header-fill)' : col.header;
+      let defs2 = '';
+      if (img) {
+        const [, , bw, bh] = box, k = Math.max(bw / img.w, bh / img.h), ox = (bw - k * img.w) / 2, oy = (bh - k * img.h) / 2;
+        defs2 = '<defs><pattern id="lo-header-fill" patternContentUnits="objectBoundingBox" width="1" height="1"><use xlink:href="#lo-header-image" transform="matrix(' + [k / bw, 0, 0, k / bh, ox / bw, oy / bh].map(v => +v.toFixed(6)).join(' ') + ')"/></pattern>'
+          + '<image id="lo-header-image" width="' + img.w + '" height="' + img.h + '" preserveAspectRatio="none" xlink:href="' + img.src + '"/></defs>';
+      }
+      if (defs2) out.push(defs2);
+      if (st.header === 'bleed') out.push(rect('Header', box[0], box[1], box[2], box[3], fill, ' rx="0"'));
       else if (st.header === 'line') out.push(rect('Header-line', hdr.x, hdr.y + hdr.h - 3, hdr.w, 3, col.accent, ' rx="1.5"'));
-      else out.push(rect('Header', hdr.x, hdr.y, hdr.w, hdr.h, col.header, sh));
+      else out.push(rect('Header', box[0], box[1], box[2], box[3], fill, sh));
     }
     const logo = L.items.find(o => o.id === 'logo');
-    if (logo && logo.src && c.header.logo && c.header.logo.inBg) out.push('<image id="Logo" href="' + logo.src + '" x="' + f(logo.x) + '" y="' + f(logo.y) + '" width="' + f(logo.w) + '" height="' + f(logo.h) + '" preserveAspectRatio="xMidYMid meet"/>');
+    if (logo && logo.src && c.header.logo && c.header.logo.inBg) out.push('<image id="Logo" xlink:href="' + logo.src + '" x="' + f(logo.x) + '" y="' + f(logo.y) + '" width="' + f(logo.w) + '" height="' + f(logo.h) + '" preserveAspectRatio="xMidYMid meet"/>');
     const side = L.items.find(o => o.id === 'side');
     if (side && st.side !== 'none') out.push(rect('Side-panel', side.x, side.y, side.w, side.h, col.sidePanel, sh + border));
     if (st.cards !== 'none') {
@@ -49,7 +65,7 @@ const LR = (() => {
       g.push('</g>'); out.push(g.join(''));
     }
     if (opts.inner) return defs + out.join('');
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + defs + out.join('') + '</svg>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + defs + out.join('') + '</svg>';
   }
 
   /* ----- a sketch of each visual type inside its box ----- */
@@ -147,7 +163,7 @@ const LR = (() => {
     } else if (kind === 'button') {
       s.push('<rect x="' + f(o.x + pad) + '" y="' + f(o.y + pad) + '" width="' + f(o.w - 2 * pad) + '" height="' + f(o.h - 2 * pad) + '" rx="6" fill="' + d[0] + '"/>', t(o.x + o.w / 2, o.y + o.h / 2 + 4, o.title || 'Button', 12, col.card, 'middle', 600));
     } else if (kind === 'image' && o.logo) {
-      if (o.src) s.push('<image href="' + o.src + '" x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" preserveAspectRatio="xMidYMid meet"/>');
+      if (o.src) s.push('<image xlink:href="' + o.src + '" x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" preserveAspectRatio="xMidYMid meet"/>');
       else s.push('<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="4" fill="' + col.card + '" fill-opacity=".25" stroke="' + col.headerText + '" stroke-opacity=".6" stroke-dasharray="4 3"/>', t(o.x + o.w / 2, o.y + o.h / 2 + 4, 'LOGO', Math.min(12, o.h * 0.4), col.headerText, 'middle', 700));
     } else if (kind === 'image') {
       s.push('<rect x="' + f(x) + '" y="' + f(y) + '" width="' + f(w) + '" height="' + f(h) + '" fill="' + col.muted + '" opacity=".15" rx="2"/><path d="M' + f(x) + ' ' + f(y) + ' L' + f(x + w) + ' ' + f(y + h) + ' M' + f(x + w) + ' ' + f(y) + ' L' + f(x) + ' ' + f(y + h) + '" stroke="' + col.muted + '" stroke-opacity=".4"/>');
@@ -190,8 +206,8 @@ const LR = (() => {
       if (opts.dims && o.h >= 44) out.push('<text x="' + f(o.x + o.w - 6) + '" y="' + f(o.y + o.h - 6) + '" font-size="10" text-anchor="end" fill="' + col.muted + '" font-family="Consolas, monospace">' + Math.round(o.w) + '×' + Math.round(o.h) + ' @ ' + Math.round(o.x) + ',' + Math.round(o.y) + '</text>');
     });
     const defs = st.shadow ? '' : '';
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"' + (opts.cls ? ' class="' + opts.cls + '"' : '') + '>' + defs + out.join('') + '</svg>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"' + (opts.cls ? ' class="' + opts.cls + '"' : '') + '>' + defs + out.join('') + '</svg>';
   }
 
-  return { background, wireframe, sketch, idName, shadowOf, SH_DEFAULT };
+  return { background, wireframe, sketch, idName, shadowOf, headerImage, SH_DEFAULT };
 })();

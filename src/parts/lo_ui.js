@@ -64,6 +64,12 @@ function renderPage(){
   $('logoClear').hidden = $('logoInBgWrap').hidden = !lg.src; $('logoInBg').checked = !!lg.inBg;
   $('logoFileLbl').textContent = lg.src ? 'Replace the image' : 'Add the logo image';
   $('logoInfo').textContent = lg.src ? 'Width and height keep the image\u2019s proportions.' : 'Optional: shows your logo in the drawings.';
+  // header image: Colored band and Full-width bar only
+  const st = state.look.style, hi = st.hdrImg;
+  $('hdrImgWrap').hidden = !(st.header === 'band' || st.header === 'bleed');
+  $('hdrImgClear').hidden = !(hi && hi.src);
+  $('hdrImgLbl').textContent = hi && hi.src ? 'Replace the image' : 'Use an image';
+  if (!state.hdrImgMsg) $('hdrImgInfo').textContent = hi && hi.src ? 'It fills the header, cropped to fit.' : 'Optional: an image instead of the header color.';
   const n = t => (h.items || []).filter(x => x.type === t).length;
   set('hCardN', n('card')); set('hSlicerN', n('slicer'));
   set('hCardW', h.cardW); set('hCardH', h.cardH); set('hSlicerW', h.slicerW); set('hSlicerH', h.slicerH);
@@ -202,6 +208,9 @@ function init(){
   try { const g = JSON.parse(store.get('sg') || 'null'); if (g) state.sg = Object.assign(LS.blankInput(), g); } catch (e) {}
   if (!cfg) $('suggestBox').open = true;
   renderAll(); renderSuggestInputs();
+  // logos saved before they were stored as PNG or JPEG: convert once, so Figma and PowerPoint get them
+  const lg0 = state.cfg.header && state.cfg.header.logo;
+  if (lg0 && lg0.src && !/^data:image\/(png|jpe?g)/i.test(lg0.src)) LX.readImage(lg0.src, 1200).then(im => { lg0.src = im.src; refresh(); }, () => {});
 
   const num = (v, d) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
   const edited = opts => { leaveExample(); refresh(opts); };
@@ -231,15 +240,23 @@ function init(){
     const file = $('logoFile').files[0]; if (!file) return;
     if (file.size > 1024 * 1024) { $('logoInfo').textContent = 'That image is over 1 MB. Use a smaller PNG or an SVG.'; $('logoFile').value = ''; return; }
     const rd = new FileReader();
-    rd.onload = () => {
-      const src = rd.result, img = new Image();
-      // keep the height, set the width from the image's proportions
-      img.onload = () => { const lg = state.cfg.header.logo; lg.src = src; if (img.naturalWidth && img.naturalHeight) { lg.ratio = img.naturalWidth / img.naturalHeight; lg.w = Math.round(lg.h * lg.ratio); } edited(); };
-      img.onerror = () => { $('logoInfo').textContent = 'That file couldn’t be read as an image.'; };
-      img.src = src;
-    };
+    // stored as PNG or JPEG so Figma and PowerPoint take it; keep the height, set the width from the image's proportions
+    rd.onload = () => LX.readImage(rd.result, 1200).then(im => { const lg = state.cfg.header.logo; lg.src = im.src; lg.ratio = im.w / im.h; lg.w = Math.round(lg.h * lg.ratio); edited(); },
+      err => { $('logoInfo').textContent = err.message; });
     rd.readAsDataURL(file);
   });
+  $('hdrImgFile').addEventListener('change', () => {
+    const file = $('hdrImgFile').files[0]; if (!file) return;
+    const say = t => { state.hdrImgMsg = !!t; $('hdrImgInfo').textContent = t; };
+    if (file.size > 5 * 1024 * 1024) { say('That image is over 5 MB. Use a smaller one.'); $('hdrImgFile').value = ''; return; }
+    const rd = new FileReader();
+    rd.onload = () => LX.readImage(rd.result, 2560).then(im => {
+      say(''); state.look.style.hdrImg = im; edited();
+      if ((store.get('look') || '').indexOf(im.src) < 0) say('It shows here, but it\u2019s too big to keep after you close the page. Use a smaller image to keep it.');
+    }, err => say(err.message));
+    rd.readAsDataURL(file);
+  });
+  $('hdrImgClear').addEventListener('click', () => { delete state.look.style.hdrImg; state.hdrImgMsg = false; $('hdrImgFile').value = ''; edited(); });
   $('sidePos').addEventListener('change', () => { state.cfg.side.pos = $('sidePos').value; if (state.cfg.side.pos !== 'none' && !state.cfg.side.items.length) state.cfg.side.items = [{ type: 'slicer', title: 'Year' }, { type: 'slicer', title: 'Region' }]; edited({ editor: true }); });
   $('sideW').addEventListener('input', () => { state.cfg.side.w = Math.max(40, num($('sideW').value, 220)); edited(); });
   $('sideItemH').addEventListener('input', () => { state.cfg.side.itemH = Math.max(16, num($('sideItemH').value, 64)); edited(); });
@@ -319,14 +336,15 @@ function init(){
       else if (b.dataset.copy === 'bg-svg') copyText(state.out.bg, b);
       else if (b.dataset.dl === 'wf-svg') download(new Blob([state.out.wf], { type: 'image/svg+xml' }), name + ' wireframe.svg');
       else if (b.dataset.dl === 'bg-svg') download(new Blob([state.out.bg], { type: 'image/svg+xml' }), name + ' background.svg');
-      else if (b.dataset.dl === 'wf-png') download(await LX.png(state.out.wf, c.w, c.h, 2), name + ' wireframe.png');
-      else if (b.dataset.dl === 'bg-png2') download(await LX.png(state.out.bg, c.w, c.h, 2), name + ' background.png');
+      else if (b.dataset.dl === 'wf-png') download(await LX.png(state.out.wf, c.w, c.h, 1), name + ' wireframe.png');
+      else if (b.dataset.dl === 'wf-png2') download(await LX.png(state.out.wf, c.w, c.h, 2), name + ' wireframe 2x.png');
+      else if (b.dataset.dl === 'bg-png2') download(await LX.png(state.out.bg, c.w, c.h, 2), name + ' background 2x.png');
       else if (b.dataset.dl === 'pptx') {
         const bytes = async svg => new Uint8Array(await (await LX.png(svg, c.w, c.h, 2)).arrayBuffer());
         const blob = LP.build(state.L, c, state.col, state.look.style, state.look.font, { wf: await bytes(state.out.wf), bg: await bytes(state.out.bg) });
         download(blob, name + ' layout.pptx');
       }
-      else if (b.dataset.dl === 'bg-png1') download(await LX.png(state.out.bg, c.w, c.h, 1), name + ' background 1x.png');
+      else if (b.dataset.dl === 'bg-png1') download(await LX.png(state.out.bg, c.w, c.h, 1), name + ' background.png');
     } catch (err) { const m = document.createElement('div'); m.className = 'msg err'; m.textContent = err.message || String(err); b.closest('.btns').after(m); setTimeout(() => m.remove(), 8000); }
   });
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); });

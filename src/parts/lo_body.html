@@ -42,6 +42,11 @@
           <label class="chk"><input type="checkbox" id="hdrOn"> <b>Header</b></label>
           <div class="pair"><div class="field sm"><label for="hdrH">Height <span class="muted">(px)</span></label><input type="number" id="hdrH" min="20" max="300"></div>
           <div class="field"><label for="hdrStyle">Style</label><select id="hdrStyle"><option value="band">Colored band</option><option value="bleed">Full-width bar</option><option value="line">No background, accent underline</option><option value="none">No background</option></select></div></div>
+          <div class="logo-more" id="hdrImgWrap">
+            <input type="file" id="hdrImgFile" class="sr" accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp"><label class="filebtn btn small" for="hdrImgFile" id="hdrImgLbl">Use an image</label>
+            <span id="hdrImgInfo" class="small muted"></span>
+            <button type="button" class="linkbtn" id="hdrImgClear" hidden>Use the color instead</button>
+          </div>
         </div>
         <div class="area">
           <div class="field"><label for="sidePos"><b>Side panel</b></label><select id="sidePos"><option value="none">None</option><option value="left">On the left</option><option value="right">On the right</option></select></div>
@@ -184,13 +189,13 @@
         <div class="out-card">
           <h3>Wireframe with sample visuals</h3>
           <div class="thumb" id="wfThumb"></div>
-          <div class="btns"><button type="button" class="btn primary" data-dl="wf-png">Download PNG</button><button type="button" class="btn" data-dl="wf-svg">SVG</button><button type="button" class="btn figma-only" data-copy="wf-svg">Copy for Figma</button></div>
+          <div class="btns"><button type="button" class="btn primary" data-dl="wf-png">Download PNG</button><button type="button" class="btn" data-dl="wf-png2">PNG at 2&times;</button><button type="button" class="btn" data-dl="wf-svg">SVG</button><button type="button" class="btn figma-only" data-copy="wf-svg">Copy for Figma</button></div>
         </div>
         <div class="out-card">
           <h3>Background image</h3>
           <div class="thumb" id="bgThumb"></div>
-          <div class="btns"><button type="button" class="btn primary" data-dl="bg-png2">Download PNG</button><button type="button" class="btn" data-dl="bg-png1">PNG at 1&times;</button><button type="button" class="btn" data-dl="bg-svg">SVG</button><button type="button" class="btn figma-only" data-copy="bg-svg">Copy for Figma</button></div>
-          <p class="note small">In Power BI Desktop: <b>Format page</b> &gt; <b>Canvas background</b> &gt; <b>Image</b>, <b>Image fit: Fit</b>, <b>Transparency 0%</b>. Then turn off each visual&rsquo;s own background so the cards show through. The PNG is twice the page size so it stays sharp.</p>
+          <div class="btns"><button type="button" class="btn primary" data-dl="bg-png1">Download PNG</button><button type="button" class="btn" data-dl="bg-png2">PNG at 2&times;</button><button type="button" class="btn" data-dl="bg-svg">SVG</button><button type="button" class="btn figma-only" data-copy="bg-svg">Copy for Figma</button></div>
+          <p class="note small">In Power BI Desktop: <b>Format page</b> &gt; <b>Canvas background</b> &gt; <b>Image</b>, <b>Image fit: Fit</b>, <b>Transparency 0%</b>. Then turn off each visual&rsquo;s own background so the cards show through. The PNG is the page size you set in Step 1. PNG at 2&times; is twice that, for extra sharpness.</p>
         </div>
       </div>
       <div class="out-card pptx-card">
@@ -201,9 +206,9 @@
       <div class="figma-only figma-box">
         <h3>Into Figma</h3>
         <ol class="how">
-          <li><b>Copy for Figma</b>, then in Figma select a page and press <b>Ctrl+V</b>. The drawing arrives as one frame of editable shapes, with layers named Page, Header, Side-panel and Card-&lt;visual&gt;.</li>
+          <li><b>Copy for Figma</b>, then in Figma select a page and press <b>Ctrl+V</b>. The drawing arrives as one frame of editable shapes, with layers named Page, Header, Side-panel and Card-&lt;visual&gt;. Your logo and header image come along as images.</li>
           <li>Refine it there (shapes, icons, gradients). Shadows come through as SVG filters; if one doesn’t, add a Drop shadow effect with the same X, Y, Blur, Spread, color and opacity as in Step 3. Hide the sample visuals layer before exporting the background.</li>
-          <li>Export the background frame as PNG at 2&times; and set it as the canvas background in Power BI Desktop, as above.</li>
+          <li>Export the background frame as PNG at 1&times; (the page size) and set it as the canvas background in Power BI Desktop, as above.</li>
         </ol>
       </div>
       <h3>Positions <span class="muted small">(Format pane &gt; General &gt; Properties: Size and Position)</span></h3>

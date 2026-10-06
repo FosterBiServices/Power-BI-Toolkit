@@ -61,5 +61,26 @@ const LX = (() => {
     });
   }
 
-  return { derive, suggestedFromAccent, fromThemeBuilder, fromThemeJson, png };
+  /* ----- an image the user adds (logo, header image) -----
+     PNG and JPEG up to maxSide stay as they are. Anything else (SVG, GIF, WebP), or a bigger
+     picture, is redrawn as a PNG (JPEG for photos), so Figma, PowerPoint and the PNGs all take it. */
+  function readImage(src, maxSide){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h) { w = 600; h = 200; }
+        const jpeg = /^data:image\/jpe?g/i.test(src), keep = (jpeg || /^data:image\/png/i.test(src)) && Math.max(w, h) <= maxSide;
+        if (keep) return resolve({ src, w, h });
+        const k = Math.min(maxSide / Math.max(w, h), /^data:image\/svg/i.test(src) ? Math.max(1, 600 / Math.max(w, h)) : 1);
+        const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(w * k)); cv.height = Math.max(1, Math.round(h * k));
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        try { resolve({ src: jpeg ? cv.toDataURL('image/jpeg', 0.9) : cv.toDataURL('image/png'), w: cv.width, h: cv.height }); } catch (e) { reject(new Error('That file couldn’t be read as an image.')); }
+      };
+      img.onerror = () => reject(new Error('That file couldn’t be read as an image.'));
+      img.src = src;
+    });
+  }
+
+  return { derive, suggestedFromAccent, fromThemeBuilder, fromThemeJson, png, readImage };
 })();
