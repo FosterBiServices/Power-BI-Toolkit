@@ -50,17 +50,26 @@ const LP = (() => {
     return '<p:sp><p:nvSpPr><p:cNvPr id="' + (nextId++) + '" name="' + xml(name) + '"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>' + xfrm(x, y, w, h) + geom + fill + ln + (o.shadow || '') + '</p:spPr>'
       + '<p:txBody><a:bodyPr wrap="square" lIns="' + pad + '" tIns="' + pad + '" rIns="' + pad + '" bIns="' + pad + '" anchor="' + (o.anchor || 't') + '"><a:normAutofit/></a:bodyPr><a:lstStyle/>' + paras + '</p:txBody></p:sp>';
   }
-  const pic = (name, rid, x, y, w, h) => '<p:pic><p:nvPicPr><p:cNvPr id="' + (nextId++) + '" name="' + xml(name) + '"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="' + rid + '"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>' + xfrm(x, y, w, h) + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
+  /* o: { crop: [l, t, r, b] fractions, radius, shadow } */
+  const pic = (name, rid, x, y, w, h, o) => { o = o || {};
+    const cr = o.crop ? '<a:srcRect' + ['l', 't', 'r', 'b'].map((k, i) => o.crop[i] > 0 ? ' ' + k + '="' + Math.round(o.crop[i] * 100000) + '"' : '').join('') + '/>' : '';
+    const r = +o.radius || 0, geom = r ? '<a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val ' + Math.min(50000, Math.round(r / Math.max(1, Math.min(w, h)) * 100000)) + '"/></a:avLst></a:prstGeom>' : '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>';
+    return '<p:pic><p:nvPicPr><p:cNvPr id="' + (nextId++) + '" name="' + xml(name) + '"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="' + rid + '"/>' + cr + '<a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>' + xfrm(x, y, w, h) + geom + (o.shadow || '') + '</p:spPr></p:pic>'; };
+  // crop an image of iw x ih so it covers a w x h box, centered (like the SVG pattern)
+  const cover = (iw, ih, w, h) => { const ri = iw / ih, rb = w / h; if (ri > rb) { const c = (1 - rb / ri) / 2; return [c, 0, c, 0]; } const c = (1 - ri / rb) / 2; return [0, c, 0, c]; };
   const slideXml = (name, body) => HEAD + '<p:sld ' + NS + '><p:cSld name="' + xml(name) + '"><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>' + body + '</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>';
 
   /* The editable layout: every container is a PowerPoint shape you can move, resize and restyle */
-  function layoutSlide(L, c, col, st, font, logoRid){
+  function layoutSlide(L, c, col, st, font, logoRid, hdrRid){
     const W = c.w, H = c.h, r = +st.radius || 0, sh = shadowXml(st), out = [];
     const border = st.border ? { line: col.border } : {};
     out.push(shape('Page background', 0, 0, W, H, { fill: col.page, pad: 0 }));
     const hdr = L.items.find(o => o.id === 'header');
     const onBand = st.header === 'band' || st.header === 'bleed';
-    if (hdr && st.header === 'bleed') out.push(shape('Header', 0, 0, W, hdr.y + hdr.h, { fill: col.header, pad: 0 }));
+    const hi = hdrRid && LR.headerImage(st);
+    if (hdr && hi) { const bleed = st.header === 'bleed', b = bleed ? [0, 0, W, hdr.y + hdr.h] : [hdr.x, hdr.y, hdr.w, hdr.h];
+      out.push(pic('Header', hdrRid, b[0], b[1], b[2], b[3], { crop: cover(hi.w, hi.h, b[2], b[3]), radius: bleed ? 0 : r, shadow: bleed ? '' : sh })); }
+    else if (hdr && st.header === 'bleed') out.push(shape('Header', 0, 0, W, hdr.y + hdr.h, { fill: col.header, pad: 0 }));
     else if (hdr && st.header === 'band') out.push(shape('Header', hdr.x, hdr.y, hdr.w, hdr.h, Object.assign({ fill: col.header, radius: r, shadow: sh, pad: 0 })));
     else if (hdr && st.header === 'line') out.push(shape('Header underline', hdr.x, hdr.y + hdr.h - 3, hdr.w, 3, { fill: col.accent, pad: 0 }));
     const side = L.items.find(o => o.id === 'side');
@@ -97,7 +106,11 @@ const LP = (() => {
     let logoRid = null;
     const lg = c.header && c.header.logo, m = lg && lg.on && lg.src && /^data:image\/(png|jpe?g);base64,(.*)$/i.exec(lg.src);
     if (m) { const ext = /png/i.test(m[1]) ? 'png' : 'jpeg'; media.push(['ppt/media/logo.' + ext, b64(m[2])]); logoRid = 'rId2'; }
-    slides.push({ name: 'Layout (editable)', body: layoutSlide(L, c, col, st, font, logoRid), rels: [['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml']].concat(logoRid ? [['rId2', 'image', '../media/logo.' + (/png/i.test(m[1]) ? 'png' : 'jpeg')]] : []) });
+    // header image as a cropped picture
+    let hdrRid = null, hdrRel = [];
+    const hi = LR.headerImage(st), hm = hi && /^data:image\/(png|jpe?g);base64,(.*)$/i.exec(hi.src);
+    if (hm) { const ext = /png/i.test(hm[1]) ? 'png' : 'jpeg'; media.push(['ppt/media/header.' + ext, b64(hm[2])]); hdrRid = 'rId3'; hdrRel = [['rId3', 'image', '../media/header.' + ext]]; }
+    slides.push({ name: 'Layout (editable)', body: layoutSlide(L, c, col, st, font, logoRid, hdrRid), rels: [['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml']].concat(logoRid ? [['rId2', 'image', '../media/logo.' + (/png/i.test(m[1]) ? 'png' : 'jpeg')]] : [], hdrRel) });
     if (images && images.wf) { media.push(['ppt/media/wireframe.png', images.wf]); slides.push({ name: 'Wireframe with sample visuals', body: pic('Wireframe', 'rId2', 0, 0, W, H), rels: [['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'], ['rId2', 'image', '../media/wireframe.png']] }); }
     if (images && images.bg) { media.push(['ppt/media/background.png', images.bg]); slides.push({ name: 'Background image', body: pic('Background', 'rId2', 0, 0, W, H), rels: [['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'], ['rId2', 'image', '../media/background.png']] }); }
 

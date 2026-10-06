@@ -399,6 +399,11 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
           <label class="chk"><input type="checkbox" id="hdrOn"> <b>Header</b></label>
           <div class="pair"><div class="field sm"><label for="hdrH">Height <span class="muted">(px)</span></label><input type="number" id="hdrH" min="20" max="300"></div>
           <div class="field"><label for="hdrStyle">Style</label><select id="hdrStyle"><option value="band">Colored band</option><option value="bleed">Full-width bar</option><option value="line">No background, accent underline</option><option value="none">No background</option></select></div></div>
+          <div class="logo-more" id="hdrImgWrap">
+            <input type="file" id="hdrImgFile" class="sr" accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp"><label class="filebtn btn small" for="hdrImgFile" id="hdrImgLbl">Use an image</label>
+            <span id="hdrImgInfo" class="small muted"></span>
+            <button type="button" class="linkbtn" id="hdrImgClear" hidden>Use the color instead</button>
+          </div>
         </div>
         <div class="area">
           <div class="field"><label for="sidePos"><b>Side panel</b></label><select id="sidePos"><option value="none">None</option><option value="left">On the left</option><option value="right">On the right</option></select></div>
@@ -541,13 +546,13 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
         <div class="out-card">
           <h3>Wireframe with sample visuals</h3>
           <div class="thumb" id="wfThumb"></div>
-          <div class="btns"><button type="button" class="btn primary" data-dl="wf-png">Download PNG</button><button type="button" class="btn" data-dl="wf-svg">SVG</button><button type="button" class="btn figma-only" data-copy="wf-svg">Copy for Figma</button></div>
+          <div class="btns"><button type="button" class="btn primary" data-dl="wf-png">Download PNG</button><button type="button" class="btn" data-dl="wf-png2">PNG at 2&times;</button><button type="button" class="btn" data-dl="wf-svg">SVG</button><button type="button" class="btn figma-only" data-copy="wf-svg">Copy for Figma</button></div>
         </div>
         <div class="out-card">
           <h3>Background image</h3>
           <div class="thumb" id="bgThumb"></div>
-          <div class="btns"><button type="button" class="btn primary" data-dl="bg-png2">Download PNG</button><button type="button" class="btn" data-dl="bg-png1">PNG at 1&times;</button><button type="button" class="btn" data-dl="bg-svg">SVG</button><button type="button" class="btn figma-only" data-copy="bg-svg">Copy for Figma</button></div>
-          <p class="note small">In Power BI Desktop: <b>Format page</b> &gt; <b>Canvas background</b> &gt; <b>Image</b>, <b>Image fit: Fit</b>, <b>Transparency 0%</b>. Then turn off each visual&rsquo;s own background so the cards show through. The PNG is twice the page size so it stays sharp.</p>
+          <div class="btns"><button type="button" class="btn primary" data-dl="bg-png1">Download PNG</button><button type="button" class="btn" data-dl="bg-png2">PNG at 2&times;</button><button type="button" class="btn" data-dl="bg-svg">SVG</button><button type="button" class="btn figma-only" data-copy="bg-svg">Copy for Figma</button></div>
+          <p class="note small">In Power BI Desktop: <b>Format page</b> &gt; <b>Canvas background</b> &gt; <b>Image</b>, <b>Image fit: Fit</b>, <b>Transparency 0%</b>. Then turn off each visual&rsquo;s own background so the cards show through. The PNG is the page size you set in Step 1. PNG at 2&times; is twice that, for extra sharpness.</p>
         </div>
       </div>
       <div class="out-card pptx-card">
@@ -558,9 +563,9 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
       <div class="figma-only figma-box">
         <h3>Into Figma</h3>
         <ol class="how">
-          <li><b>Copy for Figma</b>, then in Figma select a page and press <b>Ctrl+V</b>. The drawing arrives as one frame of editable shapes, with layers named Page, Header, Side-panel and Card-&lt;visual&gt;.</li>
+          <li><b>Copy for Figma</b>, then in Figma select a page and press <b>Ctrl+V</b>. The drawing arrives as one frame of editable shapes, with layers named Page, Header, Side-panel and Card-&lt;visual&gt;. Your logo and header image come along as images.</li>
           <li>Refine it there (shapes, icons, gradients). Shadows come through as SVG filters; if one doesn’t, add a Drop shadow effect with the same X, Y, Blur, Spread, color and opacity as in Step 3. Hide the sample visuals layer before exporting the background.</li>
-          <li>Export the background frame as PNG at 2&times; and set it as the canvas background in Power BI Desktop, as above.</li>
+          <li>Export the background frame as PNG at 1&times; (the page size) and set it as the canvas background in Power BI Desktop, as above.</li>
         </ol>
       </div>
       <h3>Positions <span class="muted small">(Format pane &gt; General &gt; Properties: Size and Position)</span></h3>
@@ -949,6 +954,12 @@ const LR = (() => {
       + '<feComposite in2="blur" operator="in" result="shadow"/><feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
   }
 
+  /* Header image (Colored band or Full-width bar): { src, w, h } with the image's own size */
+  function headerImage(st){
+    const i = st.hdrImg;
+    return (st.header === 'band' || st.header === 'bleed') && i && i.src && i.w > 0 && i.h > 0 ? i : null;
+  }
+
   /* ----- the page background: page fill, header, side panel, a card behind each visual ----- */
   function background(L, c, col, st, opts){
     opts = opts || {};
@@ -961,12 +972,22 @@ const LR = (() => {
     const sh = st.shadow ? ' filter="url(#lo-shadow)"' : '';
     const hdr = L.items.find(o => o.id === 'header');
     if (hdr && st.header !== 'none') {
-      if (st.header === 'bleed') out.push(rect('Header', 0, 0, W, hdr.y + hdr.h + (c.margin > 0 ? 0 : 0), col.header, ' rx="0"'));
+      // a header image fills the band like Figma's image fill (cover), as a pattern Figma reads back as an image fill
+      const img = headerImage(st), box = st.header === 'bleed' ? [0, 0, W, hdr.y + hdr.h] : [hdr.x, hdr.y, hdr.w, hdr.h];
+      const fill = img ? 'url(#lo-header-fill)' : col.header;
+      let defs2 = '';
+      if (img) {
+        const [, , bw, bh] = box, k = Math.max(bw / img.w, bh / img.h), ox = (bw - k * img.w) / 2, oy = (bh - k * img.h) / 2;
+        defs2 = '<defs><pattern id="lo-header-fill" patternContentUnits="objectBoundingBox" width="1" height="1"><use xlink:href="#lo-header-image" transform="matrix(' + [k / bw, 0, 0, k / bh, ox / bw, oy / bh].map(v => +v.toFixed(6)).join(' ') + ')"/></pattern>'
+          + '<image id="lo-header-image" width="' + img.w + '" height="' + img.h + '" preserveAspectRatio="none" xlink:href="' + img.src + '"/></defs>';
+      }
+      if (defs2) out.push(defs2);
+      if (st.header === 'bleed') out.push(rect('Header', box[0], box[1], box[2], box[3], fill, ' rx="0"'));
       else if (st.header === 'line') out.push(rect('Header-line', hdr.x, hdr.y + hdr.h - 3, hdr.w, 3, col.accent, ' rx="1.5"'));
-      else out.push(rect('Header', hdr.x, hdr.y, hdr.w, hdr.h, col.header, sh));
+      else out.push(rect('Header', box[0], box[1], box[2], box[3], fill, sh));
     }
     const logo = L.items.find(o => o.id === 'logo');
-    if (logo && logo.src && c.header.logo && c.header.logo.inBg) out.push('<image id="Logo" href="' + logo.src + '" x="' + f(logo.x) + '" y="' + f(logo.y) + '" width="' + f(logo.w) + '" height="' + f(logo.h) + '" preserveAspectRatio="xMidYMid meet"/>');
+    if (logo && logo.src && c.header.logo && c.header.logo.inBg) out.push('<image id="Logo" xlink:href="' + logo.src + '" x="' + f(logo.x) + '" y="' + f(logo.y) + '" width="' + f(logo.w) + '" height="' + f(logo.h) + '" preserveAspectRatio="xMidYMid meet"/>');
     const side = L.items.find(o => o.id === 'side');
     if (side && st.side !== 'none') out.push(rect('Side-panel', side.x, side.y, side.w, side.h, col.sidePanel, sh + border));
     if (st.cards !== 'none') {
@@ -977,7 +998,7 @@ const LR = (() => {
       g.push('</g>'); out.push(g.join(''));
     }
     if (opts.inner) return defs + out.join('');
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + defs + out.join('') + '</svg>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + defs + out.join('') + '</svg>';
   }
 
   /* ----- a sketch of each visual type inside its box ----- */
@@ -1075,7 +1096,7 @@ const LR = (() => {
     } else if (kind === 'button') {
       s.push('<rect x="' + f(o.x + pad) + '" y="' + f(o.y + pad) + '" width="' + f(o.w - 2 * pad) + '" height="' + f(o.h - 2 * pad) + '" rx="6" fill="' + d[0] + '"/>', t(o.x + o.w / 2, o.y + o.h / 2 + 4, o.title || 'Button', 12, col.card, 'middle', 600));
     } else if (kind === 'image' && o.logo) {
-      if (o.src) s.push('<image href="' + o.src + '" x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" preserveAspectRatio="xMidYMid meet"/>');
+      if (o.src) s.push('<image xlink:href="' + o.src + '" x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" preserveAspectRatio="xMidYMid meet"/>');
       else s.push('<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="4" fill="' + col.card + '" fill-opacity=".25" stroke="' + col.headerText + '" stroke-opacity=".6" stroke-dasharray="4 3"/>', t(o.x + o.w / 2, o.y + o.h / 2 + 4, 'LOGO', Math.min(12, o.h * 0.4), col.headerText, 'middle', 700));
     } else if (kind === 'image') {
       s.push('<rect x="' + f(x) + '" y="' + f(y) + '" width="' + f(w) + '" height="' + f(h) + '" fill="' + col.muted + '" opacity=".15" rx="2"/><path d="M' + f(x) + ' ' + f(y) + ' L' + f(x + w) + ' ' + f(y + h) + ' M' + f(x + w) + ' ' + f(y) + ' L' + f(x) + ' ' + f(y + h) + '" stroke="' + col.muted + '" stroke-opacity=".4"/>');
@@ -1118,10 +1139,10 @@ const LR = (() => {
       if (opts.dims && o.h >= 44) out.push('<text x="' + f(o.x + o.w - 6) + '" y="' + f(o.y + o.h - 6) + '" font-size="10" text-anchor="end" fill="' + col.muted + '" font-family="Consolas, monospace">' + Math.round(o.w) + '×' + Math.round(o.h) + ' @ ' + Math.round(o.x) + ',' + Math.round(o.y) + '</text>');
     });
     const defs = st.shadow ? '' : '';
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"' + (opts.cls ? ' class="' + opts.cls + '"' : '') + '>' + defs + out.join('') + '</svg>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"' + (opts.cls ? ' class="' + opts.cls + '"' : '') + '>' + defs + out.join('') + '</svg>';
   }
 
-  return { background, wireframe, sketch, idName, shadowOf, SH_DEFAULT };
+  return { background, wireframe, sketch, idName, shadowOf, headerImage, SH_DEFAULT };
 })();
 
 
@@ -1187,7 +1208,28 @@ const LX = (() => {
     });
   }
 
-  return { derive, suggestedFromAccent, fromThemeBuilder, fromThemeJson, png };
+  /* ----- an image the user adds (logo, header image) -----
+     PNG and JPEG up to maxSide stay as they are. Anything else (SVG, GIF, WebP), or a bigger
+     picture, is redrawn as a PNG (JPEG for photos), so Figma, PowerPoint and the PNGs all take it. */
+  function readImage(src, maxSide){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h) { w = 600; h = 200; }
+        const jpeg = /^data:image\/jpe?g/i.test(src), keep = (jpeg || /^data:image\/png/i.test(src)) && Math.max(w, h) <= maxSide;
+        if (keep) return resolve({ src, w, h });
+        const k = Math.min(maxSide / Math.max(w, h), /^data:image\/svg/i.test(src) ? Math.max(1, 600 / Math.max(w, h)) : 1);
+        const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(w * k)); cv.height = Math.max(1, Math.round(h * k));
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        try { resolve({ src: jpeg ? cv.toDataURL('image/jpeg', 0.9) : cv.toDataURL('image/png'), w: cv.width, h: cv.height }); } catch (e) { reject(new Error('That file couldn’t be read as an image.')); }
+      };
+      img.onerror = () => reject(new Error('That file couldn’t be read as an image.'));
+      img.src = src;
+    });
+  }
+
+  return { derive, suggestedFromAccent, fromThemeBuilder, fromThemeJson, png, readImage };
 })();
 
 
@@ -1242,17 +1284,26 @@ const LP = (() => {
     return '<p:sp><p:nvSpPr><p:cNvPr id="' + (nextId++) + '" name="' + xml(name) + '"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>' + xfrm(x, y, w, h) + geom + fill + ln + (o.shadow || '') + '</p:spPr>'
       + '<p:txBody><a:bodyPr wrap="square" lIns="' + pad + '" tIns="' + pad + '" rIns="' + pad + '" bIns="' + pad + '" anchor="' + (o.anchor || 't') + '"><a:normAutofit/></a:bodyPr><a:lstStyle/>' + paras + '</p:txBody></p:sp>';
   }
-  const pic = (name, rid, x, y, w, h) => '<p:pic><p:nvPicPr><p:cNvPr id="' + (nextId++) + '" name="' + xml(name) + '"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="' + rid + '"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>' + xfrm(x, y, w, h) + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
+  /* o: { crop: [l, t, r, b] fractions, radius, shadow } */
+  const pic = (name, rid, x, y, w, h, o) => { o = o || {};
+    const cr = o.crop ? '<a:srcRect' + ['l', 't', 'r', 'b'].map((k, i) => o.crop[i] > 0 ? ' ' + k + '="' + Math.round(o.crop[i] * 100000) + '"' : '').join('') + '/>' : '';
+    const r = +o.radius || 0, geom = r ? '<a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val ' + Math.min(50000, Math.round(r / Math.max(1, Math.min(w, h)) * 100000)) + '"/></a:avLst></a:prstGeom>' : '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>';
+    return '<p:pic><p:nvPicPr><p:cNvPr id="' + (nextId++) + '" name="' + xml(name) + '"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="' + rid + '"/>' + cr + '<a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>' + xfrm(x, y, w, h) + geom + (o.shadow || '') + '</p:spPr></p:pic>'; };
+  // crop an image of iw x ih so it covers a w x h box, centered (like the SVG pattern)
+  const cover = (iw, ih, w, h) => { const ri = iw / ih, rb = w / h; if (ri > rb) { const c = (1 - rb / ri) / 2; return [c, 0, c, 0]; } const c = (1 - ri / rb) / 2; return [0, c, 0, c]; };
   const slideXml = (name, body) => HEAD + '<p:sld ' + NS + '><p:cSld name="' + xml(name) + '"><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>' + body + '</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>';
 
   /* The editable layout: every container is a PowerPoint shape you can move, resize and restyle */
-  function layoutSlide(L, c, col, st, font, logoRid){
+  function layoutSlide(L, c, col, st, font, logoRid, hdrRid){
     const W = c.w, H = c.h, r = +st.radius || 0, sh = shadowXml(st), out = [];
     const border = st.border ? { line: col.border } : {};
     out.push(shape('Page background', 0, 0, W, H, { fill: col.page, pad: 0 }));
     const hdr = L.items.find(o => o.id === 'header');
     const onBand = st.header === 'band' || st.header === 'bleed';
-    if (hdr && st.header === 'bleed') out.push(shape('Header', 0, 0, W, hdr.y + hdr.h, { fill: col.header, pad: 0 }));
+    const hi = hdrRid && LR.headerImage(st);
+    if (hdr && hi) { const bleed = st.header === 'bleed', b = bleed ? [0, 0, W, hdr.y + hdr.h] : [hdr.x, hdr.y, hdr.w, hdr.h];
+      out.push(pic('Header', hdrRid, b[0], b[1], b[2], b[3], { crop: cover(hi.w, hi.h, b[2], b[3]), radius: bleed ? 0 : r, shadow: bleed ? '' : sh })); }
+    else if (hdr && st.header === 'bleed') out.push(shape('Header', 0, 0, W, hdr.y + hdr.h, { fill: col.header, pad: 0 }));
     else if (hdr && st.header === 'band') out.push(shape('Header', hdr.x, hdr.y, hdr.w, hdr.h, Object.assign({ fill: col.header, radius: r, shadow: sh, pad: 0 })));
     else if (hdr && st.header === 'line') out.push(shape('Header underline', hdr.x, hdr.y + hdr.h - 3, hdr.w, 3, { fill: col.accent, pad: 0 }));
     const side = L.items.find(o => o.id === 'side');
@@ -1289,7 +1340,11 @@ const LP = (() => {
     let logoRid = null;
     const lg = c.header && c.header.logo, m = lg && lg.on && lg.src && /^data:image\/(png|jpe?g);base64,(.*)$/i.exec(lg.src);
     if (m) { const ext = /png/i.test(m[1]) ? 'png' : 'jpeg'; media.push(['ppt/media/logo.' + ext, b64(m[2])]); logoRid = 'rId2'; }
-    slides.push({ name: 'Layout (editable)', body: layoutSlide(L, c, col, st, font, logoRid), rels: [['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml']].concat(logoRid ? [['rId2', 'image', '../media/logo.' + (/png/i.test(m[1]) ? 'png' : 'jpeg')]] : []) });
+    // header image as a cropped picture
+    let hdrRid = null, hdrRel = [];
+    const hi = LR.headerImage(st), hm = hi && /^data:image\/(png|jpe?g);base64,(.*)$/i.exec(hi.src);
+    if (hm) { const ext = /png/i.test(hm[1]) ? 'png' : 'jpeg'; media.push(['ppt/media/header.' + ext, b64(hm[2])]); hdrRid = 'rId3'; hdrRel = [['rId3', 'image', '../media/header.' + ext]]; }
+    slides.push({ name: 'Layout (editable)', body: layoutSlide(L, c, col, st, font, logoRid, hdrRid), rels: [['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml']].concat(logoRid ? [['rId2', 'image', '../media/logo.' + (/png/i.test(m[1]) ? 'png' : 'jpeg')]] : [], hdrRel) });
     if (images && images.wf) { media.push(['ppt/media/wireframe.png', images.wf]); slides.push({ name: 'Wireframe with sample visuals', body: pic('Wireframe', 'rId2', 0, 0, W, H), rels: [['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'], ['rId2', 'image', '../media/wireframe.png']] }); }
     if (images && images.bg) { media.push(['ppt/media/background.png', images.bg]); slides.push({ name: 'Background image', body: pic('Background', 'rId2', 0, 0, W, H), rels: [['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'], ['rId2', 'image', '../media/background.png']] }); }
 
@@ -1495,6 +1550,12 @@ function renderPage(){
   $('logoClear').hidden = $('logoInBgWrap').hidden = !lg.src; $('logoInBg').checked = !!lg.inBg;
   $('logoFileLbl').textContent = lg.src ? 'Replace the image' : 'Add the logo image';
   $('logoInfo').textContent = lg.src ? 'Width and height keep the image\u2019s proportions.' : 'Optional: shows your logo in the drawings.';
+  // header image: Colored band and Full-width bar only
+  const st = state.look.style, hi = st.hdrImg;
+  $('hdrImgWrap').hidden = !(st.header === 'band' || st.header === 'bleed');
+  $('hdrImgClear').hidden = !(hi && hi.src);
+  $('hdrImgLbl').textContent = hi && hi.src ? 'Replace the image' : 'Use an image';
+  if (!state.hdrImgMsg) $('hdrImgInfo').textContent = hi && hi.src ? 'It fills the header, cropped to fit.' : 'Optional: an image instead of the header color.';
   const n = t => (h.items || []).filter(x => x.type === t).length;
   set('hCardN', n('card')); set('hSlicerN', n('slicer'));
   set('hCardW', h.cardW); set('hCardH', h.cardH); set('hSlicerW', h.slicerW); set('hSlicerH', h.slicerH);
@@ -1633,6 +1694,9 @@ function init(){
   try { const g = JSON.parse(store.get('sg') || 'null'); if (g) state.sg = Object.assign(LS.blankInput(), g); } catch (e) {}
   if (!cfg) $('suggestBox').open = true;
   renderAll(); renderSuggestInputs();
+  // logos saved before they were stored as PNG or JPEG: convert once, so Figma and PowerPoint get them
+  const lg0 = state.cfg.header && state.cfg.header.logo;
+  if (lg0 && lg0.src && !/^data:image\/(png|jpe?g)/i.test(lg0.src)) LX.readImage(lg0.src, 1200).then(im => { lg0.src = im.src; refresh(); }, () => {});
 
   const num = (v, d) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
   const edited = opts => { leaveExample(); refresh(opts); };
@@ -1662,15 +1726,23 @@ function init(){
     const file = $('logoFile').files[0]; if (!file) return;
     if (file.size > 1024 * 1024) { $('logoInfo').textContent = 'That image is over 1 MB. Use a smaller PNG or an SVG.'; $('logoFile').value = ''; return; }
     const rd = new FileReader();
-    rd.onload = () => {
-      const src = rd.result, img = new Image();
-      // keep the height, set the width from the image's proportions
-      img.onload = () => { const lg = state.cfg.header.logo; lg.src = src; if (img.naturalWidth && img.naturalHeight) { lg.ratio = img.naturalWidth / img.naturalHeight; lg.w = Math.round(lg.h * lg.ratio); } edited(); };
-      img.onerror = () => { $('logoInfo').textContent = 'That file couldn’t be read as an image.'; };
-      img.src = src;
-    };
+    // stored as PNG or JPEG so Figma and PowerPoint take it; keep the height, set the width from the image's proportions
+    rd.onload = () => LX.readImage(rd.result, 1200).then(im => { const lg = state.cfg.header.logo; lg.src = im.src; lg.ratio = im.w / im.h; lg.w = Math.round(lg.h * lg.ratio); edited(); },
+      err => { $('logoInfo').textContent = err.message; });
     rd.readAsDataURL(file);
   });
+  $('hdrImgFile').addEventListener('change', () => {
+    const file = $('hdrImgFile').files[0]; if (!file) return;
+    const say = t => { state.hdrImgMsg = !!t; $('hdrImgInfo').textContent = t; };
+    if (file.size > 5 * 1024 * 1024) { say('That image is over 5 MB. Use a smaller one.'); $('hdrImgFile').value = ''; return; }
+    const rd = new FileReader();
+    rd.onload = () => LX.readImage(rd.result, 2560).then(im => {
+      say(''); state.look.style.hdrImg = im; edited();
+      if ((store.get('look') || '').indexOf(im.src) < 0) say('It shows here, but it\u2019s too big to keep after you close the page. Use a smaller image to keep it.');
+    }, err => say(err.message));
+    rd.readAsDataURL(file);
+  });
+  $('hdrImgClear').addEventListener('click', () => { delete state.look.style.hdrImg; state.hdrImgMsg = false; $('hdrImgFile').value = ''; edited(); });
   $('sidePos').addEventListener('change', () => { state.cfg.side.pos = $('sidePos').value; if (state.cfg.side.pos !== 'none' && !state.cfg.side.items.length) state.cfg.side.items = [{ type: 'slicer', title: 'Year' }, { type: 'slicer', title: 'Region' }]; edited({ editor: true }); });
   $('sideW').addEventListener('input', () => { state.cfg.side.w = Math.max(40, num($('sideW').value, 220)); edited(); });
   $('sideItemH').addEventListener('input', () => { state.cfg.side.itemH = Math.max(16, num($('sideItemH').value, 64)); edited(); });
@@ -1750,14 +1822,15 @@ function init(){
       else if (b.dataset.copy === 'bg-svg') copyText(state.out.bg, b);
       else if (b.dataset.dl === 'wf-svg') download(new Blob([state.out.wf], { type: 'image/svg+xml' }), name + ' wireframe.svg');
       else if (b.dataset.dl === 'bg-svg') download(new Blob([state.out.bg], { type: 'image/svg+xml' }), name + ' background.svg');
-      else if (b.dataset.dl === 'wf-png') download(await LX.png(state.out.wf, c.w, c.h, 2), name + ' wireframe.png');
-      else if (b.dataset.dl === 'bg-png2') download(await LX.png(state.out.bg, c.w, c.h, 2), name + ' background.png');
+      else if (b.dataset.dl === 'wf-png') download(await LX.png(state.out.wf, c.w, c.h, 1), name + ' wireframe.png');
+      else if (b.dataset.dl === 'wf-png2') download(await LX.png(state.out.wf, c.w, c.h, 2), name + ' wireframe 2x.png');
+      else if (b.dataset.dl === 'bg-png2') download(await LX.png(state.out.bg, c.w, c.h, 2), name + ' background 2x.png');
       else if (b.dataset.dl === 'pptx') {
         const bytes = async svg => new Uint8Array(await (await LX.png(svg, c.w, c.h, 2)).arrayBuffer());
         const blob = LP.build(state.L, c, state.col, state.look.style, state.look.font, { wf: await bytes(state.out.wf), bg: await bytes(state.out.bg) });
         download(blob, name + ' layout.pptx');
       }
-      else if (b.dataset.dl === 'bg-png1') download(await LX.png(state.out.bg, c.w, c.h, 1), name + ' background 1x.png');
+      else if (b.dataset.dl === 'bg-png1') download(await LX.png(state.out.bg, c.w, c.h, 1), name + ' background.png');
     } catch (err) { const m = document.createElement('div'); m.className = 'msg err'; m.textContent = err.message || String(err); b.closest('.btns').after(m); setTimeout(() => m.remove(), 8000); }
   });
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); });
