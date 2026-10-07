@@ -20,7 +20,7 @@ function hl(code){
   }).join('\n');
 }
 const clone = o => JSON.parse(JSON.stringify(o));
-const blankCfg = () => ({ mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard', htmlSize: 'M' });
+const blankCfg = () => ({ mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard', htmlW: KV_HTML_W, htmlH: KV_HTML_H, htmlLayout: 'auto' });
 const state = { example: false, model: null, kpis: [], cfg: blankCfg(), out: {} };
 const FIELDS = ['label', 'measure', 'format', 'better', 'target', 'compare', 'compareLabel', 'pv.value', 'pv.target', 'pv.compare', 'pv.trend'];
 // field paths: 'label', 'pv.value', 'ctx.0.ref'
@@ -263,11 +263,11 @@ function kvSteps(id, kpis, cfg){
       G.push({ title: 'Get the HTML Content visual (once per report)', steps: [
         'In the Visualizations pane, select the <b>&hellip;</b> (Get more visuals) &gt; <b>Get more visuals</b>, search for <b>HTML Content</b> (by Daniel Marsh-Patrick) and select <b>Add</b>.',
         'If AppSource visuals are blocked where you work, ask your Power BI admin to allow it, or build a card with variance instead.'] });
-      const fit = kvHtmlFit(k, cfg), zn = KV_HTML_SIZES.find(z => z.x === kvHtmlScale(cfg)).name;
+      const lay = kvHtmlLayout(k, cfg), sz = lay.size;
       G.push({ title: 'Add the visual', steps: ['Select an empty spot, then select the <b>HTML Content</b> icon in the Visualizations pane.', 'Drag ' + B(hm) + ' into its <b>Values</b> field well. The card draws itself from the measure&rsquo;s HTML.'] });
       G.push({ title: 'Size it', steps: [
-        'The text size is set in the measure, not by the visual: this card is <b>' + zn + '</b> (value text ' + Math.round(32 * kvHtmlScale(cfg)) + ' px). Making the visual bigger adds space but doesn&rsquo;t grow the text. To change it, pick another <b>Card size</b> above and paste the script again.',
-        FP('General &gt; Properties &gt; Size') + ': about <b>' + fit.w + ' &times; ' + fit.h + '</b> pixels fits this card. The card stretches to the visual&rsquo;s width; if a scroll bar shows, make the visual taller or pick a smaller size.'] });
+        FP('General &gt; Properties &gt; Size') + ': set the width to <b>' + sz.w + '</b> and the height to <b>' + sz.h + '</b>. The measure&rsquo;s text sizes, gaps and padding are built for that size' + (lay.tooSmall ? ', the smallest where every line is readable (you entered ' + lay.W + ' &times; ' + lay.H + ')' : '') + '.',
+        'Resizing the visual doesn&rsquo;t resize the text. If you change its size, enter the new size under <b>Visual size</b> above and paste the script again.'] });
       G.push({ title: 'Format it', tip, steps: [
         FP('General &gt; Title') + ' and <b>Background</b>: turn them off, so only the card shows.',
         'To change colors, the font or one text size, edit the style variables at the top of ' + B(hm) + ' (<b>_BoxStyle</b>, <b>_ValueStyle</b> and so on) in TMDL view or the formula bar.',
@@ -352,7 +352,7 @@ function renderBuild(){
   $('buildKind').textContent = plan.length ? 'The script adds ' + plan.length + ' measure' + (plan.length > 1 ? 's' : '') + (o.id === 'rtable' ? ' and the scorecard table' : '') + ' to your model. Below the script, step-by-step setup in Power BI says where each one goes.' : 'Nothing to add to your model. The steps below set it up in Power BI.';
   $('buildCfg').hidden = !plan.length;
   const spark = plan.some(m => /Sparkline/.test(m.name));
-  $('trendWrap').hidden = !spark && o.id !== 'kpi' && o.id !== 'core'; $('periodsWrap').hidden = !spark; $('scoreWrap').hidden = o.id !== 'rtable'; $('htmlSizeWrap').hidden = o.id !== 'html';
+  $('trendWrap').hidden = !spark && o.id !== 'kpi' && o.id !== 'core'; $('periodsWrap').hidden = !spark; $('scoreWrap').hidden = o.id !== 'rtable'; $('htmlSizeWrap').hidden = o.id !== 'html'; renderHtmlFit(o.id === 'html' ? kpis[0] : null);
   if (!plan.length && (o.id === 'kpi' || o.id === 'core')) $('buildCfg').hidden = false;
   if (!plan.length) ['homeTable', 'folder'].forEach(id => { $(id).closest('.field').hidden = true; }); else ['homeTable', 'folder'].forEach(id => { $(id).closest('.field').hidden = false; });
   syncInputs();
@@ -364,13 +364,28 @@ function renderBuild(){
   $('outBox').hidden = !!errs.length;
   if (errs.length) { state.out = {}; return; }
   state.out.tmdl = kvTmdl(kpis, state.cfg, o.id); state.out.test = kvTestQuery(kpis, state.cfg, o.id);
-  state.out.html = o.id === 'html' ? '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + kvHtmlEsc(kvName(kpis[0])) + '</title></head>\n<body style="margin:16px;background:#F3F2F1">\n<div style="max-width:' + kvHtmlFit(kpis[0], state.cfg).w + 'px">\n' + kvHtmlCard(kpis[0], state.cfg) + '\n</div>\n</body></html>\n' : '';
+  state.out.html = o.id === 'html' ? '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + kvHtmlEsc(kvName(kpis[0])) + '</title></head>\n<body style="margin:16px;background:#F3F2F1">\n<div style="width:' + (kvHtmlLayout(kpis[0], state.cfg).size.w - KV_HTML_EDGE) + 'px">\n' + kvHtmlCard(kpis[0], state.cfg) + '\n</div>\n</body></html>\n' : '';
   $('htmlBox').hidden = !state.out.html; $('htmlView').textContent = state.out.html;
   $('tmdlView').innerHTML = hl(state.out.tmdl); $('testView').innerHTML = hl(state.out.test);
 }
+// The HTML card at the size entered, in each layout that suits it, with a readability check
+function renderHtmlFit(k){
+  const box = $('htmlFit'); box.hidden = !k; if (!k) { box.innerHTML = ''; return; }
+  const c = state.cfg, l = kvHtmlLayout(k, c), best = kvHtmlBest(k, c), lays = kvHtmlLayoutsFor(k), nm = id => KV_HTML_LAYOUTS.find(o => o.id === id).name;
+  const btn = (id, label) => '<button type="button" class="btn" data-hlay="' + id + '" aria-pressed="' + ((c.htmlLayout || 'auto') === id || (id === 'auto' && !lays.some(o => o.id === c.htmlLayout))) + '">' + label + '</button>';
+  box.innerHTML = '<div class="kv-lays"><span class="small">Layout:</span>' + btn('auto', 'Best fit (' + nm(best.lay) + ')') + (lays.length > 1 ? lays.map(o => btn(o.id, o.name)).join('') : '') + '</div>'
+    + (l.tooSmall
+      ? '<div class="msg warn">At ' + l.W + ' &times; ' + l.H + ' the text would be too small to read. Make the visual at least <b>' + l.minSize.w + ' &times; ' + l.minSize.h + '</b> (' + l.comfy.w + ' &times; ' + l.comfy.h + ' reads more easily). The script is built for ' + l.minSize.w + ' &times; ' + l.minSize.h + '.</div>'
+      : '<div class="msg ok">' + nm(l.lay) + ' fits ' + l.W + ' &times; ' + l.H + ': the value is ' + l.value + ' px and the smallest text ' + l.smallest + ' px.</div>')
+    + '<div class="kv-fitwrap">' + lays.map(o => {
+      const f = kvHtmlFitFor(k, c, o.id);
+      return '<figure class="kv-fitfig' + (o.id === l.lay ? ' on' : '') + '" data-hlay="' + o.id + '" title="' + esc(o.tip) + '"><figcaption class="small">' + o.name + (o.id === best.lay ? ' <span class="muted">(best fit)</span>' : '') + ' &middot; ' + (f.tooSmall ? 'needs ' + f.minSize.w + ' &times; ' + f.minSize.h : 'value ' + f.value + ' px') + '</figcaption>'
+        + '<div class="kv-fitframe" style="width:' + f.size.w + 'px;height:' + f.size.h + 'px;padding:' + (KV_HTML_EDGE / 2) + 'px">' + kvHtmlCard(k, c, f) + '</div></figure>';
+    }).join('') + '</div><div class="small muted">Shown at the size the script is built for, with the preview&rsquo;s numbers. Select one to use it.</div>';
+}
 function syncInputs(){
   const c = state.cfg;
-  [['homeTable', 'table'], ['folder', 'folder'], ['trendCol', 'trendCol'], ['periods', 'periods'], ['scoreTable', 'scoreTable'], ['htmlSize', 'htmlSize']].forEach(([id, key]) => { if (document.activeElement !== $(id)) $(id).value = c[key]; });
+  [['homeTable', 'table'], ['folder', 'folder'], ['trendCol', 'trendCol'], ['periods', 'periods'], ['scoreTable', 'scoreTable'], ['htmlW', 'htmlW'], ['htmlH', 'htmlH']].forEach(([id, key]) => { if (document.activeElement !== $(id)) $(id).value = c[key]; });
 }
 function renderLive(){ renderOptions(); renderBuild(); }
 function renderAll(){ renderKpis(); renderModel(); renderColors(); renderLive(); }
@@ -471,7 +486,8 @@ function init(){
     const s4 = $('s4'); if (s4 && s4.scrollIntoView) s4.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   [['homeTable', 'table'], ['folder', 'folder'], ['trendCol', 'trendCol'], ['scoreTable', 'scoreTable']].forEach(([id, key]) => $(id).addEventListener('input', () => { state.cfg[key] = $(id).value; renderBuild(); persist(); }));
-  $('htmlSize').addEventListener('change', () => { state.cfg.htmlSize = $('htmlSize').value; renderBuild(); persist(); });
+  $('htmlFit').addEventListener('click', e => { const b = e.target.closest('[data-hlay]'); if (!b) return; state.cfg.htmlLayout = b.dataset.hlay; renderBuild(); persist(); });
+  ['htmlW', 'htmlH'].forEach(id => $(id).addEventListener('input', () => { const v = parseInt($(id).value, 10); state.cfg[id] = isFinite(v) ? Math.max(40, Math.min(2000, v)) : (id === 'htmlW' ? KV_HTML_W : KV_HTML_H); renderBuild(); persist(); }));
   $('periods').addEventListener('input', () => { const v = parseInt($('periods').value, 10); state.cfg.periods = isFinite(v) ? Math.max(2, Math.min(36, v)) : 12; renderBuild(); persist(); });
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); });
   document.addEventListener('click', e => {

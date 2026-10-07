@@ -120,9 +120,10 @@
         <div class="field"><label for="folder">Display folder <span class="muted">(each KPI gets a subfolder)</span></label><input type="text" id="folder" autocomplete="off" placeholder="KPI Visuals"></div>
         <div class="field" id="trendWrap"><label for="trendCol">Trend by <span class="muted">(a date or number column)</span></label><input type="text" id="trendCol" list="trendCols" autocomplete="off" spellcheck="false" placeholder="'Date'[Month Start]"></div>
         <div class="field" id="periodsWrap"><label for="periods">Periods</label><input type="number" id="periods" min="2" max="36" style="width:80px"></div>
-        <div class="field" id="htmlSizeWrap"><label for="htmlSize">Card size <span class="muted">(text size in the card)</span></label><select id="htmlSize"><option value="S">Small</option><option value="M">Medium</option><option value="L">Large</option><option value="XL">Extra large</option></select></div>
+        <div class="field" id="htmlSizeWrap"><label for="htmlW">Visual size in Power BI <span class="muted">(width &times; height, pixels)</span></label><span class="kv-wh"><input type="number" id="htmlW" min="40" max="2000" style="width:80px" aria-label="Width in pixels"> &times; <input type="number" id="htmlH" min="40" max="2000" style="width:80px" aria-label="Height in pixels"></span></div>
         <div class="field" id="scoreWrap"><label for="scoreTable">Scorecard table name</label><input type="text" id="scoreTable" autocomplete="off" placeholder="KPI Scorecard"></div>
       </div>
+      <div id="htmlFit" class="kv-fit" hidden></div>
       <datalist id="tableNames"></datalist><datalist id="trendCols"></datalist>
       <div id="checks"></div>
       <div id="outBox">
