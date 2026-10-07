@@ -267,29 +267,62 @@ const kvArrow = d => d > 0 ? '▲' : d < 0 ? '▼' : '►';
 // A card's reference label colors its text only; a pill (background) is drawn only where Power BI can draw it (HTML)
 function kvLabelHtml(L, small, pill){ return L.st ? '<span class="kv-lab' + (small ? ' sm' : '') + (pill ? ' pill' : '') + '" style="' + (pill ? 'background:' + L.c.fill + ';' : '') + 'color:' + L.c.text + '">' + kvArrow(L.d) + ' ' + kvSigned(L.d) + ' ' + esc(L.vsWhat) + '</span>' : ''; }
 // The HTML card, with inline styles, as the HTML Content visual shows it (and as a file you can copy)
-// Sizes scale every font, gap and padding; the card fills the visual's width
-const KV_HTML_SIZES = [{ id: 'S', name: 'Small', x: 1 }, { id: 'M', name: 'Medium', x: 1.5 }, { id: 'L', name: 'Large', x: 2 }, { id: 'XL', name: 'Extra large', x: 3 }];
-const kvHtmlScale = cfg => (KV_HTML_SIZES.find(z => z.id === (cfg && cfg.htmlSize)) || KV_HTML_SIZES[1]).x;
-function kvHtmlStyle(cfg){
-  const x = kvHtmlScale(cfg), px = n => Math.round(n * x) + 'px';
-  return { box: 'font-family:Segoe UI,sans-serif;background:#FFFFFF;padding:' + px(12) + ' ' + px(16) + ';box-sizing:border-box;width:100%', name: 'font-size:' + px(14) + ';color:#605E5C', value: 'font-size:' + px(32) + ';font-weight:600;color:#252423;line-height:1.2', pill: 'display:inline-block;margin-top:' + px(6) + ';padding:' + px(2) + ' ' + px(8) + ';border-radius:' + px(4) + ';font-size:' + px(12) + ';font-weight:600', sub: 'margin-top:' + px(6) + ';font-size:' + px(12) + ';color:#605E5C' };
-}
-// A visual size that fits the card without scrolling (width x height, pixels)
-function kvHtmlFit(k, cfg){
-  const x = kvHtmlScale(cfg), h = kvHas(k), lines = (kvHtmlSub(k) ? 1 : 0) + kvCtx(k).length;
-  return { w: Math.round(240 * x), h: Math.round((24 + 20 + 39 + (h.base ? 26 : 0) + lines * 23) * x) + 16 };
+// The card is built for the visual's size (cfg.htmlW x cfg.htmlH): every font, gap and padding scales to fill it.
+// Layouts: stack (all lines under each other), side (name and value left, details right), grid (details in two columns)
+const KV_HTML_W = 320, KV_HTML_H = 200, KV_HTML_MIN_PX = 11, KV_HTML_EDGE = 8;
+const KV_HTML_LAYOUTS = [{ id: 'stack', name: 'Stacked', tip: 'Everything in one column. Suits tall or square visuals.' }, { id: 'side', name: 'Side by side', tip: 'Name and value on the left, details on the right. Suits wide, short visuals.' }, { id: 'grid', name: 'Grid', tip: 'Details in two columns under the value. Suits wide visuals with several details.' }];
+function kvHtmlStyle(x, lay, h){
+  const px = n => Math.max(1, Math.round(n * x)) + 'px';
+  return {
+    box: 'font-family:Segoe UI,sans-serif;font-size:' + px(12) + ';line-height:1.3;background:#FFFFFF;padding:' + px(12) + ' ' + px(16) + ';box-sizing:border-box;width:100%' + (h ? ';min-height:' + h + 'px' : '') + (lay === 'side' ? ';display:flex;align-items:center;gap:' + px(16) : h ? ';display:flex;flex-direction:column;justify-content:center' : ''),
+    name: 'font-size:' + px(14) + ';color:#605E5C',
+    value: 'font-size:' + px(32) + ';font-weight:600;color:#252423;line-height:1.2;white-space:nowrap',
+    details: lay === 'grid' ? 'display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:' + px(6) + ' ' + px(16) + ';margin-top:' + px(6)
+      : 'display:flex;flex-direction:column;align-items:flex-start;gap:' + px(6) + (lay === 'side' ? ';border-left:1px solid #E1DFDD;padding-left:' + px(16) : ';margin-top:' + px(6)),
+    pill: 'justify-self:start;padding:' + px(2) + ' ' + px(8) + ';border-radius:' + px(4) + ';font-size:' + px(12) + ';font-weight:600;white-space:nowrap',
+    sub: 'font-size:' + px(12) + ';color:#605E5C' };
 }
 const kvHtmlEsc = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
 const kvHtmlSub = k => { const h = kvHas(k); return h.target ? 'Target ' : h.compare ? ((k.compareLabel || '').trim() || 'Last period') + ' ' : ''; };
-function kvHtmlCard(k, cfg){
-  const L = kvLook(k, cfg), n = L.n, sub = kvHtmlSub(k), KV_HTML = kvHtmlStyle(cfg);
-  return "<div style='" + KV_HTML.box + "'>"
-    + "<div style='" + KV_HTML.name + "'>" + kvHtmlEsc(kvName(k)) + '</div>'
-    + "<div style='" + KV_HTML.value + "'>" + kvHtmlEsc(kvFmt(n.v, k.format)) + '</div>'
-    + (L.st ? "<span style='" + KV_HTML.pill + ';background:' + L.c.fill + ';color:' + L.c.text + "'>" + kvArrow(L.d) + ' ' + kvSigned(L.d) + ' ' + kvHtmlEsc(L.vsWhat) + '</span>' : '')
-    + (sub ? "<div style='" + KV_HTML.sub + "'>" + kvHtmlEsc(sub + kvFmt(L.h.target ? n.t : n.c, k.format)) + '</div>' : '')
-    + kvCtx(k).map(c => "<div style='" + KV_HTML.sub + "'>" + kvHtmlEsc(kvCtxSample(k, c)) + '</div>').join('')
-    + '</div>';
+// The detail lines under the value: the status pill, the target or comparison, then context lines
+function kvHtmlDetails(k, cfg){
+  const L = kvLook(k, cfg), n = L.n, sub = kvHtmlSub(k), D = [];
+  if (L.h.base) D.push({ pill: true, text: kvArrow(L.d) + ' ' + kvSigned(L.d) + ' ' + L.vsWhat, show: !!L.st, len: L.vsWhat.length + 9 });
+  if (sub) D.push({ text: sub + kvFmt(L.h.target ? n.t : n.c, k.format) });
+  kvCtx(k).forEach(c => D.push({ text: kvCtxSample(k, c) }));
+  return D;
+}
+const kvHtmlLayoutsFor = k => KV_HTML_LAYOUTS.filter(o => o.id === 'stack' || (o.id === 'side' ? kvHtmlDetails(k, { colors: KV_EXCEL, band: 0 }).length >= 1 : kvHtmlDetails(k, { colors: KV_EXCEL, band: 0 }).length >= 2));
+// What the card needs at scale 1 (pixels), from the preview's text with room for longer numbers and labels
+function kvHtmlNeed(k, cfg, lay){
+  const L = kvLook(k, cfg), D = kvHtmlDetails(k, cfg);
+  const headW = Math.max(kvName(k).length * 14 * 0.55, (kvFmt(L.n.v, k.format).length + 1) * 32 * 0.6), headH = 14 * 1.3 + 32 * 1.2;
+  const dw = D.map(d => d.pill ? (d.len || d.text.length + 2) * 12 * 0.6 + 16 : (d.text.length + 2) * 12 * 0.55), dh = D.map(d => d.pill ? 12 * 1.3 + 4 : 12 * 1.3);
+  const maxW = Math.max(0, ...dw), maxH = Math.max(0, ...dh), colH = dh.reduce((a, b) => a + b, 0) + 6 * Math.max(0, D.length - 1);
+  if (!D.length || lay === 'stack') return { w: Math.max(headW, maxW) + 32, h: 24 + headH + (D.length ? 6 + colH : 0) };
+  if (lay === 'side') return { w: headW + 16 + 1 + 16 + maxW + 32, h: 24 + Math.max(headH, colH) };
+  const rows = Math.ceil(D.length / 2);
+  return { w: Math.max(headW, 2 * maxW + 16) + 32, h: 24 + headH + 6 + rows * maxH + 6 * (rows - 1) };
+}
+// The scale that fits the visual for one layout, or the smallest readable one with the visual size it needs
+function kvHtmlFitFor(k, cfg, lay){
+  const W = Math.max(40, +cfg.htmlW || KV_HTML_W), H = Math.max(40, +cfg.htmlH || KV_HTML_H), need = kvHtmlNeed(k, cfg, lay);
+  const fit = Math.min(8, 0.96 * Math.min((W - KV_HTML_EDGE) / need.w, (H - KV_HTML_EDGE) / need.h)), min = KV_HTML_MIN_PX / 12;
+  const at = x => ({ w: Math.ceil((need.w * x / 0.96 + KV_HTML_EDGE) / 10) * 10, h: Math.ceil((need.h * x / 0.96 + KV_HTML_EDGE) / 10) * 10 });
+  const x = Math.max(fit, min), tooSmall = fit < min;
+  return { lay, W, H, x, fit, tooSmall, smallest: Math.round(12 * x), value: Math.round(32 * x), minSize: at(min), comfy: at(1.25), size: tooSmall ? at(min) : { w: W, h: H } };
+}
+// The layout picked (cfg.htmlLayout), or the one that gives the biggest text at this size
+function kvHtmlBest(k, cfg){ return kvHtmlLayoutsFor(k).map(o => kvHtmlFitFor(k, cfg, o.id)).reduce((a, b) => b.fit > a.fit * 1.05 ? b : a); }
+function kvHtmlLayout(k, cfg){
+  const ok = kvHtmlLayoutsFor(k).some(o => o.id === cfg.htmlLayout);
+  return ok ? kvHtmlFitFor(k, cfg, cfg.htmlLayout) : kvHtmlBest(k, cfg);
+}
+function kvHtmlCard(k, cfg, lay){
+  const L = kvLook(k, cfg), l = lay || (cfg.htmlScale ? { x: cfg.htmlScale, lay: 'stack' } : kvHtmlLayout(k, cfg)), S = kvHtmlStyle(l.x, l.lay, l.size && l.size.h - KV_HTML_EDGE), D = kvHtmlDetails(k, cfg);
+  const head = "<div style='" + S.name + "'>" + kvHtmlEsc(kvName(k)) + '</div>' + "<div style='" + S.value + "'>" + kvHtmlEsc(kvFmt(L.n.v, k.format)) + '</div>';
+  const det = D.filter(d => !d.pill || d.show).map(d => d.pill ? "<div style='" + S.pill + ';background:' + L.c.fill + ';color:' + L.c.text + "'>" + kvHtmlEsc(d.text) + '</div>' : "<div style='" + S.sub + "'>" + kvHtmlEsc(d.text) + '</div>').join('');
+  return "<div style='" + S.box + "'>" + (l.lay === 'side' && D.length ? '<div>' + head + '</div>' : head) + (D.length ? "<div style='" + S.details + "'>" + det + '</div>' : '') + '</div>';
 }
 const kvCtxHtml = k => kvCtx(k).map(c => '<div class="kv-ctx">' + esc(kvCtxSample(k, c)) + '</div>').join('');
 function kvCardHtml(k, L, inner, opts){
@@ -312,7 +345,7 @@ function kvPreview(id, k, cfg){
     case 'waffle': { const p = L.h.pct ? n.v : (n.t ? n.v / n.t : 0); return kvCardHtml(k, L, '<div class="kv-row"><div class="kv-svg">' + kvSvgWaffle(p, L.st ? L.c.text : '#605E5C') + '</div><div class="kv-sub">' + (L.h.pct ? '' : Math.round(p * 100) + '% of target') + '</div></div>', {}); }
     case 'gauge': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgGauge(n, sc) + '</div><div class="kv-sub">Target ' + esc(kvFmt(n.t, k.format, true)) + '</div>');
     case 'kpi': return '<div class="kv-card"><div class="kv-cl">' + esc(kvName(k)) + '</div><div class="kv-kpi"><div class="kv-area">' + kvSvgArea(n) + '</div><div class="kv-cv" style="color:' + sc + '">' + esc(kvFmt(n.v, k.format, true)) + ' <span class="kv-ic">' + (L.st === 'good' ? '✔' : L.st === 'bad' ? '!' : '') + '</span></div></div><div class="kv-sub">Goal: ' + esc(kvFmt(n.t, k.format, true)) + ' (' + kvSigned(L.d) + ')</div></div>';
-    case 'html': return '<div class="kv-html">' + kvHtmlCard(k, Object.assign({}, cfg, { htmlSize: 'S' })) + '</div>';
+    case 'html': return '<div class="kv-html">' + kvHtmlCard(k, Object.assign({}, cfg, { htmlScale: 1 })) + '</div>';
     case 'core': return '<div class="kv-card">' + '<div class="kv-cl">' + esc(kvName(k)) + '</div><div class="kv-cv">' + esc(kvFmt(n.v, k.format, true)) + '</div>' + kvLabelHtml(L) + '<div class="kv-area">' + kvSvgArea(n) + '</div></div>';
   }
   return '';
@@ -402,20 +435,34 @@ function kvSvgMeasure(id, k, cfg){
   return m;
 }
 function kvHtmlMeasure(k, cfg){
-  const KV_HTML = kvHtmlStyle(cfg), h = kvHas(k), fmt = daxString(k.format || '#,0'), q = x => x.replace(/"/g, '""'), sub = kvHtmlSub(k);
+  const l = kvHtmlLayout(k, cfg), KV_HTML = kvHtmlStyle(l.x, l.lay, l.size.h - KV_HTML_EDGE), h = kvHas(k), fmt = daxString(k.format || '#,0'), q = x => x.replace(/"/g, '""'), sub = kvHtmlSub(k), n = kvCtx(k).length;
+  const hasD = h.base || !!sub || n > 0, side = l.lay === 'side' && hasD;
   const D = ['VAR _Value = ' + kvRef(k.measure)];
   if (h.base) D.push('VAR _Label = ' + bracket(kvMName(k, 'Status Label')), 'VAR _Color = ' + bracket(kvMName(k, 'Status Color')), 'VAR _Fill = ' + bracket(kvMName(k, 'Status Fill')));
   if (sub) D.push('VAR _Base = ' + kvRef(h.target ? k.target : k.compare));
-  D.push('RETURN', '    IF (', '        NOT ISBLANK ( _Value ),',
-    '        "<div style=\'' + KV_HTML.box + '\'>"',
-    '            & "<div style=\'' + KV_HTML.name + '\'>' + q(kvHtmlEsc(kvName(k))) + '</div>"',
-    '            & "<div style=\'' + KV_HTML.value + '\'>" & FORMAT ( _Value, ' + fmt + ' ) & "</div>"');
-  if (h.base) D.push('            & IF ( NOT ISBLANK ( _Label ), "<span style=\'' + KV_HTML.pill + ';background:" & _Fill & ";color:" & _Color & "\'>" & _Label & "</span>" )');
-  if (sub) D.push('            & IF ( NOT ISBLANK ( _Base ), "<div style=\'' + KV_HTML.sub + '\'>' + q(kvHtmlEsc(sub)) + '" & FORMAT ( _Base, ' + fmt + ' ) & "</div>" )');
-  kvCtx(k).forEach((c, i) => D.splice(D.indexOf('RETURN'), 0, 'VAR _Context' + (i + 1) + ' = ' + bracket(kvCtxName(k, i))));
-  kvCtx(k).forEach((c, i) => D.push('            & IF ( NOT ISBLANK ( _Context' + (i + 1) + ' ), "<div style=\'' + KV_HTML.sub + '\'>" & _Context' + (i + 1) + ' & "</div>" )'));
+  kvCtx(k).forEach((c, i) => D.push('VAR _Context' + (i + 1) + ' = ' + bracket(kvCtxName(k, i))));
+  D.push('// Styles for a visual ' + l.size.w + ' x ' + l.size.h + ' pixels, ' + KV_HTML_LAYOUTS.find(o => o.id === l.lay).name.toLowerCase() + ': change sizes, colors and the font here',
+    'VAR _BoxStyle = "' + KV_HTML.box + '"', 'VAR _NameStyle = "' + KV_HTML.name + '"', 'VAR _ValueStyle = "' + KV_HTML.value + '"');
+  if (hasD) D.push('VAR _DetailStyle = "' + KV_HTML.details + '"');
+  if (h.base) D.push('VAR _PillStyle = "' + KV_HTML.pill + ';background:" & _Fill & ";color:" & _Color');
+  if (sub || n) D.push('VAR _SubStyle = "' + KV_HTML.sub + '"');
+  const I = side ? '    ' : '';
+  const opt = (test, html) => ['                & IF (', '                    NOT ISBLANK ( ' + test + ' ),', '                    ' + html, '                )'];
+  D.push('RETURN', '    IF (', '        NOT ISBLANK ( _Value ),', '        "<div style=\'" & _BoxStyle & "\'>"');
+  if (side) D.push('            & "<div>"');
+  D.push(I + '            & "<div style=\'" & _NameStyle & "\'>' + q(kvHtmlEsc(kvName(k))) + '</div>"',
+    I + '            & "<div style=\'" & _ValueStyle & "\'>" & FORMAT ( _Value, ' + fmt + ' ) & "</div>"');
+  if (side) D.push('            & "</div>"');
+  if (hasD) {
+    D.push('            & "<div style=\'" & _DetailStyle & "\'>"');
+    const o2 = opt;
+    if (h.base) D.push(...o2('_Label', '"<div style=\'" & _PillStyle & "\'>" & _Label & "</div>"'));
+    if (sub) D.push(...o2('_Base', '"<div style=\'" & _SubStyle & "\'>' + q(kvHtmlEsc(sub)) + '" & FORMAT ( _Base, ' + fmt + ' ) & "</div>"'));
+    kvCtx(k).forEach((c, i) => D.push(...o2('_Context' + (i + 1), '"<div style=\'" & _SubStyle & "\'>" & _Context' + (i + 1) + ' & "</div>"')));
+    D.push('                & "</div>"');
+  }
   D.push('            & "</div>"', '    )');
-  return { name: kvMName(k, 'HTML Card'), description: 'The whole card as HTML, for the HTML Content visual (from AppSource). Size: ' + (KV_HTML_SIZES.find(z => z.x === kvHtmlScale(cfg)).name) + '.', expression: D.join('\n') };
+  return { name: kvMName(k, 'HTML Card'), description: 'The whole card as HTML, for the HTML Content visual (from AppSource). Built for a visual ' + l.size.w + ' x ' + l.size.h + ' pixels.', expression: D.join('\n') };
 }
 const kvCtxName = (k, i) => kvMName(k, 'Context ' + (i + 1));
 const kvCtxTipName = (c, i) => ({ measure: 'Also', share: 'Share of total', rank: 'Rank', per: 'Per item', period: (c.before || 'Earlier').replace(/:\s*$/, ''), asof: 'As of', text: 'Note' }[c.kind] || 'Context ' + (i + 1));
