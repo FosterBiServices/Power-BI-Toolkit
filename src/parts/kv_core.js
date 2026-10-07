@@ -267,11 +267,22 @@ const kvArrow = d => d > 0 ? '▲' : d < 0 ? '▼' : '►';
 // A card's reference label colors its text only; a pill (background) is drawn only where Power BI can draw it (HTML)
 function kvLabelHtml(L, small, pill){ return L.st ? '<span class="kv-lab' + (small ? ' sm' : '') + (pill ? ' pill' : '') + '" style="' + (pill ? 'background:' + L.c.fill + ';' : '') + 'color:' + L.c.text + '">' + kvArrow(L.d) + ' ' + kvSigned(L.d) + ' ' + esc(L.vsWhat) + '</span>' : ''; }
 // The HTML card, with inline styles, as the HTML Content visual shows it (and as a file you can copy)
-const KV_HTML = { box: 'font-family:Segoe UI,sans-serif;background:#FFFFFF;padding:12px 16px;display:inline-block;min-width:180px', name: 'font-size:14px;color:#605E5C', value: 'font-size:32px;font-weight:600;color:#252423;line-height:1.2', pill: 'display:inline-block;margin-top:6px;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600', sub: 'margin-top:6px;font-size:12px;color:#605E5C' };
+// Sizes scale every font, gap and padding; the card fills the visual's width
+const KV_HTML_SIZES = [{ id: 'S', name: 'Small', x: 1 }, { id: 'M', name: 'Medium', x: 1.5 }, { id: 'L', name: 'Large', x: 2 }, { id: 'XL', name: 'Extra large', x: 3 }];
+const kvHtmlScale = cfg => (KV_HTML_SIZES.find(z => z.id === (cfg && cfg.htmlSize)) || KV_HTML_SIZES[1]).x;
+function kvHtmlStyle(cfg){
+  const x = kvHtmlScale(cfg), px = n => Math.round(n * x) + 'px';
+  return { box: 'font-family:Segoe UI,sans-serif;background:#FFFFFF;padding:' + px(12) + ' ' + px(16) + ';box-sizing:border-box;width:100%', name: 'font-size:' + px(14) + ';color:#605E5C', value: 'font-size:' + px(32) + ';font-weight:600;color:#252423;line-height:1.2', pill: 'display:inline-block;margin-top:' + px(6) + ';padding:' + px(2) + ' ' + px(8) + ';border-radius:' + px(4) + ';font-size:' + px(12) + ';font-weight:600', sub: 'margin-top:' + px(6) + ';font-size:' + px(12) + ';color:#605E5C' };
+}
+// A visual size that fits the card without scrolling (width x height, pixels)
+function kvHtmlFit(k, cfg){
+  const x = kvHtmlScale(cfg), h = kvHas(k), lines = (kvHtmlSub(k) ? 1 : 0) + kvCtx(k).length;
+  return { w: Math.round(240 * x), h: Math.round((24 + 20 + 39 + (h.base ? 26 : 0) + lines * 23) * x) + 16 };
+}
 const kvHtmlEsc = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
 const kvHtmlSub = k => { const h = kvHas(k); return h.target ? 'Target ' : h.compare ? ((k.compareLabel || '').trim() || 'Last period') + ' ' : ''; };
 function kvHtmlCard(k, cfg){
-  const L = kvLook(k, cfg), n = L.n, sub = kvHtmlSub(k);
+  const L = kvLook(k, cfg), n = L.n, sub = kvHtmlSub(k), KV_HTML = kvHtmlStyle(cfg);
   return "<div style='" + KV_HTML.box + "'>"
     + "<div style='" + KV_HTML.name + "'>" + kvHtmlEsc(kvName(k)) + '</div>'
     + "<div style='" + KV_HTML.value + "'>" + kvHtmlEsc(kvFmt(n.v, k.format)) + '</div>'
@@ -301,7 +312,7 @@ function kvPreview(id, k, cfg){
     case 'waffle': { const p = L.h.pct ? n.v : (n.t ? n.v / n.t : 0); return kvCardHtml(k, L, '<div class="kv-row"><div class="kv-svg">' + kvSvgWaffle(p, L.st ? L.c.text : '#605E5C') + '</div><div class="kv-sub">' + (L.h.pct ? '' : Math.round(p * 100) + '% of target') + '</div></div>', {}); }
     case 'gauge': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgGauge(n, sc) + '</div><div class="kv-sub">Target ' + esc(kvFmt(n.t, k.format, true)) + '</div>');
     case 'kpi': return '<div class="kv-card"><div class="kv-cl">' + esc(kvName(k)) + '</div><div class="kv-kpi"><div class="kv-area">' + kvSvgArea(n) + '</div><div class="kv-cv" style="color:' + sc + '">' + esc(kvFmt(n.v, k.format, true)) + ' <span class="kv-ic">' + (L.st === 'good' ? '✔' : L.st === 'bad' ? '!' : '') + '</span></div></div><div class="kv-sub">Goal: ' + esc(kvFmt(n.t, k.format, true)) + ' (' + kvSigned(L.d) + ')</div></div>';
-    case 'html': return '<div class="kv-html">' + kvHtmlCard(k, cfg) + '</div>';
+    case 'html': return '<div class="kv-html">' + kvHtmlCard(k, Object.assign({}, cfg, { htmlSize: 'S' })) + '</div>';
     case 'core': return '<div class="kv-card">' + '<div class="kv-cl">' + esc(kvName(k)) + '</div><div class="kv-cv">' + esc(kvFmt(n.v, k.format, true)) + '</div>' + kvLabelHtml(L) + '<div class="kv-area">' + kvSvgArea(n) + '</div></div>';
   }
   return '';
@@ -391,7 +402,7 @@ function kvSvgMeasure(id, k, cfg){
   return m;
 }
 function kvHtmlMeasure(k, cfg){
-  const h = kvHas(k), fmt = daxString(k.format || '#,0'), q = x => x.replace(/"/g, '""'), sub = kvHtmlSub(k);
+  const KV_HTML = kvHtmlStyle(cfg), h = kvHas(k), fmt = daxString(k.format || '#,0'), q = x => x.replace(/"/g, '""'), sub = kvHtmlSub(k);
   const D = ['VAR _Value = ' + kvRef(k.measure)];
   if (h.base) D.push('VAR _Label = ' + bracket(kvMName(k, 'Status Label')), 'VAR _Color = ' + bracket(kvMName(k, 'Status Color')), 'VAR _Fill = ' + bracket(kvMName(k, 'Status Fill')));
   if (sub) D.push('VAR _Base = ' + kvRef(h.target ? k.target : k.compare));
@@ -404,7 +415,7 @@ function kvHtmlMeasure(k, cfg){
   kvCtx(k).forEach((c, i) => D.splice(D.indexOf('RETURN'), 0, 'VAR _Context' + (i + 1) + ' = ' + bracket(kvCtxName(k, i))));
   kvCtx(k).forEach((c, i) => D.push('            & IF ( NOT ISBLANK ( _Context' + (i + 1) + ' ), "<div style=\'' + KV_HTML.sub + '\'>" & _Context' + (i + 1) + ' & "</div>" )'));
   D.push('            & "</div>"', '    )');
-  return { name: kvMName(k, 'HTML Card'), description: 'The whole card as HTML, for the HTML Content visual (from AppSource).', expression: D.join('\n') };
+  return { name: kvMName(k, 'HTML Card'), description: 'The whole card as HTML, for the HTML Content visual (from AppSource). Size: ' + (KV_HTML_SIZES.find(z => z.x === kvHtmlScale(cfg)).name) + '.', expression: D.join('\n') };
 }
 const kvCtxName = (k, i) => kvMName(k, 'Context ' + (i + 1));
 const kvCtxTipName = (c, i) => ({ measure: 'Also', share: 'Share of total', rank: 'Rank', per: 'Per item', period: (c.before || 'Earlier').replace(/:\s*$/, ''), asof: 'As of', text: 'Note' }[c.kind] || 'Context ' + (i + 1));
