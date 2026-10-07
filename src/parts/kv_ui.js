@@ -20,7 +20,7 @@ function hl(code){
   }).join('\n');
 }
 const clone = o => JSON.parse(JSON.stringify(o));
-const blankCfg = () => ({ mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard' });
+const blankCfg = () => ({ mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard', htmlSize: 'M' });
 const state = { example: false, model: null, kpis: [], cfg: blankCfg(), out: {} };
 const FIELDS = ['label', 'measure', 'format', 'better', 'target', 'compare', 'compareLabel', 'pv.value', 'pv.target', 'pv.compare', 'pv.trend'];
 // field paths: 'label', 'pv.value', 'ctx.0.ref'
@@ -263,13 +263,17 @@ function kvSteps(id, kpis, cfg){
       G.push({ title: 'Get the HTML Content visual (once per report)', steps: [
         'In the Visualizations pane, select the <b>&hellip;</b> (Get more visuals) &gt; <b>Get more visuals</b>, search for <b>HTML Content</b> (by Daniel Marsh-Patrick) and select <b>Add</b>.',
         'If AppSource visuals are blocked where you work, ask your Power BI admin to allow it, or build a card with variance instead.'] });
+      const fit = kvHtmlFit(k, cfg), zn = KV_HTML_SIZES.find(z => z.x === kvHtmlScale(cfg)).name;
       G.push({ title: 'Add the visual', steps: ['Select an empty spot, then select the <b>HTML Content</b> icon in the Visualizations pane.', 'Drag ' + B(hm) + ' into its <b>Values</b> field well. The card draws itself from the measure&rsquo;s HTML.'] });
+      G.push({ title: 'Size it', steps: [
+        'The text size is set in the measure, not by the visual: this card is <b>' + zn + '</b> (value text ' + Math.round(32 * kvHtmlScale(cfg)) + ' px). Making the visual bigger adds space but doesn&rsquo;t grow the text. To change it, pick another <b>Card size</b> above and paste the script again.',
+        FP('General &gt; Properties &gt; Size') + ': about <b>' + fit.w + ' &times; ' + fit.h + '</b> pixels fits this card. The card stretches to the visual&rsquo;s width; if a scroll bar shows, make the visual taller or pick a smaller size.'] });
       G.push({ title: 'Format it', tip, steps: [
         FP('General &gt; Title') + ' and <b>Background</b>: turn them off, so only the card shows.',
-        'To change the look (font sizes, colors, the pill), edit the inline styles in ' + B(hm) + ' in TMDL view or the formula bar.',
+        'To change colors or the font, edit the inline styles in ' + B(hm) + ' in TMDL view or the formula bar.',
       ].concat(kvCtx(k).length ? ['Your context lines (' + kvCtx(k).slice(0, KV_CTX_MAX).map((c, j) => B(kvCtxName(k, j))).join(', ') + ') are already in the card, under the value.'] : []).concat([
         'To use the card outside Power BI (an email, a web page), copy the <b>HTML file</b> above. It has the numbers shown in the preview, not live data.']) });
-      G.push(finish(h.base ? kvMName(k, 'Status Label') : '', '250 &times; 150')); break;
+      { const fin = finish(h.base ? kvMName(k, 'Status Label') : '', ''); fin.steps.shift(); G.push(fin); } break;
     }
     case 'ctxlabel': case 'ctxsub': case 'ctxtip': {
       const cs = kvCtx(k).slice(0, KV_CTX_MAX), names = cs.map((c, j) => kvCtxName(k, j));
@@ -348,7 +352,7 @@ function renderBuild(){
   $('buildKind').textContent = plan.length ? 'The script adds ' + plan.length + ' measure' + (plan.length > 1 ? 's' : '') + (o.id === 'rtable' ? ' and the scorecard table' : '') + ' to your model. Below the script, step-by-step setup in Power BI says where each one goes.' : 'Nothing to add to your model. The steps below set it up in Power BI.';
   $('buildCfg').hidden = !plan.length;
   const spark = plan.some(m => /Sparkline/.test(m.name));
-  $('trendWrap').hidden = !spark && o.id !== 'kpi' && o.id !== 'core'; $('periodsWrap').hidden = !spark; $('scoreWrap').hidden = o.id !== 'rtable';
+  $('trendWrap').hidden = !spark && o.id !== 'kpi' && o.id !== 'core'; $('periodsWrap').hidden = !spark; $('scoreWrap').hidden = o.id !== 'rtable'; $('htmlSizeWrap').hidden = o.id !== 'html';
   if (!plan.length && (o.id === 'kpi' || o.id === 'core')) $('buildCfg').hidden = false;
   if (!plan.length) ['homeTable', 'folder'].forEach(id => { $(id).closest('.field').hidden = true; }); else ['homeTable', 'folder'].forEach(id => { $(id).closest('.field').hidden = false; });
   syncInputs();
@@ -360,13 +364,13 @@ function renderBuild(){
   $('outBox').hidden = !!errs.length;
   if (errs.length) { state.out = {}; return; }
   state.out.tmdl = kvTmdl(kpis, state.cfg, o.id); state.out.test = kvTestQuery(kpis, state.cfg, o.id);
-  state.out.html = o.id === 'html' ? '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><title>' + kvHtmlEsc(kvName(kpis[0])) + '</title></head>\n<body style="margin:16px;background:#F3F2F1">\n' + kvHtmlCard(kpis[0], state.cfg) + '\n</body></html>\n' : '';
+  state.out.html = o.id === 'html' ? '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + kvHtmlEsc(kvName(kpis[0])) + '</title></head>\n<body style="margin:16px;background:#F3F2F1">\n<div style="max-width:' + kvHtmlFit(kpis[0], state.cfg).w + 'px">\n' + kvHtmlCard(kpis[0], state.cfg) + '\n</div>\n</body></html>\n' : '';
   $('htmlBox').hidden = !state.out.html; $('htmlView').textContent = state.out.html;
   $('tmdlView').innerHTML = hl(state.out.tmdl); $('testView').innerHTML = hl(state.out.test);
 }
 function syncInputs(){
   const c = state.cfg;
-  [['homeTable', 'table'], ['folder', 'folder'], ['trendCol', 'trendCol'], ['periods', 'periods'], ['scoreTable', 'scoreTable']].forEach(([id, key]) => { if (document.activeElement !== $(id)) $(id).value = c[key]; });
+  [['homeTable', 'table'], ['folder', 'folder'], ['trendCol', 'trendCol'], ['periods', 'periods'], ['scoreTable', 'scoreTable'], ['htmlSize', 'htmlSize']].forEach(([id, key]) => { if (document.activeElement !== $(id)) $(id).value = c[key]; });
 }
 function renderLive(){ renderOptions(); renderBuild(); }
 function renderAll(){ renderKpis(); renderModel(); renderColors(); renderLive(); }
@@ -467,6 +471,7 @@ function init(){
     const s4 = $('s4'); if (s4 && s4.scrollIntoView) s4.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   [['homeTable', 'table'], ['folder', 'folder'], ['trendCol', 'trendCol'], ['scoreTable', 'scoreTable']].forEach(([id, key]) => $(id).addEventListener('input', () => { state.cfg[key] = $(id).value; renderBuild(); persist(); }));
+  $('htmlSize').addEventListener('change', () => { state.cfg.htmlSize = $('htmlSize').value; renderBuild(); persist(); });
   $('periods').addEventListener('input', () => { const v = parseInt($('periods').value, 10); state.cfg.periods = isFinite(v) ? Math.max(2, Math.min(36, v)) : 12; renderBuild(); persist(); });
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); });
   document.addEventListener('click', e => {
