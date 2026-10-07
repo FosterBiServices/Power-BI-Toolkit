@@ -1426,11 +1426,12 @@ init();
     try { localStorage.removeItem(HKEY); } catch (e) {}
   };
   S.clearHistory = () => { try { localStorage.removeItem(HKEY); } catch (e) {} };
-  S.set = (text, name) => {
+  // source: 'pbip' when the rows were read from a PBIP folder (every tool then opens on that folder)
+  S.set = (text, name, source) => {
     try {
       const prev = S.get();
       if (prev && prev.text && prev.text.trim() !== (text || '').trim()) keep(prev);
-      localStorage.setItem(KEY, JSON.stringify({ text, name: name !== undefined ? name : (prev ? prev.name || '' : ''), savedAt: Date.now() }));
+      localStorage.setItem(KEY, JSON.stringify({ text, name: name !== undefined ? name : (prev ? prev.name || '' : ''), savedAt: Date.now(), source: source || '' }));
       return true;
     } catch (e) { return false; }
   };
@@ -1464,7 +1465,7 @@ init();
   S.describe = v => {
     const c = S.counts(v.text), d = new Date(v.savedAt || Date.now());
     const when = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-    return (v.name ? '<b>' + esc(v.name) + '</b> &middot; ' : '') + c.table + ' tables, ' + c.measure + ' measures &middot; saved ' + esc(when);
+    return (v.name ? '<b>' + esc(v.name) + '</b> &middot; ' : '') + c.table + ' tables, ' + c.measure + ' measures &middot; ' + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + esc(when);
   };
   // Date columns from the export, in the Date Table Generator's "Table, Column, Type, Hidden" layout
   S.dateColumns = t => {
@@ -1663,7 +1664,7 @@ init();
       const v = S.get(); if (!v) return;
       if (exampleShowing()) { const c = document.getElementById('clearAll'); if (c) c.click(); }
       ta.value = valueFor(v);
-      if (conn) conn.set('export');
+      if (conn) conn.set(v.source === 'pbip' ? 'pbip' : 'export', v);
       if (cfg.open) { const d = document.getElementById(cfg.open); if (d) d.open = true; }
       ta.dispatchEvent(new Event('input', { bubbles: true }));
       try { localStorage.removeItem(cfg.prefix + 'blank'); } catch (e) {}
@@ -1682,9 +1683,13 @@ init();
     const v = S.get();
     let blank = false; try { blank = localStorage.getItem(cfg.prefix + 'blank') === '1'; } catch (e) {}
     // ...or when this page is still on an older saved export it took from the toolkit
-    if (v && valueFor(v) && ta.value.trim() !== valueFor(v).trim() && !(conn && ['pbip', 'none'].includes(conn.choice())) && (exampleShowing() || (!ta.value.trim() && !blank) || (ta.value.trim() && following()))) use();
+    // A model read from a PBIP folder in another tool is used here too, unless this page chose No model or its own export
+    const ch = conn ? conn.choice() : '', fromPbip = v && v.source === 'pbip';
+    const allowed = !conn || (fromPbip ? ch !== 'none' && (ch !== 'export' || following() || exampleShowing()) : !['pbip', 'none'].includes(ch));
+    if (v && valueFor(v) && ta.value.trim() !== valueFor(v).trim() && allowed && (exampleShowing() || (!ta.value.trim() && !blank) || (ta.value.trim() && (following() || (fromPbip && ch === 'pbip'))))) use();
     else render();
     window.addEventListener('storage', e => { if (e.key === KEY) render(); });
+    if (conn) conn.onShared(() => { remember(); render(); });
   };
 })();
 // ---------- Connect your model: a PBIP folder read into the same rows as the model export ----------
@@ -1861,6 +1866,10 @@ init();
       + '.sc-drop{border:1px dashed var(--line);border-radius:8px;padding:14px;text-align:center;font-size:13px;color:var(--muted)}.sc-drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}';
     document.head.appendChild(st);
   }
+  // The last PBIP folder chosen with the folder picker, kept (as a handle) so any tool can read it again in one click
+  const idb = fn => new Promise((res, rej) => { try { const o = indexedDB.open('sfpbi', 1); o.onupgradeneeded = () => o.result.createObjectStore('h'); o.onsuccess = () => { try { fn(o.result.transaction('h', 'readwrite').objectStore('h'), res, rej); } catch (e) { rej(e); } }; o.onerror = () => rej(o.error); } catch (e) { rej(e); } });
+  const saveHandle = h => idb((st, res) => { const r = st.put(h, 'pbip'); r.onsuccess = () => res(); r.onerror = () => res(); }).catch(() => {});
+  const getHandle = () => idb((st, res) => { const r = st.get('pbip'); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); }).catch(() => null);
   // cfg (from S.hook): { input, prefix, mode, connect: { step: h2 id of the step that gets the choice, none: text for "No model" or false,
   //   exportOnly: [selectors shown only for the export], title, lede, retitle: { h2 id: text } } }
   S.connect = (cfg, ta, bar) => {
@@ -1876,10 +1885,14 @@ init();
     if (c.none) opts.push(['none', 'No model', c.none]);
     const wrap = document.createElement('div'); wrap.className = 'sc-wrap';
     wrap.innerHTML = '<div class="sc-choose" role="radiogroup" aria-label="How to connect your model">' + opts.map(o => '<button type="button" role="radio" aria-checked="false" data-sc="' + o[0] + '"><span class="tn">' + o[1] + '</span><span class="td">' + o[2] + '</span></button>').join('') + '</div>'
-      + '<div class="sc-pbip" hidden><div class="sc-row"><button type="button" class="btn primary" data-sc-pick>Choose a PBIP folder</button><span class="small muted">or drop the project folder below. The files are read in this page and never uploaded.</span></div>'
+      + '<div class="sc-pbip" hidden><div class="sc-row"><button type="button" class="btn primary" data-sc-pick>Choose a PBIP folder</button><button type="button" class="btn" data-sc-again hidden>Read it again</button><span class="small muted">or drop the project folder below. The files are read in this page and never uploaded.</span></div>'
       + '<div class="sc-drop">Drop the project folder here</div><input type="file" webkitdirectory multiple hidden><div class="sc-msg" role="status"></div></div>';
     head.insertAdjacentElement('afterend', wrap);
-    const pane = wrap.querySelector('.sc-pbip'), msg = wrap.querySelector('.sc-msg'), input = wrap.querySelector('input[type=file]'), drop = wrap.querySelector('.sc-drop');
+    const pane = wrap.querySelector('.sc-pbip'), msg = wrap.querySelector('.sc-msg'), input = wrap.querySelector('input[type=file]'), drop = wrap.querySelector('.sc-drop'), again = wrap.querySelector('[data-sc-again]');
+    let onShared = () => {};
+    // "Read it again" shows when the shared model came from the folder the browser still has a handle for
+    const showAgain = async () => { const v = S.get(), h = window.showDirectoryPicker && v && v.source === 'pbip' ? await getHandle() : null; again.hidden = !(h && h.name === v.name); };
+    const usingMsg = v => '<div class="msg ok">&#10003; Using <b>' + esc(v.name) + '</b>, read from its PBIP folder ' + esc(new Date(v.savedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })) + '. Every tool uses it until you choose another folder or paste an export. After you change the model, read it again.</div>';
     const exportEls = () => [ta, bar].concat((c.exportOnly || []).flatMap(s => [...document.querySelectorAll(s)])).filter(Boolean);
     let choice = get('connect') || '', stash = '';
     const exampleShowing = () => { const b = document.getElementById('exampleBanner'); return !!(b && !b.hidden); };
@@ -1889,7 +1902,9 @@ init();
       pane.hidden = choice !== 'pbip';
       exportEls().forEach(e => e.classList.toggle('sc-hide', choice !== 'export'));
       const name = get('pbipName');
-      if (choice === 'pbip' && name && ta.value.trim() && !msg.innerHTML) msg.innerHTML = '<div class="msg ok">&#10003; Read from <b>' + esc(name) + '</b>. Choose the folder again after you change the model.</div>';
+      const v = S.get();
+      if (choice === 'pbip' && name && ta.value.trim() && !msg.innerHTML) msg.innerHTML = v && v.source === 'pbip' && v.name === name ? usingMsg(v) : '<div class="msg ok">&#10003; Read from <b>' + esc(name) + '</b>. Choose the folder again after you change the model.</div>';
+      if (choice === 'pbip') showAgain();
     };
     const fire = () => ta.dispatchEvent(new Event('input', { bubbles: true }));
     const choose = v => {
@@ -1901,24 +1916,33 @@ init();
       if (v === 'export') { const d = c.open && document.getElementById(c.open); if (d && !ta.value.trim()) d.open = true; }
     };
     wrap.querySelector('.sc-choose').addEventListener('click', e => { const b = e.target.closest('[data-sc]'); if (b) choose(b.dataset.sc); });
-    const load = async (root, list) => {
+    const load = async (root, list, handle) => {
       msg.innerHTML = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>';
       const r = S.pbipExport(await S.pbipFiles(list));
       if (r.error) { msg.innerHTML = '<div class="msg err">' + esc(r.error) + '</div>'; return; }
       if (exampleShowing()) { const x = document.getElementById('clearAll'); if (x) x.click(); }
       choice = 'pbip'; set('connect', 'pbip'); set('pbipName', r.name);
       try { localStorage.removeItem(cfg.prefix + 'blank'); } catch (e) {}
-      ta.value = cfg.mode === 'dates' ? S.dateColumns(r.text) : r.text; fire();
+      const shared = S.set(r.text, r.name, 'pbip');
+      if (handle) await saveHandle(handle);
+      ta.value = cfg.mode === 'dates' ? S.dateColumns(r.text) : r.text; fire(); if (shared) onShared();
       const noDates = cfg.mode === 'dates' && !ta.value.trim();
-      msg.innerHTML = '<div class="msg ' + (noDates ? 'warn' : 'ok') + '">' + (noDates ? '' : '&#10003; ') + 'Read <b>' + esc(r.name) + '</b>: ' + r.tables + ' tables, ' + r.measures + ' measures.' + (noDates ? ' It has no date columns, so set the years yourself in the next step.' : '') + (r.others.length ? ' This folder has more models (' + esc(r.others.join(', ')) + '); choose that project&rsquo;s own folder to use one of them.' : '') + ' Choose the folder again after you change the model.</div>';
+      msg.innerHTML = '<div class="msg ' + (noDates ? 'warn' : 'ok') + '">' + (noDates ? '' : '&#10003; ') + 'Read <b>' + esc(r.name) + '</b>: ' + r.tables + ' tables, ' + r.measures + ' measures.' + (noDates ? ' It has no date columns, so set the years yourself in the next step.' : '') + (r.others.length ? ' This folder has more models (' + esc(r.others.join(', ')) + '); choose that project&rsquo;s own folder to use one of them.' : '') + (shared ? ' Every tool uses it now, so you don&rsquo;t connect again in the others.' : ' It&rsquo;s too large to share with the other tools (browser storage limit).') + ' Read it again after you change the model.</div>';
       render();
     };
     const fail = e => { msg.innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(e.message || e) + '</div>'; };
     wrap.querySelector('[data-sc-pick]').addEventListener('click', async () => {
       if (window.showDirectoryPicker) {
         let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-' + cfg.prefix.replace(/\W/g, ''), mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; input.click(); return; }
-        const list = []; try { await walkHandle(dir, dir.name, list); await load(dir.name, list); } catch (e) { fail(e); }
+        const list = []; try { await walkHandle(dir, dir.name, list); await load(dir.name, list, dir); } catch (e) { fail(e); }
       } else input.click();
+    });
+    again.addEventListener('click', async () => {
+      const dir = await getHandle(); if (!dir) { again.hidden = true; return; }
+      try {
+        if ((await dir.queryPermission({ mode: 'read' })) !== 'granted' && (await dir.requestPermission({ mode: 'read' })) !== 'granted') return;
+        const list = []; await walkHandle(dir, dir.name, list); await load(dir.name, list, dir);
+      } catch (e) { msg.innerHTML = '<div class="msg warn">The folder couldn&rsquo;t be read again (it may have moved). Choose it again.</div>'; again.hidden = true; }
     });
     input.addEventListener('change', async () => {
       const fl = [...input.files]; if (!fl.length) return;
@@ -1930,17 +1954,23 @@ init();
     ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
     drop.addEventListener('drop', async e => {
       e.preventDefault();
+      const it0 = [...(e.dataTransfer.items || [])][0], hp = it0 && it0.getAsFileSystemHandle ? it0.getAsFileSystemHandle().catch(() => null) : null;
       const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
       if (!item || !item.isDirectory) { msg.innerHTML = '<div class="msg warn">Drop the project <b>folder</b>, not a file inside it.</div>'; return; }
       const list = []; await walkEntry(item, '', list);
-      try { await load(item.name, list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file }))); } catch (err) { fail(err); }
+      const h = hp ? await hp : null;
+      try { await load(item.name, list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file })), h && h.kind === 'directory' ? h : null); } catch (err) { fail(err); }
     });
     // typing or pasting an export means the export; Clear entries (an empty, flagged page) starts the choice again
     ta.addEventListener('input', e => { if (e.isTrusted && choice !== 'export' && ta.value.trim()) { choice = 'export'; set('connect', 'export'); render(); } });
     const clr = document.getElementById('clearYes');
     if (clr) clr.addEventListener('click', () => { choice = ''; stash = ''; msg.innerHTML = ''; render(); });
     render();
-    return { choice: () => choice, set: v => { choice = v; set('connect', v); render(); } };
+    return { choice: () => choice, onShared: f => { onShared = f; }, set: (v, shared) => {
+      choice = v; set('connect', v);
+      if (v === 'pbip' && shared) { set('pbipName', shared.name); msg.innerHTML = usingMsg(shared); }
+      render();
+    } };
   };
 })();
 /*SUITE-END*/
