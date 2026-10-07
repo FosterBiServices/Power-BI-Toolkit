@@ -313,6 +313,12 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 .cfg{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end}
 .cfg input[type=text]{width:230px;max-width:100%;font-family:var(--sans)}
 .kv-steps{display:flex;flex-direction:column;gap:8px;padding-left:1.3em;margin:0;max-width:80ch}
+.kv-steps ul{margin:6px 0 0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+.kv-setup{display:flex;flex-direction:column;gap:16px}
+#setupHead{font-size:18px;margin:10px 0 0}
+.kv-grp{display:flex;flex-direction:column;gap:8px}
+.kv-grp h4{margin:0;font-family:var(--cond);font-size:16px;color:var(--accent)}
+.kv-grp p{margin:0;max-width:80ch}
 #outBox{display:flex;flex-direction:column;gap:12px;min-width:0}
 #outBox>*{min-width:0;max-width:100%}
 #outBox h3{margin:6px 0 0}
@@ -452,7 +458,6 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
         <div class="field" id="scoreWrap"><label for="scoreTable">Scorecard table name</label><input type="text" id="scoreTable" autocomplete="off" placeholder="KPI Scorecard"></div>
       </div>
       <datalist id="tableNames"></datalist><datalist id="trendCols"></datalist>
-      <ol class="kv-steps" id="steps"></ol>
       <div id="checks"></div>
       <div id="outBox">
         <h3>1. Check the measures first <span class="muted">(DAX query view, optional)</span></h3>
@@ -466,6 +471,8 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
           <pre class="tall" id="tmdlView"></pre>
         </div>
       </div>
+      <h3 id="setupHead">Set it up in Power BI</h3>
+      <div class="kv-setup" id="steps"></div>
       <p class="note small">Ideas behind the options: <a href="https://data-goblins.com/power-bi/kpi-templates" target="_blank" rel="noopener">KPIs and cards in Power BI</a> by Data Goblins (number, meaning and context; SVG and core-visual KPI templates).</p>
     </div>
   </section>
@@ -2103,45 +2110,118 @@ function renderOptions(){
 
 /* ---------- Step 5: build ---------- */
 const B = n => '<b>' + esc(bracket(n)) + '</b>';
+const FP = p => '<b>Format visual &gt; ' + p + '</b>';
+const FX = n => 'select the <b>fx</b> button, set Format style to <b>Field value</b> and pick ' + B(n);
+// Setup steps in Power BI for the chosen option, in groups: [{ title, steps: [html] }]
 function kvSteps(id, kpis, cfg){
-  const k = kpis[0], h = kvHas(k), m = kvRef(k.measure), mn = (k.measure || '').replace(/^\[|\]$/g, '');
-  const apply = 'Optional: run the test query in <b>DAX query view</b> to see each new measure&rsquo;s result without changing the model. Then open <b>TMDL view</b>, paste the script into a new tab, select <b>Preview</b> (it only adds measures' + (id === 'rtable' ? ' and the scorecard table' : '') + ') and select <b>Apply</b>.';
-  const card = 'Add the new <b>Card</b> visual and put <b>' + esc(m) + '</b> in Data. Set the callout&rsquo;s display units to Auto.';
-  const label = h.base ? 'Under Format &gt; <b>Reference labels</b>, add ' + B(kvMName(k, 'Status Label')) + '. For its color, select <b>fx</b>, Format style <b>Field value</b>, field ' + B(kvMName(k, 'Status Color')) + '. For the full Excel look, set the reference label background the same way with ' + B(kvMName(k, 'Status Fill')) + '.' : '';
-  const img = (name, w, hh) => 'Put the picture under the value: in the new Card, Format &gt; <b>Images</b>, turn the image on, choose <b>Image URL</b> and pick ' + B(name) + ' with fx. Or use it as a column in a table or matrix and set Format &gt; <b>Image size</b> to ' + hh + ' high and ' + w + ' wide. The script marks it as an Image URL already.';
+  const k = kpis[0], h = kvHas(k), m = kvRef(k.measure), trend = esc((cfg.trendCol || '').trim() || "'Date'[Month Start]");
+  const plan = kvPlan(kpis, cfg, id), status = x => kvOptionMeasures(id, x, cfg).some(p => /Status Label$/.test(p.name));
+  const G = [];
+  if (plan.length) {
+    const tbl = esc((cfg.table || '').trim() || '_Measures'), fold = esc(normFolder(cfg.folder || '') || '');
+    G.push({ title: 'Add the measures to your model', steps: [
+      'Optional: copy the <b>test query</b> above, open <b>DAX query view</b> (on the left edge of Power BI Desktop), paste it into a new query tab and select <b>Run</b>. You see what each new measure returns. Nothing in the model changes.',
+      'Open <b>TMDL view</b> (also on the left edge). If it isn&rsquo;t there, turn it on under File &gt; Options and settings &gt; Options &gt; Preview features.',
+      'Copy the <b>TMDL script</b> above, open a new tab with <b>+</b>, paste the script and select <b>Apply</b>. It only adds ' + (id === 'rtable' ? 'the scorecard table and its measures, plus ' : '') + 'measures in <b>' + tbl + '</b>' + (fold ? ', in the folder <b>' + fold + '</b>' : '') + '.',
+      'Go back to <b>Report view</b>. The new measures are in the Data pane under ' + (id === 'rtable' ? '<b>' + esc(kvScoreTable(cfg)) + '</b> and ' : '') + '<b>' + tbl + '</b>.'] });
+  }
+  const tip = 'Names in the Format pane move a little between Power BI versions. If a setting isn&rsquo;t where a step says, type its name in the search box at the top of the Format pane.';
+  const newCard = 'Select an empty spot on the page, then select the <b>Card</b> visual in the Visualizations pane (the newer card; some versions list it as <b>Card (new)</b>).';
+  const callout = FP('Visual &gt; Callout value') + ': set Display units to <b>Auto</b> and the decimal places you want.';
+  const refLabel = x => [
+    FP('Visual &gt; Reference labels') + ': turn them on and add a label. For its value (Data), pick ' + B(kvMName(x, 'Status Label')) + '. Turn the label&rsquo;s title off, or call it &ldquo;' + (kvHas(x).target ? 'vs target' : 'vs ' + esc((x.compareLabel || '').trim() || 'last period')) + '&rdquo;.',
+    'For the reference label&rsquo;s value color, ' + FX(kvMName(x, 'Status Color')) + '.',
+    'For the Excel look, turn on the reference label&rsquo;s background and, for its color, ' + FX(kvMName(x, 'Status Fill')) + '.'];
+  const finish = (alt, size) => ({ title: 'Finish', steps: [
+    'Drag the corners until nothing is cut off' + (size ? '; about ' + size + ' pixels works' : '') + '. To set it exactly, use ' + FP('General &gt; Properties &gt; Size') + '.',
+    FP('General &gt; Title') + ': name the period, like &ldquo;' + esc(kvName(k)) + ', year to date&rdquo;, so readers know what they&rsquo;re looking at.',
+    alt ? FP('General &gt; Alt text') + ': ' + FX(alt) + ', so screen readers hear the status too.' : '',
+    'Test it: change a slicer or filter and check the number' + (alt ? ', color and arrow change' : ' changes') + ' with it.'].filter(Boolean) });
   const svg = { bullet: ['Bullet', 120, 24], progress: ['Progress', 120, 24], spark: ['Sparkline', 120, 32], varbar: ['Variance Bar', 120, 24], slope: ['Slope', 120, 32], waffle: ['Waffle', 60, 60] }[id];
-  if (svg) return [apply, card, img(kvMName(k, svg[0]), svg[1], svg[2]), label].filter(Boolean);
+  if (svg) {
+    const pic = kvMName(k, svg[0]), st = status(k);
+    G.push({ title: 'Add the visual', steps: [newCard, 'Drag <b>' + esc(m) + '</b> from the Data pane into the visual&rsquo;s <b>Data</b> field well.'] });
+    G.push({ title: 'Format it', tip, steps: [callout].concat(st ? refLabel(k) : [], [
+      FP('Visual &gt; Images') + ': turn images on and set Image type to <b>Image URL</b>. For the URL, ' + FX(pic) + '.',
+      'Under Images, set Position to <b>Bottom</b> (or Right) and the size to about ' + svg[1] + ' wide and ' + svg[2] + ' high.',
+      'In a table or matrix instead: add ' + B(pic) + ' as a column and set ' + FP('Visual &gt; Image size') + ' to ' + svg[2] + ' high and ' + svg[1] + ' wide. The script already marks it as an Image URL, so it shows as a picture.']) });
+    G.push(finish(st ? kvMName(k, 'Status Label') : '', '250 &times; 170'));
+    return G;
+  }
   const C = cfg.colors;
   switch (id) {
-    case 'card': return [card, 'Give it a label that names the period, like &ldquo;Sales, year to date&rdquo;, so readers know what they&rsquo;re looking at.', 'Nothing to add to the model. If you have a target or a comparison later, a card with variance tells readers whether the number is good.'];
-    case 'cardvar': return [apply, card, label];
-    case 'core': return [h.base ? apply : '', card, label, 'Under it, add an <b>Area chart</b>: X-axis ' + esc(cfg.trendCol || "'Date'[Month Start]") + ', Y-axis <b>' + esc(m) + '</b>. Turn off the title, both axes, gridlines and the legend, and make the area grey.', 'Select both visuals and group them (Format &gt; Group) so they move together.'].filter(Boolean);
-    case 'kpi': return ['Add the <b>KPI</b> visual: Value <b>' + esc(m) + '</b>, Trend axis ' + esc(cfg.trendCol || "'Date'[Month Start]") + ', Target <b>' + esc(kvRef(k.target)) + '</b>.', 'Under Format &gt; <b>Callout value</b> &gt; Color coding, set Direction to <b>' + (k.better === 'lower' ? 'Low is good' : 'High is good') + '</b>, Good color ' + C.good.text + ', Neutral color ' + C.neutral.text + ' and Bad color ' + C.bad.text + '.', 'Under <b>Target label</b>, show the distance to goal as a %, and label it &ldquo;Goal&rdquo;.', 'Nothing to add to the model.'];
-    case 'gauge': return [apply, 'Add the <b>Gauge</b> visual: Value <b>' + esc(m) + '</b>, Target value <b>' + esc(kvRef(k.target)) + '</b>. Set Maximum to a fixed value or a measure about 25% above the target, so the needle doesn&rsquo;t sit at the end.', 'Under Format &gt; <b>Colors</b> &gt; Fill color, select <b>fx</b>, Format style <b>Field value</b>, field ' + B(kvMName(k, 'Status Color')) + '.'];
+    case 'card':
+      G.push({ title: 'Add the visual', steps: [newCard, 'Drag <b>' + esc(m) + '</b> into the <b>Data</b> field well.'] });
+      G.push({ title: 'Format it', tip, steps: [callout, FP('Visual &gt; Label') + ' (the category label under the value): keep it on, or turn it off when the title already names the KPI.', 'Nothing to add to the model. When you have a target or a comparison, a card with variance tells readers whether the number is good.'] });
+      G.push(finish('', '220 &times; 120')); break;
+    case 'cardvar':
+      G.push({ title: 'Add the visual', steps: [newCard, 'Drag <b>' + esc(m) + '</b> into the <b>Data</b> field well.'] });
+      G.push({ title: 'Format it', tip, steps: [callout].concat(refLabel(k)) });
+      G.push(finish(kvMName(k, 'Status Label'), '250 &times; 150')); break;
+    case 'core':
+      G.push({ title: 'Add the card', steps: [newCard, 'Drag <b>' + esc(m) + '</b> into the <b>Data</b> field well.'] });
+      G.push({ title: 'Format the card', tip, steps: [callout].concat(status(k) ? refLabel(k) : []) });
+      G.push({ title: 'Add the area chart under it', steps: [
+        'Select an empty spot, then select <b>Area chart</b> in the Visualizations pane.',
+        'X-axis: ' + trend + '. Y-axis: <b>' + esc(m) + '</b>.',
+        'In the Format pane turn off ' + FP('Visual &gt; X-axis') + ', <b>Y-axis</b>, <b>Gridlines</b> and <b>Legend</b>, and ' + FP('General &gt; Title') + '.',
+        FP('Visual &gt; Lines') + ' (and Shade area): make the line and area a light grey, so the trend sits behind the number.',
+        'Make it the same width as the card and about a third of its height, then place it along the card&rsquo;s bottom edge.',
+        'Select both visuals (Ctrl+click), right-click and choose <b>Group &gt; Group</b>, so they move and resize together.'] });
+      G.push(finish(status(k) ? kvMName(k, 'Status Label') : '', '')); break;
+    case 'kpi':
+      G.push({ title: 'Add the visual', steps: ['Select an empty spot, then select the <b>KPI</b> visual in the Visualizations pane.', 'Field wells: <b>Value</b> ' + esc(m) + ', <b>Trend axis</b> ' + trend + ', <b>Target</b> ' + esc(kvRef(k.target)) + '.'] });
+      G.push({ title: 'Format it', tip, steps: [
+        FP('Visual &gt; Color coding') + ' (called Indicator in some versions): Direction <b>' + (k.better === 'lower' ? 'Low is good' : 'High is good') + '</b>, Good color ' + esc(C.good.text) + ', Neutral color ' + esc(C.neutral.text) + ', Bad color ' + esc(C.bad.text) + '. Neutral needs a distance from goal, set as a % next to it (' + esc(String(cfg.band)) + '% matches this page).',
+        FP('Visual &gt; Target label') + ': turn it on, label it &ldquo;Goal&rdquo; and show the distance to goal as a <b>Percent</b>.',
+        FP('Visual &gt; Trend axis') + ': keep it on; that&rsquo;s the shaded trend behind the value.',
+        'Nothing to add to the model.'] });
+      G.push(finish('', '250 &times; 170')); break;
+    case 'gauge':
+      G.push({ title: 'Add the visual', steps: ['Select an empty spot, then select <b>Gauge</b> in the Visualizations pane.', 'Field wells: <b>Value</b> ' + esc(m) + ', <b>Target value</b> ' + esc(kvRef(k.target)) + '.', 'Set the maximum about 25% above the target, so the needle doesn&rsquo;t sit at the end: put a measure in the <b>Maximum value</b> well, or type a number under ' + FP('Visual &gt; Gauge axis &gt; Max') + '.'] });
+      G.push({ title: 'Format it', tip, steps: [FP('Visual &gt; Colors') + ': for Fill color, ' + FX(kvMName(k, 'Status Color')) + '. Keep the target color a dark grey.', FP('Visual &gt; Data labels') + ': turn them off if the callout already shows the value.'] });
+      G.push(finish(kvMName(k, 'Status Label'), '250 &times; 170')); break;
     case 'rcards': case 'rspark': case 'rbullet': {
-      const s = [apply, 'Add one new <b>Card</b> visual and put each KPI measure in Data: ' + kpis.map(x => '<b>' + esc(kvRef(x.measure)) + '</b>').join(', ') + '. It shows one card per measure; set how many per row under Format &gt; <b>Layout</b>.',
-        'Under Format &gt; <b>Reference labels</b>, pick each card in the Series list and add its Status Label (for example ' + B(kvMName(kpis.find(x => kvHas(x).base) || k, 'Status Label')) + '). Color each one with fx &gt; Field value &gt; its Status Color, and the background with its Status Fill.'];
-      if (id !== 'rcards') s.push('Under Format &gt; <b>Images</b>, pick each card in the Series list, choose <b>Image URL</b> and pick its ' + (id === 'rspark' ? 'Sparkline' : 'Bullet') + ' measure with fx' + (id === 'rbullet' ? '. KPIs without a target get no bullet.' : '.'));
-      return s;
+      const pic = id === 'rspark' ? 'Sparkline' : id === 'rbullet' ? 'Bullet' : '';
+      G.push({ title: 'Add the visual', steps: [newCard, 'Drag each KPI measure into the <b>Data</b> field well, in this order: ' + kpis.map(x => '<b>' + esc(kvRef(x.measure)) + '</b>').join(', ') + '. One card visual shows a card for each.', FP('Visual &gt; Layout') + ': set the arrangement to a single row with ' + kpis.length + ' cards (max tiles), and the gap between them.'] });
+      const each = kpis.map(x => { const st = status(x), hasPic = pic && (pic !== 'Bullet' || kvHas(x).target); if (!st && !hasPic) return ''; return '<b>' + esc(kvRef(x.measure)) + '</b>: ' + [st ? 'reference label ' + B(kvMName(x, 'Status Label')) + ', its color from ' + B(kvMName(x, 'Status Color')) + ' and background from ' + B(kvMName(x, 'Status Fill')) : '', hasPic ? 'image ' + B(kvMName(x, pic)) : ''].filter(Boolean).join('; ') + '.'; }).filter(Boolean);
+      const steps = [callout + ' Leave &ldquo;Apply settings to&rdquo; on <b>All</b> for this, so every card matches.',
+        'At the top of the Visual tab, set <b>Apply settings to</b> (Series) to one KPI at a time. Then:'];
+      if (each.length) steps.push('<ul>' + each.map(x => '<li>' + x + '</li>').join('') + '</ul>');
+      steps.push('For each one, ' + FP('Visual &gt; Reference labels') + ': add a label and pick its Status Label; for the value color and the background, select <b>fx</b>, Format style <b>Field value</b>, and pick its Status Color and Status Fill.');
+      if (pic) steps.push('And ' + FP('Visual &gt; Images') + ': turn images on, set Image type to <b>Image URL</b>, select <b>fx</b> &gt; Field value and pick its ' + pic + ' measure. Position <b>Bottom</b>.' + (id === 'rbullet' ? ' KPIs without a target get no bullet.' : ''));
+      G.push({ title: 'Format it', tip, steps });
+      G.push(finish('', 'about 220 wide per card, so ' + (kpis.length * 230) + ' &times; ' + (pic ? 170 : 150))); break;
     }
-    case 'rtable': { const t = kvScoreTable(cfg); return [apply, 'Add a <b>Table</b> visual with ' + esc(qName(t)) + '[KPI], [KPI Value], [KPI Status Label], [KPI Bullet] and [KPI Trend]. One row per KPI, in your order.', 'On <b>KPI Status Label</b>, add conditional formatting: Font color &gt; Field value &gt; [KPI Status Color], and Background color &gt; Field value &gt; [KPI Status Fill].', 'Under Format &gt; <b>Image size</b>, set height 32 and width 120.', 'To change the KPIs later, come back here and apply the new script; it replaces the table and its measures.']; }
+    case 'rtable': {
+      const t = qName(kvScoreTable(cfg));
+      G.push({ title: 'Add the visual', steps: ['Select an empty spot, then select <b>Table</b> in the Visualizations pane.', 'Drag these into <b>Columns</b>, in order: ' + esc(t) + '[KPI], [KPI Value], [KPI Status Label]' + (kpis.some(x => kvHas(x).target) ? ', [KPI Bullet]' : '') + ', [KPI Trend]. You get one row per KPI, in your order.', 'To rename a column header, double-click it in the Columns well (for example, &ldquo;Status&rdquo;, &ldquo;Target&rdquo;, &ldquo;Last ' + (cfg.periods || 12) + '&rdquo;).'] });
+      G.push({ title: 'Format it', tip, steps: [
+        'In the Columns well, select the arrow next to <b>KPI Status Label</b> &gt; <b>Conditional formatting</b> &gt; <b>Font color</b>. Set Format style to <b>Field value</b> and pick [KPI Status Color]. Select OK.',
+        'Do the same for <b>Background color</b> with [KPI Status Fill].',
+        FP('Visual &gt; Image size') + ': height 32, width 120.',
+        FP('Visual &gt; Totals') + ': turn totals off; a total of different KPIs means nothing.',
+        'To change the KPIs later, come back to this page and apply the new script. It replaces the scorecard table and its measures.'] });
+      G.push(finish('', '')); break;
+    }
   }
-  return [];
+  return G;
 }
 function renderBuild(){
   const o = chosenOption(), row = state.cfg.mode === 'row';
   const kpis = row ? state.kpis : (currentKpi() ? [currentKpi()] : []);
   $('buildName').textContent = o ? o.name : '';
-  if (!o || !kpis.length) { $('buildKind').textContent = 'Add a KPI in Step 2 first.'; $('steps').innerHTML = ''; $('checks').innerHTML = ''; $('outBox').hidden = true; $('buildCfg').hidden = true; state.out = {}; return; }
+  if (!o || !kpis.length) { $('buildKind').textContent = 'Add a KPI in Step 2 first.'; $('steps').innerHTML = ''; $('setupHead').hidden = true; $('checks').innerHTML = ''; $('outBox').hidden = true; $('buildCfg').hidden = true; state.out = {}; return; }
   const plan = kvPlan(kpis, state.cfg, o.id);
-  $('buildKind').textContent = plan.length ? 'The script adds ' + plan.length + ' measure' + (plan.length > 1 ? 's' : '') + (o.id === 'rtable' ? ' and the scorecard table' : '') + ' to your model. The steps say where each one goes.' : 'Nothing to add to your model: it’s all set in the visual.';
+  $('buildKind').textContent = plan.length ? 'The script adds ' + plan.length + ' measure' + (plan.length > 1 ? 's' : '') + (o.id === 'rtable' ? ' and the scorecard table' : '') + ' to your model. Below the script, step-by-step setup in Power BI says where each one goes.' : 'Nothing to add to your model. The steps below set it up in Power BI.';
   $('buildCfg').hidden = !plan.length;
   const spark = plan.some(m => /Sparkline/.test(m.name));
   $('trendWrap').hidden = !spark && o.id !== 'kpi' && o.id !== 'core'; $('periodsWrap').hidden = !spark; $('scoreWrap').hidden = o.id !== 'rtable';
   if (!plan.length && (o.id === 'kpi' || o.id === 'core')) $('buildCfg').hidden = false;
   if (!plan.length) ['homeTable', 'folder'].forEach(id => { $(id).closest('.field').hidden = true; }); else ['homeTable', 'folder'].forEach(id => { $(id).closest('.field').hidden = false; });
   syncInputs();
-  $('steps').innerHTML = kvSteps(o.id, kpis, state.cfg).map(s => '<li>' + s + '</li>').join('');
+  $('setupHead').hidden = false;
+  $('steps').innerHTML = kvSteps(o.id, kpis, state.cfg).map(g => '<div class="kv-grp"><h4>' + g.title + '</h4>' + (g.tip ? '<p class="small muted">' + g.tip + '</p>' : '') + '<ol class="kv-steps">' + g.steps.map(s => '<li>' + s + '</li>').join('') + '</ol></div>').join('');
   if (!plan.length) { $('checks').innerHTML = ''; $('outBox').hidden = true; state.out = {}; return; }
   const checks = kvChecks(kpis, state.cfg, o.id, state.model), errs = checks.filter(x => x.level === 'err');
   $('checks').innerHTML = checks.map(x => '<div class="msg ' + x.level + '">' + esc(x.text) + '</div>').join('') || (state.model ? '<div class="msg ok">&#10003; Every name checks out against the export.</div>' : '');

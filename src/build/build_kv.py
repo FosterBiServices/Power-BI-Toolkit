@@ -78,6 +78,12 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 .cfg{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end}
 .cfg input[type=text]{width:230px;max-width:100%;font-family:var(--sans)}
 .kv-steps{display:flex;flex-direction:column;gap:8px;padding-left:1.3em;margin:0;max-width:80ch}
+.kv-steps ul{margin:6px 0 0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+.kv-setup{display:flex;flex-direction:column;gap:16px}
+#setupHead{font-size:18px;margin:10px 0 0}
+.kv-grp{display:flex;flex-direction:column;gap:8px}
+.kv-grp h4{margin:0;font-family:var(--cond);font-size:16px;color:var(--accent)}
+.kv-grp p{margin:0;max-width:80ch}
 #outBox{display:flex;flex-direction:column;gap:12px;min-width:0}
 #outBox>*{min-width:0;max-width:100%}
 #outBox h3{margin:6px 0 0}
