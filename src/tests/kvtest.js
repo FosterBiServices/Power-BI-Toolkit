@@ -11,7 +11,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   const tmdl = await p.locator('#tmdlView').innerText();
   console.log('tmdl: ref table', tmdl.includes("ref table _Measures"), '| ImageUrl', tmdl.includes('dataCategory: ImageUrl'), '| excel good', tmdl.includes('#006100'), '| no green/red in tracks', !/#(00FF00|FF0000)/i.test(tmdl));
   const test = await p.locator('#testView').innerText();
-  console.log('test query: DEFINE', test.includes('DEFINE'), '| MEASURE', (test.match(/MEASURE /g) || []).length, '(expect 6)');
+  console.log('test query: DEFINE', test.includes('DEFINE'), '| MEASURE', (test.match(/MEASURE /g) || []).length, '(expect 5)');
   await p.screenshot({ path: 'kv_1.png', fullPage: true });
   // each option builds without page errors
   for (const id of ['cardvar', 'spark', 'varbar', 'progress', 'slope', 'kpi', 'core', 'card', 'gauge']) {

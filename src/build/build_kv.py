@@ -57,6 +57,9 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 .kv-row{display:flex;gap:10px;align-items:center}
 .kv-lab{display:inline-block;align-self:flex-start;font-size:12px;font-weight:600;border-radius:4px;padding:2px 7px;white-space:nowrap}
 .kv-lab.sm{font-size:11px;padding:1px 6px}
+.kv-lab:not(.pill){padding-left:0;padding-right:0}
+.kv-html{overflow-x:auto;max-width:100%}
+.kv-html>div{box-shadow:0 1px 2px rgba(0,0,0,.12);border-radius:6px}
 .kv-kpi{position:relative;min-height:56px;display:flex;align-items:center}
 .kv-kpi .kv-area{position:absolute;inset:auto 0 0 0;opacity:.8}
 .kv-kpi .kv-cv{position:relative}

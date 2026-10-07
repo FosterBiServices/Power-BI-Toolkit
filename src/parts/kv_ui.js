@@ -136,7 +136,7 @@ function readThemeJson(){
 }
 
 /* ---------- Step 4: options ---------- */
-const KIND = { native: 'Power BI visual', svg: 'SVG measure', core: 'Core visuals' };
+const KIND = { native: 'Power BI visual', svg: 'SVG measure', core: 'Core visuals', html: 'HTML measure' };
 function currentKpi(){ return state.kpis[Math.min(state.cfg.sel, state.kpis.length - 1)] || null; }
 function chosenOption(){
   if (state.cfg.mode === 'row') return KV_ROW_OPTIONS.find(o => o.id === state.cfg.rowOption) || KV_ROW_OPTIONS[0];
@@ -196,8 +196,7 @@ function kvSteps(id, kpis, cfg){
   const callout = FP('Visual &gt; Callout value') + ': set Display units to <b>Auto</b> and the decimal places you want.';
   const refLabel = x => [
     FP('Visual &gt; Reference labels') + ': turn them on and add a label. For its value (Data), pick ' + B(kvMName(x, 'Status Label')) + '. Turn the label&rsquo;s title off, or call it &ldquo;' + (kvHas(x).target ? 'vs target' : 'vs ' + esc((x.compareLabel || '').trim() || 'last period')) + '&rdquo;.',
-    'For the reference label&rsquo;s value color, ' + FX(kvMName(x, 'Status Color')) + '.',
-    'For the Excel look, turn on the reference label&rsquo;s background and, for its color, ' + FX(kvMName(x, 'Status Fill')) + '.'];
+    'For the reference label&rsquo;s value color, ' + FX(kvMName(x, 'Status Color')) + '. Leave its background off: a background fills the whole label area under the value, not just the text. For a colored pill like Excel&rsquo;s, use the HTML card.'];
   const finish = (alt, size) => ({ title: 'Finish', steps: [
     'Drag the corners until nothing is cut off' + (size ? '; about ' + size + ' pixels works' : '') + '. To set it exactly, use ' + FP('General &gt; Properties &gt; Size') + '.',
     FP('General &gt; Title') + ': name the period, like &ldquo;' + esc(kvName(k)) + ', year to date&rdquo;, so readers know what they&rsquo;re looking at.',
@@ -220,6 +219,18 @@ function kvSteps(id, kpis, cfg){
       G.push({ title: 'Add the visual', steps: [newCard, 'Drag <b>' + esc(m) + '</b> into the <b>Data</b> field well.'] });
       G.push({ title: 'Format it', tip, steps: [callout, FP('Visual &gt; Label') + ' (the category label under the value): keep it on, or turn it off when the title already names the KPI.', 'Nothing to add to the model. When you have a target or a comparison, a card with variance tells readers whether the number is good.'] });
       G.push(finish('', '220 &times; 120')); break;
+    case 'html': {
+      const hm = kvMName(k, 'HTML Card');
+      G.push({ title: 'Get the HTML Content visual (once per report)', steps: [
+        'In the Visualizations pane, select the <b>&hellip;</b> (Get more visuals) &gt; <b>Get more visuals</b>, search for <b>HTML Content</b> (by Daniel Marsh-Patrick) and select <b>Add</b>.',
+        'If AppSource visuals are blocked where you work, ask your Power BI admin to allow it, or build a card with variance instead.'] });
+      G.push({ title: 'Add the visual', steps: ['Select an empty spot, then select the <b>HTML Content</b> icon in the Visualizations pane.', 'Drag ' + B(hm) + ' into its <b>Values</b> field well. The card draws itself from the measure&rsquo;s HTML.'] });
+      G.push({ title: 'Format it', tip, steps: [
+        FP('General &gt; Title') + ' and <b>Background</b>: turn them off, so only the card shows.',
+        'To change the look (font sizes, colors, the pill), edit the inline styles in ' + B(hm) + ' in TMDL view or the formula bar.',
+        'To use the card outside Power BI (an email, a web page), copy the <b>HTML file</b> above. It has the numbers shown in the preview, not live data.'] });
+      G.push(finish(h.base ? kvMName(k, 'Status Label') : '', '250 &times; 150')); break;
+    }
     case 'cardvar':
       G.push({ title: 'Add the visual', steps: [newCard, 'Drag <b>' + esc(m) + '</b> into the <b>Data</b> field well.'] });
       G.push({ title: 'Format it', tip, steps: [callout].concat(refLabel(k)) });
@@ -250,11 +261,11 @@ function kvSteps(id, kpis, cfg){
     case 'rcards': case 'rspark': case 'rbullet': {
       const pic = id === 'rspark' ? 'Sparkline' : id === 'rbullet' ? 'Bullet' : '';
       G.push({ title: 'Add the visual', steps: [newCard, 'Drag each KPI measure into the <b>Data</b> field well, in this order: ' + kpis.map(x => '<b>' + esc(kvRef(x.measure)) + '</b>').join(', ') + '. One card visual shows a card for each.', FP('Visual &gt; Layout') + ': set the arrangement to a single row with ' + kpis.length + ' cards (max tiles), and the gap between them.'] });
-      const each = kpis.map(x => { const st = status(x), hasPic = pic && (pic !== 'Bullet' || kvHas(x).target); if (!st && !hasPic) return ''; return '<b>' + esc(kvRef(x.measure)) + '</b>: ' + [st ? 'reference label ' + B(kvMName(x, 'Status Label')) + ', its color from ' + B(kvMName(x, 'Status Color')) + ' and background from ' + B(kvMName(x, 'Status Fill')) : '', hasPic ? 'image ' + B(kvMName(x, pic)) : ''].filter(Boolean).join('; ') + '.'; }).filter(Boolean);
+      const each = kpis.map(x => { const st = status(x), hasPic = pic && (pic !== 'Bullet' || kvHas(x).target); if (!st && !hasPic) return ''; return '<b>' + esc(kvRef(x.measure)) + '</b>: ' + [st ? 'reference label ' + B(kvMName(x, 'Status Label')) + ', its color from ' + B(kvMName(x, 'Status Color')) : '', hasPic ? 'image ' + B(kvMName(x, pic)) : ''].filter(Boolean).join('; ') + '.'; }).filter(Boolean);
       const steps = [callout + ' Leave &ldquo;Apply settings to&rdquo; on <b>All</b> for this, so every card matches.',
         'At the top of the Visual tab, set <b>Apply settings to</b> (Series) to one KPI at a time. Then:'];
       if (each.length) steps.push('<ul>' + each.map(x => '<li>' + x + '</li>').join('') + '</ul>');
-      steps.push('For each one, ' + FP('Visual &gt; Reference labels') + ': add a label and pick its Status Label; for the value color and the background, select <b>fx</b>, Format style <b>Field value</b>, and pick its Status Color and Status Fill.');
+      steps.push('For each one, ' + FP('Visual &gt; Reference labels') + ': add a label and pick its Status Label; for the value color, select <b>fx</b>, Format style <b>Field value</b>, and pick its Status Color. Leave the label background off; it would fill the whole label area.');
       if (pic) steps.push('And ' + FP('Visual &gt; Images') + ': turn images on, set Image type to <b>Image URL</b>, select <b>fx</b> &gt; Field value and pick its ' + pic + ' measure. Position <b>Bottom</b>.' + (id === 'rbullet' ? ' KPIs without a target get no bullet.' : ''));
       G.push({ title: 'Format it', tip, steps });
       G.push(finish('', 'about 220 wide per card, so ' + (kpis.length * 230) + ' &times; ' + (pic ? 170 : 150))); break;
@@ -294,6 +305,8 @@ function renderBuild(){
   $('outBox').hidden = !!errs.length;
   if (errs.length) { state.out = {}; return; }
   state.out.tmdl = kvTmdl(kpis, state.cfg, o.id); state.out.test = kvTestQuery(kpis, state.cfg, o.id);
+  state.out.html = o.id === 'html' ? '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><title>' + kvHtmlEsc(kvName(kpis[0])) + '</title></head>\n<body style="margin:16px;background:#F3F2F1">\n' + kvHtmlCard(kpis[0], state.cfg) + '\n</body></html>\n' : '';
+  $('htmlBox').hidden = !state.out.html; $('htmlView').textContent = state.out.html;
   $('tmdlView').innerHTML = hl(state.out.tmdl); $('testView').innerHTML = hl(state.out.test);
 }
 function syncInputs(){
@@ -318,6 +331,7 @@ function init(){
   if (kpis && kpis.length) state.kpis = kpis.map(k => Object.assign(kvBlankKpi(), k, { pv: Object.assign(kvBlankKpi().pv, k.pv || {}) }));
   else if (!(saved && saved.trim()) && store.get('blank') !== '1') { state.kpis = clone(KV_EX_KPIS); Object.assign(state.cfg, KV_EX_CFG); setExample(true); }
   renderAll();
+  $('dlHtml').addEventListener('click', () => { if (!state.out.html) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([state.out.html], { type: 'text/html' })); a.download = (kvName(currentKpi() || {}).replace(/[^\w -]+/g, '').trim() || 'KPI') + ' card.html'; document.body.appendChild(a); a.click(); a.remove(); });
 
   const touch = () => { try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {} };
   $('modelInput').addEventListener('input', () => { if ($('modelInput').value.trim()) leaveExample(); touch(); renderKpis(); renderModel(); renderLive(); persist(); });
