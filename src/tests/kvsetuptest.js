@@ -21,7 +21,7 @@ const { chromium } = require('playwright');
   const fits = async tag => { const r = await p.$$eval('.kv-fitfig', fs => fs.map(f => { const fr = f.querySelector('.kv-fitframe'), c = fr.firstElementChild; return f.dataset.hlay + ' ' + fr.style.width + 'x' + fr.style.height + (c.scrollWidth <= fr.clientWidth && c.offsetHeight <= fr.clientHeight - 8 + 1 && c.scrollWidth <= c.clientWidth + 1 ? ' fits' : ' CLIPPED ' + c.scrollWidth + 'x' + c.offsetHeight); })); console.log('html ' + tag + ':', r.join(' | '), '|', await p.locator('#htmlFit .msg').innerText()); };
   console.log('html size: inputs', await p.locator('#htmlW').isVisible(), '| fills width', tm.includes('width:100%'), '| size step', (await p.locator('#steps').innerText()).includes('Size it'));
   await fits('320x200');
-  for (const [w, h] of [['600', '160'], ['200', '300'], ['900', '500'], ['120', '60']]) { await p.fill('#htmlW', w); await p.fill('#htmlH', h); await fits(w + 'x' + h); }
+  for (const [w, h] of [['600', '160'], ['470', '90'], ['200', '300'], ['900', '500'], ['120', '60']]) { await p.fill('#htmlW', w); await p.fill('#htmlH', h); await fits(w + 'x' + h); }
   console.log('html 120x60: script built for min', (await p.locator('#tmdlView').innerText()).includes('Built for a visual') , '| steps', (await p.locator('#steps').innerText()).match(/set the width to \d+ and the height to \d+/)?.[0]);
   await p.fill('#htmlW', '600'); await p.fill('#htmlH', '160'); await p.click('.kv-fitfig[data-hlay="grid"]');
   const tg = await p.locator('#tmdlView').innerText();

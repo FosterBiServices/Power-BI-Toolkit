@@ -375,8 +375,8 @@ function renderHtmlFit(k){
   const btn = (id, label) => '<button type="button" class="btn" data-hlay="' + id + '" aria-pressed="' + ((c.htmlLayout || 'auto') === id || (id === 'auto' && !lays.some(o => o.id === c.htmlLayout))) + '">' + label + '</button>';
   box.innerHTML = '<div class="kv-lays"><span class="small">Layout:</span>' + btn('auto', 'Best fit (' + nm(best.lay) + ')') + (lays.length > 1 ? lays.map(o => btn(o.id, o.name)).join('') : '') + '</div>'
     + (l.tooSmall
-      ? '<div class="msg warn">At ' + l.W + ' &times; ' + l.H + ' the text would be too small to read. Make the visual at least <b>' + l.minSize.w + ' &times; ' + l.minSize.h + '</b> (' + l.comfy.w + ' &times; ' + l.comfy.h + ' reads more easily). The script is built for ' + l.minSize.w + ' &times; ' + l.minSize.h + '.</div>'
-      : '<div class="msg ok">' + nm(l.lay) + ' fits ' + l.W + ' &times; ' + l.H + ': the value is ' + l.value + ' px and the smallest text ' + l.smallest + ' px.</div>')
+      ? '<div class="msg warn">At ' + l.W + ' &times; ' + l.H + ' the card doesn&rsquo;t fit with text of ' + KV_HTML_MIN_PX + ' px or more. Make the visual at least <b>' + l.minSize.w + ' &times; ' + l.minSize.h + '</b> (' + l.comfy.w + ' &times; ' + l.comfy.h + ' reads more easily). The script is built for ' + l.minSize.w + ' &times; ' + l.minSize.h + '.</div>'
+      : '<div class="msg ok">' + nm(l.lay) + ' fits ' + l.W + ' &times; ' + l.H + ': the value is ' + l.value + ' px and the smallest text ' + l.smallest + ' px (never below ' + KV_HTML_MIN_PX + ').</div>')
     + '<div class="kv-fitwrap">' + lays.map(o => {
       const f = kvHtmlFitFor(k, c, o.id);
       return '<figure class="kv-fitfig' + (o.id === l.lay ? ' on' : '') + '" data-hlay="' + o.id + '" title="' + esc(o.tip) + '"><figcaption class="small">' + o.name + (o.id === best.lay ? ' <span class="muted">(best fit)</span>' : '') + ' &middot; ' + (f.tooSmall ? 'needs ' + f.minSize.w + ' &times; ' + f.minSize.h : 'value ' + f.value + ' px') + '</figcaption>'
