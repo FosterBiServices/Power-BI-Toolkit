@@ -1749,20 +1749,32 @@ const kvArrow = d => d > 0 ? '▲' : d < 0 ? '▼' : '►';
 // A card's reference label colors its text only; a pill (background) is drawn only where Power BI can draw it (HTML)
 function kvLabelHtml(L, small, pill){ return L.st ? '<span class="kv-lab' + (small ? ' sm' : '') + (pill ? ' pill' : '') + '" style="' + (pill ? 'background:' + L.c.fill + ';' : '') + 'color:' + L.c.text + '">' + kvArrow(L.d) + ' ' + kvSigned(L.d) + ' ' + esc(L.vsWhat) + '</span>' : ''; }
 // The HTML card, with inline styles, as the HTML Content visual shows it (and as a file you can copy)
-// The card is built for the visual's size (cfg.htmlW x cfg.htmlH): every font, gap and padding scales to fill it.
+// The card is built for the visual's size (cfg.htmlW x cfg.htmlH): the value text gets as big as fits, and the
+// other text, gaps and padding follow it, never below KV_HTML_MIN_PX.
 // Layouts: stack (all lines under each other), side (name and value left, details right), grid (details in two columns)
-const KV_HTML_W = 320, KV_HTML_H = 200, KV_HTML_MIN_PX = 11, KV_HTML_EDGE = 8;
+const KV_HTML_W = 320, KV_HTML_H = 200, KV_HTML_MIN_PX = 12, KV_HTML_EDGE = 8, KV_HTML_VMIN = 24, KV_HTML_VMAX = 200;
 const KV_HTML_LAYOUTS = [{ id: 'stack', name: 'Stacked', tip: 'Everything in one column. Suits tall or square visuals.' }, { id: 'side', name: 'Side by side', tip: 'Name and value on the left, details on the right. Suits wide, short visuals.' }, { id: 'grid', name: 'Grid', tip: 'Details in two columns under the value. Suits wide visuals with several details.' }];
-function kvHtmlStyle(x, lay, h){
-  const px = n => Math.max(1, Math.round(n * x)) + 'px';
+// Pixel sizes for a value font size v
+function kvHtmlSizes(v){
+  const r = (f, min) => Math.max(min, Math.round(f * v)), det = Math.max(KV_HTML_MIN_PX, Math.round(v * 0.5));
+  return { v, name: Math.max(KV_HTML_MIN_PX, Math.round(v * 0.4)), det, padV: r(0.32, 6), padH: r(0.44, 8), gap: r(0.44, 8), dgap: r(0.18, 4), pillV: Math.max(2, Math.round(det * 0.12)), pillH: Math.max(4, Math.round(det * 0.4)), radius: Math.max(3, Math.round(det * 0.25)) };
+}
+function kvHtmlStyle(v, lay, h){
+  const z = kvHtmlSizes(v), px = n => n + 'px';
   return {
-    box: 'font-family:Segoe UI,sans-serif;font-size:' + px(12) + ';line-height:1.3;background:#FFFFFF;padding:' + px(12) + ' ' + px(16) + ';box-sizing:border-box;width:100%' + (h ? ';min-height:' + h + 'px' : '') + (lay === 'side' ? ';display:flex;align-items:center;gap:' + px(16) : h ? ';display:flex;flex-direction:column;justify-content:center' : ''),
-    name: 'font-size:' + px(14) + ';color:#605E5C',
-    value: 'font-size:' + px(32) + ';font-weight:600;color:#252423;line-height:1.2;white-space:nowrap',
-    details: lay === 'grid' ? 'display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:' + px(6) + ' ' + px(16) + ';margin-top:' + px(6)
-      : 'display:flex;flex-direction:column;align-items:flex-start;gap:' + px(6) + (lay === 'side' ? ';border-left:1px solid #E1DFDD;padding-left:' + px(16) : ';margin-top:' + px(6)),
-    pill: 'justify-self:start;padding:' + px(2) + ' ' + px(8) + ';border-radius:' + px(4) + ';font-size:' + px(12) + ';font-weight:600;white-space:nowrap',
-    sub: 'font-size:' + px(12) + ';color:#605E5C' };
+    box: 'font-family:Segoe UI,Arial,sans-serif;font-size:' + px(z.det) + ';line-height:1.3;background:#FFFFFF;padding:' + px(z.padV) + ' ' + px(z.padH) + ';box-sizing:border-box;width:100%' + (h ? ';min-height:' + h + 'px' : '') + (lay === 'side' ? ';display:flex;align-items:center;gap:' + px(z.gap) : h ? ';display:flex;flex-direction:column;justify-content:center' : ''),
+    name: 'font-size:' + px(z.name) + ';color:#605E5C',
+    value: 'font-size:' + px(z.v) + ';font-weight:600;color:#252423;line-height:1.2;white-space:nowrap',
+    details: lay === 'grid' ? 'display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:' + px(z.dgap) + ' ' + px(z.gap) + ';margin-top:' + px(z.dgap)
+      : 'display:flex;flex-direction:column;align-items:flex-start;gap:' + px(z.dgap) + (lay === 'side' ? ';border-left:1px solid #E1DFDD;padding-left:' + px(z.gap) : ';margin-top:' + px(z.dgap)),
+    pill: 'justify-self:start;padding:' + px(z.pillV) + ' ' + px(z.pillH) + ';border-radius:' + px(z.radius) + ';font-size:' + px(z.det) + ';font-weight:600;white-space:nowrap',
+    sub: 'font-size:' + px(z.det) + ';color:#605E5C' };
+}
+// Rough text width in pixels for Segoe UI (and Arial), by character class
+function kvTextW(t, fs, bold){
+  let w = 0;
+  for (const ch of String(t)) w += /[0-9$#€£]/.test(ch) ? 0.56 : /[,.:;'!|il ]/.test(ch) ? 0.27 : /[%]/.test(ch) ? 0.85 : /[▲▼►]/.test(ch) ? 0.8 : /[mwMW]/.test(ch) ? 0.85 : /[A-Z]/.test(ch) ? 0.64 : /[a-z]/.test(ch) ? 0.5 : 0.58;
+  return w * fs * (bold ? 1.06 : 1);
 }
 const kvHtmlEsc = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
 const kvHtmlSub = k => { const h = kvHas(k); return h.target ? 'Target ' : h.compare ? ((k.compareLabel || '').trim() || 'Last period') + ' ' : ''; };
@@ -1775,33 +1787,39 @@ function kvHtmlDetails(k, cfg){
   return D;
 }
 const kvHtmlLayoutsFor = k => KV_HTML_LAYOUTS.filter(o => o.id === 'stack' || (o.id === 'side' ? kvHtmlDetails(k, { colors: KV_EXCEL, band: 0 }).length >= 1 : kvHtmlDetails(k, { colors: KV_EXCEL, band: 0 }).length >= 2));
-// What the card needs at scale 1 (pixels), from the preview's text with room for longer numbers and labels
-function kvHtmlNeed(k, cfg, lay){
-  const L = kvLook(k, cfg), D = kvHtmlDetails(k, cfg);
-  const headW = Math.max(kvName(k).length * 14 * 0.55, (kvFmt(L.n.v, k.format).length + 1) * 32 * 0.6), headH = 14 * 1.3 + 32 * 1.2;
-  const dw = D.map(d => d.pill ? (d.len || d.text.length + 2) * 12 * 0.6 + 16 : (d.text.length + 2) * 12 * 0.55), dh = D.map(d => d.pill ? 12 * 1.3 + 4 : 12 * 1.3);
-  const maxW = Math.max(0, ...dw), maxH = Math.max(0, ...dh), colH = dh.reduce((a, b) => a + b, 0) + 6 * Math.max(0, D.length - 1);
-  if (!D.length || lay === 'stack') return { w: Math.max(headW, maxW) + 32, h: 24 + headH + (D.length ? 6 + colH : 0) };
-  if (lay === 'side') return { w: headW + 16 + 1 + 16 + maxW + 32, h: 24 + Math.max(headH, colH) };
+// What the card needs (pixels) with value font size v, from the preview's text plus room for one more digit
+function kvHtmlNeed(k, cfg, lay, v){
+  const L = kvLook(k, cfg), D = kvHtmlDetails(k, cfg), z = kvHtmlSizes(v);
+  const headW = Math.max(kvTextW(kvName(k), z.name), kvTextW(kvFmt(L.n.v, k.format) + '0', v, true)), headH = z.name * 1.3 + v * 1.2;
+  const dw = D.map(d => d.pill ? kvTextW(d.text, z.det, true) + 2 * z.pillH : kvTextW(d.text, z.det)), dh = D.map(d => d.pill ? z.det * 1.3 + 2 * z.pillV : z.det * 1.3);
+  const maxW = Math.max(0, ...dw), maxH = Math.max(0, ...dh), colH = dh.reduce((a, b) => a + b, 0) + z.dgap * Math.max(0, D.length - 1);
+  if (!D.length || lay === 'stack') return { w: Math.max(headW, maxW) + 2 * z.padH, h: 2 * z.padV + headH + (D.length ? z.dgap + colH : 0) };
+  if (lay === 'side') return { w: 2 * z.padH + headW + 2 * z.gap + 1 + maxW, h: 2 * z.padV + Math.max(headH, colH) };
   const rows = Math.ceil(D.length / 2);
-  return { w: Math.max(headW, 2 * maxW + 16) + 32, h: 24 + headH + 6 + rows * maxH + 6 * (rows - 1) };
+  return { w: 2 * z.padH + Math.max(headW, 2 * maxW + z.gap), h: 2 * z.padV + headH + z.dgap + rows * maxH + z.dgap * (rows - 1) };
 }
-// The scale that fits the visual for one layout, or the smallest readable one with the visual size it needs
+// The biggest value size that fits the visual in one layout; if even the smallest doesn't fit, the visual size it needs
 function kvHtmlFitFor(k, cfg, lay){
-  const W = Math.max(40, +cfg.htmlW || KV_HTML_W), H = Math.max(40, +cfg.htmlH || KV_HTML_H), need = kvHtmlNeed(k, cfg, lay);
-  const fit = Math.min(8, 0.96 * Math.min((W - KV_HTML_EDGE) / need.w, (H - KV_HTML_EDGE) / need.h)), min = KV_HTML_MIN_PX / 12;
-  const at = x => ({ w: Math.ceil((need.w * x / 0.96 + KV_HTML_EDGE) / 10) * 10, h: Math.ceil((need.h * x / 0.96 + KV_HTML_EDGE) / 10) * 10 });
-  const x = Math.max(fit, min), tooSmall = fit < min;
-  return { lay, W, H, x, fit, tooSmall, smallest: Math.round(12 * x), value: Math.round(32 * x), minSize: at(min), comfy: at(1.25), size: tooSmall ? at(min) : { w: W, h: H } };
+  const W = Math.max(40, +cfg.htmlW || KV_HTML_W), H = Math.max(40, +cfg.htmlH || KV_HTML_H);
+  const fits = v => { const n = kvHtmlNeed(k, cfg, lay, v); return n.w <= (W - KV_HTML_EDGE) * 0.98 && n.h <= (H - KV_HTML_EDGE) * 0.98; };
+  const at = v => { const n = kvHtmlNeed(k, cfg, lay, v); return { w: Math.ceil((n.w / 0.98 + KV_HTML_EDGE) / 10) * 10, h: Math.ceil((n.h / 0.98 + KV_HTML_EDGE) / 10) * 10 }; };
+  let lo = KV_HTML_VMIN, hi = KV_HTML_VMAX;
+  const tooSmall = !fits(lo);
+  if (!tooSmall) { while (lo < hi) { const m = Math.ceil((lo + hi) / 2); if (fits(m)) lo = m; else hi = m - 1; } }
+  const v = lo, z = kvHtmlSizes(v);
+  return { lay, W, H, v, fit: tooSmall ? 0 : v, tooSmall, smallest: Math.min(z.name, z.det), value: v, minSize: at(KV_HTML_VMIN), comfy: at(32), size: tooSmall ? at(KV_HTML_VMIN) : { w: W, h: H } };
 }
 // The layout picked (cfg.htmlLayout), or the one that gives the biggest text at this size
-function kvHtmlBest(k, cfg){ return kvHtmlLayoutsFor(k).map(o => kvHtmlFitFor(k, cfg, o.id)).reduce((a, b) => b.fit > a.fit * 1.05 ? b : a); }
+function kvHtmlBest(k, cfg){
+  const all = kvHtmlLayoutsFor(k).map(o => kvHtmlFitFor(k, cfg, o.id));
+  return all.every(f => f.tooSmall) ? all.reduce((a, b) => b.minSize.w * b.minSize.h < a.minSize.w * a.minSize.h ? b : a) : all.reduce((a, b) => b.fit > a.fit * 1.05 ? b : a);
+}
 function kvHtmlLayout(k, cfg){
   const ok = kvHtmlLayoutsFor(k).some(o => o.id === cfg.htmlLayout);
   return ok ? kvHtmlFitFor(k, cfg, cfg.htmlLayout) : kvHtmlBest(k, cfg);
 }
 function kvHtmlCard(k, cfg, lay){
-  const L = kvLook(k, cfg), l = lay || (cfg.htmlScale ? { x: cfg.htmlScale, lay: 'stack' } : kvHtmlLayout(k, cfg)), S = kvHtmlStyle(l.x, l.lay, l.size && l.size.h - KV_HTML_EDGE), D = kvHtmlDetails(k, cfg);
+  const L = kvLook(k, cfg), l = lay || (cfg.htmlScale ? { v: 32, lay: 'stack' } : kvHtmlLayout(k, cfg)), S = kvHtmlStyle(l.v, l.lay, l.size && l.size.h - KV_HTML_EDGE), D = kvHtmlDetails(k, cfg);
   const head = "<div style='" + S.name + "'>" + kvHtmlEsc(kvName(k)) + '</div>' + "<div style='" + S.value + "'>" + kvHtmlEsc(kvFmt(L.n.v, k.format)) + '</div>';
   const det = D.filter(d => !d.pill || d.show).map(d => d.pill ? "<div style='" + S.pill + ';background:' + L.c.fill + ';color:' + L.c.text + "'>" + kvHtmlEsc(d.text) + '</div>' : "<div style='" + S.sub + "'>" + kvHtmlEsc(d.text) + '</div>').join('');
   return "<div style='" + S.box + "'>" + (l.lay === 'side' && D.length ? '<div>' + head + '</div>' : head) + (D.length ? "<div style='" + S.details + "'>" + det + '</div>' : '') + '</div>';
@@ -1917,7 +1935,7 @@ function kvSvgMeasure(id, k, cfg){
   return m;
 }
 function kvHtmlMeasure(k, cfg){
-  const l = kvHtmlLayout(k, cfg), KV_HTML = kvHtmlStyle(l.x, l.lay, l.size.h - KV_HTML_EDGE), h = kvHas(k), fmt = daxString(k.format || '#,0'), q = x => x.replace(/"/g, '""'), sub = kvHtmlSub(k), n = kvCtx(k).length;
+  const l = kvHtmlLayout(k, cfg), KV_HTML = kvHtmlStyle(l.v, l.lay, l.size.h - KV_HTML_EDGE), h = kvHas(k), fmt = daxString(k.format || '#,0'), q = x => x.replace(/"/g, '""'), sub = kvHtmlSub(k), n = kvCtx(k).length;
   const hasD = h.base || !!sub || n > 0, side = l.lay === 'side' && hasD;
   const D = ['VAR _Value = ' + kvRef(k.measure)];
   if (h.base) D.push('VAR _Label = ' + bracket(kvMName(k, 'Status Label')), 'VAR _Color = ' + bracket(kvMName(k, 'Status Color')), 'VAR _Fill = ' + bracket(kvMName(k, 'Status Fill')));
@@ -2473,8 +2491,8 @@ function renderHtmlFit(k){
   const btn = (id, label) => '<button type="button" class="btn" data-hlay="' + id + '" aria-pressed="' + ((c.htmlLayout || 'auto') === id || (id === 'auto' && !lays.some(o => o.id === c.htmlLayout))) + '">' + label + '</button>';
   box.innerHTML = '<div class="kv-lays"><span class="small">Layout:</span>' + btn('auto', 'Best fit (' + nm(best.lay) + ')') + (lays.length > 1 ? lays.map(o => btn(o.id, o.name)).join('') : '') + '</div>'
     + (l.tooSmall
-      ? '<div class="msg warn">At ' + l.W + ' &times; ' + l.H + ' the text would be too small to read. Make the visual at least <b>' + l.minSize.w + ' &times; ' + l.minSize.h + '</b> (' + l.comfy.w + ' &times; ' + l.comfy.h + ' reads more easily). The script is built for ' + l.minSize.w + ' &times; ' + l.minSize.h + '.</div>'
-      : '<div class="msg ok">' + nm(l.lay) + ' fits ' + l.W + ' &times; ' + l.H + ': the value is ' + l.value + ' px and the smallest text ' + l.smallest + ' px.</div>')
+      ? '<div class="msg warn">At ' + l.W + ' &times; ' + l.H + ' the card doesn&rsquo;t fit with text of ' + KV_HTML_MIN_PX + ' px or more. Make the visual at least <b>' + l.minSize.w + ' &times; ' + l.minSize.h + '</b> (' + l.comfy.w + ' &times; ' + l.comfy.h + ' reads more easily). The script is built for ' + l.minSize.w + ' &times; ' + l.minSize.h + '.</div>'
+      : '<div class="msg ok">' + nm(l.lay) + ' fits ' + l.W + ' &times; ' + l.H + ': the value is ' + l.value + ' px and the smallest text ' + l.smallest + ' px (never below ' + KV_HTML_MIN_PX + ').</div>')
     + '<div class="kv-fitwrap">' + lays.map(o => {
       const f = kvHtmlFitFor(k, c, o.id);
       return '<figure class="kv-fitfig' + (o.id === l.lay ? ' on' : '') + '" data-hlay="' + o.id + '" title="' + esc(o.tip) + '"><figcaption class="small">' + o.name + (o.id === best.lay ? ' <span class="muted">(best fit)</span>' : '') + ' &middot; ' + (f.tooSmall ? 'needs ' + f.minSize.w + ' &times; ' + f.minSize.h : 'value ' + f.value + ' px') + '</figcaption>'
