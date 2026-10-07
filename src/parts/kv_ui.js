@@ -23,8 +23,14 @@ const clone = o => JSON.parse(JSON.stringify(o));
 const blankCfg = () => ({ mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard' });
 const state = { example: false, model: null, kpis: [], cfg: blankCfg(), out: {} };
 const FIELDS = ['label', 'measure', 'format', 'better', 'target', 'compare', 'compareLabel', 'pv.value', 'pv.target', 'pv.compare', 'pv.trend'];
-const getF = (k, f) => f.startsWith('pv.') ? k.pv[f.slice(3)] : k[f];
-const setF = (k, f, v) => { if (f.startsWith('pv.')) k.pv[f.slice(3)] = v; else k[f] = v; };
+// field paths: 'label', 'pv.value', 'ctx.0.ref'
+const getF = (k, f) => { const p = f.split('.'); if (p[0] === 'pv') return k.pv[p[1]]; if (p[0] === 'ctx') return ((k.ctx || [])[+p[1]] || {})[p[2]]; return k[f]; };
+const setF = (k, f, v) => {
+  const p = f.split('.');
+  if (p[0] === 'pv') k.pv[p[1]] = v;
+  else if (p[0] === 'ctx') { k.ctx = k.ctx || []; const c = k.ctx[+p[1]] || (k.ctx[+p[1]] = kvBlankCtx()); if (p[2] === 'kind') { const n = kvBlankCtx(v), d = kvCtxKind(c); n.ref = ['measure', 'period'].includes(v) === ['measure', 'period'].includes(c.kind) ? c.ref : ''; if (c.before !== (d.before || '')) n.before = c.before; if (c.after !== (d.after || '')) n.after = c.after; k.ctx[+p[1]] = n; } else c[p[2]] = v; }
+  else k[f] = v;
+};
 
 function persist(){
   store.set('model', state.example ? '' : $('modelInput').value);
@@ -36,7 +42,27 @@ function setExample(on){ state.example = on; $('exampleBanner').hidden = !on; }
 function leaveExample(){ if (state.example) { state.kpis = []; state.cfg.table = ''; state.cfg.sel = 0; setExample(false); } }
 
 /* ---------- Step 2: KPIs ---------- */
+function ctxEditor(k, i, it){
+  const cs = k.ctx || [], main = it === 'context';
+  const line = (c, j) => {
+    const d = kvCtxKind(c), id = 'k' + i + '_ctx' + j, inp = (fld, label, ph, list) => '<div class="field"><label for="' + id + fld + '">' + label + '</label><input type="text" id="' + id + fld + '" data-f="ctx.' + j + '.' + fld + '" value="' + esc(c[fld] || '') + '" placeholder="' + esc(ph) + '" autocomplete="off" spellcheck="false"' + (list ? ' list="' + list + '"' : '') + '></div>';
+    return '<div class="kv-ctxed"><div class="kv-fields">'
+      + '<div class="field"><label for="' + id + 'kind">Context ' + (j + 1) + '</label><select id="' + id + 'kind" data-f="ctx.' + j + '.kind">' + KV_CTX_KINDS.map(x => '<option value="' + x.id + '"' + (x.id === c.kind ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('') + '</select></div>'
+      + (d.ref ? inp('ref', d.ref, d.ph, ['measure', 'period'].includes(c.kind) ? 'measureNames' : 'columnNames') : '')
+      + inp('before', c.kind === 'text' ? 'Text' : 'Text before', c.kind === 'text' ? 'Excludes returns' : d.before || '')
+      + (c.kind === 'text' ? '' : inp('after', 'Text after', d.after || ''))
+      + (['measure', 'per'].includes(c.kind) ? inp('fmt', 'Format string', d.fmt, 'formats') : '')
+      + (c.kind === 'measure' ? inp('pv', 'Number for the preview', '1,240') : '')
+      + '</div><button type="button" class="ib" data-act="rmctx" data-j="' + j + '" aria-label="Remove context ' + (j + 1) + '">&#10005;</button></div>';
+  };
+  const add = cs.length < KV_CTX_MAX ? '<button type="button" class="btn" data-act="addctx">+ Add context</button>' : '';
+  const intro = '<p class="small muted">A short neutral line next to the value: share of the total, a rank, per customer, an as-of date, another measure, or your own text. No good or bad colors.</p>';
+  if (main || cs.length) return '<div class="kv-ctxbox"><h4>Context' + (main ? '' : ' <span class="muted">(optional)</span>') + '</h4>' + intro + cs.map(line).join('') + add + '</div>';
+  return '<div class="kv-ctxbox closed">' + add + ' <span class="small muted">Optional: a neutral line like &ldquo;18% of total&rdquo; or &ldquo;As of 30 Sep&rdquo;.</span></div>';
+}
 function kpiEditor(k, i){
+  const it = kvIntent(k), show = { goal: it === 'goal' || !!(k.target || '').trim(), change: it === 'change' || !!(k.compare || '').trim() };
+  show.better = show.goal || show.change || it === 'trend';
   const f = (field, label, ph, extra) => '<div class="field' + (extra || '') + '"><label for="k' + i + '_' + field + '">' + label + '</label><input type="text" id="k' + i + '_' + field + '" data-f="' + field + '" value="' + esc(getF(k, field) || '') + '" placeholder="' + esc(ph) + '" autocomplete="off" spellcheck="false"' + (/measure|target|compare$/.test(field) ? ' list="measureNames"' : field === 'format' ? ' list="formats"' : '') + '></div>';
   return '<div class="kv-ed" data-i="' + i + '">'
     + '<div class="kv-ed-head"><b>KPI ' + (i + 1) + '</b><button type="button" class="ib" data-act="rm" aria-label="Remove KPI ' + (i + 1) + '">&#10005;</button></div>'
@@ -44,11 +70,14 @@ function kpiEditor(k, i){
     + f('label', 'Name on the card', 'Sales')
     + f('measure', 'Measure', 'Total Sales')
     + f('format', 'Format string', '\\$#,0 or 0.0%')
-    + '<div class="field"><label for="k' + i + '_better">Better when</label><select id="k' + i + '_better" data-f="better"><option value="higher"' + (k.better !== 'lower' ? ' selected' : '') + '>Higher</option><option value="lower"' + (k.better === 'lower' ? ' selected' : '') + '>Lower</option></select></div>'
-    + f('target', 'Target <span class="muted">(measure or number)</span>', 'Sales Target')
-    + f('compare', 'Compare to <span class="muted">(measure)</span>', 'Sales LY')
-    + f('compareLabel', 'Comparison name', 'last year')
     + '</div>'
+    + '<div class="field kv-intent"><label for="k' + i + '_intent">What should readers get from it?</label><select id="k' + i + '_intent" data-f="intent">' + KV_INTENTS.map(x => '<option value="' + x.id + '"' + (x.id === it ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('') + '</select></div>'
+    + (show.goal || show.change || show.better ? '<div class="kv-fields">'
+      + (show.better ? '<div class="field"><label for="k' + i + '_better">Better when</label><select id="k' + i + '_better" data-f="better"><option value="higher"' + (k.better !== 'lower' ? ' selected' : '') + '>Higher</option><option value="lower"' + (k.better === 'lower' ? ' selected' : '') + '>Lower</option></select></div>' : '')
+      + (show.goal ? f('target', 'Target <span class="muted">(measure or number)</span>', 'Sales Target') : '')
+      + (show.change ? f('compare', 'Compare to <span class="muted">(measure)</span>', 'Sales LY') + f('compareLabel', 'Comparison name', 'last year') : '')
+      + '</div>' : '')
+    + ctxEditor(k, i, it)
     + '<details class="kv-pv"><summary>Numbers for the preview <span class="muted">(optional)</span></summary><div class="kv-fields">'
     + f('pv.value', 'Value', '1,240,000') + f('pv.target', 'Target value', '1,200,000') + f('pv.compare', 'Comparison value', '1,150,000')
     + f('pv.trend', 'Last 12 periods', '940000 980000 1010000 …', ' wide')
@@ -71,6 +100,7 @@ function renderModel(){
   $('pickBox').hidden = !state.model;
   const ms = state.model ? state.model.measures : [];
   $('measureNames').innerHTML = ms.map(x => '<option value="' + esc(x.name) + '">').join('');
+  $('columnNames').innerHTML = state.model ? state.model.columns.map(c => '<option value="' + esc(qName(c.table) + bracket(c.name)) + '">').join('') : '';
   $('tableNames').innerHTML = state.model ? state.model.tables.map(t => '<option value="' + esc(t.name) + '">').join('') : '';
   const dateCols = state.model ? state.model.columns.filter(c => /date|time|int/i.test(c.dataType || '') && (/date|calendar|period|month/i.test(c.table) || /month|date|period/i.test(c.name))) : [];
   $('trendCols').innerHTML = dateCols.map(c => '<option value="' + esc(qName(c.table) + bracket(c.name)) + '">').join('');
@@ -152,7 +182,7 @@ function renderOptions(){
   const chosen = chosenOption();
   const sample = row ? state.kpis.some(x => kvNums(x).sample) : kvNums(k).sample;
   $('sampleMsg').innerHTML = sample ? '<div class="msg info">Some preview numbers are made up because none were typed. Add yours under &ldquo;Numbers for the preview&rdquo; in Step 2.</div>' : '';
-  $('s3note').textContent = row ? 'Each layout shows all your KPIs. Pick one to see how to build it.' : 'Best fit first, based on what your KPI has. Pick one to see how to build it.';
+  $('s3note').textContent = row ? 'Each layout shows all your KPIs. Pick one to see how to build it.' : 'Ways that fit what you want readers to get come first. Pick one to see how to build it.';
   if (row) {
     $('options').innerHTML = KV_ROW_OPTIONS.map(o => '<article class="kv-opt wide' + (o === chosen ? ' on' : '') + '">'
       + '<div class="kv-opt-head"><h3>' + esc(o.name) + '</h3><span class="pill replace">' + KIND[o.kind] + '</span></div>'
@@ -161,8 +191,16 @@ function renderOptions(){
       + '<button type="button" class="btn' + (o === chosen ? ' primary' : '') + '" data-opt="' + o.id + '" aria-pressed="' + (o === chosen) + '">' + (o === chosen ? '&#10003; Building this' : 'Build this') + '</button></article>').join('');
     return;
   }
-  const h = kvHas(k);
-  $('options').innerHTML = kvRanked(k).map(({ o, ok }) => {
+  const h = kvHas(k), ranked = kvRanked(k), it = KV_INTENTS.find(x => x.id === kvIntent(k));
+  const firstOther = ranked.findIndex(x => !x.fit), firstOff = ranked.findIndex(x => !x.ok);
+  const head = (t, p) => '<div class="kv-grouphead"><h3>' + t + '</h3>' + (p ? '<p class="small muted">' + p + '</p>' : '') + '</div>';
+  $('options').innerHTML = ranked.map(({ o, ok }, idx) => {
+    const pre = idx === 0 && ranked[0].fit ? head('Fits what you want: ' + esc(it.name.charAt(0).toLowerCase() + it.name.slice(1)), '') : idx === firstOther && ok ? head(firstOther === 0 ? 'Ways to show it' : 'Other ways', firstOther === 0 ? 'Nothing fits that yet: ' + (kvIntent(k) === 'goal' ? 'add a target' : kvIntent(k) === 'change' ? 'add a comparison' : 'add a context line') + ' in Step 2.' : 'They show something else about the KPI.') : idx === firstOff ? head('Needs more in Step 2', '') : '';
+    return pre + optCard(o, ok, k, h, chosen);
+  }).join('');
+}
+function optCard(o, ok, k, h, chosen){
+  {
     if (!ok) return '<article class="kv-opt off"><div class="kv-opt-head"><h3>' + esc(o.name) + '</h3><span class="pill skip">' + KIND[o.kind] + '</span></div><p class="small muted">' + esc(KV_NEED[o.need] || '') + '. ' + esc(o.fits) + '</p></article>';
     return '<article class="kv-opt' + (o === chosen ? ' on' : '') + '">'
       + '<div class="kv-opt-head"><h3>' + esc(o.name) + '</h3><span class="pill replace">' + KIND[o.kind] + '</span></div>'
@@ -171,7 +209,7 @@ function renderOptions(){
       + '<p class="small"><b>Fits:</b> ' + esc(o.fits) + '</p><p class="small"><b>Avoid:</b> ' + esc(o.avoid) + '</p>'
       + (o.id === 'card' && h.base ? '<p class="small muted">Your KPI has a ' + (h.target ? 'target' : 'comparison') + '; a card with variance shows it.</p>' : '')
       + '<button type="button" class="btn' + (o === chosen ? ' primary' : '') + '" data-opt="' + o.id + '" aria-pressed="' + (o === chosen) + '">' + (o === chosen ? '&#10003; Building this' : 'Build this') + '</button></article>';
-  }).join('');
+  }
 }
 
 /* ---------- Step 5: build ---------- */
@@ -197,6 +235,7 @@ function kvSteps(id, kpis, cfg){
   const refLabel = x => [
     FP('Visual &gt; Reference labels') + ': turn them on and add a label. For its value (Data), pick ' + B(kvMName(x, 'Status Label')) + '. Turn the label&rsquo;s title off, or call it &ldquo;' + (kvHas(x).target ? 'vs target' : 'vs ' + esc((x.compareLabel || '').trim() || 'last period')) + '&rdquo;.',
     'For the reference label&rsquo;s value color, ' + FX(kvMName(x, 'Status Color')) + '. Leave its background off: a background fills the whole label area under the value, not just the text. For a colored pill like Excel&rsquo;s, use the HTML card.'];
+  const ctxLabels = x => kvCtx(x).slice(0, KV_CTX_MAX).map((c, j) => FP('Visual &gt; Reference labels') + ': add ' + (j || id === 'cardvar' ? 'another' : 'a') + ' label with value ' + B(kvCtxName(x, j)) + ' (&ldquo;' + esc(kvCtxSample(x, c)) + '&rdquo; in the preview). Turn its title off and make its value grey (#605E5C): it&rsquo;s context, not good or bad.');
   const finish = (alt, size) => ({ title: 'Finish', steps: [
     'Drag the corners until nothing is cut off' + (size ? '; about ' + size + ' pixels works' : '') + '. To set it exactly, use ' + FP('General &gt; Properties &gt; Size') + '.',
     FP('General &gt; Title') + ': name the period, like &ldquo;' + esc(kvName(k)) + ', year to date&rdquo;, so readers know what they&rsquo;re looking at.',
@@ -228,12 +267,28 @@ function kvSteps(id, kpis, cfg){
       G.push({ title: 'Format it', tip, steps: [
         FP('General &gt; Title') + ' and <b>Background</b>: turn them off, so only the card shows.',
         'To change the look (font sizes, colors, the pill), edit the inline styles in ' + B(hm) + ' in TMDL view or the formula bar.',
-        'To use the card outside Power BI (an email, a web page), copy the <b>HTML file</b> above. It has the numbers shown in the preview, not live data.'] });
+      ].concat(kvCtx(k).length ? ['Your context lines (' + kvCtx(k).slice(0, KV_CTX_MAX).map((c, j) => B(kvCtxName(k, j))).join(', ') + ') are already in the card, under the value.'] : []).concat([
+        'To use the card outside Power BI (an email, a web page), copy the <b>HTML file</b> above. It has the numbers shown in the preview, not live data.']) });
       G.push(finish(h.base ? kvMName(k, 'Status Label') : '', '250 &times; 150')); break;
+    }
+    case 'ctxlabel': case 'ctxsub': case 'ctxtip': {
+      const cs = kvCtx(k).slice(0, KV_CTX_MAX), names = cs.map((c, j) => kvCtxName(k, j));
+      G.push({ title: 'Add the visual', steps: [newCard, 'Drag <b>' + esc(m) + '</b> into the <b>Data</b> field well.'] });
+      if (id === 'ctxlabel') G.push({ title: 'Format it', tip, steps: [callout].concat(ctxLabels(k)) });
+      if (id === 'ctxsub') G.push({ title: 'Format it', tip, steps: [callout,
+        FP('General &gt; Title') + ': turn the title on and type ' + esc(kvName(k)) + ' as its text.',
+        'Under Title, turn <b>Subtitle</b> on. For its text, ' + FX(names[0]) + '. Make it a size or two smaller than the title, in grey (#605E5C).'].concat(names[1] ? ['Your second context line doesn&rsquo;t fit in the subtitle. Add it as a reference label: ' + FP('Visual &gt; Reference labels') + ', value ' + B(names[1]) + '.'] : [])
+        .concat([FP('Visual &gt; Label') + ' (the category label under the value): turn it off; the title already names the KPI.']) });
+      if (id === 'ctxtip') G.push({ title: 'Format it', tip, steps: [callout,
+        'Drag ' + names.map(B).join(' and ') + ' into the visual&rsquo;s <b>Tooltips</b> field well.',
+        'In the Tooltips well, double-click each one and rename it for readers, like &ldquo;' + cs.map((c, j) => esc(kvCtxTipName(c, j))).join('&rdquo; and &ldquo;') + '&rdquo;.',
+        'Check ' + FP('General &gt; Tooltips') + ' is on. Hover the card to see them.'] });
+      G.push(finish('', '220 &times; 140'));
+      break;
     }
     case 'cardvar':
       G.push({ title: 'Add the visual', steps: [newCard, 'Drag <b>' + esc(m) + '</b> into the <b>Data</b> field well.'] });
-      G.push({ title: 'Format it', tip, steps: [callout].concat(refLabel(k)) });
+      G.push({ title: 'Format it', tip, steps: [callout].concat(refLabel(k), ctxLabels(k)) });
       G.push(finish(kvMName(k, 'Status Label'), '250 &times; 150')); break;
     case 'core':
       G.push({ title: 'Add the card', steps: [newCard, 'Drag <b>' + esc(m) + '</b> into the <b>Data</b> field well.'] });
@@ -328,7 +383,7 @@ function init(){
   let kpis = null, cfg = null; try { kpis = JSON.parse(store.get('kpis') || 'null'); cfg = JSON.parse(store.get('cfg') || 'null'); } catch (e) {}
   if (cfg) state.cfg = Object.assign(blankCfg(), cfg);
   if (saved && saved.trim()) $('modelInput').value = saved;
-  if (kpis && kpis.length) state.kpis = kpis.map(k => Object.assign(kvBlankKpi(), k, { pv: Object.assign(kvBlankKpi().pv, k.pv || {}) }));
+  if (kpis && kpis.length) state.kpis = kpis.map(k => Object.assign(kvBlankKpi(), k, { pv: Object.assign(kvBlankKpi().pv, k.pv || {}), ctx: Array.isArray(k.ctx) ? k.ctx.slice(0, KV_CTX_MAX).map(c => Object.assign(kvBlankCtx(c.kind), c)) : [] }));
   else if (!(saved && saved.trim()) && store.get('blank') !== '1') { state.kpis = clone(KV_EX_KPIS); Object.assign(state.cfg, KV_EX_CFG); setExample(true); }
   renderAll();
   $('dlHtml').addEventListener('click', () => { if (!state.out.html) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([state.out.html], { type: 'text/html' })); a.download = (kvName(currentKpi() || {}).replace(/[^\w -]+/g, '').trim() || 'KPI') + ' card.html'; document.body.appendChild(a); a.click(); a.remove(); });
@@ -345,6 +400,16 @@ function init(){
     const f = document.querySelector('#kpis .kv-ed:last-of-type input'); if (f) f.focus();
   });
   $('kpis').addEventListener('click', e => {
+    const c = e.target.closest('[data-act=addctx],[data-act=rmctx]');
+    if (c) {
+      const i = +c.closest('[data-i]').dataset.i;
+      if (state.example) { leaveExample(); state.kpis = [kvBlankKpi()]; }
+      const k = state.kpis[Math.min(i, state.kpis.length - 1)]; k.ctx = k.ctx || [];
+      if (c.dataset.act === 'addctx' && k.ctx.length < KV_CTX_MAX) k.ctx.push(kvBlankCtx(kvIntent(k) === 'context' && !k.ctx.length ? 'share' : 'measure'));
+      if (c.dataset.act === 'rmctx') k.ctx.splice(+c.dataset.j, 1);
+      touch(); renderKpis(); renderLive(); persist();
+      return;
+    }
     const b = e.target.closest('[data-act=rm]'); if (!b) return;
     const i = +b.closest('[data-i]').dataset.i;
     if (state.example) { leaveExample(); } else state.kpis.splice(i, 1);
@@ -360,11 +425,12 @@ function init(){
       leaveExample(); touch();
       const k = kvBlankKpi(); setF(k, f, own); state.kpis = [k];
       renderKpis(); renderAvail(); renderLive(); persist();
-      const el = $('k0_' + f); if (el) { if (f.startsWith('pv.')) el.closest('details').open = true; el.focus(); if (el.setSelectionRange && el.type === 'text') el.setSelectionRange(el.value.length, el.value.length); }
+      const el = $('k0_' + f.replace(/^ctx\.(\d+)\./, 'ctx$1')); if (el) { if (f.startsWith('pv.')) el.closest('details').open = true; el.focus(); if (el.setSelectionRange && el.type === 'text') el.setSelectionRange(el.value.length, el.value.length); }
       return;
     }
     setF(state.kpis[i], f, e.target.value); touch();
     state.cfg.sel = i;
+    if (f === 'intent' || /^ctx\.\d+\.kind$/.test(f)) { if (f === 'intent') state.cfg.option = ''; renderKpis(); const el = $('k' + i + '_' + (f === 'intent' ? 'intent' : 'ctx' + f.split('.')[1] + 'kind')); if (el) el.focus(); }
     const kp = $('kpiPick'); if (kp) kp.value = i;
     if (f === 'measure' && state.model) renderAvail();
     renderLive(); persist();

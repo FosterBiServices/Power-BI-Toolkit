@@ -40,7 +40,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   await p.click('label:has(#modeOne)');
   await p.locator('#k0_label').click(); await p.keyboard.press('End'); await p.keyboard.type(' Net');
   console.log('after typing: banner', await p.locator('#exampleBanner').isVisible(), '| kpis', await p.locator('.kv-ed').count(), '| label', JSON.stringify(await p.locator('#k0_label').inputValue()), '(expect "Net") | measure', JSON.stringify(await p.locator('#k0_measure').inputValue()));
-  await p.fill('#k0_measure', 'Net Revenue'); await p.fill('#k0_target', 'Revenue Budget');
+  await p.fill('#k0_measure', 'Net Revenue'); await p.selectOption('#k0_intent', 'goal'); await p.fill('#k0_target', 'Revenue Budget');
   console.log('own KPI options:', (await opts()).slice(0, 80), '| sample msg', await p.locator('#sampleMsg').innerText().then(t => !!t));
   console.log('checks without table:', await p.locator('#checks').innerText());
   await p.fill('#homeTable', 'Sales'); console.log('out shown', await p.locator('#outBox').isVisible());

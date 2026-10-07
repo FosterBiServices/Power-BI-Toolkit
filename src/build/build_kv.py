@@ -52,6 +52,20 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 .kv-cl{font-size:12px;color:#605E5C}
 .kv-cv{font-size:26px;font-weight:600;line-height:1.15;color:#252423;font-variant-numeric:tabular-nums}
 .kv-sub{font-size:11.5px;color:#605E5C}
+.kv-ctx{font-size:12px;color:#605E5C}
+.kv-intent select{max-width:100%}
+.kv-ctxbox{display:flex;flex-direction:column;gap:8px;border-top:1px dashed var(--line);padding-top:10px}
+.kv-ctxbox.closed{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.kv-ctxbox h4{margin:0;font-size:14px}.kv-ctxbox p{margin:0}
+.kv-ctxed{display:flex;gap:8px;align-items:flex-start;background:var(--surface-2);border-radius:8px;padding:8px 10px}
+.kv-ctxed .kv-fields{flex:1;min-width:0}
+.kv-grouphead{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.kv-grouphead h3{margin:0;font-size:16px}.kv-grouphead p{margin:0}
+.kv-ttl{font-size:14px;font-weight:600;color:#252423}
+.kv-subt{font-size:12px;color:#605E5C;margin-bottom:2px}
+.kv-tipwrap{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.kv-tip{background:#FFFFFF;border:1px solid #C8C6C4;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,.18);padding:6px 10px;font-size:12px;display:flex;flex-direction:column;gap:3px;margin-top:18px}
+.kv-tip div{display:flex;gap:14px;justify-content:space-between}.kv-tip span{color:#605E5C}.kv-tip b{font-weight:600;color:#252423}
 .kv-svg{line-height:0}
 .kv-svg svg{max-width:100%;height:auto}
 .kv-row{display:flex;gap:10px;align-items:center}
