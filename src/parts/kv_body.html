@@ -65,7 +65,7 @@
       </div>
       <div id="kpis" class="kv-kpis"></div>
       <div class="reply-actions"><button type="button" class="btn" id="addKpi">+ Add a KPI</button><span class="small muted" id="kpiMax"></span></div>
-      <datalist id="measureNames"></datalist>
+      <datalist id="measureNames"></datalist><datalist id="columnNames"></datalist>
     </div>
   </section>
 
@@ -99,7 +99,7 @@
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">Ways to show it</h2>
-        <p id="s3note">Best fit first, based on what your KPI has. Pick one to see how to build it.</p>
+        <p id="s3note">Ways that fit what you want readers to get come first. Pick one to see how to build it.</p>
       </div>
       <div class="field" id="kpiPickWrap"><label for="kpiPick">Options for</label><select id="kpiPick"></select></div>
       <div id="sampleMsg"></div>
@@ -123,7 +123,6 @@
         <div class="field" id="scoreWrap"><label for="scoreTable">Scorecard table name</label><input type="text" id="scoreTable" autocomplete="off" placeholder="KPI Scorecard"></div>
       </div>
       <datalist id="tableNames"></datalist><datalist id="trendCols"></datalist>
-      <ol class="kv-steps" id="steps"></ol>
       <div id="checks"></div>
       <div id="outBox">
         <h3>1. Check the measures first <span class="muted">(DAX query view, optional)</span></h3>
@@ -136,7 +135,16 @@
           <div class="codebox-bar"><span class="t">TMDL script</span><span class="r"><button class="btn primary" type="button" data-copy="tmdl">Copy script</button></span></div>
           <pre class="tall" id="tmdlView"></pre>
         </div>
+        <div id="htmlBox" hidden>
+          <h3>3. The card as an HTML file <span class="muted">(optional, with the preview&rsquo;s numbers)</span></h3>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">HTML file</span><span class="r"><button class="btn" type="button" id="dlHtml">Download</button><button class="btn primary" type="button" data-copy="html">Copy HTML</button></span></div>
+            <pre class="short" id="htmlView"></pre>
+          </div>
+        </div>
       </div>
+      <h3 id="setupHead">Set it up in Power BI</h3>
+      <div class="kv-setup" id="steps"></div>
       <p class="note small">Ideas behind the options: <a href="https://data-goblins.com/power-bi/kpi-templates" target="_blank" rel="noopener">KPIs and cards in Power BI</a> by Data Goblins (number, meaning and context; SVG and core-visual KPI templates).</p>
     </div>
   </section>

@@ -11,7 +11,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   const tmdl = await p.locator('#tmdlView').innerText();
   console.log('tmdl: ref table', tmdl.includes("ref table _Measures"), '| ImageUrl', tmdl.includes('dataCategory: ImageUrl'), '| excel good', tmdl.includes('#006100'), '| no green/red in tracks', !/#(00FF00|FF0000)/i.test(tmdl));
   const test = await p.locator('#testView').innerText();
-  console.log('test query: DEFINE', test.includes('DEFINE'), '| MEASURE', (test.match(/MEASURE /g) || []).length, '(expect 6)');
+  console.log('test query: DEFINE', test.includes('DEFINE'), '| MEASURE', (test.match(/MEASURE /g) || []).length, '(expect 5)');
   await p.screenshot({ path: 'kv_1.png', fullPage: true });
   // each option builds without page errors
   for (const id of ['cardvar', 'spark', 'varbar', 'progress', 'slope', 'kpi', 'core', 'card', 'gauge']) {
@@ -40,7 +40,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   await p.click('label:has(#modeOne)');
   await p.locator('#k0_label').click(); await p.keyboard.press('End'); await p.keyboard.type(' Net');
   console.log('after typing: banner', await p.locator('#exampleBanner').isVisible(), '| kpis', await p.locator('.kv-ed').count(), '| label', JSON.stringify(await p.locator('#k0_label').inputValue()), '(expect "Net") | measure', JSON.stringify(await p.locator('#k0_measure').inputValue()));
-  await p.fill('#k0_measure', 'Net Revenue'); await p.fill('#k0_target', 'Revenue Budget');
+  await p.fill('#k0_measure', 'Net Revenue'); await p.selectOption('#k0_intent', 'goal'); await p.fill('#k0_target', 'Revenue Budget');
   console.log('own KPI options:', (await opts()).slice(0, 80), '| sample msg', await p.locator('#sampleMsg').innerText().then(t => !!t));
   console.log('checks without table:', await p.locator('#checks').innerText());
   await p.fill('#homeTable', 'Sales'); console.log('out shown', await p.locator('#outBox').isVisible());
