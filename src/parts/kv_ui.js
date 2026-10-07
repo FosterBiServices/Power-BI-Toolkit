@@ -270,7 +270,7 @@ function kvSteps(id, kpis, cfg){
         FP('General &gt; Properties &gt; Size') + ': about <b>' + fit.w + ' &times; ' + fit.h + '</b> pixels fits this card. The card stretches to the visual&rsquo;s width; if a scroll bar shows, make the visual taller or pick a smaller size.'] });
       G.push({ title: 'Format it', tip, steps: [
         FP('General &gt; Title') + ' and <b>Background</b>: turn them off, so only the card shows.',
-        'To change colors or the font, edit the inline styles in ' + B(hm) + ' in TMDL view or the formula bar.',
+        'To change colors, the font or one text size, edit the style variables at the top of ' + B(hm) + ' (<b>_BoxStyle</b>, <b>_ValueStyle</b> and so on) in TMDL view or the formula bar.',
       ].concat(kvCtx(k).length ? ['Your context lines (' + kvCtx(k).slice(0, KV_CTX_MAX).map((c, j) => B(kvCtxName(k, j))).join(', ') + ') are already in the card, under the value.'] : []).concat([
         'To use the card outside Power BI (an email, a web page), copy the <b>HTML file</b> above. It has the numbers shown in the preview, not live data.']) });
       { const fin = finish(h.base ? kvMName(k, 'Status Label') : '', ''); fin.steps.shift(); G.push(fin); } break;

@@ -21,7 +21,7 @@ const { chromium } = require('playwright');
   await p.selectOption('#htmlSize', 'XL'); const tx = await p.locator('#tmdlView').innerText();
   console.log('html XL: value 96px', tx.includes('font-size:96px'), '| file 96px', (await p.locator('#htmlView').innerText()).includes('font-size:96px'), '| step says 720', (await p.locator('#steps').innerText()).includes('720'), '(expect all true)');
   await p.reload(); console.log('html size kept after reload', await p.inputValue('#htmlSize'), '(expect XL)'); await p.click('[data-opt="html"]').catch(() => {});
-  console.log(tm.slice(tm.indexOf("measure 'Sales HTML Card'")).split('\n').slice(0, 16).join('\n'));
+  console.log(tm.slice(tm.indexOf("measure 'Sales HTML Card'")).split('\n').slice(0, 36).join('\n'));
   await p.locator('.kv-opt.on').scrollIntoViewIfNeeded(); await p.locator('.kv-opt.on').screenshot({ path: 'kv_html.png' });
   await p.click('[data-opt="cardvar"]');
   console.log('cardvar: fill in script', (await p.locator('#tmdlView').innerText()).includes('Status Fill'), '(expect false) | label bg', await p.locator('.kv-opt.on .kv-lab').first().evaluate(e => getComputedStyle(e).backgroundColor), '(expect transparent)');

@@ -402,18 +402,22 @@ function kvSvgMeasure(id, k, cfg){
   return m;
 }
 function kvHtmlMeasure(k, cfg){
-  const KV_HTML = kvHtmlStyle(cfg), h = kvHas(k), fmt = daxString(k.format || '#,0'), q = x => x.replace(/"/g, '""'), sub = kvHtmlSub(k);
+  const KV_HTML = kvHtmlStyle(cfg), h = kvHas(k), fmt = daxString(k.format || '#,0'), q = x => x.replace(/"/g, '""'), sub = kvHtmlSub(k), n = kvCtx(k).length;
   const D = ['VAR _Value = ' + kvRef(k.measure)];
   if (h.base) D.push('VAR _Label = ' + bracket(kvMName(k, 'Status Label')), 'VAR _Color = ' + bracket(kvMName(k, 'Status Color')), 'VAR _Fill = ' + bracket(kvMName(k, 'Status Fill')));
   if (sub) D.push('VAR _Base = ' + kvRef(h.target ? k.target : k.compare));
+  kvCtx(k).forEach((c, i) => D.push('VAR _Context' + (i + 1) + ' = ' + bracket(kvCtxName(k, i))));
+  D.push('// Styles: change sizes, colors and the font here', 'VAR _BoxStyle = "' + KV_HTML.box + '"', 'VAR _NameStyle = "' + KV_HTML.name + '"', 'VAR _ValueStyle = "' + KV_HTML.value + '"');
+  if (h.base) D.push('VAR _PillStyle = "' + KV_HTML.pill + ';background:" & _Fill & ";color:" & _Color');
+  if (sub || n) D.push('VAR _SubStyle = "' + KV_HTML.sub + '"');
+  const opt = (test, html) => ['            & IF (', '                NOT ISBLANK ( ' + test + ' ),', '                ' + html, '            )'];
   D.push('RETURN', '    IF (', '        NOT ISBLANK ( _Value ),',
-    '        "<div style=\'' + KV_HTML.box + '\'>"',
-    '            & "<div style=\'' + KV_HTML.name + '\'>' + q(kvHtmlEsc(kvName(k))) + '</div>"',
-    '            & "<div style=\'' + KV_HTML.value + '\'>" & FORMAT ( _Value, ' + fmt + ' ) & "</div>"');
-  if (h.base) D.push('            & IF ( NOT ISBLANK ( _Label ), "<span style=\'' + KV_HTML.pill + ';background:" & _Fill & ";color:" & _Color & "\'>" & _Label & "</span>" )');
-  if (sub) D.push('            & IF ( NOT ISBLANK ( _Base ), "<div style=\'' + KV_HTML.sub + '\'>' + q(kvHtmlEsc(sub)) + '" & FORMAT ( _Base, ' + fmt + ' ) & "</div>" )');
-  kvCtx(k).forEach((c, i) => D.splice(D.indexOf('RETURN'), 0, 'VAR _Context' + (i + 1) + ' = ' + bracket(kvCtxName(k, i))));
-  kvCtx(k).forEach((c, i) => D.push('            & IF ( NOT ISBLANK ( _Context' + (i + 1) + ' ), "<div style=\'' + KV_HTML.sub + '\'>" & _Context' + (i + 1) + ' & "</div>" )'));
+    '        "<div style=\'" & _BoxStyle & "\'>"',
+    '            & "<div style=\'" & _NameStyle & "\'>' + q(kvHtmlEsc(kvName(k))) + '</div>"',
+    '            & "<div style=\'" & _ValueStyle & "\'>" & FORMAT ( _Value, ' + fmt + ' ) & "</div>"');
+  if (h.base) D.push(...opt('_Label', '"<span style=\'" & _PillStyle & "\'>" & _Label & "</span>"'));
+  if (sub) D.push(...opt('_Base', '"<div style=\'" & _SubStyle & "\'>' + q(kvHtmlEsc(sub)) + '" & FORMAT ( _Base, ' + fmt + ' ) & "</div>"'));
+  kvCtx(k).forEach((c, i) => D.push(...opt('_Context' + (i + 1), '"<div style=\'" & _SubStyle & "\'>" & _Context' + (i + 1) + ' & "</div>"')));
   D.push('            & "</div>"', '    )');
   return { name: kvMName(k, 'HTML Card'), description: 'The whole card as HTML, for the HTML Content visual (from AppSource). Size: ' + (KV_HTML_SIZES.find(z => z.x === kvHtmlScale(cfg)).name) + '.', expression: D.join('\n') };
 }
