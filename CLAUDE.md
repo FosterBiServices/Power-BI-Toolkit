@@ -96,6 +96,9 @@ Things to know:
   `step`, and hides the `exportOnly` elements unless Model export is chosen. `S.pbipExport()`
   turns a PBIP folder's TMDL (or model.bim) into export rows, so the tool reads it like an
   export. The choice is saved as `<prefix>connect`. Settings per page are in build_site.py HOOKS.
+  A folder read in any tool is saved as the shared export with `source: 'pbip'`, so every other tool
+  opens on it (unless it chose No model or its own export). The folder picker's handle is kept in
+  IndexedDB (`sfpbi`, store `h`, key `pbip`) for the **Read it again** button.
 - Home link and Switch tool menu (`S.TOOLS`).
 - Prompts as files: for every page in `PROMPTS` (prompt element → reply element) each prompt
   box gets **Download file**, a "Send it to Copilot as a file" note, and "Open a reply file"

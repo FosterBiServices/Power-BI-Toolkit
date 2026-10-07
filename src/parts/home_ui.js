@@ -36,7 +36,7 @@ function renderSaved(){
   if (!v) return;
   const m = parseModel(v.text);
   const d = new Date(v.savedAt);
-  $('savedWhen').textContent = (v.name ? v.name + ' · ' : '') + 'saved ' + d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  $('savedWhen').textContent = (v.name ? v.name + ' · ' : '') + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   $('savedStats').innerHTML = '<span class="stat"><b>' + m.tables.length + '</b> tables</span><span class="stat"><b>' + m.columns.length + '</b> columns</span><span class="stat"><b>' + m.measures.length + '</b> measures</span><span class="stat"><b>' + m.rels.length + '</b> relationships</span>' + (m.composite ? '<span class="stat remote">Composite model</span>' : '');
   if (!$('modelName').value) $('modelName').value = v.name || '';
   const h = SF_SUITE.history ? SF_SUITE.history().length : 0;

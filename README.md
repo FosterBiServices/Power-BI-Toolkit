@@ -25,7 +25,7 @@ Open these and start. Some also use your saved model export if there is one.
 
 ### Tools that use your model
 
-Export your model once from the home page (Steps 1 and 2); each of these tools loads it as it opens.
+Export your model once from the home page (Steps 1 and 2), or choose its PBIP folder in any tool; each of these tools loads it as it opens.
 
 | Tool | What it does | Model export | Copilot |
 | --- | --- | :---: | :---: |
