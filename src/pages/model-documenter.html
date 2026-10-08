@@ -500,7 +500,7 @@ function parseModel(text){
     if (kind === 'table') {
       if (flags.includes('private')) { res.skipped++; continue; }
       const t = { name, category: get(c, 'type'), hidden: flags.includes('hidden'), description: get(c, 'description'),
-        storage: get(c, 'storage'), source: get(c, 'source') };
+        storage: get(c, 'storage'), source: get(c, 'source'), calc: get(c, 'expression') };
       res.tables.push(t); tablesSeen.set(lc(name), t);
     } else if (kind === 'column') {
       if (/^RowNumber-/i.test(name)) { res.skipped++; continue; }

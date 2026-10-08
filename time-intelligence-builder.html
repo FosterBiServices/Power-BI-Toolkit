@@ -615,7 +615,7 @@ function parseModel(text){
     if (kind === 'table') {
       if (flags.includes('private')) { res.skipped++; continue; }
       const t = { name, category: get(c, 'type'), hidden: flags.includes('hidden'), description: get(c, 'description'),
-        storage: get(c, 'storage'), source: get(c, 'source') };
+        storage: get(c, 'storage'), source: get(c, 'source'), calc: get(c, 'expression') };
       res.tables.push(t); tablesSeen.set(lc(name), t);
     } else if (kind === 'column') {
       if (/^RowNumber-/i.test(name)) { res.skipped++; continue; }
@@ -1494,6 +1494,8 @@ const TI_CALCS_LATEST = [
 function tiCalcList(cfg){ return (cfg || {}).basis === 'context' ? TI_CALCS : TI_CALCS_LATEST; }
 const TI_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const TI_LAST_DAY = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+// A DAX date table: CALENDAR ( … ) or CALENDARAUTO ( … ) in a calculated table
+function tiCalcDateTable(t){ return !!t && /\bCALENDAR(AUTO)?\s*\(/i.test(t.calc || ''); }
 function tiDateRef(cfg){ return qName(cfg.dateTable) + bracket(cfg.dateColumn); }
 function tiFy(cfg){
   const m = +cfg.fyEnd || 12;
@@ -1545,7 +1547,8 @@ function tiCheck(model, cfg){
   else if (!col) add('err', 'Choose the date column of ' + qName(t.name) + ' in Step 2.');
   else {
     if (!/date/i.test(col.dataType || '')) add('err', qName(t.name) + bracket(col.name) + ' is a ' + (col.dataType || 'non-date') + ' column; time intelligence needs a date column.');
-    if (lc(t.category) !== 'time') add('warn', qName(t.name) + ' isn\u2019t marked as a date table. These calculations need a date table with one row for every day and no gaps; a fact table\u2019s date column won\u2019t do (the Date Table Generator builds a proper one). If ' + qName(t.name) + ' is a date table, mark it (Table tools > Mark as date table, using ' + bracket(col.name) + ') so year-to-date and last-year results ignore filters on its other columns, like Month.');
+    if (lc(t.category) !== 'time' && tiCalcDateTable(t)) add('warn', qName(t.name) + ' is a calculated date table (built with ' + (/CALENDARAUTO/i.test(t.calc) ? 'CALENDARAUTO' : 'CALENDAR') + '), which works here, but it isn\u2019t marked as a date table. Mark it (Table tools > Mark as date table, using ' + bracket(col.name) + ') so year-to-date and last-year results ignore filters on its other columns, like Month.');
+    else if (lc(t.category) !== 'time') add('warn', qName(t.name) + ' isn\u2019t marked as a date table. These calculations need a date table with one row for every day and no gaps; a fact table\u2019s date column won\u2019t do (the Date Table Generator builds a proper one). If ' + qName(t.name) + ' is a date table, mark it (Table tools > Mark as date table, using ' + bracket(col.name) + ') so year-to-date and last-year results ignore filters on its other columns, like Month.');
     if (!model.rels.some(r => (lc(r.toTable) === lc(t.name) || lc(r.fromTable) === lc(t.name)))) add('warn', qName(t.name) + ' has no relationships in the export, so these calculations won’t filter your facts. Relate it to your fact tables first.');
   }
   const calcs = tiSelectedCalcs(cfg);
@@ -1739,7 +1742,7 @@ function autoPick(){
   const dateTables = m.tables.filter(t => lc(t.category) === 'time');
   const dateCols = t => m.columns.filter(x => lc(x.table) === lc(t) && /date/i.test(x.dataType || ''));
   if (!m.tables.some(t => lc(t.name) === lc(c.dateTable))) {
-    const t = dateTables[0] || m.tables.find(t => /date|calendar/i.test(t.name) && dateCols(t.name).length) || m.tables.find(t => dateCols(t.name).length);
+    const t = dateTables[0] || m.tables.find(t => tiCalcDateTable(t) && dateCols(t.name).length) || m.tables.find(t => /date|calendar/i.test(t.name) && dateCols(t.name).length) || m.tables.find(t => dateCols(t.name).length);
     c.dateTable = t ? t.name : '';
     c.dateColumn = '';
   }
@@ -1776,7 +1779,7 @@ function renderDates(){
   if (!m) { ['dTable', 'dCol'].forEach(id => { $(id).innerHTML = '<option value="">After Step 1</option>'; }); $('dateMsg').innerHTML = ''; }
   else {
     const withDates = m.tables.filter(t => m.columns.some(x => lc(x.table) === lc(t.name) && /date/i.test(x.dataType || '')));
-    $('dTable').innerHTML = (withDates.length ? '' : '<option value="">No table has a date column</option>') + withDates.map(t => opt(t.name, t.name + (lc(t.category) === 'time' ? '  (date table)' : ''), lc(t.name) === lc(c.dateTable))).join('');
+    $('dTable').innerHTML = (withDates.length ? '' : '<option value="">No table has a date column</option>') + withDates.map(t => opt(t.name, t.name + (lc(t.category) === 'time' ? '  (date table)' : tiCalcDateTable(t) ? '  (calculated date table)' : ''), lc(t.name) === lc(c.dateTable))).join('');
     $('dCol').innerHTML = m.columns.filter(x => lc(x.table) === lc(c.dateTable) && /date/i.test(x.dataType || '')).map(x => opt(x.name, x.name + (x.key ? '  (key)' : ''), lc(x.name) === lc(c.dateColumn))).join('');
   }
   $('fyEnd').innerHTML = TI_MONTHS.map((n, i) => opt(i + 1, n + (i === 11 ? ' (calendar year)' : ''), (+c.fyEnd || 12) === i + 1)).join('');
