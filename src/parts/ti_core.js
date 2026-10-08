@@ -16,6 +16,25 @@ const TI_CALCS = [
   { key: 'r12', name: 'Rolling 12M', kind: 'value', label: 'Last 12 months to the latest date', tpl: 'CALCULATE ( {m}, DATESINPERIOD ( {d}, MAX ( {d} ), -12, MONTH ) )' },
   { key: 'r3avg', name: '3M Avg', kind: 'value', label: 'Monthly average over the last 3 months', tpl: 'VAR _Months = DATESINPERIOD ( {d}, MAX ( {d} ), -3, MONTH )\nRETURN\n    DIVIDE ( CALCULATE ( {m}, _Months ), 3 )' }
 ];
+// Latest-date calculations (the default): {a} = the latest date in the filter, and each period is worked out from it,
+// so a card or total shows one month or year, not every date added up. {ys} = start of _Anchor's (fiscal) year,
+// {ly} = the same day last year (a month end stays a month end, so 28 Feb gives 29 Feb in a leap year).
+const TI_CALCS_LATEST = [
+  { key: 'ytd', name: 'YTD', kind: 'value', label: 'Year to the latest date', tpl: 'VAR _Anchor = {a}\nVAR _YearStart = {ys}\nRETURN\n    CALCULATE ( {m}, DATESBETWEEN ( {d}, _YearStart, _Anchor ) )' },
+  { key: 'qtd', name: 'QTD', kind: 'value', label: 'Quarter to the latest date', tpl: 'VAR _Anchor = {a}\nRETURN\n    CALCULATE ( {m}, DATESBETWEEN ( {d}, EOMONTH ( _Anchor, -1 - MOD ( MONTH ( _Anchor ) - 1, 3 ) ) + 1, _Anchor ) )' },
+  { key: 'mtd', name: 'MTD', kind: 'value', label: 'Month to the latest date', tpl: 'VAR _Anchor = {a}\nRETURN\n    CALCULATE ( {m}, DATESBETWEEN ( {d}, EOMONTH ( _Anchor, -1 ) + 1, _Anchor ) )' },
+  { key: 'py', name: 'PY', kind: 'value', label: 'Previous year, whole year', tpl: 'VAR _Anchor = {a}\nVAR _YearStart = {ys}\nRETURN\n    CALCULATE ( {m}, DATESBETWEEN ( {d}, EDATE ( _YearStart, -12 ), _YearStart - 1 ) )' },
+  { key: 'pytd', name: 'PY YTD', kind: 'value', label: 'Last year, to the same day', tpl: 'VAR _Anchor = {a}\nVAR _YearStart = {ys}\nVAR _LastYear = {ly}\nRETURN\n    CALCULATE ( {m}, DATESBETWEEN ( {d}, EDATE ( _YearStart, -12 ), _LastYear ) )' },
+  { key: 'yoy', name: 'YoY', kind: 'value', label: 'Year to date vs last year to date', tpl: 'VAR _Anchor = {a}\nVAR _YearStart = {ys}\nVAR _LastYear = {ly}\nVAR _YTD = CALCULATE ( {m}, DATESBETWEEN ( {d}, _YearStart, _Anchor ) )\nVAR _PriorYTD = CALCULATE ( {m}, DATESBETWEEN ( {d}, EDATE ( _YearStart, -12 ), _LastYear ) )\nRETURN\n    IF ( NOT ISBLANK ( _YTD ) && NOT ISBLANK ( _PriorYTD ), _YTD - _PriorYTD )' },
+  { key: 'yoyp', name: 'YoY %', kind: 'pct', label: 'Year to date vs last year to date, %', tpl: 'VAR _Anchor = {a}\nVAR _YearStart = {ys}\nVAR _LastYear = {ly}\nVAR _YTD = CALCULATE ( {m}, DATESBETWEEN ( {d}, _YearStart, _Anchor ) )\nVAR _PriorYTD = CALCULATE ( {m}, DATESBETWEEN ( {d}, EDATE ( _YearStart, -12 ), _LastYear ) )\nRETURN\n    IF ( NOT ISBLANK ( _YTD ), DIVIDE ( _YTD - _PriorYTD, _PriorYTD ) )' },
+  { key: 'pm', name: 'PM', kind: 'value', label: 'Previous month, whole month', tpl: 'VAR _Anchor = {a}\nRETURN\n    CALCULATE ( {m}, DATESBETWEEN ( {d}, EOMONTH ( _Anchor, -2 ) + 1, EOMONTH ( _Anchor, -1 ) ) )' },
+  { key: 'momp', name: 'MoM %', kind: 'pct', label: 'Month to date vs previous month, %', tpl: 'VAR _Anchor = {a}\nVAR _Current = CALCULATE ( {m}, DATESBETWEEN ( {d}, EOMONTH ( _Anchor, -1 ) + 1, _Anchor ) )\nVAR _PriorMonth = CALCULATE ( {m}, DATESBETWEEN ( {d}, EOMONTH ( _Anchor, -2 ) + 1, EOMONTH ( _Anchor, -1 ) ) )\nRETURN\n    IF ( NOT ISBLANK ( _Current ), DIVIDE ( _Current - _PriorMonth, _PriorMonth ) )' },
+  { key: 'pymtd', name: 'PY MTD', kind: 'value', label: 'Same month last year, to the same day', tpl: 'VAR _Anchor = {a}\nVAR _LastYear = {ly}\nRETURN\n    CALCULATE ( {m}, DATESBETWEEN ( {d}, EOMONTH ( _LastYear, -1 ) + 1, _LastYear ) )' },
+  { key: 'mtdyoyp', name: 'MTD YoY %', kind: 'pct', label: 'Month to date vs same month last year, %', tpl: 'VAR _Anchor = {a}\nVAR _LastYear = {ly}\nVAR _MTD = CALCULATE ( {m}, DATESBETWEEN ( {d}, EOMONTH ( _Anchor, -1 ) + 1, _Anchor ) )\nVAR _PriorMTD = CALCULATE ( {m}, DATESBETWEEN ( {d}, EOMONTH ( _LastYear, -1 ) + 1, _LastYear ) )\nRETURN\n    IF ( NOT ISBLANK ( _MTD ), DIVIDE ( _MTD - _PriorMTD, _PriorMTD ) )' },
+  { key: 'r12', name: 'Rolling 12M', kind: 'value', label: 'Last 12 months to the latest date', tpl: 'VAR _Anchor = {a}\nRETURN\n    CALCULATE ( {m}, DATESINPERIOD ( {d}, _Anchor, -12, MONTH ) )' },
+  { key: 'r3avg', name: '3M Avg', kind: 'value', label: 'Monthly average over the last 3 months', tpl: 'VAR _Anchor = {a}\nVAR _Months = DATESINPERIOD ( {d}, _Anchor, -3, MONTH )\nRETURN\n    DIVIDE ( CALCULATE ( {m}, _Months ), 3 )' }
+];
+function tiCalcList(cfg){ return (cfg || {}).basis === 'context' ? TI_CALCS : TI_CALCS_LATEST; }
 const TI_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const TI_LAST_DAY = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 function tiDateRef(cfg){ return qName(cfg.dateTable) + bracket(cfg.dateColumn); }
@@ -23,16 +42,23 @@ function tiFy(cfg){
   const m = +cfg.fyEnd || 12;
   return m === 12 ? '' : ', "' + String(m).padStart(2, '0') + '-' + TI_LAST_DAY[m - 1] + '"';
 }
+function tiAnchor(cfg){ const d = tiDateRef(cfg); return cfg.hideFuture ? 'MIN ( MAX ( ' + d + ' ), TODAY () )' : 'MAX ( ' + d + ' )'; }
+function tiYearStart(cfg){
+  const s = (+cfg.fyEnd || 12) % 12 + 1;
+  return s === 1 ? 'DATE ( YEAR ( _Anchor ), 1, 1 )' : 'DATE ( YEAR ( _Anchor ) - IF ( MONTH ( _Anchor ) < ' + s + ', 1, 0 ), ' + s + ', 1 )';
+}
+const TI_LAST_YEAR = 'IF ( _Anchor = EOMONTH ( _Anchor, 0 ), EOMONTH ( _Anchor, -12 ), EDATE ( _Anchor, -12 ) )';
 function tiCalcName(cfg, c){ const o = (cfg.names || {})[c.key]; return (o || '').trim() || c.name; }
 function tiExpr(cfg, c, measureExpr){
-  let e = c.tpl.split('{m}').join(measureExpr).split('{d}').join(tiDateRef(cfg)).split('{fy}').join(tiFy(cfg));
+  let e = c.tpl.split('{a}').join(tiAnchor(cfg)).split('{ys}').join(tiYearStart(cfg)).split('{ly}').join(TI_LAST_YEAR)
+    .split('{m}').join(measureExpr).split('{d}').join(tiDateRef(cfg)).split('{fy}').join(tiFy(cfg));
   if (cfg.hideFuture) {
     const body = e.split('\n');
     e = 'IF (\n    MIN ( ' + tiDateRef(cfg) + ' ) > TODAY (),\n    BLANK (),\n' + body.map(l => '    ' + l).join('\n') + '\n)';
   }
   return e;
 }
-function tiSelectedCalcs(cfg){ return TI_CALCS.filter(c => (cfg.calcs || []).includes(c.key)); }
+function tiSelectedCalcs(cfg){ return tiCalcList(cfg).filter(c => (cfg.calcs || []).includes(c.key)); }
 function tiMeasureName(cfg, base, c){
   const n = tiCalcName(cfg, c);
   return cfg.namePattern === 'prefix' ? n + ' ' + base.name : base.name + ' ' + n;
