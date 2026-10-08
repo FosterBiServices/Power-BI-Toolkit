@@ -80,6 +80,40 @@ function buildHolidays(cfg, a, b){
     .sort((x, z) => x.date - z.date).map(h => ({ date: h.date, name: h.names.join(' / ') }));
 }
 
+/* ---------- daylight saving ---------- */
+// Clocks change on a Sunday. The day clocks go forward counts as DST (most of it is);
+// the day they go back doesn't (it's standard time from 2 AM). So DST runs from the
+// start Sunday up to the day before the end Sunday.
+// Each rule is "the Sunday on or before" a date: 14 March = second Sunday, 31 March = last Sunday.
+const DST_RULES = {
+  us: { name: 'United States', text: 'second Sunday in March to first Sunday in November (before 2007: first Sunday in April to last Sunday in October)',
+    cur: { start: [3, 14], end: [11, 7] }, since: 2007, old: { start: [4, 7], end: [10, 31] } },
+  eu: { name: 'UK and EU', text: 'last Sunday in March to last Sunday in October',
+    cur: { start: [3, 31], end: [10, 31] } }
+};
+function sundayOnOrBefore(dt){ return addDays(dt, -dt.getUTCDay()); }
+function isDst(dt, region){
+  const r = DST_RULES[region] || DST_RULES.us, y = dt.getUTCFullYear();
+  const rule = r.since && y < r.since ? r.old : r.cur;
+  return dt >= sundayOnOrBefore(D(y, rule.start[0], rule.start[1])) && dt < sundayOnOrBefore(D(y, rule.end[0], rule.end[1]));
+}
+function dstDax(region){
+  const r = DST_RULES[region] || DST_RULES.us;
+  const sun = md => 'DATE ( _y, ' + md[0] + ', ' + md[1] + ' ) - WEEKDAY ( DATE ( _y, ' + md[0] + ', ' + md[1] + ' ), 1 ) + 1';
+  const pick = k => r.since ? 'IF ( _y >= ' + r.since + ', ' + sun(r.cur[k]) + ', ' + sun(r.old[k]) + ' )' : sun(r.cur[k]);
+  return ['// Daylight saving (' + r.name + '): ' + r.text + '.',
+    '// Each changeover is the Sunday on or before a fixed date. The day clocks go forward counts as DST; the day they go back doesn\u2019t.',
+    'VAR _dstStart = ' + pick('start'), 'VAR _dstEnd = ' + pick('end')];
+}
+function dstM(region){
+  const r = DST_RULES[region] || DST_RULES.us;
+  const sun = md => 'Date.StartOfWeek(#date(y, ' + md[0] + ', ' + md[1] + '), Day.Sunday)';
+  const pick = k => r.since ? 'if y >= ' + r.since + ' then ' + sun(r.cur[k]) + ' else ' + sun(r.old[k]) : sun(r.cur[k]);
+  return ['// Daylight saving (' + r.name + '): ' + r.text + '.',
+    '// Each changeover is the Sunday on or before a fixed date. The day clocks go forward counts as DST; the day they go back doesn\u2019t.',
+    'dstStart = ' + pick('start'), 'dstEnd = ' + pick('end')];
+}
+
 /* ---------- range ---------- */
 function fiscalStartYear(dt, s){ const y = dt.getUTCFullYear(), m = dt.getUTCMonth() + 1; return s > 1 && m < s ? y - 1 : y; }
 function fyNumber(fsy, cfg){ return cfg.fyStart > 1 && cfg.fyNaming === 'end' ? fsy + 1 : fsy; }
@@ -198,6 +232,7 @@ const DT_COLUMNS = [
   { key: 'isHoliday', name: 'Is Holiday', group: 'Working days', type: 'bool', on: true, needsHol: true, dax: 'NOT ISBLANK ( _hol )', m: 'hol <> null', js: c => !!c.hol },
   { key: 'holidayName', name: 'Holiday Name', group: 'Working days', type: 'text', on: true, needsHol: true, dax: '_hol', m: 'hol', js: c => c.hol || '' },
   { key: 'isWorkday', name: 'Is Working Day', group: 'Working days', type: 'bool', on: true, dax: '{WORKDAY_DAX}', m: '{WORKDAY_M}', js: c => !c.weekend && !c.hol },
+  { key: 'isDST', name: 'Is DST', group: 'Daylight saving', type: 'bool', on: false, dst: true, dax: '_d >= _dstStart && _d < _dstEnd', m: 'd >= dstStart and d < dstEnd', js: c => c.dst },
   { key: 'monthFilter', name: 'Month Filter', group: 'Relative to today', type: 'text', on: true, rel: true, dax: '{MF_DAX}', m: '{MF_M}', sortBy: 'monthSort',
     js: c => c.y === c.today.getUTCFullYear() && c.m === c.today.getUTCMonth() + 1 ? 'Current' : (c.mfStyle === 'short' ? MONTHS[c.m - 1].slice(0, 3) : MONTHS[c.m - 1]) + '-' + c.y },
   { key: 'dayOffset', name: 'Day Offset', group: 'Relative to today', type: 'int', on: false, rel: true, dax: 'INT ( _d - _today )', m: 'Duration.Days(d - Today)', js: c => Math.round((c.dt - c.today) / DAY) },
@@ -235,7 +270,7 @@ function rowValues(dt, cfg, holMap, today){
     fyLabel: fyLabel(fsy, cfg), isoWk: Math.floor((Math.round((thu - D(thu.getUTCFullYear(), 1, 1)) / DAY)) / 7) + 1, isoYr: thu.getUTCFullYear(),
     wk: Math.floor((Math.round((dt - jan1) / DAY) + jan1dow - 1) / 7) + 1,
     weekend: (cfg.weekend || []).includes(dt.getUTCDay()), hol: holMap.get(ymd(dt)) || null,
-    todayFy: fyNumber(fiscalStartYear(today, cfg.fyStart), cfg), mfStyle: cfg.monthFilterStyle };
+    todayFy: fyNumber(fiscalStartYear(today, cfg.fyStart), cfg), mfStyle: cfg.monthFilterStyle, dst: isDst(dt, cfg.dstRegion) };
   return c;
 }
 function fyLabel(fsy, cfg){
@@ -340,6 +375,7 @@ function daxCode(cfg, today){
   L.push('        VAR _fm = MOD ( _m - ' + cfg.fyStart + ' + 12, 12 ) + 1');
   L.push('        VAR _fq = QUOTIENT ( _fm - 1, 3 ) + 1');
   L.push('        VAR _weekend = ' + weekendDax(cfg));
+  if (cols.some(c => c.dst)) dstDax(cfg.dstRegion).forEach(l => L.push('        ' + l));
   if (hols.length) L.push('        VAR _hol = CONCATENATEX ( FILTER ( _holidays, [HolidayDate] = _d ), [HolidayName], " / ", [Seq], ASC )');
   L.push('        RETURN');
   L.push('            ROW (');
@@ -405,8 +441,11 @@ function mCode(cfg, today){
   L.push('            fy = fsy' + (cfg.fyStart > 1 && cfg.fyNaming === 'end' ? ' + 1' : '') + ',');
   L.push('            fm = Number.Mod(m - FiscalStartMonth + 12, 12) + 1,');
   L.push('            fq = Number.IntegerDivide(fm - 1, 3) + 1,');
-  L.push('            weekend = ' + weekendM(cfg) + (hols.length ? ',' : ''));
-  if (hols.length) L.push('            hol = Record.FieldOrDefault(Holidays, Date.ToText(d, [Format = "yyyy-MM-dd", Culture = "en-US"]), null)');
+  const vars = ['weekend = ' + weekendM(cfg)];
+  if (cols.some(c => c.dst)) vars.push(...dstM(cfg.dstRegion));
+  if (hols.length) vars.push('hol = Record.FieldOrDefault(Holidays, Date.ToText(d, [Format = "yyyy-MM-dd", Culture = "en-US"]), null)');
+  const lastVar = vars.length - 1 - [...vars].reverse().findIndex(v => !v.startsWith('//'));
+  vars.forEach((v, i) => L.push('            ' + v + (i < lastVar && !v.startsWith('//') ? ',' : '')));
   L.push('        in');
   L.push('            [');
   L.push('                Date = d,');

@@ -11,7 +11,7 @@ const TODAY = localToday();
 function defaults(){
   const fy = fyNumber(fiscalStartYear(TODAY, 7), { fyStart: 7, fyNaming: 'end' });
   return { tableName: 'Date', fyStart: 7, fyNaming: 'end', fyStyle: 'fy', align: 'fiscal', startYear: fy - 3, startMode: 'fixed', startSnap: 'exact', startCols: '', dcPaste: '', endMode: 'fixed', endSnap: 'exact', endYear: fy + 1, rollYears: 1,
-    weekStart: 'mon', weekend: [0, 6], country: 'us', holidays: {}, observed: true, custom: '', cols: {}, monthFiscalOrder: false, monthFilterStyle: 'long' };
+    weekStart: 'mon', weekend: [0, 6], country: 'us', holidays: {}, observed: true, custom: '', cols: {}, monthFiscalOrder: false, monthFilterStyle: 'long', dstRegion: 'us' };
 }
 let cfg = defaults();
 const ui = { lang: 'dax', form: 'code', previewFrom: '', holYear: null };
@@ -56,12 +56,14 @@ function buildControls(){
   $('colGroups').innerHTML = groups.map(g => '<fieldset class="cgroup"><legend>' + esc(g) + '</legend>'
     + (g === 'Calendar' ? '<label class="c"><input type="checkbox" checked disabled> Date</label>' : '')
     + DT_COLUMNS.filter(c => c.group === g && !c.hide).map(c => '<label class="c"><input type="checkbox" data-col="' + c.key + '"> ' + esc(c.name) + '</label>').join('')
+    + (g === 'Daylight saving' ? '<div class="field"><label for="dstRegion">Rules</label><select id="dstRegion">' + Object.keys(DST_RULES).map(k => '<option value="' + k + '">' + esc(DST_RULES[k].name) + '</option>').join('') + '</select></div>'
+      + '<p class="note">TRUE from the day the clocks go forward to the day before they go back.</p>' : '')
     + (g === 'Relative to today' ? '<p class="note">Update each time the table refreshes. Offsets: 0 = this day, month or year. Month Filter shows "Current" for this month.</p>' : '') + '</fieldset>').join('');
 }
 function syncControls(){
   $('tableName').value = cfg.tableName; $('fyStart').value = String(cfg.fyStart); $('fyStyle').value = cfg.fyStyle;
   $('startYear').value = cfg.startYear; $('startCols').value = cfg.startCols; $('dcInput').value = cfg.dcPaste || '';  $('endYear').value = cfg.endYear; $('rollYears').value = String(cfg.rollYears);
-  $('country').value = cfg.country; $('observed').checked = cfg.observed; $('custom').value = cfg.custom; $('fiscalOrder').checked = cfg.monthFiscalOrder; $('mfStyle').value = cfg.monthFilterStyle;
+  $('country').value = cfg.country; $('observed').checked = cfg.observed; $('custom').value = cfg.custom; $('fiscalOrder').checked = cfg.monthFiscalOrder; $('mfStyle').value = cfg.monthFilterStyle; $('dstRegion').value = cfg.dstRegion;
   [['fyNaming', cfg.fyNaming], ['align', cfg.align], ['startMode', cfg.startMode], ['endMode', cfg.endMode], ['weekStart', cfg.weekStart], ['lang', ui.lang], ['form', ui.form]]
     .forEach(([n, v]) => document.querySelectorAll('input[name=' + n + ']').forEach(r => { r.checked = r.value === v; }));
   document.querySelectorAll('[data-col]').forEach(cb => { const c = DT_COLUMNS.find(x => x.key === cb.dataset.col); cb.checked = cfg.cols[c.key] !== undefined ? cfg.cols[c.key] : c.on; });
@@ -261,6 +263,7 @@ function init(){
   $('custom').addEventListener('input', () => { cfg.custom = $('custom').value; change(); });
   $('holYear').addEventListener('change', () => { ui.holYear = +$('holYear').value; render(); });
   $('colGroups').addEventListener('change', e => { const cb = e.target.closest('[data-col]'); if (!cb) return; cfg.cols[cb.dataset.col] = cb.checked; change(); });
+  $('dstRegion').addEventListener('change', () => { cfg.dstRegion = $('dstRegion').value; change(); });
   $('mfStyle').addEventListener('change', () => { cfg.monthFilterStyle = $('mfStyle').value; change(); });
   $('fiscalOrder').addEventListener('change', () => { cfg.monthFiscalOrder = $('fiscalOrder').checked; change(); });
   $('previewFrom').addEventListener('change', () => { ui.previewFrom = $('previewFrom').value; render(); });
