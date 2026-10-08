@@ -37,7 +37,7 @@ function autoPick(){
   const dateTables = m.tables.filter(t => lc(t.category) === 'time');
   const dateCols = t => m.columns.filter(x => lc(x.table) === lc(t) && /date/i.test(x.dataType || ''));
   if (!m.tables.some(t => lc(t.name) === lc(c.dateTable))) {
-    const t = dateTables[0] || m.tables.find(t => /date|calendar/i.test(t.name) && dateCols(t.name).length) || m.tables.find(t => dateCols(t.name).length);
+    const t = dateTables[0] || m.tables.find(t => tiCalcDateTable(t) && dateCols(t.name).length) || m.tables.find(t => /date|calendar/i.test(t.name) && dateCols(t.name).length) || m.tables.find(t => dateCols(t.name).length);
     c.dateTable = t ? t.name : '';
     c.dateColumn = '';
   }
@@ -74,7 +74,7 @@ function renderDates(){
   if (!m) { ['dTable', 'dCol'].forEach(id => { $(id).innerHTML = '<option value="">After Step 1</option>'; }); $('dateMsg').innerHTML = ''; }
   else {
     const withDates = m.tables.filter(t => m.columns.some(x => lc(x.table) === lc(t.name) && /date/i.test(x.dataType || '')));
-    $('dTable').innerHTML = (withDates.length ? '' : '<option value="">No table has a date column</option>') + withDates.map(t => opt(t.name, t.name + (lc(t.category) === 'time' ? '  (date table)' : ''), lc(t.name) === lc(c.dateTable))).join('');
+    $('dTable').innerHTML = (withDates.length ? '' : '<option value="">No table has a date column</option>') + withDates.map(t => opt(t.name, t.name + (lc(t.category) === 'time' ? '  (date table)' : tiCalcDateTable(t) ? '  (calculated date table)' : ''), lc(t.name) === lc(c.dateTable))).join('');
     $('dCol').innerHTML = m.columns.filter(x => lc(x.table) === lc(c.dateTable) && /date/i.test(x.dataType || '')).map(x => opt(x.name, x.name + (x.key ? '  (key)' : ''), lc(x.name) === lc(c.dateColumn))).join('');
   }
   $('fyEnd').innerHTML = TI_MONTHS.map((n, i) => opt(i + 1, n + (i === 11 ? ' (calendar year)' : ''), (+c.fyEnd || 12) === i + 1)).join('');

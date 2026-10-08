@@ -22,6 +22,18 @@ const { chromium } = require('playwright'); const fs = require('fs');
   console.log('prefix names:', (await p.locator('#tmdlView').innerText()).split('\n').filter(l => /measure /.test(l)).slice(0, 3).join(' | '));
   // non-date table: pick a date table not marked
   await p.selectOption('#dTable', 'Sales'); console.log('sales date table:', await p.locator('#dCol').inputValue(), '|', (await p.locator('#checks').innerText()).slice(0, 110));
+  // a calculated date table (CALENDARAUTO), not marked: picked over Sales, with its own warning
+  const H = ['Kind', 'Table', 'Name', 'Type', 'Folder', 'Flags', 'Description', 'Expression', 'ToTable', 'ToColumn', 'Storage', 'Source'];
+  const row = o => H.map(h => o[h] || '').join('\t');
+  await p.evaluate(() => localStorage.clear()); await p.reload();
+  await p.evaluate(v => { const t = document.getElementById('modelInput'); t.value = v; t.dispatchEvent(new Event('input', { bubbles: true })); }, [H.join('\t'),
+    row({ Kind: 'Table', Table: 'Sales', Name: 'Sales', Storage: 'Import' }),
+    row({ Kind: 'Table', Table: 'Calendar', Name: 'Calendar', Expression: 'CALENDARAUTO ()', Storage: 'Import' }),
+    row({ Kind: 'Column', Table: 'Sales', Name: 'Order Date', Type: 'DateTime' }),
+    row({ Kind: 'Column', Table: 'Calendar', Name: 'Date', Type: 'DateTime' }),
+    row({ Kind: 'Measure', Table: 'Sales', Name: 'Total Sales', Type: '#,0', Expression: 'SUM ( Sales[Amount] )' }),
+    row({ Kind: 'Relationship', Table: 'Sales', Name: 'Order Date', Type: 'Many:One', Flags: 'OneDirection', ToTable: 'Calendar', ToColumn: 'Date' })].join('\n'));
+  console.log('calc date table:', await p.locator('#dTable').inputValue(), '|', await p.locator('#dTable option:checked').innerText(), '|', (await p.locator('#checks').innerText()).slice(0, 80), '(expect Calendar, calculated date table, CALENDARAUTO warning)');
   await p.evaluate(() => localStorage.clear()); await p.setViewportSize({ width: 375, height: 800 }); await p.reload();
   console.log('mobile hscroll', await p.evaluate(() => document.documentElement.scrollWidth > innerWidth));
   console.log('errors', errs); await b.close();
