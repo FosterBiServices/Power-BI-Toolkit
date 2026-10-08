@@ -79,6 +79,11 @@ css=L(7,217)+'''
 .disclaimer h2{margin:0}
 .disc-top a{color:inherit;font-weight:600}
 .msg.info{background:var(--info-soft);color:var(--info)}
+.clear-all-home{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin-top:8px}
+.clear-all-home [hidden]{display:none!important}
+#homeClearConfirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn.danger{background:var(--err);border-color:var(--err);color:#fff}
+.btn.danger:hover{filter:brightness(1.08);color:#fff}
 '''
 logo=p[318]
 body=open(S+'home_body.html').read(); ui=open(S+'home_ui.js').read()

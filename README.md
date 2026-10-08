@@ -57,7 +57,7 @@ Tip: rename the query tab in DAX query view (for example *Toolkit export*) and k
 
 - **Your data stays with you.** The pages make no network requests with your content. The saved export lives in your browser's local storage for this site only, so it isn't shared with other browsers, other computers or other people.
 - **One export at a time.** Pasting a model export into any tool also replaces the saved one, so every tool stays on the same model. Remove it any time from the home page.
-- **Each tool keeps its own work** (requests, replies, settings) in your browser. **Clear entries** on a tool empties that tool only.
+- **Each tool keeps its own work** (requests, replies, settings) in your browser. **Clear entries** on a tool empties that tool only; its **Clear all pages** choice empties every tool and removes the saved export.
 - **Examples.** Every tool opens with customer and sales sample content so you can see how it works. Your own paste replaces it.
 - **Size limit.** Browsers allow about 5 MB of saved data per site. A very large model export may not fit; in that case paste it into each tool directly.
 - **Always test before you change a model.** Generated DAX, M and TMDL are checked by the pages where possible, but run them against a copy or use the comparison and validation queries the tools provide before updating a production model.
@@ -69,7 +69,7 @@ Tip: rename the query tab in DAX query view (for example *Toolkit export*) and k
 - **Test on a copy first.** Back up your report or keep it under version control (PBIP and Git), and apply scripts to a copy before a production model.
 - **No warranty, no liability.** The toolkit is provided free and "as is", without warranty of any kind, express or implied. Foster BI Services accepts no liability for incorrect information, errors, data loss, downtime, or any other loss or damage arising from its use or from relying on its output. Use it at your own discretion and risk.
 - **Follow your organization's policies.** Only paste prompts into AI tools your organization approves. Model exports contain no data rows, but names, formulas and descriptions may still be confidential.
-- **Shared computers.** Work is saved in the browser. On a shared computer, use **Clear entries** on each tool and remove the saved export from the home page when you finish.
+- **Shared computers.** Work is saved in the browser. On a shared computer, use **Clear all pages** (in any tool's Clear entries, or on the home page) when you finish.
 - **Not a Microsoft product.** This toolkit isn't affiliated with or endorsed by Microsoft. Power BI and Copilot are trademarks of Microsoft Corporation.
 
 ## Requirements

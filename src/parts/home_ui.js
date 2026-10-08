@@ -69,6 +69,10 @@ function init(){
   $('modelName').addEventListener('input', () => { const v = SF_SUITE.get(); if (v) { SF_SUITE.set(v.text, $('modelName').value.trim()); renderSaved(); } });
   $('clearSaved').addEventListener('click', () => { SF_SUITE.clear(); $('modelName').value = ''; $('saveMsg').innerHTML = msg('info', 'The saved export is removed. Each tool keeps its own copy until you clear that tool.'); renderSaved(); });
   window.addEventListener('storage', renderSaved);
+  const showClear = on => { $('homeClearConfirm').hidden = !on; $('homeClearAll').hidden = on; $('homeClearAll').setAttribute('aria-expanded', on); if (on) { $('homeClearDone').textContent = ''; $('homeClearNo').focus(); } };
+  $('homeClearAll').addEventListener('click', () => showClear(true));
+  $('homeClearNo').addEventListener('click', () => { showClear(false); $('homeClearAll').focus(); });
+  $('homeClearYes').addEventListener('click', () => { SF_SUITE.clearAll(); $('modelName').value = ''; $('exportInput').value = ''; $('saveMsg').innerHTML = ''; renderSaved(); showClear(false); $('homeClearDone').textContent = 'Every tool is empty and the saved export is removed.'; });
   renderTools(); renderSaved();
 }
 init();

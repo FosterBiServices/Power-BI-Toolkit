@@ -81,7 +81,7 @@
       <li><b>Nothing leaves your browser.</b> The pages don&rsquo;t send data anywhere. Prompts only reach Copilot when you paste them yourself.</li>
       <li><b>Where the export is kept:</b> in this browser&rsquo;s storage for this site, so it&rsquo;s there next time on this computer, but not on another computer or in another browser.</li>
       <li><b>One export at a time.</b> Pasting a model export into any tool also replaces the saved one, so every tool stays on the same model.</li>
-      <li><b>Each tool keeps its own work</b> (requests, replies, settings). Its <b>Clear entries</b> button empties that tool only; the saved export stays until you remove it here.</li>
+      <li><b>Each tool keeps its own work</b> (requests, replies, settings). Its <b>Clear entries</b> button empties that tool only, and the saved export stays until you remove it here. To empty every tool and remove the saved export at once, choose <b>Clear all pages</b> there or below.</li>
       <li><b>The Power Query Explainer</b> reads Power Query code, so its whole-model mode has its own export query. The <b>Date Table Generator</b> fills its date-column list from the saved export.</li>
       <li><b>The Model Documenter</b> uses the saved export for a quick document, or reads a PBIP project folder in the browser for the full one (Power Query, sources and report pages). The folder&rsquo;s files are read on the page and never uploaded.</li>
     </ul>
@@ -95,7 +95,10 @@
       <li><b>Test on a copy first.</b> Scripts can add, replace or change objects in your model. Back up the report or keep it under version control (PBIP and Git), and apply changes to a copy before a production model.</li>
       <li><b>No warranty, no liability.</b> The toolkit is provided free and &ldquo;as is&rdquo;, without warranty of any kind, express or implied. Foster BI Services accepts no liability for incorrect information, errors, data loss, downtime, or any other loss or damage arising from using it or relying on its output. You use it at your own discretion and risk.</li>
       <li><b>Follow your organization&rsquo;s policies.</b> Only paste prompts into AI tools your organization approves. A model export holds no data rows, but table, column and measure names, formulas and descriptions can still be confidential; treat them the way your data policies require.</li>
-      <li><b>Shared computers.</b> Exports and work are saved in this browser. On a shared or public computer, use <b>Clear entries</b> on each tool and remove the saved export here when you finish.</li>
+      <li><b>Shared computers.</b> Exports and work are saved in this browser. On a shared or public computer, clear everything when you finish.
+        <div class="clear-all-home"><button type="button" class="btn" id="homeClearAll" aria-controls="homeClearConfirm" aria-expanded="false">Clear all pages</button>
+          <span id="homeClearConfirm" hidden><span>Empty every tool and remove the saved model export? It can&rsquo;t be undone.</span> <button type="button" class="btn danger" id="homeClearYes">Clear all pages</button> <button type="button" class="btn" id="homeClearNo">Cancel</button></span>
+          <span id="homeClearDone" role="status"></span></div></li>
       <li><b>Not a Microsoft product.</b> This toolkit isn&rsquo;t affiliated with or endorsed by Microsoft. Power BI and Copilot are trademarks of Microsoft Corporation.</li>
     </ul>
   </section>
