@@ -63,8 +63,10 @@
         <div class="field"><label for="dTable">Date table</label><select id="dTable"></select></div>
         <div class="field"><label for="dCol">Date column</label><select id="dCol"></select></div>
         <div class="field"><label for="fyEnd">Year ends in</label><select id="fyEnd"></select></div>
+        <div class="field"><label for="basis">Work out periods from</label><select id="basis"><option value="latest">The latest date in the filter</option><option value="context">Every date in the filter</option></select></div>
       </div>
-      <div class="opts"><label><input type="checkbox" id="hideFuture"> Show blank for dates after today <span class="hint">(stops last-year and year-to-date lines running on past today)</span></label></div>
+      <p class="small muted" id="basisHint"></p>
+      <div class="opts"><label><input type="checkbox" id="hideFuture"> Show blank for dates after today <span class="hint">(stops last-year and year-to-date lines running on past today, and the latest date is never after today)</span></label></div>
       <div id="dateMsg"></div>
     </div>
   </section>

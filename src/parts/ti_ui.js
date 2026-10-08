@@ -16,11 +16,11 @@ function hl(code){
   return esc(code).split('\n').map(l => {
     if (/^\s*\/\//.test(l)) return '<span class="tok-com">' + l + '</span>';
     return l.replace(/(&quot;(?:[^&]|&(?!quot;))*?&quot;)/g, '<span class="tok-str">$1</span>')
-      .replace(/\b(createOrReplace|ref table|table|column|measure|calculationGroup|calculationItem|formatStringDefinition|DEFINE|MEASURE|EVALUATE|SUMMARIZECOLUMNS|ORDER BY|CALCULATE|DATESYTD|DATESQTD|DATESMTD|SAMEPERIODLASTYEAR|DATEADD|DATESINPERIOD|DIVIDE|VAR|RETURN|IF|NOT|ISBLANK|SELECTEDMEASURE|BLANK|MIN|MAX|TODAY)\b/g, '<span class="tok-kw">$1</span>');
+      .replace(/\b(createOrReplace|ref table|table|column|measure|calculationGroup|calculationItem|formatStringDefinition|DEFINE|MEASURE|EVALUATE|SUMMARIZECOLUMNS|ORDER BY|CALCULATE|DATESYTD|DATESQTD|DATESMTD|SAMEPERIODLASTYEAR|DATEADD|DATESINPERIOD|DIVIDE|VAR|RETURN|IF|NOT|ISBLANK|SELECTEDMEASURE|BLANK|MIN|MAX|TODAY|DATESBETWEEN|EOMONTH|EDATE|DATE|YEAR|MONTH|MOD)\b/g, '<span class="tok-kw">$1</span>');
   }).join('\n');
 }
 
-const blankCfg = () => ({ output: 'measures', dateTable: '', dateColumn: '', fyEnd: 12, hideFuture: false, calcs: ['ytd', 'py', 'yoyp'], names: {}, pctFormat: '0.0%',
+const blankCfg = () => ({ output: 'measures', dateTable: '', dateColumn: '', fyEnd: 12, basis: 'latest', hideFuture: false, calcs: ['ytd', 'pytd', 'yoyp'], names: {}, pctFormat: '0.0%',
   measures: [], target: '', namePattern: 'suffix', folderMode: 'fixed', folder: 'Time Intelligence', groupTable: 'Time Intelligence', groupColumn: 'Show as', precedence: 10, testBy: '', testMeasure: '' });
 const state = { example: false, model: null, cfg: blankCfg(), out: {} };
 
@@ -79,10 +79,14 @@ function renderDates(){
   }
   $('fyEnd').innerHTML = TI_MONTHS.map((n, i) => opt(i + 1, n + (i === 11 ? ' (calendar year)' : ''), (+c.fyEnd || 12) === i + 1)).join('');
   $('hideFuture').checked = !!c.hideFuture;
+  $('basis').value = c.basis === 'context' ? 'context' : 'latest';
+  $('basisHint').textContent = c.basis === 'context'
+    ? 'Each calculation uses every date in the filter: with no date in the visual, last year and previous month add up every date shifted back.'
+    : 'Each calculation starts from the latest date in the filter and works out its month, quarter or year from it. A card or total shows one period, and previous month or last year shifts back from that date.';
 }
 function renderCalcs(){
   const c = state.cfg;
-  $('calcs').innerHTML = TI_CALCS.map(k => {
+  $('calcs').innerHTML = tiCalcList(c).map(k => {
     const on = c.calcs.includes(k.key);
     return '<div class="calc' + (on ? ' on' : '') + '"><label class="ck"><input type="checkbox" data-calc="' + k.key + '"' + (on ? ' checked' : '') + '> <span><b>' + esc(k.name) + '</b><span class="cd">' + esc(k.label) + (k.kind === 'pct' ? ' · percent' : '') + '</span></span></label>'
       + '<input type="text" class="cname" data-name="' + k.key + '" value="' + esc((c.names || {})[k.key] || '') + '" placeholder="' + esc(k.name) + '" aria-label="Name for ' + esc(k.label) + '"' + (on ? '' : ' disabled') + '></div>';
@@ -167,7 +171,7 @@ function init(){
   const saved = store.get('model');
   let cfg = null; try { cfg = JSON.parse(store.get('cfg') || 'null'); } catch (e) {}
   if (saved && saved.trim()) { $('modelInput').value = saved; if (cfg) state.cfg = Object.assign(blankCfg(), cfg); }
-  else if (store.get('blank') !== '1') { $('modelInput').value = FP_EX_MODEL; state.cfg = Object.assign(blankCfg(), { measures: ['Total Sales', 'Gross Margin'], calcs: ['ytd', 'py', 'yoyp', 'r12'] }); setExample(true); }
+  else if (store.get('blank') !== '1') { $('modelInput').value = FP_EX_MODEL; state.cfg = Object.assign(blankCfg(), { measures: ['Total Sales', 'Gross Margin'], calcs: ['ytd', 'pytd', 'yoyp', 'pm'] }); setExample(true); }
   else if (cfg) state.cfg = Object.assign(blankCfg(), cfg);
   renderAll();
 
@@ -181,12 +185,13 @@ function init(){
   $('dTable').addEventListener('change', () => { c().dateTable = $('dTable').value; c().dateColumn = ''; c().testBy = ''; change(); });
   $('dCol').addEventListener('change', () => { c().dateColumn = $('dCol').value; change(); });
   $('fyEnd').addEventListener('change', () => { c().fyEnd = +$('fyEnd').value; change(); });
+  $('basis').addEventListener('change', () => { c().basis = $('basis').value; change(); });
   $('hideFuture').addEventListener('change', () => { c().hideFuture = $('hideFuture').checked; change(); });
   $('outMeasures').addEventListener('click', () => { c().output = 'measures'; change(); });
   $('outGroup').addEventListener('click', () => { c().output = 'group'; change(); });
   $('calcs').addEventListener('change', e => {
     const k = e.target.dataset.calc; if (!k) return;
-    c().calcs = e.target.checked ? TI_CALCS.map(x => x.key).filter(x => x === k || c().calcs.includes(x)) : c().calcs.filter(x => x !== k);
+    c().calcs = e.target.checked ? tiCalcList(c()).map(x => x.key).filter(x => x === k || c().calcs.includes(x)) : c().calcs.filter(x => x !== k);
     change();
   });
   $('calcs').addEventListener('input', e => { const k = e.target.dataset.name; if (!k) return; c().names[k] = e.target.value; leaveExample(); renderMeasures(); renderOut(); persist(); });
