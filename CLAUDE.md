@@ -24,6 +24,9 @@ prompt the user takes to Copilot, then check the reply pasted back. Nothing call
 - A **Clear entries** button in the banner, with a confirm step. It empties the page, removes
   everything the page saved in the browser (its own `localStorage` prefix), and leaves a flag
   (`<prefix>blank`) so a reload stays empty instead of bringing the example back.
+  suite.js adds a **Clear all pages** choice to that confirm (and the home page has one): it
+  clears every prefix in `S.PREFIXES`, the shared export, its history and the PBIP folder handle,
+  and sets every page's blank flag. A new tool's prefix goes in `S.PREFIXES`.
 - **Connect first.** A tool that reads the model starts with "Connect your model" as Step 1 (a PBIP
   folder, the model export, or no model where that works), then the task. Don't ask about
   measures or tables before the user has chosen how to connect.
@@ -78,7 +81,7 @@ Things to know:
    `P+'tool-name.html'`.
 2. `build_site.py` HOOKS: add `'tool-name': "SF_SUITE.hook({...});"` or `''` if it doesn't use
    the model export.
-3. `suite.js` `S.TOOLS` (Switch tool menu order), plus `AI_TOOLS` and `PROMPTS` if it writes a
+3. `suite.js` `S.TOOLS` (Switch tool menu order), `S.PREFIXES` (Clear all pages), plus `AI_TOOLS` and `PROMPTS` if it writes a
    Copilot prompt.
 4. `home_ui.js` TOOLS card (`free: true` = works without the model export; `tags`), and
    `FREE_ORDER` if free.

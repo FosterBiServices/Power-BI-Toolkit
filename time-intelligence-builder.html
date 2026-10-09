@@ -2215,6 +2215,7 @@ init();
     if (v && valueFor(v) && ta.value.trim() !== valueFor(v).trim() && allowed && (exampleShowing() || (!ta.value.trim() && !blank) || (ta.value.trim() && (following() || (fromPbip && ch === 'pbip'))))) use();
     else render();
     window.addEventListener('storage', e => { if (e.key === KEY) render(); });
+    window.addEventListener('sfpbi-cleared', () => { note = ''; render(); });
     if (conn) conn.onShared(() => { remember(); render(); });
   };
 })();
@@ -2498,6 +2499,30 @@ init();
       render();
     } };
   };
+
+  // ---------- Clear all pages: every tool's saved work, the saved export (and its history) and the remembered PBIP folder ----------
+  S.PREFIXES = ['kmb.', 'kmd.', 'kpa.', 'kdr.', 'kvq.', 'kti.', 'kfp.', 'krl.', 'kml.', 'kmc.', 'kmdoc.', 'kab.', 'kpw.', 'kpq.', 'kdt.', 'kkv.', 'ktb.', 'klo.', 'ksr.'];
+  S.clearAll = () => {
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('sfpbi.') || S.PREFIXES.some(p => k.startsWith(p))).forEach(k => localStorage.removeItem(k));
+      // each page then opens empty instead of bringing its example back
+      S.PREFIXES.forEach(p => localStorage.setItem(p + 'blank', '1'));
+    } catch (e) {}
+    try { const o = indexedDB.open('sfpbi', 1); o.onupgradeneeded = () => o.result.createObjectStore('h'); o.onsuccess = () => { try { o.result.transaction('h', 'readwrite').objectStore('h').delete('pbip'); } catch (e) {} }; } catch (e) {}
+    window.dispatchEvent(new Event('sfpbi-cleared'));
+  };
+  // A second choice in each page's Clear entries confirm: this page only, or every page
+  const cyes = document.getElementById('clearYes'), cmsg = document.getElementById('clearMsg');
+  if (cyes && !document.getElementById('clearAllPages')) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn danger'; b.id = 'clearAllPages'; b.textContent = 'Clear all pages';
+    cyes.insertAdjacentElement('afterend', b);
+    if (cmsg) cmsg.insertAdjacentHTML('beforeend', ' <span class="suite-clear-note"><b>Clear all pages</b> does the same on every tool and also removes the saved model export.</span>');
+    const done = document.getElementById('clearDone');
+    let extra = null;
+    if (done) { extra = document.createElement('span'); extra.className = 'suite-clear-all'; extra.textContent = ' Every other tool and the saved model export were cleared too.'; extra.hidden = true; done.appendChild(extra); }
+    cyes.addEventListener('click', () => { if (extra) extra.hidden = true; });
+    b.addEventListener('click', () => { cyes.click(); S.clearAll(); if (extra) extra.hidden = false; });
+  }
 })();
 /*SUITE-END*/
 

@@ -257,6 +257,11 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 .disclaimer h2{margin:0}
 .disc-top a{color:inherit;font-weight:600}
 .msg.info{background:var(--info-soft);color:var(--info)}
+.clear-all-home{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin-top:8px}
+.clear-all-home [hidden]{display:none!important}
+#homeClearConfirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn.danger{background:var(--err);border-color:var(--err);color:#fff}
+.btn.danger:hover{filter:brightness(1.08);color:#fff}
 
 </style>
 </head>
@@ -349,7 +354,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       <li><b>Nothing leaves your browser.</b> The pages don&rsquo;t send data anywhere. Prompts only reach Copilot when you paste them yourself.</li>
       <li><b>Where the export is kept:</b> in this browser&rsquo;s storage for this site, so it&rsquo;s there next time on this computer, but not on another computer or in another browser.</li>
       <li><b>One export at a time.</b> Pasting a model export into any tool also replaces the saved one, so every tool stays on the same model.</li>
-      <li><b>Each tool keeps its own work</b> (requests, replies, settings). Its <b>Clear entries</b> button empties that tool only; the saved export stays until you remove it here.</li>
+      <li><b>Each tool keeps its own work</b> (requests, replies, settings). Its <b>Clear entries</b> button empties that tool only, and the saved export stays until you remove it here. To empty every tool and remove the saved export at once, choose <b>Clear all pages</b> there or below.</li>
       <li><b>The Power Query Explainer</b> reads Power Query code, so its whole-model mode has its own export query. The <b>Date Table Generator</b> fills its date-column list from the saved export.</li>
       <li><b>The Model Documenter</b> uses the saved export for a quick document, or reads a PBIP project folder in the browser for the full one (Power Query, sources and report pages). The folder&rsquo;s files are read on the page and never uploaded.</li>
     </ul>
@@ -363,7 +368,10 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       <li><b>Test on a copy first.</b> Scripts can add, replace or change objects in your model. Back up the report or keep it under version control (PBIP and Git), and apply changes to a copy before a production model.</li>
       <li><b>No warranty, no liability.</b> The toolkit is provided free and &ldquo;as is&rdquo;, without warranty of any kind, express or implied. Foster BI Services accepts no liability for incorrect information, errors, data loss, downtime, or any other loss or damage arising from using it or relying on its output. You use it at your own discretion and risk.</li>
       <li><b>Follow your organization&rsquo;s policies.</b> Only paste prompts into AI tools your organization approves. A model export holds no data rows, but table, column and measure names, formulas and descriptions can still be confidential; treat them the way your data policies require.</li>
-      <li><b>Shared computers.</b> Exports and work are saved in this browser. On a shared or public computer, use <b>Clear entries</b> on each tool and remove the saved export here when you finish.</li>
+      <li><b>Shared computers.</b> Exports and work are saved in this browser. On a shared or public computer, clear everything when you finish.
+        <div class="clear-all-home"><button type="button" class="btn" id="homeClearAll" aria-controls="homeClearConfirm" aria-expanded="false">Clear all pages</button>
+          <span id="homeClearConfirm" hidden><span>Empty every tool and remove the saved model export? It can&rsquo;t be undone.</span> <button type="button" class="btn danger" id="homeClearYes">Clear all pages</button> <button type="button" class="btn" id="homeClearNo">Cancel</button></span>
+          <span id="homeClearDone" role="status"></span></div></li>
       <li><b>Not a Microsoft product.</b> This toolkit isn&rsquo;t affiliated with or endorsed by Microsoft. Power BI and Copilot are trademarks of Microsoft Corporation.</li>
     </ul>
   </section>
@@ -1669,6 +1677,7 @@ function testQuery(measures){
     if (v && valueFor(v) && ta.value.trim() !== valueFor(v).trim() && allowed && (exampleShowing() || (!ta.value.trim() && !blank) || (ta.value.trim() && (following() || (fromPbip && ch === 'pbip'))))) use();
     else render();
     window.addEventListener('storage', e => { if (e.key === KEY) render(); });
+    window.addEventListener('sfpbi-cleared', () => { note = ''; render(); });
     if (conn) conn.onShared(() => { remember(); render(); });
   };
 })();
@@ -1952,6 +1961,30 @@ function testQuery(measures){
       render();
     } };
   };
+
+  // ---------- Clear all pages: every tool's saved work, the saved export (and its history) and the remembered PBIP folder ----------
+  S.PREFIXES = ['kmb.', 'kmd.', 'kpa.', 'kdr.', 'kvq.', 'kti.', 'kfp.', 'krl.', 'kml.', 'kmc.', 'kmdoc.', 'kab.', 'kpw.', 'kpq.', 'kdt.', 'kkv.', 'ktb.', 'klo.', 'ksr.'];
+  S.clearAll = () => {
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('sfpbi.') || S.PREFIXES.some(p => k.startsWith(p))).forEach(k => localStorage.removeItem(k));
+      // each page then opens empty instead of bringing its example back
+      S.PREFIXES.forEach(p => localStorage.setItem(p + 'blank', '1'));
+    } catch (e) {}
+    try { const o = indexedDB.open('sfpbi', 1); o.onupgradeneeded = () => o.result.createObjectStore('h'); o.onsuccess = () => { try { o.result.transaction('h', 'readwrite').objectStore('h').delete('pbip'); } catch (e) {} }; } catch (e) {}
+    window.dispatchEvent(new Event('sfpbi-cleared'));
+  };
+  // A second choice in each page's Clear entries confirm: this page only, or every page
+  const cyes = document.getElementById('clearYes'), cmsg = document.getElementById('clearMsg');
+  if (cyes && !document.getElementById('clearAllPages')) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn danger'; b.id = 'clearAllPages'; b.textContent = 'Clear all pages';
+    cyes.insertAdjacentElement('afterend', b);
+    if (cmsg) cmsg.insertAdjacentHTML('beforeend', ' <span class="suite-clear-note"><b>Clear all pages</b> does the same on every tool and also removes the saved model export.</span>');
+    const done = document.getElementById('clearDone');
+    let extra = null;
+    if (done) { extra = document.createElement('span'); extra.className = 'suite-clear-all'; extra.textContent = ' Every other tool and the saved model export were cleared too.'; extra.hidden = true; done.appendChild(extra); }
+    cyes.addEventListener('click', () => { if (extra) extra.hidden = true; });
+    b.addEventListener('click', () => { cyes.click(); S.clearAll(); if (extra) extra.hidden = false; });
+  }
 })();
 /*SUITE-END*/
 
@@ -2026,6 +2059,10 @@ function init(){
   $('modelName').addEventListener('input', () => { const v = SF_SUITE.get(); if (v) { SF_SUITE.set(v.text, $('modelName').value.trim()); renderSaved(); } });
   $('clearSaved').addEventListener('click', () => { SF_SUITE.clear(); $('modelName').value = ''; $('saveMsg').innerHTML = msg('info', 'The saved export is removed. Each tool keeps its own copy until you clear that tool.'); renderSaved(); });
   window.addEventListener('storage', renderSaved);
+  const showClear = on => { $('homeClearConfirm').hidden = !on; $('homeClearAll').hidden = on; $('homeClearAll').setAttribute('aria-expanded', on); if (on) { $('homeClearDone').textContent = ''; $('homeClearNo').focus(); } };
+  $('homeClearAll').addEventListener('click', () => showClear(true));
+  $('homeClearNo').addEventListener('click', () => { showClear(false); $('homeClearAll').focus(); });
+  $('homeClearYes').addEventListener('click', () => { SF_SUITE.clearAll(); $('modelName').value = ''; $('exportInput').value = ''; $('saveMsg').innerHTML = ''; renderSaved(); showClear(false); $('homeClearDone').textContent = 'Every tool is empty and the saved export is removed.'; });
   renderTools(); renderSaved();
 }
 init();
