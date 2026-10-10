@@ -3,8 +3,9 @@
 const KV_EXCEL = { good: { fill: '#C6EFCE', text: '#006100' }, neutral: { fill: '#FFEB9C', text: '#9C5700' }, bad: { fill: '#FFC7CE', text: '#9C0006' } };
 // Excel's 3-color scale (red, yellow, green) as fills, with dark text
 const KV_SCALE = { good: { fill: '#63BE7B', text: '#1E4620' }, neutral: { fill: '#FFEB84', text: '#5C4A00' }, bad: { fill: '#F8696B', text: '#5A0A0B' } };
-// Neutral colors for everything that isn't status (tracks, lines, target marks)
-const KV_INK = '#252423', KV_GREY = '#8A8886', KV_TRACK = '#E6E6E6';
+// Card colors for everything that isn't status: the starting values, which the user changes in Step 4
+const KV_INK_DEF = { bg: '#FFFFFF', text: '#252423', muted: '#605E5C', line: '#8A8886', track: '#E6E6E6', accent: '#118DFF' };
+const KV_INK_KEYS = [['bg', 'Background'], ['text', 'Text'], ['muted', 'Labels'], ['line', 'Trend lines'], ['track', 'Tracks and dividers'], ['accent', 'Accent']];
 
 function kvHex(c){ const m = String(c || '').trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i); if (!m) return ''; let h = m[1]; if (h.length === 3) h = h.split('').map(x => x + x).join(''); return '#' + h.toUpperCase(); }
 function kvMix(a, b, t){
@@ -20,6 +21,23 @@ function kvPair(color){
   const fill = kvMix(c, '#FFFFFF', 0.78);
   let text = c, i = 0; while (kvContrast(text, fill) < 4.5 && i < 12) { text = kvMix(text, '#000000', 0.12); i++; }
   return { fill, text };
+}
+// The card colors chosen (cfg.ink), each falling back to its starting value
+function kvInk(cfg){ const o = (cfg && cfg.ink) || {}, P = {}; Object.keys(KV_INK_DEF).forEach(x => { P[x] = kvHex(o[x]) || KV_INK_DEF[x]; }); return P; }
+// Card colors from a Power BI theme JSON (foreground, background, dataColors), or Theme Builder's saved settings
+function kvThemeInk(obj){
+  if (!obj || typeof obj !== 'object') return null;
+  const vis = obj.visualBg && obj.visualBg !== 'transparent' ? kvHex(obj.visualBg) : '';
+  const bg = vis || kvHex(obj.background) || '';
+  const dark = bg && kvLum(bg) < 0.2;
+  const text = kvHex(obj.foreground) || (obj.textMode === 'custom' && kvHex(obj.textColor)) || (bg ? (dark ? '#F3F2F1' : '#252423') : '');
+  const accent = kvHex((obj.dataColors || [])[0]) || kvHex(obj.brand) || kvHex(obj.tableAccent);
+  if (!bg && !text && !accent) return null;
+  const P = kvInk({ ink: { bg, text, accent } });
+  P.muted = kvHex(obj.foregroundNeutralSecondary) || kvMix(P.text, P.bg, 0.35);
+  P.line = kvHex(obj.foregroundNeutralTertiary) || kvMix(P.text, P.bg, 0.5);
+  P.track = kvHex(obj.backgroundNeutral) || kvMix(P.text, P.bg, 0.88);
+  return P;
 }
 // good / neutral / bad from a Power BI theme JSON, or Theme Builder's saved settings
 function kvThemeColors(obj){
@@ -117,46 +135,237 @@ function kvStatus(x, base, better, band){
 
 /* ---------- SVG pictures (the same geometry the DAX measures draw) ---------- */
 const kvF = x => (Math.round(x * 10) / 10).toString();
-function kvSvgBullet(n, color){
+function kvSvgBullet(n, color, P){
   const max = Math.max(n.v, n.t, 0) * 1.15 || 1, vw = kvClamp(n.v / max, 0, 1) * 112, tx = 4 + kvClamp(n.t / max, 0, 1) * 112;
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="24" viewBox="0 0 120 24"><rect x="4" y="6" width="112" height="12" fill="' + KV_TRACK + '"/><rect x="4" y="8" width="' + kvF(vw) + '" height="8" fill="' + color + '"/><rect x="' + kvF(tx - 1) + '" y="3" width="2" height="18" fill="' + KV_INK + '"/></svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="24" viewBox="0 0 120 24"><rect x="4" y="6" width="112" height="12" fill="' + P.track + '"/><rect x="4" y="8" width="' + kvF(vw) + '" height="8" fill="' + color + '"/><rect x="' + kvF(tx - 1) + '" y="3" width="2" height="18" fill="' + P.text + '"/></svg>';
 }
-function kvSvgProgress(n, color){
+function kvSvgProgress(n, color, P){
   const p = n.t ? n.v / n.t : 0, w = kvClamp(p, 0, 1) * 88;
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="24" viewBox="0 0 120 24"><rect x="2" y="8" width="88" height="8" rx="4" fill="' + KV_TRACK + '"/><rect x="2" y="8" width="' + kvF(w) + '" height="8" rx="4" fill="' + color + '"/><text x="118" y="16" text-anchor="end" font-family="Segoe UI, sans-serif" font-size="11" fill="' + KV_INK + '">' + Math.round(p * 100) + '%</text></svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="24" viewBox="0 0 120 24"><rect x="2" y="8" width="88" height="8" rx="4" fill="' + P.track + '"/><rect x="2" y="8" width="' + kvF(w) + '" height="8" rx="4" fill="' + color + '"/><text x="118" y="16" text-anchor="end" font-family="Segoe UI, sans-serif" font-size="11" fill="' + P.text + '">' + Math.round(p * 100) + '%</text></svg>';
 }
-function kvSvgSpark(n, color){
+function kvSvgSpark(n, color, P){
   const t = n.trend.slice(-12), N = t.length, lo = Math.min(...t), hi = Math.max(...t), r = hi === lo ? 1 : hi - lo;
   const pts = t.map((y, i) => [2 + i * 116 / Math.max(N - 1, 1), 29 - (y - lo) * 26 / r]);
   const last = pts[pts.length - 1];
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="32" viewBox="0 0 120 32"><polyline points="' + pts.map(p => kvF(p[0]) + ',' + kvF(p[1])).join(' ') + '" fill="none" stroke="' + KV_GREY + '" stroke-width="1.5" stroke-linejoin="round"/><circle cx="' + kvF(last[0]) + '" cy="' + kvF(last[1]) + '" r="2.5" fill="' + color + '"/></svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="32" viewBox="0 0 120 32"><polyline points="' + pts.map(p => kvF(p[0]) + ',' + kvF(p[1])).join(' ') + '" fill="none" stroke="' + P.line + '" stroke-width="1.5" stroke-linejoin="round"/><circle cx="' + kvF(last[0]) + '" cy="' + kvF(last[1]) + '" r="2.5" fill="' + color + '"/></svg>';
 }
-function kvSvgVarBar(d, color){
+function kvSvgVarBar(d, color, P){
   const w = kvClamp(Math.abs(d) / 0.25, 0, 1) * 50, x = d >= 0 ? 60 : 60 - w;
   const tx = d >= 0 ? 57 : 63, anchor = d >= 0 ? 'end' : 'start';
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="24" viewBox="0 0 120 24"><rect x="' + kvF(x) + '" y="6" width="' + kvF(w) + '" height="12" fill="' + color + '"/><rect x="59.5" y="2" width="1" height="20" fill="' + KV_INK + '"/><text x="' + tx + '" y="16" text-anchor="' + anchor + '" font-family="Segoe UI, sans-serif" font-size="10" fill="' + KV_INK + '">' + kvSigned(d, 0) + '</text></svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="24" viewBox="0 0 120 24"><rect x="' + kvF(x) + '" y="6" width="' + kvF(w) + '" height="12" fill="' + color + '"/><rect x="59.5" y="2" width="1" height="20" fill="' + P.text + '"/><text x="' + tx + '" y="16" text-anchor="' + anchor + '" font-family="Segoe UI, sans-serif" font-size="10" fill="' + P.text + '">' + kvSigned(d, 0) + '</text></svg>';
 }
-function kvSvgSlope(d, color){
+function kvSvgSlope(d, color, P){
   const dy = kvClamp(d / 0.25, -1, 1) * 11, y1 = 16 + dy, y2 = 16 - dy;
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="32" viewBox="0 0 120 32"><line x1="10" y1="' + kvF(y1) + '" x2="110" y2="' + kvF(y2) + '" stroke="' + color + '" stroke-width="2"/><circle cx="10" cy="' + kvF(y1) + '" r="3" fill="' + KV_GREY + '"/><circle cx="110" cy="' + kvF(y2) + '" r="3.5" fill="' + color + '"/></svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="32" viewBox="0 0 120 32"><line x1="10" y1="' + kvF(y1) + '" x2="110" y2="' + kvF(y2) + '" stroke="' + color + '" stroke-width="2"/><circle cx="10" cy="' + kvF(y1) + '" r="3" fill="' + P.line + '"/><circle cx="110" cy="' + kvF(y2) + '" r="3.5" fill="' + color + '"/></svg>';
 }
-function kvSvgWaffle(p, color){
+function kvSvgWaffle(p, color, P){
   const f = Math.round(kvClamp(p, 0, 1) * 100);
   let s = '<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60">';
-  for (let i = 0; i < 100; i++) s += '<rect x="' + (i % 10) * 6 + '" y="' + (9 - Math.floor(i / 10)) * 6 + '" width="5" height="5" fill="' + (i < f ? color : KV_TRACK) + '"/>';
+  for (let i = 0; i < 100; i++) s += '<rect x="' + (i % 10) * 6 + '" y="' + (9 - Math.floor(i / 10)) * 6 + '" width="5" height="5" fill="' + (i < f ? color : P.track) + '"/>';
   return s + '</svg>';
 }
-function kvSvgGauge(n, color){
+function kvSvgGauge(n, color, P){
   const max = Math.max(n.v, n.t) * 1.25 || 1, a = p => Math.PI * (1 - kvClamp(p, 0, 1));
   const pt = (p, r) => [60 + r * Math.cos(a(p)), 56 - r * Math.sin(a(p))];
   const arc = (p, col) => { const e = pt(p, 44); return '<path d="M16,56 A44,44 0 0 1 ' + kvF(e[0]) + ',' + kvF(e[1]) + '" fill="none" stroke="' + col + '" stroke-width="14"/>'; };
   const t1 = pt(n.t / max, 34), t2 = pt(n.t / max, 54);
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="62" viewBox="0 0 120 62">' + arc(1, KV_TRACK) + arc(n.v / max, color) + '<line x1="' + kvF(t1[0]) + '" y1="' + kvF(t1[1]) + '" x2="' + kvF(t2[0]) + '" y2="' + kvF(t2[1]) + '" stroke="' + KV_INK + '" stroke-width="2"/></svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="62" viewBox="0 0 120 62">' + arc(1, P.track) + arc(n.v / max, color) + '<line x1="' + kvF(t1[0]) + '" y1="' + kvF(t1[1]) + '" x2="' + kvF(t2[0]) + '" y2="' + kvF(t2[1]) + '" stroke="' + P.text + '" stroke-width="2"/></svg>';
 }
-function kvSvgArea(n){
+function kvSvgArea(n, P){
   const t = n.trend.slice(-12), N = t.length, lo = Math.min(...t) * 0.9, hi = Math.max(...t), r = hi === lo ? 1 : hi - lo;
   const pts = t.map((y, i) => kvF(i * 200 / Math.max(N - 1, 1)) + ',' + kvF(46 - (y - lo) * 40 / r));
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="48" viewBox="0 0 200 48" preserveAspectRatio="none"><polygon points="0,48 ' + pts.join(' ') + ' 200,48" fill="' + kvMix(KV_GREY, '#FFFFFF', 0.7) + '"/><polyline points="' + pts.join(' ') + '" fill="none" stroke="' + KV_GREY + '" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="48" viewBox="0 0 200 48" preserveAspectRatio="none"><polygon points="0,48 ' + pts.join(' ') + ' 200,48" fill="' + kvMix(P.line, P.bg, 0.7) + '"/><polyline points="' + pts.join(' ') + '" fill="none" stroke="' + P.line + '" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>';
+}
+
+/* ---------- Card designs: a whole card drawn by one SVG measure (layouts from PowerViz KPI templates) ---------- */
+// A design writes its SVG once. In the preview each hole is the preview's number or text; in the measure it's a
+// DAX variable. Every color comes from Step 4 (status colors and card colors).
+const KV_DFONT = "font-family='Segoe UI, Arial, sans-serif'";
+// "1.2M", "$12.6K": the value with K, M or bn and one decimal, the way the measure formats it
+function kvFmtC(v, fmt){
+  if (v == null || !isFinite(v)) return '';
+  if (kvIsPct(fmt) || Math.abs(v) < 1e3) return kvFmt(v, fmt);
+  const cur = ((fmt || '').match(/[$€£¥]/) || [''])[0], a = Math.abs(v), [d, u] = a >= 1e9 ? [1e9, 'bn'] : a >= 1e6 ? [1e6, 'M'] : [1e3, 'K'];
+  return (v < 0 ? '-' : '') + cur + (a / d).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + u;
+}
+function kvDaxFmtC(x, fmt){
+  const f = fmt || '#,0';
+  if (kvIsPct(f)) return ['IF ( ISBLANK ( ' + x + ' ), "", FORMAT ( ' + x + ', ' + daxString(f) + ' ) )'];
+  const cur = ((f.match(/\\?[$€£¥]/) || [''])[0]), one = daxString(cur + '#,0.0');
+  return ['SWITCH (', '    TRUE (),', '    ISBLANK ( ' + x + ' ), "",',
+    '    ABS ( ' + x + ' ) >= 1E9, FORMAT ( ' + x + ' / 1E9, ' + one + ' ) & "bn",',
+    '    ABS ( ' + x + ' ) >= 1E6, FORMAT ( ' + x + ' / 1E6, ' + one + ' ) & "M",',
+    '    ABS ( ' + x + ' ) >= 1E3, FORMAT ( ' + x + ' / 1E3, ' + one + ' ) & "K",',
+    '    FORMAT ( ' + x + ', ' + daxString(f) + ' )', ')'];
+}
+const kvXml = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&apos;');
+// The pieces a design can use, for one KPI. dax: true gives holes and collects the DAX variables they need.
+function kvDesignCtx(k, cfg, dax, sfx){
+  sfx = sfx || '';
+  const n = kvNums(k), h = kvHas(k), P = kvInk(cfg), C = cfg.colors, band = (+cfg.band || 0) / 100, fmt = k.format;
+  const tc = (cfg.trendCol || '').trim() || "'Date'[Month Start]", N = Math.max(2, Math.min(36, +cfg.periods || 12));
+  const defs = new Map(), vn = x => x + sfx;
+  const def = (name, lines) => { name = vn(name); if (!defs.has(name)) { const L = Array.isArray(lines) ? lines : [lines]; defs.set(name, L.length > 1 ? ['VAR ' + name + ' ='].concat(L.map(l => '    ' + l)) : ['VAR ' + name + ' = ' + L[0]]); } return name; };
+  const hole = name => '\u0001' + name + '\u0002';
+  const W = which => which === 't' ? 'target' : which === 'c' ? 'compare' : h.target ? 'target' : 'compare';
+  const baseNum = which => W(which) === 'target' ? n.t : n.c;
+  const vsName = which => W(which) === 'target' ? 'vs target' : 'vs ' + ((k.compareLabel || '').trim() || 'last period');
+  const baseName = which => W(which) === 'target' ? 'Target' : ((k.compareLabel || '').trim() || 'Last period').replace(/^./, c => c.toUpperCase());
+  // DAX variables
+  const dValue = () => def('_Value', kvRef(k.measure));
+  const dBase = which => W(which) === 'target' ? def('_Target', kvRef(k.target)) : def('_Compare', kvRef(k.compare));
+  const tag = which => W(which) === 'target' ? 'T' : 'C';
+  const dVar = which => { const v = dValue(), b = dBase(which); return def('_Var' + tag(which), 'IF ( NOT ISBLANK ( ' + v + ' ) && NOT ISBLANK ( ' + b + ' ) && ' + b + ' <> 0, DIVIDE ( ' + v + ' - ' + b + ', ABS ( ' + b + ' ) ) )'); };
+  const dStatus = (which, part) => { const x = dVar(which), s = k.better === 'lower' ? '-' + x : x;
+    return def('_' + (part === 'fill' ? 'Fill' : 'Col') + tag(which), ['SWITCH (', '    TRUE (),', '    ISBLANK ( ' + x + ' ), "' + (part === 'fill' ? P.track : P.muted) + '",', '    ' + s + ' >= ' + band + ' && ' + s + ' > 0, "' + C.good[part] + '",', '    ' + s + ' <= -' + band + ' && ' + s + ' < 0, "' + C.bad[part] + '",', '    "' + C.neutral[part] + '"', ')']); };
+  const dTrend = () => {
+    const v = dValue();
+    def('_Data', ['TOPN (', '    ' + N + ',', '    FILTER ( ADDCOLUMNS ( VALUES ( ' + tc + ' ), "@v", ' + kvRef(k.measure) + ' ), NOT ISBLANK ( [@v] ) ),', '    ' + tc + ', DESC', ')']);
+    def('_N', 'COUNTROWS ( ' + vn('_Data') + ' )'); def('_Lo', 'MINX ( ' + vn('_Data') + ', [@v] )'); def('_Hi', 'MAXX ( ' + vn('_Data') + ', [@v] )');
+    def('_Range', 'IF ( ' + vn('_Hi') + ' = ' + vn('_Lo') + ', 1, ( ' + vn('_Hi') + ' - ' + vn('_Lo') + ' ) * 1.25 )');
+    def('_Floor', vn('_Lo') + ' - IF ( ' + vn('_Hi') + ' = ' + vn('_Lo') + ', 0.5, ( ' + vn('_Hi') + ' - ' + vn('_Lo') + ' ) * 0.25 )');
+    return def('_Pts', 'ADDCOLUMNS ( ' + vn('_Data') + ', "@x", RANKX ( ' + vn('_Data') + ', ' + tc + ', , ASC ) )');
+  };
+  // preview trend: the last N numbers, with the same scale as the measure
+  const pts = () => { const t = n.trend.slice(-N), lo = Math.min(...t), hi = Math.max(...t), range = hi === lo ? 1 : (hi - lo) * 1.25, floor = lo - (hi === lo ? 0.5 : (hi - lo) * 0.25); return { t, N: t.length, range, floor }; };
+  const yOf = (v, s, y, hh) => y + hh - (v - s.floor) * hh / s.range;
+  const z = {
+    n, h, P, C, k,
+    name: kvXml(kvName(k)), vsName, baseName,
+    has: which => W(which) === 'target' ? h.target : h.compare,
+    value(){ return dax ? hole(def('_ValueText', kvDaxFmtC(dValue(), fmt))) : kvXml(kvFmtC(n.v, fmt)); },
+    base(which){ return dax ? hole(def('_' + W(which).replace(/^./, c => c.toUpperCase()) + 'Text', kvDaxFmtC(dBase(which), fmt))) : kvXml(kvFmtC(baseNum(which), fmt)); },
+    // "▲ +6.2%"
+    vary(which){
+      if (dax) { const x = dVar(which); return hole(def('_Var' + tag(which) + 'Text', 'IF ( ISBLANK ( ' + x + ' ), "", SWITCH ( TRUE (), ' + x + ' > 0, UNICHAR ( 9650 ), ' + x + ' < 0, UNICHAR ( 9660 ), UNICHAR ( 9658 ) ) & " " & FORMAT ( ' + x + ', "+0.0%;-0.0%;0.0%" ) )')); }
+      const b = baseNum(which); if (b == null || !b) return ''; const d = (n.v - b) / Math.abs(b); return kvArrow(d) + ' ' + kvSigned(d);
+    },
+    color(which, part){
+      part = part || 'text';
+      if (dax) return hole(dStatus(which, part));
+      const st = kvStatus(n.v, baseNum(which), k.better, cfg.band); return st ? C[st][part] : (part === 'fill' ? P.track : P.muted);
+    },
+    pct(){ if (dax) { const p = def('_Pct', 'DIVIDE ( ' + dValue() + ', ' + dBase('t') + ' )'); return hole(def('_PctText', 'FORMAT ( ' + p + ', "0%" )')); } return n.t ? Math.round(n.v / n.t * 100) + '%' : ''; },
+    // a length that grows with % of target, up to len
+    pctLen(len){ if (dax) { const p = def('_Pct', 'DIVIDE ( ' + dValue() + ', ' + dBase('t') + ' )'); return hole(def('_Len' + len, kvFx('MAX ( 0, MIN ( 1, ' + p + ' ) ) * ' + len))); } return kvF(n.t ? kvClamp(n.v / n.t, 0, 1) * len : 0); },
+    // where a fill that rises with % of target starts, for a shape from y to y + len
+    pctTop(y, len){ if (dax) { const p = def('_Pct', 'DIVIDE ( ' + dValue() + ', ' + dBase('t') + ' )'); return hole(def('_Top' + y, kvFx(y + len + ' - MAX ( 0, MIN ( 1, ' + p + ' ) ) * ' + len))); } return kvF(y + len - (n.t ? kvClamp(n.v / n.t, 0, 1) * len : 0)); },
+    // a status badge (a pill with the % change), right-aligned at x; nothing when there's no change to show
+    badge(which, x, y){
+      const w = 70, el = (fill, col, t) => "<rect x='" + (x - w) + "' y='" + y + "' width='" + w + "' height='22' rx='11' fill='" + fill + "'/><text x='" + (x - w / 2) + "' y='" + (y + 15) + "' text-anchor='middle' " + KV_DFONT + " font-size='12' font-weight='600' fill='" + col + "'>" + t + '</text>';
+      if (dax) { const t = this.vary(which), f = this.color(which, 'fill'), c = this.color(which), tv = t.replace(/\u0001|\u0002/g, '');
+        return hole(def('_Badge' + tag(which), 'IF ( ' + tv + ' = "", "", ' + kvDaxJoin(el(f, c, t)) + ' )')); }
+      const t = this.vary(which); return t ? el(this.color(which, 'fill'), this.color(which), t) : '';
+    },
+    // trend shapes in the box x, y, w, hh
+    line(x, y, w, hh){
+      if (dax) { const p = dTrend(); return hole(def('_Line', ['CONCATENATEX (', '    ' + p + ',', '    ' + kvFx(x + ' + ( [@x] - 1 ) * ' + w + ' / MAX ( ' + vn('_N') + ' - 1, 1 )') + ' & "," & ' + kvFx(y + hh + ' - ( [@v] - ' + vn('_Floor') + ' ) * ' + hh + ' / ' + vn('_Range')) + ',', '    " ",', '    [@x], ASC', ')'])); }
+      const s = pts(); return s.t.map((v, i) => kvF(x + i * w / Math.max(s.N - 1, 1)) + ',' + kvF(yOf(v, s, y, hh))).join(' ');
+    },
+    lastY(y, hh){
+      if (dax) { dTrend(); return hole(def('_LastY', kvFx(y + hh + ' - ( MAXX ( TOPN ( 1, ' + vn('_Data') + ', ' + tc + ', DESC ), [@v] ) - ' + vn('_Floor') + ' ) * ' + hh + ' / ' + vn('_Range')))); }
+      const s = pts(); return kvF(yOf(s.t[s.t.length - 1], s, y, hh));
+    },
+    // stems and dots, one per period
+    lollipops(x, y, w, hh, color){
+      const el = (cx, cy) => "<line x1='" + cx + "' y1='" + (y + hh) + "' x2='" + cx + "' y2='" + cy + "' stroke='" + P.line + "' stroke-width='1.5'/><circle cx='" + cx + "' cy='" + cy + "' r='3.5' fill='" + color + "'/>";
+      if (dax) { const p = dTrend(); return hole(def('_Lollipops', ['CONCATENATEX (', '    ' + p + ',', '    VAR _X = ' + kvFx(x + ' + ( [@x] - 0.5 ) * ' + w + ' / ' + vn('_N')), '    VAR _Y = ' + kvFx(y + hh + ' - ( [@v] - ' + vn('_Floor') + ' ) * ' + hh + ' / ' + vn('_Range')), '    RETURN', '        ' + kvDaxJoin(el(hole('_X'), hole('_Y'))) + ',', '    "",', '    [@x], ASC', ')'])); }
+      const s = pts(); return s.t.map((v, i) => el(kvF(x + (i + 0.5) * w / s.N), kvF(yOf(v, s, y, hh)))).join('');
+    },
+    ctxText(i){ const c = kvCtx(k)[i]; if (!c) return ''; return dax ? hole(def('_Context' + (i + 1), bracket(kvCtxName(k, i)))) : kvXml(kvCtxSample(k, c)); },
+    defs: () => [...defs.values()].flat(), valueVar: () => dValue()
+  };
+  return z;
+}
+const kvTxt = (x, y, size, color, text, extra) => "<text x='" + x + "' y='" + y + "' " + KV_DFONT + " font-size='" + size + "' fill='" + color + "'" + (extra || '') + '>' + text + '</text>';
+const kvCardBg = (w, hh, P, accent) => ["<defs><clipPath id='kvc'><rect width='" + w + "' height='" + hh + "' rx='10'/></clipPath></defs>", "<rect x='0.5' y='0.5' width='" + (w - 1) + "' height='" + (hh - 1) + "' rx='10' fill='" + P.bg + "' stroke='" + P.track + "'/>"].concat(accent ? ["<rect width='6' height='" + hh + "' fill='" + P.accent + "' clip-path='url(#kvc)'/>"] : []);
+// Card designs: size, what they need (score as in KV_OPTIONS), and the SVG as a list of elements
+const KV_DESIGNS = {
+  dbadge: { w: 260, h: 150, svg: z => {
+    const P = z.P, x = 16, top = 92, hh = 58;
+    return kvCardBg(260, 150, P).concat([
+      kvTxt(x, 28, 13, P.muted, z.name), kvTxt(x, 62, 28, P.text, z.value(), " font-weight='600'")],
+      z.h.base ? [z.badge('b', 244, 14), kvTxt(244, 52, 11, P.muted, kvXml(z.vsName('b')), " text-anchor='end'")] : [],
+      ["<g clip-path='url(#kvc)'><polygon points='0," + (top + hh) + ' ' + z.line(0, top, 260, hh) + ' 260,' + (top + hh) + "' fill='" + P.accent + "' fill-opacity='0.18'/>",
+        "<polyline points='" + z.line(0, top, 260, hh) + "' fill='none' stroke='" + P.accent + "' stroke-width='2' stroke-linejoin='round'/></g>"]); } },
+  dcols: { w: 300, h: 140, svg: z => {
+    const P = z.P, cols = ['t', 'c'].filter(w => z.has(w)), cw = 264 / cols.length;
+    return kvCardBg(300, 140, P, true).concat([kvTxt(20, 28, 13, P.muted, z.name), kvTxt(20, 60, 28, P.text, z.value(), " font-weight='600'"),
+      "<line x1='20' y1='76' x2='284' y2='76' stroke='" + P.track + "'/>"],
+      cols.map((w, j) => { const cx = kvF(20 + j * cw); return (j ? "<line x1='" + kvF(14 + j * cw) + "' y1='86' x2='" + kvF(14 + j * cw) + "' y2='132' stroke='" + P.track + "'/>" : '')
+        + kvTxt(cx, 96, 11, P.muted, kvXml(z.vsName(w))) + kvTxt(cx, 116, 15, z.color(w), z.vary(w), " font-weight='600'") + kvTxt(cx, 132, 11, P.muted, kvXml(z.baseName(w)) + ' ' + z.base(w)); })); } },
+  dtarget: { w: 260, h: 150, svg: z => {
+    const P = z.P;
+    return kvCardBg(260, 150, P, true).concat([kvTxt(20, 28, 13, P.muted, z.name), kvTxt(20, 62, 28, P.text, z.value(), " font-weight='600'")],
+      z.h.compare ? [kvTxt(20, 86, 12, z.color('c'), z.vary('c'), " font-weight='600'") + kvTxt(244, 86, 12, P.muted, kvXml(z.vsName('c')), " text-anchor='end'")] : [],
+      [kvTxt(20, 114, 11, P.muted, 'Target ' + z.base('t')), kvTxt(244, 114, 12, P.text, z.pct(), " text-anchor='end' font-weight='600'"),
+        "<rect x='20' y='122' width='224' height='10' rx='5' fill='" + P.track + "'/>", "<rect x='20' y='122' width='" + z.pctLen(224) + "' height='10' rx='5' fill='" + z.color('t') + "'/>"]); } },
+  dlolli: { w: 260, h: 170, svg: z => {
+    const P = z.P;
+    return kvCardBg(260, 170, P).concat([kvTxt(16, 28, 13, P.muted, z.name), kvTxt(16, 60, 28, P.text, z.value(), " font-weight='600'"),
+      kvTxt(16, 84, 12, P.muted, kvXml(z.baseName('c')) + ' ' + z.base('c')), kvTxt(244, 84, 12, z.color('c'), z.vary('c'), " text-anchor='end' font-weight='600'"),
+      z.lollipops(16, 98, 228, 58, P.accent)]); } },
+  dfill: { w: 260, h: 130, svg: z => {
+    const P = z.P, cx = 205, cy = 65, r = 44;
+    return kvCardBg(260, 130, P).concat([kvTxt(16, 28, 13, P.muted, z.name), kvTxt(16, 62, 28, P.text, z.value(), " font-weight='600'"),
+      kvTxt(16, 86, 11, P.muted, 'Target ' + z.base('t')), kvTxt(16, 106, 12, z.color('t'), z.vary('t'), " font-weight='600'"),
+      "<clipPath id='kvf'><circle cx='" + cx + "' cy='" + cy + "' r='" + r + "'/></clipPath>",
+      "<circle cx='" + cx + "' cy='" + cy + "' r='" + r + "' fill='" + P.track + "'/>",
+      "<rect x='" + (cx - r) + "' y='" + z.pctTop(cy - r, 2 * r) + "' width='" + 2 * r + "' height='" + 2 * r + "' fill='" + z.color('t', 'fill') + "' clip-path='url(#kvf)'/>",
+      "<circle cx='" + cx + "' cy='" + cy + "' r='" + r + "' fill='none' stroke='" + z.color('t') + "' stroke-width='2'/>",
+      kvTxt(cx, cy + 6, 18, P.text, z.pct(), " text-anchor='middle' font-weight='600'")]); } },
+  ddetail: { w: 280, h: 170, svg: z => {
+    const P = z.P, D = [];
+    if (z.h.target) D.push([kvXml(z.baseName('t')), z.base('t')]);
+    if (z.h.compare) D.push([kvXml(z.baseName('c')), z.base('c')]);
+    kvCtx(z.k).slice(0, KV_CTX_MAX).forEach((c, i) => D.push([kvXml(kvCtxTipName(c, i)), z.ctxText(i)]));
+    const d = D.slice(0, 3), cw = 248 / Math.max(d.length, 1);
+    return kvCardBg(280, 170, P).concat([kvTxt(16, 26, 13, P.muted, z.name), kvTxt(16, 58, 28, P.text, z.value(), " font-weight='600'")],
+      d.map((x, j) => kvTxt(kvF(16 + j * cw), 80, 11, P.muted, x[0]) + kvTxt(kvF(16 + j * cw), 98, 13, P.text, x[1], " font-weight='600'")),
+      ["<polyline points='" + z.line(16, 112, 248, 44) + "' fill='none' stroke='" + P.accent + "' stroke-width='2' stroke-linejoin='round'/>",
+        "<circle cx='264' cy='" + z.lastY(112, 44) + "' r='3.5' fill='" + P.accent + "'/>"]); } }
+};
+const kvDesignUsesTrend = id => ['dbadge', 'dlolli', 'ddetail'].includes(id);
+function kvDesignSvg(id, k, cfg){
+  const d = KV_DESIGNS[id], z = kvDesignCtx(k, cfg, false);
+  return "<svg xmlns='http://www.w3.org/2000/svg' width='" + d.w + "' height='" + d.h + "' viewBox='0 0 " + d.w + ' ' + d.h + "'>" + d.svg(z).join('') + '</svg>';
+}
+// Text with holes as one DAX expression: "<text ...>" & _ValueText & "</text>"
+const kvDaxJoin = e => e.split(/\u0001([^\u0002]*)\u0002/).map((p, i) => i % 2 ? p : p ? daxString(p) : '').filter(Boolean).join(' & ');
+function kvDaxSvgLines(els, open){
+  const L = ['VAR _Svg =', '    ' + daxString(open)];
+  els.filter(Boolean).forEach(e => L.push('        & ' + kvDaxJoin(e)));
+  L.push('        & "</svg>"');
+  return L;
+}
+const kvSvgDataUri = cond => ['RETURN', '    IF ( ' + cond + ', "data:image/svg+xml;utf8," & SUBSTITUTE ( SUBSTITUTE ( _Svg, "%", "%25" ), "#", "%23" ) )'];
+function kvDesignMeasure(id, k, cfg){
+  const d = KV_DESIGNS[id], z = kvDesignCtx(k, cfg, true), els = d.svg(z), v = z.valueVar();
+  const open = "<svg xmlns='http://www.w3.org/2000/svg' width='" + d.w + "' height='" + d.h + "' viewBox='0 0 " + d.w + ' ' + d.h + "'>";
+  const o = KV_OPTIONS.find(x => x.id === id);
+  return { name: kvMName(k, 'Card'), dataCategory: 'ImageUrl', usesTrend: kvDesignUsesTrend(id),
+    description: o.name + ': the whole card as one picture, ' + d.w + ' x ' + d.h + ' pixels. Colors come from the KPI Visualizer; change them there and paste the script again.',
+    expression: z.defs().concat(kvDaxSvgLines(els, open), kvSvgDataUri('NOT ISBLANK ( ' + v + ' )')).join('\n') };
+}
+// A row of KPIs as one list card: name, value and a status badge per KPI
+const KV_LIST_ROW = 46;
+function kvListEls(kpis, cfg, dax){
+  const P = kvInk(cfg), hh = 16 + KV_LIST_ROW * kpis.length, E = kvCardBg(280, hh, P), zs = [];
+  kpis.forEach((k, i) => {
+    const z = kvDesignCtx(k, cfg, dax, String(i + 1)), y = 8 + i * KV_LIST_ROW; zs.push(z);
+    if (i) E.push("<line x1='16' y1='" + y + "' x2='264' y2='" + y + "' stroke='" + P.track + "'/>");
+    E.push(kvTxt(16, y + 18, 12, P.muted, z.name), kvTxt(16, y + 39, 20, P.text, z.value(), " font-weight='600'"));
+    if (z.h.base) E.push(z.badge('b', 264, y + 14));
+  });
+  return { E, zs, w: 280, h: hh };
+}
+function kvListSvg(kpis, cfg){ const r = kvListEls(kpis, cfg, false); return "<svg xmlns='http://www.w3.org/2000/svg' width='" + r.w + "' height='" + r.h + "' viewBox='0 0 " + r.w + ' ' + r.h + "'>" + r.E.join('') + '</svg>'; }
+function kvListMeasure(kpis, cfg){
+  const r = kvListEls(kpis, cfg, true), defs = [], seen = new Set();
+  r.zs.forEach(z => z.defs().forEach(l => { if (!seen.has(l)) { seen.add(l); defs.push(l); } }));
+  const open = "<svg xmlns='http://www.w3.org/2000/svg' width='" + r.w + "' height='" + r.h + "' viewBox='0 0 " + r.w + ' ' + r.h + "'>";
+  return { name: 'KPI List Card', dataCategory: 'ImageUrl', description: 'Your KPIs in one list card, ' + r.w + ' x ' + r.h + ' pixels: name, value and status for each.',
+    expression: defs.concat(kvDaxSvgLines(r.E, open), kvSvgDataUri('TRUE ()')).join('\n') };
 }
 
 /* ---------- the options ---------- */
@@ -165,7 +374,7 @@ const KV_OPTIONS = [
   { id: 'cardvar', for: ['goal', 'change'], name: 'Card with variance', kind: 'native', need: 'base',
     nmc: ['The value', 'An arrow and % vs target (or vs last period) in Excel-style status colors', 'The target or comparison named in the label'],
     fits: 'Almost every headline KPI. The reader gets the number and whether it’s good in one glance.',
-    avoid: 'Very small tiles: the reference label needs room under the value.',
+    avoid: 'Very small tiles: the reference label needs room under or beside the value.',
     score: h => h.base ? 92 : -1 },
   { id: 'bullet', for: ['goal'], name: 'Bullet chart', kind: 'svg', need: 'target',
     nmc: ['The value (on the card, or a column next to it)', 'The bar’s color, and where it ends against the target mark', 'How far from the target it is'],
@@ -207,13 +416,43 @@ const KV_OPTIONS = [
     fits: 'When SVG measures aren’t allowed or you want everything to stay editable in the format pane.',
     avoid: 'Busy pages: it’s two visuals per KPI to keep aligned.',
     score: h => 56 },
+  { id: 'dcols', for: ['goal', 'change'], name: 'Card with comparison columns', kind: 'design', need: 'base',
+    nmc: ['The value', 'The % vs target and vs your comparison, each in its status color', 'Each target or comparison value in its column'],
+    fits: 'A headline KPI judged against more than one thing, like the target and last year, in one card.',
+    avoid: 'Narrow spaces: each comparison needs its own column.',
+    score: h => h.target && h.compare ? 86 : h.base ? 64 : -1 },
+  { id: 'dtarget', for: ['goal'], name: 'Card with a target bar', kind: 'design', need: 'target',
+    nmc: ['The value', 'A bar filled to the % of target, in status color', 'The target, and the change vs your comparison'],
+    fits: 'Amounts that build toward a target, when you also want the change since an earlier period.',
+    avoid: 'KPIs where lower is better: a fuller bar reads as better.',
+    score: h => h.target ? (h.pct ? 50 : 78) : -1 },
+  { id: 'dbadge', for: ['trend', 'change', 'goal'], name: 'Card with a change badge and trend', kind: 'design', need: '',
+    nmc: ['The value', 'A badge with the % change in status color', 'The trend as an area across the bottom'],
+    fits: 'A headline KPI where readers want the number, whether it’s up or down, and the recent trend at once.',
+    avoid: 'KPIs with very little history.',
+    score: h => h.base ? 72 : 62 },
+  { id: 'dlolli', for: ['change', 'trend'], name: 'Card with last period and lollipops', kind: 'design', need: 'compare',
+    nmc: ['The value', 'The % vs your comparison in status color', 'The comparison value, and one lollipop per period'],
+    fits: 'Comparing with an earlier period while showing how each period went.',
+    avoid: 'Many periods in a small card: keep it to about 12.',
+    score: h => h.compare ? 68 : -1 },
+  { id: 'dfill', for: ['goal'], name: 'Card with a fill gauge', kind: 'design', need: 'target',
+    nmc: ['The value', 'A circle filled to the % of target, in status color', 'The target and the % vs target'],
+    fits: 'A single goal KPI on a summary page, where the fill reads at a glance.',
+    avoid: 'Comparing KPIs with each other: fill levels are harder to compare than bars.',
+    score: h => h.target ? (h.pct ? 40 : 58) : -1 },
+  { id: 'ddetail', for: ['context', 'goal', 'change', 'trend'], name: 'Card with detail numbers and a trend', kind: 'design', need: 'base',
+    nmc: ['The value', 'None on its own: the details give the scale', 'Up to three smaller numbers (target, comparison, context) and a trend line'],
+    fits: 'A header card that gives the main number with a few related ones underneath.',
+    avoid: 'Long context lines: each detail gets a third of the card’s width.',
+    score: h => h.base || h.ctx ? 66 : -1 },
   { id: 'html', for: ['goal', 'change', 'context', 'number'], name: 'HTML card', kind: 'html', need: '',
     nmc: ['The value', 'An arrow and % in a colored status pill', 'The target or comparison under it'],
     fits: 'When you want a card styled exactly your way, like the status pill, and your organization allows the HTML Content visual from AppSource.',
     avoid: 'Reports where custom visuals aren’t allowed; use a card with variance. Text in it isn’t clickable for drill-through.',
     score: h => h.base ? 50 : 40 },
   { id: 'ctxlabel', for: ['context', 'number'], name: 'Card with context labels', kind: 'native', need: 'ctx',
-    nmc: ['The value', 'Nothing good or bad: context only', 'Your context lines under the value, in grey'],
+    nmc: ['The value', 'Nothing good or bad: context only', 'Your context lines under or beside the value, in your label color'],
     fits: 'Giving the number scale or perspective without judging it: share of total, rank, per customer, as-of date.',
     avoid: 'More than two lines: the card gets busy. Put the rest in the tooltip.',
     score: h => h.ctx ? 90 : -1 },
@@ -242,9 +481,9 @@ const KV_ROW_OPTIONS = [
   { id: 'rcards', name: 'Card strip', kind: 'native', fits: 'A row of headline KPIs across the top of a page, with each one’s status under its value.', avoid: 'More than 5 or 6 KPIs in one row.' },
   { id: 'rspark', name: 'Card strip with sparklines', kind: 'svg', fits: 'A row where the trend of each KPI matters, not only today’s number.', avoid: 'KPIs with very little history.' },
   { id: 'rbullet', name: 'Card strip with bullet charts', kind: 'svg', fits: 'A row where every KPI has a target.', avoid: 'Rows where only some KPIs have targets; those cards show no bullet.' },
+  { id: 'rlist', name: 'List card', kind: 'design', fits: 'Several KPIs stacked in one card: each name, value and a status badge.', avoid: 'More than 5 KPIs: the card gets tall.' },
   { id: 'rtable', name: 'Scorecard table', kind: 'svg', fits: 'Many KPIs, or KPIs people scan as a list: one row each with value, status, bullet and trend.', avoid: 'Two or three KPIs: cards read faster.' }
 ];
-const KV_NEED = { ctx: 'Needs a context line (Step 2)', base: 'Needs a target or a comparison', target: 'Needs a target', compare: 'Needs a comparison (like last year)', pct: 'Needs a % KPI or a target' };
 function kvMeets(o, h){ return o.score(h) >= 0; }
 // Options that fit the KPI's purpose first, then the rest; ones its fields can't support last
 function kvRanked(k){
@@ -259,9 +498,9 @@ function kvLook(k, cfg){
   const n = kvNums(k), h = kvHas(k), base = h.target ? n.t : h.compare ? n.c : null;
   const st = kvStatus(n.v, base, k.better, cfg.band), d = base ? (n.v - base) / Math.abs(base) : 0;
   const stc = kvStatus(n.v, n.c, k.better, cfg.band), dc = n.c ? (n.v - n.c) / Math.abs(n.c) : 0;
-  const col = s => s ? cfg.colors[s] : { fill: '#F3F2F1', text: KV_INK };
+  const P = kvInk(cfg), col = s => s ? cfg.colors[s] : { fill: P.track, text: P.text };
   const vsWhat = h.target ? 'vs target' : 'vs ' + ((k.compareLabel || '').trim() || 'last period');
-  return { n, h, st, d, stc, dc, c: col(st), cc: col(stc), vsWhat };
+  return { n, h, st, d, stc, dc, c: col(st), cc: col(stc), vsWhat, P };
 }
 const kvArrow = d => d > 0 ? '▲' : d < 0 ? '▼' : '►';
 // A card's reference label colors its text only; a pill (background) is drawn only where Power BI can draw it (HTML)
@@ -277,16 +516,17 @@ function kvHtmlSizes(v){
   const r = (f, min) => Math.max(min, Math.round(f * v)), det = Math.max(KV_HTML_MIN_PX, Math.round(v * 0.5));
   return { v, name: Math.max(KV_HTML_MIN_PX, Math.round(v * 0.4)), det, padV: r(0.32, 6), padH: r(0.44, 8), gap: r(0.44, 8), dgap: r(0.18, 4), pillV: Math.max(2, Math.round(det * 0.12)), pillH: Math.max(4, Math.round(det * 0.4)), radius: Math.max(3, Math.round(det * 0.25)) };
 }
-function kvHtmlStyle(v, lay, h){
+function kvHtmlStyle(v, lay, h, P){
   const z = kvHtmlSizes(v), px = n => n + 'px';
+  P = P || KV_INK_DEF;
   return {
-    box: 'font-family:Segoe UI,Arial,sans-serif;font-size:' + px(z.det) + ';line-height:1.3;background:#FFFFFF;padding:' + px(z.padV) + ' ' + px(z.padH) + ';box-sizing:border-box;width:100%' + (h ? ';min-height:' + h + 'px' : '') + (lay === 'side' ? ';display:flex;align-items:center;gap:' + px(z.gap) : h ? ';display:flex;flex-direction:column;justify-content:center' : ''),
-    name: 'font-size:' + px(z.name) + ';color:#605E5C',
-    value: 'font-size:' + px(z.v) + ';font-weight:600;color:#252423;line-height:1.2;white-space:nowrap',
+    box: 'font-family:Segoe UI,Arial,sans-serif;font-size:' + px(z.det) + ';line-height:1.3;background:' + P.bg + ';padding:' + px(z.padV) + ' ' + px(z.padH) + ';box-sizing:border-box;width:100%' + (h ? ';min-height:' + h + 'px' : '') + (lay === 'side' ? ';display:flex;align-items:center;gap:' + px(z.gap) : h ? ';display:flex;flex-direction:column;justify-content:center' : ''),
+    name: 'font-size:' + px(z.name) + ';color:' + P.muted,
+    value: 'font-size:' + px(z.v) + ';font-weight:600;color:' + P.text + ';line-height:1.2;white-space:nowrap',
     details: lay === 'grid' ? 'display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:' + px(z.dgap) + ' ' + px(z.gap) + ';margin-top:' + px(z.dgap)
-      : 'display:flex;flex-direction:column;align-items:flex-start;gap:' + px(z.dgap) + (lay === 'side' ? ';border-left:1px solid #E1DFDD;padding-left:' + px(z.gap) : ';margin-top:' + px(z.dgap)),
+      : 'display:flex;flex-direction:column;align-items:flex-start;gap:' + px(z.dgap) + (lay === 'side' ? ';border-left:1px solid ' + P.track + ';padding-left:' + px(z.gap) : ';margin-top:' + px(z.dgap)),
     pill: 'justify-self:start;padding:' + px(z.pillV) + ' ' + px(z.pillH) + ';border-radius:' + px(z.radius) + ';font-size:' + px(z.det) + ';font-weight:600;white-space:nowrap',
-    sub: 'font-size:' + px(z.det) + ';color:#605E5C' };
+    sub: 'font-size:' + px(z.det) + ';color:' + P.muted };
 }
 // Rough text width in pixels for Segoe UI (and Arial), by character class
 function kvTextW(t, fs, bold){
@@ -337,48 +577,54 @@ function kvHtmlLayout(k, cfg){
   return ok ? kvHtmlFitFor(k, cfg, cfg.htmlLayout) : kvHtmlBest(k, cfg);
 }
 function kvHtmlCard(k, cfg, lay){
-  const L = kvLook(k, cfg), l = lay || (cfg.htmlScale ? { v: 32, lay: 'stack' } : kvHtmlLayout(k, cfg)), S = kvHtmlStyle(l.v, l.lay, l.size && l.size.h - KV_HTML_EDGE), D = kvHtmlDetails(k, cfg);
+  const L = kvLook(k, cfg), l = lay || (cfg.htmlScale ? { v: 32, lay: 'stack' } : kvHtmlLayout(k, cfg)), S = kvHtmlStyle(l.v, l.lay, l.size && l.size.h - KV_HTML_EDGE, kvInk(cfg)), D = kvHtmlDetails(k, cfg);
   const head = "<div style='" + S.name + "'>" + kvHtmlEsc(kvName(k)) + '</div>' + "<div style='" + S.value + "'>" + kvHtmlEsc(kvFmt(L.n.v, k.format)) + '</div>';
   const det = D.filter(d => !d.pill || d.show).map(d => d.pill ? "<div style='" + S.pill + ';background:' + L.c.fill + ';color:' + L.c.text + "'>" + kvHtmlEsc(d.text) + '</div>' : "<div style='" + S.sub + "'>" + kvHtmlEsc(d.text) + '</div>').join('');
   return "<div style='" + S.box + "'>" + (l.lay === 'side' && D.length ? '<div>' + head + '</div>' : head) + (D.length ? "<div style='" + S.details + "'>" + det + '</div>' : '') + '</div>';
 }
 const kvCtxHtml = k => kvCtx(k).map(c => '<div class="kv-ctx">' + esc(kvCtxSample(k, c)) + '</div>').join('');
+// opts.refs: the reference labels, under the value or (opts.right) to its right
 function kvCardHtml(k, L, inner, opts){
   opts = opts || {};
-  return '<div class="kv-card' + (opts.wide ? ' wide' : '') + '"><div class="kv-cl">' + esc(kvName(k)) + '</div>' + (opts.noValue ? '' : '<div class="kv-cv">' + esc(kvFmt(L.n.v, k.format, true)) + '</div>') + (inner || '') + '</div>';
+  const v = opts.noValue ? '' : '<div class="kv-cv">' + esc(kvFmt(L.n.v, k.format, true)) + '</div>', refs = opts.refs || '';
+  const mid = opts.right && refs ? '<div class="kv-rr">' + v + '<div class="kv-refs">' + refs + '</div></div>' : v + refs;
+  return '<div class="kv-card' + (opts.wide ? ' wide' : '') + '"><div class="kv-cl">' + esc(kvName(k)) + '</div>' + mid + (inner || '') + '</div>';
 }
+const kvRight = cfg => cfg.refPos === 'right';
 function kvPreview(id, k, cfg){
-  const L = kvLook(k, cfg), n = L.n, sc = L.st ? L.c.text : KV_INK;
+  const L = kvLook(k, cfg), n = L.n, P = L.P, sc = L.st ? L.c.text : P.text;
   switch (id) {
     case 'card': return kvCardHtml(k, L);
-    case 'cardvar': return kvCardHtml(k, L, kvLabelHtml(L) + kvCtxHtml(k));
-    case 'ctxlabel': return kvCardHtml(k, L, kvCtxHtml(k));
+    case 'cardvar': return kvCardHtml(k, L, '', { refs: kvLabelHtml(L) + kvCtxHtml(k), right: kvRight(cfg) });
+    case 'ctxlabel': return kvCardHtml(k, L, '', { refs: kvCtxHtml(k), right: kvRight(cfg) });
     case 'ctxsub': { const c = kvCtx(k)[0]; return '<div class="kv-card"><div class="kv-ttl">' + esc(kvName(k)) + '</div>' + (c ? '<div class="kv-subt">' + esc(kvCtxSample(k, c)) + '</div>' : '') + '<div class="kv-cv">' + esc(kvFmt(n.v, k.format, true)) + '</div></div>'; }
     case 'ctxtip': return '<div class="kv-tipwrap">' + kvCardHtml(k, L) + '<div class="kv-tip" aria-hidden="true"><div><span>' + esc(kvName(k)) + '</span><b>' + esc(kvFmt(n.v, k.format)) + '</b></div>' + kvCtx(k).map((c, i) => '<div><span>' + esc(kvCtxTipName(c, i)) + '</span><b>' + esc(kvCtxSample(k, ['period', 'asof'].includes(c.kind) ? Object.assign({}, c, { before: '' }) : c)) + '</b></div>').join('') + '</div></div>';
-    case 'bullet': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgBullet(n, sc) + '</div><div class="kv-sub">Target ' + esc(kvFmt(n.t, k.format, true)) + '</div>');
-    case 'progress': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgProgress(n, sc) + '</div><div class="kv-sub">of ' + esc(kvFmt(n.t, k.format, true)) + ' target</div>');
-    case 'spark': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgSpark(n, sc) + '</div><div class="kv-sub">Last ' + Math.min(n.trend.length, 12) + ' months</div>');
-    case 'varbar': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgVarBar(L.d, sc) + '</div><div class="kv-sub">' + esc(L.vsWhat) + '</div>');
-    case 'slope': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgSlope(L.dc, L.stc ? L.cc.text : KV_INK) + '</div><div class="kv-sub">' + esc(kvFmt(n.c, k.format, true)) + ' ' + esc((k.compareLabel || 'before').trim()) + ' → now</div>');
-    case 'waffle': { const p = L.h.pct ? n.v : (n.t ? n.v / n.t : 0); return kvCardHtml(k, L, '<div class="kv-row"><div class="kv-svg">' + kvSvgWaffle(p, L.st ? L.c.text : '#605E5C') + '</div><div class="kv-sub">' + (L.h.pct ? '' : Math.round(p * 100) + '% of target') + '</div></div>', {}); }
-    case 'gauge': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgGauge(n, sc) + '</div><div class="kv-sub">Target ' + esc(kvFmt(n.t, k.format, true)) + '</div>');
-    case 'kpi': return '<div class="kv-card"><div class="kv-cl">' + esc(kvName(k)) + '</div><div class="kv-kpi"><div class="kv-area">' + kvSvgArea(n) + '</div><div class="kv-cv" style="color:' + sc + '">' + esc(kvFmt(n.v, k.format, true)) + ' <span class="kv-ic">' + (L.st === 'good' ? '✔' : L.st === 'bad' ? '!' : '') + '</span></div></div><div class="kv-sub">Goal: ' + esc(kvFmt(n.t, k.format, true)) + ' (' + kvSigned(L.d) + ')</div></div>';
+    case 'bullet': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgBullet(n, sc, P) + '</div><div class="kv-sub">Target ' + esc(kvFmt(n.t, k.format, true)) + '</div>', { refs: kvLabelHtml(L), right: kvRight(cfg) });
+    case 'progress': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgProgress(n, sc, P) + '</div><div class="kv-sub">of ' + esc(kvFmt(n.t, k.format, true)) + ' target</div>', { refs: kvLabelHtml(L), right: kvRight(cfg) });
+    case 'spark': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgSpark(n, sc, P) + '</div><div class="kv-sub">Last ' + Math.min(n.trend.length, 12) + ' months</div>', { refs: kvLabelHtml(L), right: kvRight(cfg) });
+    case 'varbar': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgVarBar(L.d, sc, P) + '</div><div class="kv-sub">' + esc(L.vsWhat) + '</div>', { refs: kvLabelHtml(L), right: kvRight(cfg) });
+    case 'slope': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgSlope(L.dc, L.stc ? L.cc.text : P.text, P) + '</div><div class="kv-sub">' + esc(kvFmt(n.c, k.format, true)) + ' ' + esc((k.compareLabel || 'before').trim()) + ' → now</div>');
+    case 'waffle': { const p = L.h.pct ? n.v : (n.t ? n.v / n.t : 0); return kvCardHtml(k, L, '<div class="kv-row"><div class="kv-svg">' + kvSvgWaffle(p, L.st ? L.c.text : P.muted, P) + '</div><div class="kv-sub">' + (L.h.pct ? '' : Math.round(p * 100) + '% of target') + '</div></div>', { refs: kvLabelHtml(L), right: kvRight(cfg) }); }
+    case 'gauge': return kvCardHtml(k, L, '<div class="kv-svg">' + kvSvgGauge(n, sc, P) + '</div><div class="kv-sub">Target ' + esc(kvFmt(n.t, k.format, true)) + '</div>');
+    case 'kpi': return '<div class="kv-card"><div class="kv-cl">' + esc(kvName(k)) + '</div><div class="kv-kpi"><div class="kv-area">' + kvSvgArea(n, P) + '</div><div class="kv-cv" style="color:' + sc + '">' + esc(kvFmt(n.v, k.format, true)) + ' <span class="kv-ic">' + (L.st === 'good' ? '✔' : L.st === 'bad' ? '!' : '') + '</span></div></div><div class="kv-sub">Goal: ' + esc(kvFmt(n.t, k.format, true)) + ' (' + kvSigned(L.d) + ')</div></div>';
+    case 'dcols': case 'dtarget': case 'dbadge': case 'dlolli': case 'dfill': case 'ddetail': return '<div class="kv-svg kv-design">' + kvDesignSvg(id, k, cfg) + '</div>';
     case 'html': return '<div class="kv-html">' + kvHtmlCard(k, Object.assign({}, cfg, { htmlScale: 1 })) + '</div>';
-    case 'core': return '<div class="kv-card">' + '<div class="kv-cl">' + esc(kvName(k)) + '</div><div class="kv-cv">' + esc(kvFmt(n.v, k.format, true)) + '</div>' + kvLabelHtml(L) + '<div class="kv-area">' + kvSvgArea(n) + '</div></div>';
+    case 'core': return kvCardHtml(k, L, '<div class="kv-area">' + kvSvgArea(n, P) + '</div>', { refs: kvLabelHtml(L), right: kvRight(cfg) });
   }
   return '';
 }
 function kvRowPreview(id, kpis, cfg){
+  if (id === 'rlist') return '<div class="kv-svg kv-design">' + kvListSvg(kpis, cfg) + '</div>';
   if (id === 'rtable') {
     return '<div class="kv-tablewrap"><table class="kv-table"><thead><tr><th>KPI</th><th>Value</th><th>Status</th><th>Target</th><th>Trend</th></tr></thead><tbody>' + kpis.map(k => {
-      const L = kvLook(k, cfg), sc = L.st ? L.c.text : KV_INK;
-      return '<tr><td>' + esc(kvName(k)) + '</td><td class="num">' + esc(kvFmt(L.n.v, k.format, true)) + '</td><td' + (L.st ? ' style="background:' + L.c.fill + '"' : '') + '>' + (kvLabelHtml(L, true) || '<span class="muted">–</span>') + '</td><td>' + (L.h.target ? kvSvgBullet(L.n, sc) : '') + '</td><td>' + kvSvgSpark(L.n, sc) + '</td></tr>';
+      const L = kvLook(k, cfg), P = L.P, sc = L.st ? L.c.text : P.text;
+      return '<tr><td>' + esc(kvName(k)) + '</td><td class="num">' + esc(kvFmt(L.n.v, k.format, true)) + '</td><td' + (L.st ? ' style="background:' + L.c.fill + '"' : '') + '>' + (kvLabelHtml(L, true) || '<span class="muted">–</span>') + '</td><td>' + (L.h.target ? kvSvgBullet(L.n, sc, P) : '') + '</td><td>' + kvSvgSpark(L.n, sc, P) + '</td></tr>';
     }).join('') + '</tbody></table></div>';
   }
   return '<div class="kv-strip">' + kpis.map(k => {
-    const L = kvLook(k, cfg), sc = L.st ? L.c.text : KV_INK;
-    const img = id === 'rspark' ? kvSvgSpark(L.n, sc) : id === 'rbullet' && L.h.target ? kvSvgBullet(L.n, sc) : '';
-    return kvCardHtml(k, L, kvLabelHtml(L, true) + (img ? '<div class="kv-svg">' + img + '</div>' : ''));
+    const L = kvLook(k, cfg), P = L.P, sc = L.st ? L.c.text : P.text;
+    const img = id === 'rspark' ? kvSvgSpark(L.n, sc, P) : id === 'rbullet' && L.h.target ? kvSvgBullet(L.n, sc, P) : '';
+    return kvCardHtml(k, L, img ? '<div class="kv-svg">' + img + '</div>' : '', { refs: kvLabelHtml(L, true), right: kvRight(cfg) });
   }).join('') + '</div>';
 }
 
@@ -410,50 +656,50 @@ function kvStatusMeasures(k, cfg){
       expression: ['VAR _Var = ' + bracket(varN), 'VAR _Arrow =', '    SWITCH ( TRUE (), _Var > 0, UNICHAR ( 9650 ), _Var < 0, UNICHAR ( 9660 ), UNICHAR ( 9658 ) )', 'RETURN', '    IF ( NOT ISBLANK ( _Var ), _Arrow & " " & FORMAT ( _Var, "+0.0%;-0.0%;0.0%" ) & " ' + vs.replace(/"/g, '""') + '" )'].join('\n') }
   ];
 }
-const kvColorVar = (k, h) => h.base ? 'VAR _Color = COALESCE ( ' + bracket(kvMName(k, 'Status Color')) + ', "' + KV_INK + '" )' : 'VAR _Color = "' + KV_INK + '"';
+const kvColorVar = (k, h, P) => h.base ? 'VAR _Color = COALESCE ( ' + bracket(kvMName(k, 'Status Color')) + ', "' + P.text + '" )' : 'VAR _Color = "' + P.text + '"';
 function kvSvgMeasure(id, k, cfg){
   const h = kvHas(k), v = kvRef(k.measure), t = kvRef(k.target), c = kvRef(k.compare), D = [];
   const svgOpen = (w, hh) => '"<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'' + w + '\' height=\'' + hh + '\' viewBox=\'0 0 ' + w + ' ' + hh + '\'>"';
   const tc = (cfg.trendCol || '').trim() || "'Date'[Month Start]", N = Math.max(2, Math.min(36, +cfg.periods || 12));
-  const m = { dataCategory: 'ImageUrl' };
+  const m = { dataCategory: 'ImageUrl' }, P = kvInk(cfg);
   if (id === 'bullet') {
     m.name = kvMName(k, 'Bullet'); m.description = 'Bullet chart: the bar is ' + kvName(k) + ', the dark mark is the target. Set the visual’s image size to 120 x 24.';
-    D.push('VAR _Value = ' + v, 'VAR _Target = ' + t, 'VAR _Max = MAX ( MAX ( _Value, _Target ), 0 ) * 1.15', 'VAR _ValueW = MAX ( 0, MIN ( 1, DIVIDE ( _Value, _Max ) ) ) * 112', 'VAR _TargetX = 4 + MAX ( 0, MIN ( 1, DIVIDE ( _Target, _Max ) ) ) * 112', kvColorVar(k, h),
-      'VAR _Svg =', '    ' + svgOpen(120, 24), '        & "<rect x=\'4\' y=\'6\' width=\'112\' height=\'12\' fill=\'' + KV_TRACK + '\'/>"', '        & "<rect x=\'4\' y=\'8\' width=\'" & ' + kvFx('_ValueW') + ' & "\' height=\'8\' fill=\'" & _Color & "\'/>"', '        & "<rect x=\'" & ' + kvFx('_TargetX - 1') + ' & "\' y=\'3\' width=\'2\' height=\'18\' fill=\'' + KV_INK + '\'/>"', '        & "</svg>"', ...kvSvgReturn('NOT ISBLANK ( _Value ) && NOT ISBLANK ( _Target )'));
+    D.push('VAR _Value = ' + v, 'VAR _Target = ' + t, 'VAR _Max = MAX ( MAX ( _Value, _Target ), 0 ) * 1.15', 'VAR _ValueW = MAX ( 0, MIN ( 1, DIVIDE ( _Value, _Max ) ) ) * 112', 'VAR _TargetX = 4 + MAX ( 0, MIN ( 1, DIVIDE ( _Target, _Max ) ) ) * 112', kvColorVar(k, h, P),
+      'VAR _Svg =', '    ' + svgOpen(120, 24), '        & "<rect x=\'4\' y=\'6\' width=\'112\' height=\'12\' fill=\'' + P.track + '\'/>"', '        & "<rect x=\'4\' y=\'8\' width=\'" & ' + kvFx('_ValueW') + ' & "\' height=\'8\' fill=\'" & _Color & "\'/>"', '        & "<rect x=\'" & ' + kvFx('_TargetX - 1') + ' & "\' y=\'3\' width=\'2\' height=\'18\' fill=\'' + P.text + '\'/>"', '        & "</svg>"', ...kvSvgReturn('NOT ISBLANK ( _Value ) && NOT ISBLANK ( _Target )'));
   } else if (id === 'progress') {
     m.name = kvMName(k, 'Progress'); m.description = 'Progress bar: ' + kvName(k) + ' as a % of its target. Image size 120 x 24.';
-    D.push('VAR _Pct = DIVIDE ( ' + v + ', ' + t + ' )', 'VAR _W = MAX ( 0, MIN ( 1, _Pct ) ) * 88', kvColorVar(k, h),
-      'VAR _Svg =', '    ' + svgOpen(120, 24), '        & "<rect x=\'2\' y=\'8\' width=\'88\' height=\'8\' rx=\'4\' fill=\'' + KV_TRACK + '\'/>"', '        & "<rect x=\'2\' y=\'8\' width=\'" & ' + kvFx('_W') + ' & "\' height=\'8\' rx=\'4\' fill=\'" & _Color & "\'/>"', '        & "<text x=\'118\' y=\'16\' text-anchor=\'end\' font-family=\'Segoe UI, sans-serif\' font-size=\'11\' fill=\'' + KV_INK + '\'>" & FORMAT ( _Pct, "0%" ) & "</text>"', '        & "</svg>"', ...kvSvgReturn('NOT ISBLANK ( _Pct )'));
+    D.push('VAR _Pct = DIVIDE ( ' + v + ', ' + t + ' )', 'VAR _W = MAX ( 0, MIN ( 1, _Pct ) ) * 88', kvColorVar(k, h, P),
+      'VAR _Svg =', '    ' + svgOpen(120, 24), '        & "<rect x=\'2\' y=\'8\' width=\'88\' height=\'8\' rx=\'4\' fill=\'' + P.track + '\'/>"', '        & "<rect x=\'2\' y=\'8\' width=\'" & ' + kvFx('_W') + ' & "\' height=\'8\' rx=\'4\' fill=\'" & _Color & "\'/>"', '        & "<text x=\'118\' y=\'16\' text-anchor=\'end\' font-family=\'Segoe UI, sans-serif\' font-size=\'11\' fill=\'' + P.text + '\'>" & FORMAT ( _Pct, "0%" ) & "</text>"', '        & "</svg>"', ...kvSvgReturn('NOT ISBLANK ( _Pct )'));
   } else if (id === 'spark') {
     m.name = kvMName(k, 'Sparkline'); m.description = 'The last ' + N + ' periods of ' + kvName(k) + ' by ' + tc + ', with the last point in status color. Image size 120 x 32.';
     D.push('VAR _Data =', '    TOPN (', '        ' + N + ',', '        FILTER ( ADDCOLUMNS ( VALUES ( ' + tc + ' ), "@v", ' + v + ' ), NOT ISBLANK ( [@v] ) ),', '        ' + tc + ', DESC', '    )',
       'VAR _N = COUNTROWS ( _Data )', 'VAR _Lo = MINX ( _Data, [@v] )', 'VAR _Hi = MAXX ( _Data, [@v] )', 'VAR _Range = IF ( _Hi = _Lo, 1, _Hi - _Lo )',
       'VAR _Pts = ADDCOLUMNS ( _Data, "@x", RANKX ( _Data, ' + tc + ', , ASC ) )',
       'VAR _Line =', '    CONCATENATEX (', '        _Pts,', '        ' + kvFx('2 + ( [@x] - 1 ) * 116 / MAX ( _N - 1, 1 )') + ' & "," & ' + kvFx('29 - ( [@v] - _Lo ) * 26 / _Range') + ',', '        " ",', '        [@x], ASC', '    )',
-      'VAR _LastV = MAXX ( FILTER ( _Pts, [@x] = _N ), [@v] )', 'VAR _LastY = 29 - ( _LastV - _Lo ) * 26 / _Range', kvColorVar(k, h),
-      'VAR _Svg =', '    ' + svgOpen(120, 32), '        & "<polyline points=\'" & _Line & "\' fill=\'none\' stroke=\'' + KV_GREY + '\' stroke-width=\'1.5\' stroke-linejoin=\'round\'/>"', '        & "<circle cx=\'118\' cy=\'" & ' + kvFx('_LastY') + ' & "\' r=\'2.5\' fill=\'" & _Color & "\'/>"', '        & "</svg>"', ...kvSvgReturn('_N >= 2'));
+      'VAR _LastV = MAXX ( FILTER ( _Pts, [@x] = _N ), [@v] )', 'VAR _LastY = 29 - ( _LastV - _Lo ) * 26 / _Range', kvColorVar(k, h, P),
+      'VAR _Svg =', '    ' + svgOpen(120, 32), '        & "<polyline points=\'" & _Line & "\' fill=\'none\' stroke=\'' + P.line + '\' stroke-width=\'1.5\' stroke-linejoin=\'round\'/>"', '        & "<circle cx=\'118\' cy=\'" & ' + kvFx('_LastY') + ' & "\' r=\'2.5\' fill=\'" & _Color & "\'/>"', '        & "</svg>"', ...kvSvgReturn('_N >= 2'));
   } else if (id === 'varbar') {
     m.name = kvMName(k, 'Variance Bar'); m.description = 'Variance bar: % ' + (h.target ? 'vs target' : 'vs ' + (k.compareLabel || 'last period')) + '; full width is ±25%. Image size 120 x 24.';
-    D.push('VAR _Var = ' + bracket(kvMName(k, 'Var %')), 'VAR _Scale = 0.25 // full width = +/-25%', 'VAR _W = MIN ( ABS ( _Var ) / _Scale, 1 ) * 50', 'VAR _X = IF ( _Var >= 0, 60, 60 - _W )', kvColorVar(k, h),
-      'VAR _Svg =', '    ' + svgOpen(120, 24), '        & "<rect x=\'" & ' + kvFx('_X') + ' & "\' y=\'6\' width=\'" & ' + kvFx('_W') + ' & "\' height=\'12\' fill=\'" & _Color & "\'/>"', '        & "<rect x=\'59.5\' y=\'2\' width=\'1\' height=\'20\' fill=\'' + KV_INK + '\'/>"', '        & "<text x=\'" & IF ( _Var >= 0, 57, 63 ) & "\' y=\'16\' text-anchor=\'" & IF ( _Var >= 0, "end", "start" ) & "\' font-family=\'Segoe UI, sans-serif\' font-size=\'10\' fill=\'' + KV_INK + '\'>" & FORMAT ( _Var, "+0%;-0%;0%" ) & "</text>"', '        & "</svg>"', ...kvSvgReturn('NOT ISBLANK ( _Var )'));
+    D.push('VAR _Var = ' + bracket(kvMName(k, 'Var %')), 'VAR _Scale = 0.25 // full width = +/-25%', 'VAR _W = MIN ( ABS ( _Var ) / _Scale, 1 ) * 50', 'VAR _X = IF ( _Var >= 0, 60, 60 - _W )', kvColorVar(k, h, P),
+      'VAR _Svg =', '    ' + svgOpen(120, 24), '        & "<rect x=\'" & ' + kvFx('_X') + ' & "\' y=\'6\' width=\'" & ' + kvFx('_W') + ' & "\' height=\'12\' fill=\'" & _Color & "\'/>"', '        & "<rect x=\'59.5\' y=\'2\' width=\'1\' height=\'20\' fill=\'' + P.text + '\'/>"', '        & "<text x=\'" & IF ( _Var >= 0, 57, 63 ) & "\' y=\'16\' text-anchor=\'" & IF ( _Var >= 0, "end", "start" ) & "\' font-family=\'Segoe UI, sans-serif\' font-size=\'10\' fill=\'' + P.text + '\'>" & FORMAT ( _Var, "+0%;-0%;0%" ) & "</text>"', '        & "</svg>"', ...kvSvgReturn('NOT ISBLANK ( _Var )'));
   } else if (id === 'slope') {
     const band = ((+cfg.band || 0) / 100).toString(), C = cfg.colors;
     m.name = kvMName(k, 'Slope'); m.description = 'Slope from ' + ((k.compareLabel || '').trim() || 'the earlier period') + ' to now, colored by whether it got better. Image size 120 x 32.';
     D.push('VAR _Now = ' + v, 'VAR _Before = ' + c, 'VAR _Change = DIVIDE ( _Now - _Before, ABS ( _Before ) )', 'VAR _Score = ' + (k.better === 'lower' ? '-_Change' : '_Change'),
       'VAR _Color =', '    SWITCH ( TRUE (), _Score >= ' + band + ' && _Score > 0, "' + C.good.text + '", _Score <= -' + band + ' && _Score < 0, "' + C.bad.text + '", "' + C.neutral.text + '" )',
       'VAR _Dy = MAX ( -1, MIN ( 1, _Change / 0.25 ) ) * 11', 'VAR _Y1 = ' + kvFx('16 + _Dy'), 'VAR _Y2 = ' + kvFx('16 - _Dy'),
-      'VAR _Svg =', '    ' + svgOpen(120, 32), '        & "<line x1=\'10\' y1=\'" & _Y1 & "\' x2=\'110\' y2=\'" & _Y2 & "\' stroke=\'" & _Color & "\' stroke-width=\'2\'/>"', '        & "<circle cx=\'10\' cy=\'" & _Y1 & "\' r=\'3\' fill=\'' + KV_GREY + '\'/>"', '        & "<circle cx=\'110\' cy=\'" & _Y2 & "\' r=\'3.5\' fill=\'" & _Color & "\'/>"', '        & "</svg>"', ...kvSvgReturn('NOT ISBLANK ( _Now ) && NOT ISBLANK ( _Before )'));
+      'VAR _Svg =', '    ' + svgOpen(120, 32), '        & "<line x1=\'10\' y1=\'" & _Y1 & "\' x2=\'110\' y2=\'" & _Y2 & "\' stroke=\'" & _Color & "\' stroke-width=\'2\'/>"', '        & "<circle cx=\'10\' cy=\'" & _Y1 & "\' r=\'3\' fill=\'' + P.line + '\'/>"', '        & "<circle cx=\'110\' cy=\'" & _Y2 & "\' r=\'3.5\' fill=\'" & _Color & "\'/>"', '        & "</svg>"', ...kvSvgReturn('NOT ISBLANK ( _Now ) && NOT ISBLANK ( _Before )'));
   } else if (id === 'waffle') {
     m.name = kvMName(k, 'Waffle'); m.description = 'Waffle chart: ' + (h.pct ? kvName(k) : kvName(k) + ' as a % of target') + ' in squares out of 100. Image size 60 x 60.';
-    D.push('VAR _Pct = ' + (h.pct ? v : 'DIVIDE ( ' + v + ', ' + t + ' )'), 'VAR _Filled = ROUND ( MAX ( 0, MIN ( 1, _Pct ) ) * 100, 0 )', h.base ? kvColorVar(k, h) : 'VAR _Color = "#605E5C"',
-      'VAR _Cells =', '    CONCATENATEX (', '        GENERATESERIES ( 0, 99 ),', '        "<rect x=\'" & MOD ( [Value], 10 ) * 6 & "\' y=\'" & ( 9 - INT ( [Value] / 10 ) ) * 6', '            & "\' width=\'5\' height=\'5\' fill=\'" & IF ( [Value] < _Filled, _Color, "' + KV_TRACK + '" ) & "\'/>",', '        "",', '        [Value], ASC', '    )',
+    D.push('VAR _Pct = ' + (h.pct ? v : 'DIVIDE ( ' + v + ', ' + t + ' )'), 'VAR _Filled = ROUND ( MAX ( 0, MIN ( 1, _Pct ) ) * 100, 0 )', h.base ? kvColorVar(k, h, P) : 'VAR _Color = "' + P.muted + '"',
+      'VAR _Cells =', '    CONCATENATEX (', '        GENERATESERIES ( 0, 99 ),', '        "<rect x=\'" & MOD ( [Value], 10 ) * 6 & "\' y=\'" & ( 9 - INT ( [Value] / 10 ) ) * 6', '            & "\' width=\'5\' height=\'5\' fill=\'" & IF ( [Value] < _Filled, _Color, "' + P.track + '" ) & "\'/>",', '        "",', '        [Value], ASC', '    )',
       'VAR _Svg = ' + svgOpen(60, 60) + ' & _Cells & "</svg>"', ...kvSvgReturn('NOT ISBLANK ( _Pct )'));
   } else return null;
   m.expression = D.join('\n');
   return m;
 }
 function kvHtmlMeasure(k, cfg){
-  const l = kvHtmlLayout(k, cfg), KV_HTML = kvHtmlStyle(l.v, l.lay, l.size.h - KV_HTML_EDGE), h = kvHas(k), fmt = daxString(k.format || '#,0'), q = x => x.replace(/"/g, '""'), sub = kvHtmlSub(k), n = kvCtx(k).length;
+  const l = kvHtmlLayout(k, cfg), KV_HTML = kvHtmlStyle(l.v, l.lay, l.size.h - KV_HTML_EDGE, kvInk(cfg)), h = kvHas(k), fmt = daxString(k.format || '#,0'), q = x => x.replace(/"/g, '""'), sub = kvHtmlSub(k), n = kvCtx(k).length;
   const hasD = h.base || !!sub || n > 0, side = l.lay === 'side' && hasD;
   const D = ['VAR _Value = ' + kvRef(k.measure)];
   if (h.base) D.push('VAR _Label = ' + bracket(kvMName(k, 'Status Label')), 'VAR _Color = ' + bracket(kvMName(k, 'Status Color')), 'VAR _Fill = ' + bracket(kvMName(k, 'Status Fill')));
@@ -510,6 +756,8 @@ function kvOptionMeasures(id, k, cfg){
   if (['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html'].includes(id)) kvCtx(k).slice(0, KV_CTX_MAX).forEach((c, i) => out.push(kvCtxMeasure(k, c, i)));
   if (['ctxlabel', 'ctxsub', 'ctxtip'].includes(id)) return out;
   if (id === 'html') { out.push(kvHtmlMeasure(k, cfg)); return out; }
+  if (KV_DESIGNS[id]) { if (id === 'ddetail') kvCtx(k).slice(0, KV_CTX_MAX).forEach((c, i) => out.push(kvCtxMeasure(k, c, i))); out.push(kvDesignMeasure(id, k, cfg)); return out; }
+  if (id === 'rlist') return out;
   if (id === 'rtable') { if (h.target) out.push(kvSvgMeasure('bullet', k, cfg)); out.push(kvSvgMeasure('spark', k, cfg)); }
   else if (id === 'rbullet' && !h.target) { /* nothing to draw */ }
   else { const s = kvSvgMeasure(svgId, k, cfg); if (s) out.push(s); }
@@ -537,6 +785,7 @@ function kvPlan(kpis, cfg, optionId){
     if (seen.has(lc(m.name))) return; seen.add(lc(m.name));
     out.push(Object.assign({}, m, { folder: [base, kvName(k)].filter(Boolean).join('\\') }));
   }));
+  if (optionId === 'rlist' && kpis.some(k => (k.measure || '').trim())) out.push(Object.assign(kvListMeasure(kpis.filter(k => (k.measure || '').trim()), cfg), { folder: base }));
   return out;
 }
 const kvScoreTable = cfg => (cfg.scoreTable || '').trim() || 'KPI Scorecard';
@@ -588,7 +837,7 @@ function kvChecks(kpis, cfg, optionId, model){
   const out = [], add = (level, text) => out.push({ level, text });
   if (!kpis.length) { add('info', 'Add a KPI in Step 2.'); return out; }
   kpis.forEach((k, i) => { if (!(k.measure || '').trim()) add('err', 'KPI ' + (i + 1) + (k.label ? ' (' + k.label + ')' : '') + ' has no measure. Type the measure’s name so the DAX can use it.'); });
-  const usesCtx = ['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html'].includes(optionId);
+  const usesCtx = ['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html', 'ddetail'].includes(optionId);
   if (usesCtx) kpis.forEach(k => (k.ctx || []).forEach((c, j) => {
     const d = kvCtxKind(c), r = (c.ref || '').trim(), where = kvName(k) + ', context ' + (j + 1);
     if (c.kind !== 'text' && !r) add('warn', where + ' has no ' + d.ref.toLowerCase() + ' yet, so it’s left out.');
@@ -610,10 +859,10 @@ function kvChecks(kpis, cfg, optionId, model){
     const same = plan.filter(m => { const e = ms.get(lc(m.name)); return e && lc(e.table) === lc((cfg.table || '').trim()); });
     if (same.length) add('warn', 'The script replaces these measures, which are already in ' + cfg.table.trim() + ': ' + same.map(m => m.name).join(', ') + '.');
     const tc = (cfg.trendCol || '').match(/^'?(.*?)'?\[(.*)\]$/);
-    if (plan.some(m => /Sparkline/.test(m.name)) && tc && !model.columns.some(c => lc(c.table) === lc(tc[1]) && lc(c.name) === lc(tc[2]))) add('err', 'The trend column ' + cfg.trendCol.trim() + ' isn’t in the model export.');
+    if (plan.some(m => /Sparkline/.test(m.name) || m.usesTrend) && tc && !model.columns.some(c => lc(c.table) === lc(tc[1]) && lc(c.name) === lc(tc[2]))) add('err', 'The trend column ' + cfg.trendCol.trim() + ' isn’t in the model export.');
     if (optionId === 'rtable' && tables.has(lc(kvScoreTable(cfg)))) add('warn', 'A table called ' + kvScoreTable(cfg) + ' is already in the model. The script replaces it.');
   }
-  if (plan.some(m => /Sparkline/.test(m.name)) && /\[[^\]]*\]$/.test(cfg.trendCol || '') && !/month|period|week|quarter|year/i.test((cfg.trendCol.match(/\[([^\]]*)\]$/) || [])[1])) add('info', 'Trend by ' + cfg.trendCol.trim() + ' shows the last ' + (cfg.periods || 12) + ' values of that column (days, if it\u2019s a date). For months, use a column with one date per month, like \'Date\'[Month Start].');
-  if (plan.some(m => /Sparkline/.test(m.name)) && !/\[.+\]$/.test((cfg.trendCol || '').trim())) add('err', 'Type the trend column as \'Table\'[Column], for example \'Date\'[Month Start].');
+  if (plan.some(m => /Sparkline/.test(m.name) || m.usesTrend) && /\[[^\]]*\]$/.test(cfg.trendCol || '') && !/month|period|week|quarter|year/i.test((cfg.trendCol.match(/\[([^\]]*)\]$/) || [])[1])) add('info', 'Trend by ' + cfg.trendCol.trim() + ' shows the last ' + (cfg.periods || 12) + ' values of that column (days, if it\u2019s a date). For months, use a column with one date per month, like \'Date\'[Month Start].');
+  if (plan.some(m => /Sparkline/.test(m.name) || m.usesTrend) && !/\[.+\]$/.test((cfg.trendCol || '').trim())) add('err', 'Type the trend column as \'Table\'[Column], for example \'Date\'[Month Start].');
   return out;
 }
