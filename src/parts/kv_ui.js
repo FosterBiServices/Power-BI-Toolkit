@@ -197,7 +197,7 @@ function renderOptions(){
   if (row) {
     $('options').innerHTML = rowOptions().map(o => '<article class="kv-opt wide' + (o === chosen ? ' on' : '') + '">'
       + '<div class="kv-opt-head"><h3>' + esc(o.name) + '</h3><span class="pill replace">' + KIND[o.kind] + '</span></div>'
-      + '<div class="kv-canvas">' + kvRowPreview(o.id, state.kpis, state.cfg) + '</div>'
+      + '<div class="kv-canvas">' + kvRowPreview(o.id, state.kpis, state.cfg) + '</div>' + refPosPick(o.id, state.kpis)
       + '<p class="small"><b>Fits:</b> ' + esc(o.fits) + '</p><p class="small"><b>Avoid:</b> ' + esc(o.avoid) + '</p>'
       + '<button type="button" class="btn' + (o === chosen ? ' primary' : '') + '" data-opt="' + o.id + '" aria-pressed="' + (o === chosen) + '">' + (o === chosen ? '&#10003; Building this' : 'Build this') + '</button></article>').join('');
     return;
@@ -211,11 +211,17 @@ function renderOptions(){
     return pre + optCard(o, k, h, chosen);
   }).join('');
 }
+// Under or right of the value, on cards whose reference labels can go either way
+function refPosPick(id, kpis){
+  if (!usesRef(id, kpis, state.cfg)) return '';
+  const r = kvRight(state.cfg), b = (v, t, on) => '<button type="button" class="btn sm" data-refpos="' + v + '" aria-pressed="' + on + '">' + t + '</button>';
+  return '<div class="kv-refpos" role="group" aria-label="Where the reference labels go"><span class="small">Labels:</span>' + b('below', 'Under the value', !r) + b('right', 'Right of the value', r) + '</div>';
+}
 function optCard(o, k, h, chosen){
   {
     return '<article class="kv-opt' + (o === chosen ? ' on' : '') + '">'
       + '<div class="kv-opt-head"><h3>' + esc(o.name) + '</h3><span class="pill replace">' + KIND[o.kind] + '</span></div>'
-      + '<div class="kv-canvas">' + kvPreview(o.id, k, state.cfg) + '</div>'
+      + '<div class="kv-canvas">' + kvPreview(o.id, k, state.cfg) + '</div>' + refPosPick(o.id, [k])
       + '<dl class="kv-nmc"><dt>Number</dt><dd>' + esc(o.nmc[0]) + '</dd><dt>Meaning</dt><dd>' + esc(o.nmc[1]) + '</dd><dt>Context</dt><dd>' + esc(o.nmc[2]) + '</dd></dl>'
       + '<p class="small"><b>Fits:</b> ' + esc(o.fits) + '</p><p class="small"><b>Avoid:</b> ' + esc(o.avoid) + '</p>'
       + (o.id === 'card' && h.base ? '<p class="small muted">Your KPI has a ' + (h.target ? 'target' : 'comparison') + '; a card with variance shows it.</p>' : '')
@@ -528,6 +534,8 @@ function init(){
   $('band').addEventListener('input', () => { const v = parseFloat($('band').value); state.cfg.band = isFinite(v) ? Math.max(0, Math.min(50, v)) : 0; renderLive(); persist(); });
   $('kpiPick').addEventListener('change', () => { state.cfg.sel = +$('kpiPick').value; renderLive(); persist(); });
   $('options').addEventListener('click', e => {
+    const rp = e.target.closest('[data-refpos]');
+    if (rp) { state.cfg.refPos = rp.dataset.refpos; renderLive(); persist(); return; }
     const b = e.target.closest('[data-opt]'); if (!b) return;
     if (state.cfg.mode === 'row') state.cfg.rowOption = b.dataset.opt; else state.cfg.option = b.dataset.opt;
     renderLive(); persist();

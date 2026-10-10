@@ -72,6 +72,8 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 .kv-refs{display:flex;flex-direction:column;gap:3px;border-left:1px solid var(--kv-track,#E6E6E6);padding-left:12px}
 .kv-refs .kv-lab{align-self:flex-start}
 .kv-inkrow{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:8px 12px}
+.kv-refpos{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.kv-refpos [aria-pressed=true]{outline:2px solid var(--accent,#2B579A)}
 #refPosWrap .lbl{display:block;font-size:13.5px;font-weight:500;margin-bottom:4px}
 .kv-svg svg{max-width:100%;height:auto}
 .kv-row{display:flex;gap:10px;align-items:center}

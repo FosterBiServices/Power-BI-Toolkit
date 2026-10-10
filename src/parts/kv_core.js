@@ -452,7 +452,7 @@ const KV_OPTIONS = [
     avoid: 'Reports where custom visuals aren’t allowed; use a card with variance. Text in it isn’t clickable for drill-through.',
     score: h => h.base ? 50 : 40 },
   { id: 'ctxlabel', for: ['context', 'number'], name: 'Card with context labels', kind: 'native', need: 'ctx',
-    nmc: ['The value', 'Nothing good or bad: context only', 'Your context lines under the value, in grey'],
+    nmc: ['The value', 'Nothing good or bad: context only', 'Your context lines under or beside the value, in your label color'],
     fits: 'Giving the number scale or perspective without judging it: share of total, rank, per customer, as-of date.',
     avoid: 'More than two lines: the card gets busy. Put the rest in the tooltip.',
     score: h => h.ctx ? 90 : -1 },

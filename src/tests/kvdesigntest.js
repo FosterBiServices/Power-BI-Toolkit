@@ -23,6 +23,12 @@ const { chromium } = require('playwright');
   await p.click('label:has(#refRight)');
   console.log('right preview', await p.locator('.kv-opt.on .kv-rr .kv-refs .kv-lab').count(), '| steps say Horizontal', (await p.locator('#steps').innerText()).includes('Arrangement to Horizontal'));
   await p.locator('.kv-opt.on').screenshot({ path: 'kvd_right.png' });
+  // the same choice on the option cards in Step 3: context labels for Orders
+  await p.click('label:has(#refBelow)'); await p.selectOption('#kpiPick', '3');
+  await p.locator('.kv-opt:has([data-opt="ctxlabel"]) [data-refpos="right"]').click();
+  console.log('step 3 pick: ctx labels right', await p.locator('.kv-opt:has([data-opt="ctxlabel"]) .kv-rr .kv-refs .kv-ctx').count(), '(expect 2) | picks shown', await p.locator('.kv-refpos').count());
+  await p.locator('.kv-opt:has([data-opt="ctxlabel"])').screenshot({ path: 'kvd_ctxright.png' });
+  await p.selectOption('#kpiPick', '0');
   await p.click('[data-opt="dcols"]'); console.log('refPos hidden for designs', await p.locator('#refPosWrap').isHidden());
   // card colors: change the accent and background, the script follows
   await p.locator('[data-ink="accent"]').evaluate(e => { e.value = '#5B3A8E'; e.dispatchEvent(new Event('input', { bubbles: true })); });
