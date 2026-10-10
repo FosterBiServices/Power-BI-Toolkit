@@ -113,11 +113,24 @@ function renderDates(){
 }
 function renderCalcs(){
   const c = state.cfg;
-  $('calcs').innerHTML = tiCalcList(c).map(k => {
+  const list = tiCalcList(c);
+  $('calcs').innerHTML = TI_GROUPS.map(g => [g, list.filter(k => g.keys.includes(k.key))]).filter(([, ks]) => ks.length).map(([g, ks]) => '<h4 class="calc-grp">' + esc(g.name) + '</h4>' + ks.map(k => {
     const on = c.calcs.includes(k.key);
-    return '<div class="calc' + (on ? ' on' : '') + '"><label class="ck"><input type="checkbox" data-calc="' + k.key + '"' + (on ? ' checked' : '') + '> <span><b>' + esc(k.name) + '</b><span class="cd">' + esc(k.label) + (k.kind === 'pct' ? ' · percent' : '') + '</span></span></label>'
+    return '<div class="calc' + (on ? ' on' : '') + '"><label class="ck"><input type="checkbox" data-calc="' + k.key + '"' + (on ? ' checked' : '') + '> <span><b>' + esc(k.name) + '</b><span class="cd">' + esc(k.label.replace(/, %$/, '')) + (k.kind === 'pct' ? ' · percent' : '') + '</span></span></label>'
       + '<input type="text" class="cname" data-name="' + k.key + '" value="' + esc((c.names || {})[k.key] || '') + '" placeholder="' + esc(k.name) + '" aria-label="Name for ' + esc(k.label) + '"' + (on ? '' : ' disabled') + '></div>';
-  }).join('');
+  }).join('')).join('');
+}
+// growth measures can build on the measures they compare; ask to add any that aren't ticked
+function renderDepAsk(){
+  const c = state.cfg, missing = tiMissingDeps(c), box = $('depAsk');
+  box.hidden = !missing.length;
+  if (!missing.length) return;
+  const needs = tiSelectedCalcs(c).filter(x => x.dep && !tiDepsMet(c, x)).map(x => '<b>' + esc(tiCalcName(c, x)) + '</b>');
+  const adds = missing.map(x => '<b>' + esc(tiCalcName(c, x)) + '</b>');
+  const list = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  box.innerHTML = c.depMode === 'inline'
+    ? '<span>' + list(needs) + ' ' + (needs.length === 1 ? 'is written as a full formula' : 'are written as full formulas') + '.</span><span class="btns"><button type="button" class="btn" data-dep="add">Add ' + list(adds) + ' and build on them</button></span>'
+    : '<span>' + list(needs) + ' can build on ' + list(adds) + ' measures instead of repeating their formulas. Add ' + (missing.length === 1 ? 'it' : 'them') + ' too?</span><span class="btns"><button type="button" class="btn primary" data-dep="add">Add ' + (missing.length === 1 ? 'it' : 'them') + '</button><button type="button" class="btn" data-dep="inline">No, write the full formulas</button></span>';
 }
 function tiFolderOptions(m){
   const set = new Set();
@@ -185,7 +198,7 @@ function syncInputs(){
   [['pctFormat', 'pctFormat'], ['folder', 'folder'], ['gTable', 'groupTable'], ['gCol', 'groupColumn'], ['prec', 'precedence']].forEach(([id, k]) => { if (document.activeElement !== $(id)) $(id).value = c[k]; });
   $('namePattern').value = c.namePattern; $('folderMode').value = c.folderMode;
 }
-function renderAll(){ renderModel(); renderDates(); renderCalcs(); renderOutputKind(); renderMeasures(); syncInputs(); renderDestHint(); renderOut(); }
+function renderAll(){ renderModel(); renderDates(); renderCalcs(); renderOutputKind(); renderDepAsk(); renderMeasures(); syncInputs(); renderDestHint(); renderOut(); }
 
 /* ---------- init ---------- */
 function resetAll(){
@@ -221,6 +234,12 @@ function init(){
   $('calcs').addEventListener('change', e => {
     const k = e.target.dataset.calc; if (!k) return;
     c().calcs = e.target.checked ? tiCalcList(c()).map(x => x.key).filter(x => x === k || c().calcs.includes(x)) : c().calcs.filter(x => x !== k);
+    change();
+  });
+  $('depAsk').addEventListener('click', e => {
+    const v = e.target.closest('[data-dep]'); if (!v) return;
+    if (v.dataset.dep === 'add') { const keys = tiMissingDeps(c()).map(x => x.key); c().calcs = tiCalcList(c()).map(x => x.key).filter(x => keys.includes(x) || c().calcs.includes(x)); c().depMode = ''; }
+    else c().depMode = 'inline';
     change();
   });
   $('calcs').addEventListener('input', e => { const k = e.target.dataset.name; if (!k) return; c().names[k] = e.target.value; leaveExample(); renderMeasures(); renderOut(); persist(); });

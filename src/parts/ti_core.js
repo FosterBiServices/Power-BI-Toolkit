@@ -27,15 +27,16 @@ function tiBlocks(cfg, m){
   const shift = (n, unit) => tiFn('CALCULATETABLE', ['DATEADD ( ' + d + ', ' + n + ', ' + unit + ' )', dws]);
   const ytd = tiFn('CALCULATE', [m, 'DATESYTD ( ' + d + fy + ' )']);
   const mtd = tiFn('CALCULATE', [m, 'DATESMTD ( ' + d + ' )']);
+  const qtd = tiFn('CALCULATE', [m, 'DATESQTD ( ' + d + ' )']);
   return {
-    sv: tiSv(cfg), cur: m, ytd, mtd,
-    qtd: tiFn('CALCULATE', [m, 'DATESQTD ( ' + d + ' )']),
+    sv: tiSv(cfg), cur: m, ytd, mtd, qtd,
     py: tiFn('CALCULATE', [m, shift(-1, 'YEAR')]),
     pyc: tiFn('CALCULATE', [m, 'PREVIOUSYEAR ( ' + d + fy + ' )']),
     pytd: tiFn('CALCULATE', [ytd, shift(-1, 'YEAR')]),
     pm: tiFn('CALCULATE', [m, shift(-1, 'MONTH')]),
     pmc: tiFn('CALCULATE', [m, 'PARALLELPERIOD ( ' + d + ', -1, MONTH )']),
     pmtd: tiFn('CALCULATE', [mtd, shift(-1, 'MONTH')]),
+    pqtd: tiFn('CALCULATE', [qtd, shift(-1, 'QUARTER')]),
     pymtd: tiFn('CALCULATE', [mtd, shift(-1, 'YEAR')]),
     mat: tiFn('CALCULATE', [m, 'DATESINPERIOD ( ' + d + ', MAX ( ' + d + ' ), -1, YEAR )'])
   };
@@ -67,13 +68,15 @@ const TI_CALCS = [
   { key: 'ytd', name: 'YTD', kind: 'value', label: 'Year to date', f: b => tiGuard(b, b.ytd) },
   { key: 'qtd', name: 'QTD', kind: 'value', label: 'Quarter to date', f: b => tiGuard(b, b.qtd) },
   { key: 'mtd', name: 'MTD', kind: 'value', label: 'Month to date', f: b => tiGuard(b, b.mtd) },
+  { key: 'pqtd', name: 'PQTD', kind: 'value', label: 'Previous quarter, quarter to date', f: b => tiGuard(b, b.pqtd) },
+  { key: 'qoqp', dep: ['qtd', 'pqtd'], name: 'QOQTD %', kind: 'pct', label: 'Quarter to date vs previous quarter to date, %', f: b => tiGrowth(tiGuard(b, b.qtd), tiGuard(b, b.pqtd), true) },
   { key: 'py', name: 'PY', kind: 'value', label: 'Same period last year', f: b => tiGuard(b, b.py) },
   { key: 'pytd', name: 'PYTD', kind: 'value', label: 'Last year, year to date', f: b => tiGuard(b, b.pytd) },
-  { key: 'yoy', name: 'YOY', kind: 'value', label: 'Change on last year', f: b => tiGrowth(b.cur, tiGuard(b, b.py)) },
-  { key: 'yoyp', name: 'YOY %', kind: 'pct', label: 'Change on last year, %', f: b => tiGrowth(b.cur, tiGuard(b, b.py), true) },
-  { key: 'ytdyoyp', name: 'YOYTD %', kind: 'pct', label: 'Year to date vs last year to date, %', f: b => tiGrowth(tiGuard(b, b.ytd), tiGuard(b, b.pytd), true) },
+  { key: 'yoy', dep: ['cur', 'py'], name: 'YOY', kind: 'value', label: 'Change on last year', f: b => tiGrowth(b.cur, tiGuard(b, b.py)) },
+  { key: 'yoyp', dep: ['cur', 'py'], name: 'YOY %', kind: 'pct', label: 'Change on last year, %', f: b => tiGrowth(b.cur, tiGuard(b, b.py), true) },
+  { key: 'ytdyoyp', dep: ['ytd', 'pytd'], name: 'YOYTD %', kind: 'pct', label: 'Year to date vs last year to date, %', f: b => tiGrowth(tiGuard(b, b.ytd), tiGuard(b, b.pytd), true) },
   { key: 'pm', name: 'PM', kind: 'value', label: 'Previous month', f: b => tiGuard(b, b.pm) },
-  { key: 'momp', name: 'MOM %', kind: 'pct', label: 'Change on previous month, %', f: b => tiGrowth(b.cur, tiGuard(b, b.pm), true) },
+  { key: 'momp', dep: ['cur', 'pm'], name: 'MOM %', kind: 'pct', label: 'Change on previous month, %', f: b => tiGrowth(b.cur, tiGuard(b, b.pm), true) },
   { key: 'r12', name: 'MAT', kind: 'value', label: 'Moving annual total: the 12 months to the last date', f: b => tiGuard(b, b.mat) },
   { key: 'r3avg', name: 'AVG 3M', kind: 'value', label: 'Daily average over the last 3 months', f: (b, cfg) => tiAvg3m(cfg, b.cur, 'MAX ( ' + tiDateRef(cfg) + ' )') }
 ];
@@ -93,14 +96,17 @@ const TI_CALCS_LATEST = [
   { key: 'ytd', name: 'YTD', kind: 'value', label: 'Year to the last date', f: (b, cfg) => tiLatestValue(cfg, b.ytd) },
   { key: 'qtd', name: 'QTD', kind: 'value', label: 'Quarter to the last date', f: (b, cfg) => tiLatestValue(cfg, b.qtd) },
   { key: 'mtd', name: 'MTD', kind: 'value', label: 'Month to the last date', f: (b, cfg) => tiLatestValue(cfg, b.mtd) },
+  { key: 'pqtd', name: 'PQTD', kind: 'value', label: 'Previous quarter, to the same day', f: (b, cfg) => tiLatestValue(cfg, b.pqtd) },
+  { key: 'qoqp', dep: ['qtd', 'pqtd'], name: 'QOQTD %', kind: 'pct', label: 'Quarter to date vs previous quarter to date, %', f: (b, cfg) => tiLatestGrowth(cfg, b.qtd, b.pqtd, true) },
   { key: 'py', name: 'PYC', kind: 'value', label: 'Previous year, whole year', f: (b, cfg) => tiLatestValue(cfg, b.pyc) },
   { key: 'pytd', name: 'PYTD', kind: 'value', label: 'Last year, to the same day', f: (b, cfg) => tiLatestValue(cfg, b.pytd) },
-  { key: 'yoy', name: 'YOYTD', kind: 'value', label: 'Year to date vs last year to date', f: (b, cfg) => tiLatestGrowth(cfg, b.ytd, b.pytd) },
-  { key: 'yoyp', name: 'YOYTD %', kind: 'pct', label: 'Year to date vs last year to date, %', f: (b, cfg) => tiLatestGrowth(cfg, b.ytd, b.pytd, true) },
+  { key: 'yoy', dep: ['ytd', 'pytd'], name: 'YOYTD', kind: 'value', label: 'Year to date vs last year to date', f: (b, cfg) => tiLatestGrowth(cfg, b.ytd, b.pytd) },
+  { key: 'yoyp', dep: ['ytd', 'pytd'], name: 'YOYTD %', kind: 'pct', label: 'Year to date vs last year to date, %', f: (b, cfg) => tiLatestGrowth(cfg, b.ytd, b.pytd, true) },
   { key: 'pm', name: 'PMC', kind: 'value', label: 'Previous month, whole month', f: (b, cfg) => tiLatestValue(cfg, b.pmc) },
-  { key: 'momp', name: 'MOMTD %', kind: 'pct', label: 'Month to date vs the same days last month, %', f: (b, cfg) => tiLatestGrowth(cfg, b.mtd, b.pmtd, true) },
+  { key: 'pmtd', name: 'PMTD', kind: 'value', label: 'Previous month, to the same day', f: (b, cfg) => tiLatestValue(cfg, b.pmtd) },
+  { key: 'momp', dep: ['mtd', 'pmtd'], name: 'MOMTD %', kind: 'pct', label: 'Month to date vs the same days last month, %', f: (b, cfg) => tiLatestGrowth(cfg, b.mtd, b.pmtd, true) },
   { key: 'pymtd', name: 'PYMTD', kind: 'value', label: 'Same month last year, to the same day', f: (b, cfg) => tiLatestValue(cfg, b.pymtd) },
-  { key: 'mtdyoyp', name: 'MTD YOY %', kind: 'pct', label: 'Month to date vs same month last year, %', f: (b, cfg) => tiLatestGrowth(cfg, b.mtd, b.pymtd, true) },
+  { key: 'mtdyoyp', dep: ['mtd', 'pymtd'], name: 'MTD YOY %', kind: 'pct', label: 'Month to date vs same month last year, %', f: (b, cfg) => tiLatestGrowth(cfg, b.mtd, b.pymtd, true) },
   { key: 'r12', name: 'MAT', kind: 'value', label: 'Moving annual total: the 12 months to the last date', f: (b, cfg) => tiLatestValue(cfg, b.mat) },
   { key: 'r3avg', name: 'AVG 3M', kind: 'value', label: 'Daily average over the 3 months to the last date', f: (b, cfg) => tiAvg3m(cfg, b.cur, 'LastVisibleDate', tiLatest(cfg)) }
 ];
@@ -160,6 +166,7 @@ function tiMonthBlocks(cfg, m){
       ? blk(lastMonth.concat(tiVar('LastYearAvailable', at(yc)), tiVar('LastMonthInYearAvailable', at(miy))), calc(miy + ' <= LastMonthInYearAvailable', yc + ' = LastYearAvailable - 1'))
       : blk(curYear.concat(tiVar('LastMonthInYearAvailable', 'MAX ( ' + miy + ' )')), calc(miy + ' <= LastMonthInYearAvailable', yc + ' = PreviousYearNumber')),
     pm: blk([tiVar('CurrentYearMonthNumber', 'SELECTEDVALUE ( ' + ymn + ' )')], calc(ymn + ' = CurrentYearMonthNumber - 1')),
+    pqtd: blk(lastMonth.concat(tiVar('LastYearQuarterAvailable', at(yqn))), calc(yqn + ' = LastYearQuarterAvailable - 1', ymn + ' <= LastMonthAvailable - 3')),
     lm: blk(lastMonth, calc(ymn + ' = LastMonthAvailable')),
     pmc: blk(lastMonth, calc(ymn + ' = LastMonthAvailable - 1')),
     mat: blk(range(12), calc(ymn + ' >= FirstMonth12', ymn + ' <= LastMonthAvailable')),
@@ -173,13 +180,15 @@ function tiMonthGrowth(a, b, pct){ const pre = [...new Set(a.pre.concat(b.pre))]
 const TI_M_CALCS = [
   { key: 'ytd', name: 'YTD', kind: 'value', label: 'Year to date', f: b => tiMonthValue(b.ytd) },
   { key: 'qtd', name: 'QTD', kind: 'value', label: 'Quarter to date', f: b => tiMonthValue(b.qtd) },
+  { key: 'pqtd', name: 'PQTD', kind: 'value', label: 'Previous quarter, quarter to date', f: b => tiMonthValue(b.pqtd) },
+  { key: 'qoqp', dep: ['qtd', 'pqtd'], name: 'QOQTD %', kind: 'pct', label: 'Quarter to date vs previous quarter to date, %', f: b => tiMonthGrowth(b.qtd, b.pqtd, true) },
   { key: 'py', name: 'PY', kind: 'value', label: 'Same months last year', f: b => tiMonthValue(b.py) },
   { key: 'pytd', name: 'PYTD', kind: 'value', label: 'Last year, year to date', f: b => tiMonthValue(b.pytd) },
-  { key: 'yoy', name: 'YOY', kind: 'value', label: 'Change on last year', f: b => tiMonthGrowth(b.cur, b.py) },
-  { key: 'yoyp', name: 'YOY %', kind: 'pct', label: 'Change on last year, %', f: b => tiMonthGrowth(b.cur, b.py, true) },
-  { key: 'ytdyoyp', name: 'YOYTD %', kind: 'pct', label: 'Year to date vs last year to date, %', f: b => tiMonthGrowth(b.ytd, b.pytd, true) },
+  { key: 'yoy', dep: ['cur', 'py'], name: 'YOY', kind: 'value', label: 'Change on last year', f: b => tiMonthGrowth(b.cur, b.py) },
+  { key: 'yoyp', dep: ['cur', 'py'], name: 'YOY %', kind: 'pct', label: 'Change on last year, %', f: b => tiMonthGrowth(b.cur, b.py, true) },
+  { key: 'ytdyoyp', dep: ['ytd', 'pytd'], name: 'YOYTD %', kind: 'pct', label: 'Year to date vs last year to date, %', f: b => tiMonthGrowth(b.ytd, b.pytd, true) },
   { key: 'pm', name: 'PM', kind: 'value', label: 'Previous month', f: b => tiMonthValue(b.pm) },
-  { key: 'momp', name: 'MOM %', kind: 'pct', label: 'Change on previous month, %', f: b => tiMonthGrowth(b.cur, b.pm, true) },
+  { key: 'momp', dep: ['cur', 'pm'], name: 'MOM %', kind: 'pct', label: 'Change on previous month, %', f: b => tiMonthGrowth(b.cur, b.pm, true) },
   { key: 'r12', name: 'MAT', kind: 'value', label: 'Moving annual total: the 12 months to the last month', f: b => tiMonthValue(b.mat) },
   { key: 'r3avg', name: 'AVG 3M', kind: 'value', label: 'Monthly average over the last 3 months', f: b => tiMonthValue(b.avg3m) }
 ];
@@ -187,16 +196,29 @@ const TI_M_CALCS = [
 const TI_M_CALCS_LATEST = [
   { key: 'ytd', name: 'YTD', kind: 'value', label: 'Year to the last month', f: b => tiMonthValue(b.ytd) },
   { key: 'qtd', name: 'QTD', kind: 'value', label: 'Quarter to the last month', f: b => tiMonthValue(b.qtd) },
+  { key: 'pqtd', name: 'PQTD', kind: 'value', label: 'Previous quarter, to the same month', f: b => tiMonthValue(b.pqtd) },
+  { key: 'qoqp', dep: ['qtd', 'pqtd'], name: 'QOQTD %', kind: 'pct', label: 'Quarter to date vs previous quarter to date, %', f: b => tiMonthGrowth(b.qtd, b.pqtd, true) },
   { key: 'py', name: 'PYC', kind: 'value', label: 'Previous year, whole year', f: b => tiMonthValue(b.pyc) },
   { key: 'pytd', name: 'PYTD', kind: 'value', label: 'Last year, to the same month', f: b => tiMonthValue(b.pytd) },
-  { key: 'yoy', name: 'YOYTD', kind: 'value', label: 'Year to date vs last year to date', f: b => tiMonthGrowth(b.ytd, b.pytd) },
-  { key: 'yoyp', name: 'YOYTD %', kind: 'pct', label: 'Year to date vs last year to date, %', f: b => tiMonthGrowth(b.ytd, b.pytd, true) },
+  { key: 'yoy', dep: ['ytd', 'pytd'], name: 'YOYTD', kind: 'value', label: 'Year to date vs last year to date', f: b => tiMonthGrowth(b.ytd, b.pytd) },
+  { key: 'yoyp', dep: ['ytd', 'pytd'], name: 'YOYTD %', kind: 'pct', label: 'Year to date vs last year to date, %', f: b => tiMonthGrowth(b.ytd, b.pytd, true) },
+  { key: 'lm', name: 'LM', kind: 'value', label: 'Last month: the latest month with data', f: b => tiMonthValue(b.lm) },
   { key: 'pm', name: 'PMC', kind: 'value', label: 'Previous month, whole month', f: b => tiMonthValue(b.pmc) },
-  { key: 'momp', name: 'MOM %', kind: 'pct', label: 'Last month vs the month before, %', f: b => tiMonthGrowth(b.lm, b.pmc, true) },
+  { key: 'momp', dep: ['lm', 'pm'], name: 'MOM %', kind: 'pct', label: 'Last month vs the month before, %', f: b => tiMonthGrowth(b.lm, b.pmc, true) },
   { key: 'r12', name: 'MAT', kind: 'value', label: 'Moving annual total: the 12 months to the last month', f: b => tiMonthValue(b.mat) },
   { key: 'r3avg', name: 'AVG 3M', kind: 'value', label: 'Monthly average over the 3 months to the last month', f: b => tiMonthValue(b.avg3m) }
 ];
-function tiCalcList(cfg){ cfg = cfg || {}; return cfg.grain === 'month' ? (cfg.basis === 'context' ? TI_M_CALCS : TI_M_CALCS_LATEST) : cfg.basis === 'context' ? TI_CALCS : TI_CALCS_LATEST; }
+// Step 3 groups the calculations by type
+const TI_GROUPS = [
+  { name: 'Period to date', keys: ['ytd', 'qtd', 'mtd', 'lm'] },
+  { name: 'Previous periods', keys: ['py', 'pytd', 'pqtd', 'pm', 'pmtd', 'pymtd'] },
+  { name: 'Growth', keys: ['yoy', 'yoyp', 'ytdyoyp', 'qoqp', 'momp', 'mtdyoyp'] },
+  { name: 'Rolling', keys: ['r12', 'r3avg'] }
+];
+const TI_ORDER = TI_GROUPS.flatMap(g => g.keys);
+const tiSorted = l => l.slice().sort((a, b) => TI_ORDER.indexOf(a.key) - TI_ORDER.indexOf(b.key));
+function tiCalcList(cfg){ return tiSorted(tiCalcListRaw(cfg)); }
+function tiCalcListRaw(cfg){ cfg = cfg || {}; return cfg.grain === 'month' ? (cfg.basis === 'context' ? TI_M_CALCS : TI_M_CALCS_LATEST) : cfg.basis === 'context' ? TI_CALCS : TI_CALCS_LATEST; }
 const TI_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const TI_LAST_DAY = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 // A DAX date table: CALENDAR ( … ) or CALENDARAUTO ( … ) in a calculated table
@@ -235,15 +257,29 @@ function tiFolder(cfg, base){
   if (cfg.folderMode === 'perMeasure') return normFolder((f ? f + '\\' : '') + base.name);
   return f;
 }
+// Growth measures (those with dep) build on the other new measures when those are being created too:
+// dep is [current, previous], 'cur' being the base measure itself.
+function tiDepsMet(cfg, c){ return !!c.dep && c.dep.every(k => k === 'cur' || (cfg.calcs || []).includes(k)); }
+// calculations the selected growth measures need but that aren't ticked (measures output only)
+function tiMissingDeps(cfg){
+  if (cfg.output === 'group') return [];
+  const list = tiCalcList(cfg), sel = tiSelectedCalcs(cfg), keys = new Set();
+  sel.forEach(c => (c.dep || []).forEach(k => { if (k !== 'cur' && !(cfg.calcs || []).includes(k)) keys.add(k); }));
+  return list.filter(c => keys.has(c.key));
+}
 function tiPlan(model, cfg){
   const bases = (cfg.measures || []).map(n => model.measures.find(m => lc(m.name) === lc(n))).filter(Boolean);
-  const calcs = tiSelectedCalcs(cfg), out = [];
-  bases.forEach(b => calcs.forEach(c => out.push({
+  const calcs = tiSelectedCalcs(cfg), list = tiCalcList(cfg), out = [];
+  const ref = (b, k) => bracket(k === 'cur' ? b.name : tiMeasureName(cfg, b, list.find(x => x.key === k)));
+  // the measures they build on come first, growth measures last
+  const add = (b, c) => out.push({
     base: b, calc: c, name: tiMeasureName(cfg, b, c),
-    expression: tiExpr(cfg, c, bracket(b.name)),
+    expression: tiDepsMet(cfg, c) ? tiGrowth(ref(b, c.dep[0]), ref(b, c.dep[1]), c.kind === 'pct') : tiExpr(cfg, c, bracket(b.name)),
     formatString: c.kind === 'pct' ? (cfg.pctFormat || '0.0%') : (b.formatString || ''),
     folder: tiFolder(cfg, b)
-  })));
+  });
+  bases.forEach(b => calcs.filter(c => !c.dep).forEach(c => add(b, c)));
+  bases.forEach(b => calcs.filter(c => c.dep).forEach(c => add(b, c)));
   return out;
 }
 function tiCheck(model, cfg){
@@ -270,7 +306,7 @@ function tiCheck(model, cfg){
   const calcs = tiSelectedCalcs(cfg);
   if (!calcs.length) add('err', 'Pick at least one calculation in Step 3.');
   const m = +cfg.fyEnd || 12;
-  if (m % 3 !== 0 && calcs.some(c => c.key === 'qtd') && cfg.grain !== 'month') add('warn', 'QTD uses calendar quarters (Jan–Mar, Apr–Jun…), which don’t line up with a fiscal year ending in ' + TI_MONTHS[m - 1] + '.');
+  if (m % 3 !== 0 && calcs.some(c => /^(qtd|pqtd|qoqp)$/.test(c.key)) && cfg.grain !== 'month') add('warn', 'QTD uses calendar quarters (Jan–Mar, Apr–Jun…), which don’t line up with a fiscal year ending in ' + TI_MONTHS[m - 1] + '.');
   const names = calcs.map(c => lc(tiCalcName(cfg, c)));
   const dupN = names.filter((n, i) => names.indexOf(n) !== i);
   if (dupN.length) add('err', 'Two calculations have the same name: ' + [...new Set(dupN)].join(', ') + '.');

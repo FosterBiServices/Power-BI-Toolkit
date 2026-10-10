@@ -8,7 +8,9 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 /* ---------- Time Intelligence Builder ---------- */
 .msg.info{background:var(--info-soft);color:var(--info)}
 .tabbar button[aria-checked="true"]{border:2px solid var(--accent);padding:11px 15px;background:var(--accent-soft);box-shadow:inset 0 -4px 0 var(--gold)}
-.only-measures[hidden],#monthCols[hidden],.field[hidden],.only-group[hidden],#outBox[hidden],#destBox[hidden]{display:none!important}
+.only-measures[hidden],#monthCols[hidden],#depAsk[hidden],.field[hidden],.only-group[hidden],#outBox[hidden],#destBox[hidden]{display:none!important}
+.dep-ask{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.dep-ask .btns{display:flex;flex-wrap:wrap;gap:8px}
 .dest-hint{width:100%;font-size:12.5px}
 .dest select{max-width:100%}
 .cfg{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end}
@@ -19,6 +21,8 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 .opts{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center}
 .opts .hint{font-size:12.5px;color:var(--muted)}
 .calcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.calc-grp{grid-column:1/-1;margin:8px 0 0;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.calc-grp:first-child{margin-top:0}
 .calc{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--surface)}
 .calc.on{border-color:var(--accent);background:var(--accent-soft)}
 .calc .ck{display:flex;gap:8px;align-items:flex-start;cursor:pointer;font-size:14px}
