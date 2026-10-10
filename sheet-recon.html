@@ -1365,39 +1365,48 @@ if(startBlank) $('#clearDone').hidden=false; else loadSample();
       + '.brandbar a.logo-link{display:flex;flex:none;border-radius:6px}'
       + '.suite-disc{display:block;margin-top:6px;max-width:90ch;margin-left:auto;margin-right:auto;line-height:1.5}.suite-disc a{color:inherit}'
       + '.suite-ai{font-size:13.5px}'
+      + '.suite-next{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;border-top:1px solid var(--line);padding-top:16px;margin-top:8px}.suite-next-h{flex-basis:100%;font-family:var(--cond,var(--font-display,inherit));font-weight:600;font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}'
+      + '.suite-next a{display:flex;flex-direction:column;gap:2px;flex:1 1 220px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;padding:10px 14px}.suite-next a:hover{border-color:var(--accent)}.suite-next a b{color:var(--accent);font-family:var(--cond,var(--font-display,inherit));font-size:16px}.suite-next a span{font-size:13.5px;color:var(--muted)}'
       + '.suite-file{margin-top:8px}.suite-msg{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px}.suite-msg .btn{flex:none}'
       + '.suite-reply{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:4px 0}.suite-reply .btn{padding:4px 10px;font-size:13px}.suite-ok{color:var(--ok)}.suite-err{color:var(--err)}';
     document.head.appendChild(st);
   }
   // Navigation back to the home page and across tools
-  S.TOOLS = [
-    ['kpi-measure-builder.html', 'KPI Measure Builder'],
-    ['measure-describer.html', 'Measure Describer'],
-    ['prep-for-ai-writer.html', 'Prep for AI Writer'],
-    ['dax-reviewer.html', 'DAX Reviewer'],
-    ['validation-query-builder.html', 'Validation Query Builder'],
-    ['time-intelligence-builder.html', 'Time Intelligence Builder'],
-    ['field-parameter-builder.html', 'Field Parameter Builder'],
-    ['rls-role-generator.html', 'RLS Role Generator'],
-    ['model-linter.html', 'Model Linter'],
-    ['model-compare.html', 'Model Compare'],
-    ['model-documenter.html', 'Model Documenter'],
-    ['about-this-report.html', 'About This Report'],
-    ['power-query-writer.html', 'Power Query Writer'],
-    ['power-query-explainer.html', 'Power Query Explainer'],
-    ['date-table-generator.html', 'Date Table Generator'],
-    ['kpi-visualizer.html', 'KPI Visualizer'],
-    ['theme-builder.html', 'Theme Builder'],
-    ['layout-designer.html', 'Layout Designer'],
-    ['sheet-recon.html', 'Sheet Recon']
+  // Tools in the order a report gets built; the home page and the Switch tool menu use the same groups
+  S.GROUPS = [
+    ['Design the report', [
+      ['theme-builder.html', 'Theme Builder'],
+      ['layout-designer.html', 'Layout Designer'],
+      ['kpi-visualizer.html', 'KPI Visualizer']]],
+    ['Shape the data', [
+      ['power-query-writer.html', 'Power Query Writer'],
+      ['power-query-explainer.html', 'Power Query Explainer'],
+      ['date-table-generator.html', 'Date Table Generator']]],
+    ['Build the model', [
+      ['kpi-measure-builder.html', 'KPI Measure Builder'],
+      ['time-intelligence-builder.html', 'Time Intelligence Builder'],
+      ['field-parameter-builder.html', 'Field Parameter Builder'],
+      ['rls-role-generator.html', 'RLS Role Generator']]],
+    ['Check it', [
+      ['dax-reviewer.html', 'DAX Reviewer'],
+      ['model-linter.html', 'Model Linter'],
+      ['validation-query-builder.html', 'Validation Query Builder'],
+      ['model-compare.html', 'Model Compare'],
+      ['sheet-recon.html', 'Sheet Recon']]],
+    ['Explain it', [
+      ['measure-describer.html', 'Measure Describer'],
+      ['prep-for-ai-writer.html', 'Prep for AI Writer'],
+      ['about-this-report.html', 'About This Report'],
+      ['model-documenter.html', 'Model Documenter']]]
   ];
+  S.TOOLS = [].concat(...S.GROUPS.map(g => g[1]));
   const top = document.querySelector('header.top');
   if (top && !document.body.dataset.home && !document.getElementById('suiteNav')) {
     const here = (location.pathname.split('/').pop() || '').toLowerCase();
     const nav = document.createElement('nav'); nav.id = 'suiteNav'; nav.className = 'suite-nav'; nav.setAttribute('aria-label', 'Toolkit');
     nav.innerHTML = '<a class="home" href="' + HOME + '"><span aria-hidden="true">&larr;</span> Toolkit home</a>'
       + '<label class="switch"><span>Switch tool</span><select id="suiteSwitch">'
-      + S.TOOLS.map(t => '<option value="' + t[0] + '"' + (t[0] === here ? ' selected' : '') + '>' + esc(t[1]) + '</option>').join('')
+      + S.GROUPS.map(g => '<optgroup label="' + esc(g[0]) + '">' + g[1].map(t => '<option value="' + t[0] + '"' + (t[0] === here ? ' selected' : '') + '>' + esc(t[1]) + '</option>').join('') + '</optgroup>').join('')
       + '</select></label>';
     top.insertAdjacentElement('beforebegin', nav);
     nav.querySelector('select').addEventListener('change', e => { location.href = e.target.value; });
@@ -1413,6 +1422,38 @@ if(startBlank) $('#clearDone').hidden=false; else loadSample();
     const here2 = (location.pathname.split('/').pop() || '').toLowerCase();
     const hdr = document.querySelector('header.top');
     if (hdr && AI_TOOLS.includes(here2)) { const n = document.createElement('div'); n.className = 'msg warn suite-ai'; n.setAttribute('role', 'note'); n.innerHTML = '<b>AI can make mistakes.</b> This page checks Copilot&rsquo;s reply where it can, but not every error in logic or meaning. Review everything before you use it, only use AI tools your organization approves, and test on a copy of your model first. <a href="' + HOME + '#disclaimer">Disclaimer</a>'; hdr.insertAdjacentElement('afterend', n); }
+  }
+
+  // What next: a line above the footer pointing to the tools people usually use after this one
+  S.NEXT = {
+    'theme-builder.html': [['layout-designer.html', 'Plan a page with these colors'], ['kpi-visualizer.html', 'Show your KPIs in these colors']],
+    'layout-designer.html': [['kpi-visualizer.html', 'Choose how to show each KPI'], ['theme-builder.html', 'Build a theme to match']],
+    'kpi-visualizer.html': [['layout-designer.html', 'Place the cards on a page'], ['kpi-measure-builder.html', 'Write the measures behind a KPI']],
+    'power-query-writer.html': [['power-query-explainer.html', 'Comment or clean up a query you already have'], ['date-table-generator.html', 'Add a date table']],
+    'power-query-explainer.html': [['power-query-writer.html', 'Write a new query'], ['model-documenter.html', 'Document every query in the model']],
+    'date-table-generator.html': [['time-intelligence-builder.html', 'Add year to date, last year and growth']],
+    'kpi-measure-builder.html': [['dax-reviewer.html', 'Review a measure'], ['validation-query-builder.html', 'Check the results'], ['measure-describer.html', 'Describe the new measures']],
+    'time-intelligence-builder.html': [['field-parameter-builder.html', 'Let readers switch between the new measures'], ['validation-query-builder.html', 'Check the results']],
+    'field-parameter-builder.html': [['validation-query-builder.html', 'Check the results'], ['layout-designer.html', 'Plan the page it goes on']],
+    'rls-role-generator.html': [['model-linter.html', 'Check the model before you publish']],
+    'dax-reviewer.html': [['validation-query-builder.html', 'Check its results against a number you trust'], ['measure-describer.html', 'Write a description for it']],
+    'model-linter.html': [['model-documenter.html', 'Document the model'], ['model-compare.html', 'See what changed since the last export']],
+    'validation-query-builder.html': [['sheet-recon.html', 'Compare the results with a source file']],
+    'model-compare.html': [['model-documenter.html', 'Document the model as it is now']],
+    'sheet-recon.html': [['validation-query-builder.html', 'Get the Power BI numbers to compare']],
+    'measure-describer.html': [['prep-for-ai-writer.html', 'Describe tables and columns, and write Copilot instructions']],
+    'prep-for-ai-writer.html': [['about-this-report.html', 'Write the report\u2019s About page']],
+    'about-this-report.html': [['model-documenter.html', 'Make a full document of the model']],
+    'model-documenter.html': [['about-this-report.html', 'Write a short About page for report readers'], ['model-linter.html', 'Check the model']]
+  };
+  if (!document.body.dataset.home && !document.getElementById('suiteNext')) {
+    const nx = S.NEXT[(location.pathname.split('/').pop() || '').toLowerCase()], f = document.querySelector('footer');
+    if (nx && f) {
+      const name = file => (S.TOOLS.find(t => t[0] === file) || [, file])[1];
+      const n = document.createElement('nav'); n.id = 'suiteNext'; n.className = 'suite-next'; n.setAttribute('aria-label', 'What next');
+      n.innerHTML = '<span class="suite-next-h">What next</span>' + nx.map(x => '<a href="' + x[0] + '"><b>' + esc(name(x[0])) + '</b><span>' + esc(x[1]) + '</span></a>').join('');
+      f.insertAdjacentElement('beforebegin', n);
+    }
   }
 
   // Copilot prompts as files: every prompt can be downloaded as a .txt to attach in Copilot, with a short message
@@ -1579,15 +1620,17 @@ if(startBlank) $('#clearDone').hidden=false; else loadSample();
     let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { t = new TextDecoder('windows-1252').decode(buf); }
     return t.replace(/^﻿/, '');
   };
+  // files the Connect step reads: the model's TMDL (or model.bim), plus report files on pages that check report pages
+  let FILE_RE = /\.(tmdl|bim)$/i;
   async function walkHandle(dir, prefix, out){
     for await (const [name, h] of dir.entries()) {
       if (h.kind === 'directory') { if (!skipDir(name)) await walkHandle(h, prefix + '/' + name, out); }
-      else if (/\.(tmdl|bim)$/i.test(name)) out.push({ path: prefix + '/' + name, file: await h.getFile() });
+      else if (FILE_RE.test(name)) out.push({ path: prefix + '/' + name, file: await h.getFile() });
     }
   }
   function walkEntry(entry, prefix, out){
     return new Promise(resolve => {
-      if (entry.isFile) { if (/\.(tmdl|bim)$/i.test(entry.name)) entry.file(f => { out.push({ path: prefix + '/' + entry.name, file: f }); resolve(); }, () => resolve()); else resolve(); return; }
+      if (entry.isFile) { if (FILE_RE.test(entry.name)) entry.file(f => { out.push({ path: prefix + '/' + entry.name, file: f }); resolve(); }, () => resolve()); else resolve(); return; }
       if (skipDir(entry.name)) { resolve(); return; }
       const reader = entry.createReader(); const all = [];
       const next = () => reader.readEntries(batch => { if (!batch.length) { Promise.all(all.map(e => walkEntry(e, prefix + '/' + entry.name, out))).then(resolve); return; } all.push(...batch); next(); }, () => resolve());
@@ -1748,6 +1791,7 @@ if(startBlank) $('#clearDone').hidden=false; else loadSample();
   //   exportOnly: [selectors shown only for the export], title, lede, retitle: { h2 id: text } } }
   S.connect = (cfg, ta, bar) => {
     const c = cfg.connect, h2 = document.getElementById(c.step); if (!h2) return null;
+    if (c.report) FILE_RE = /\.(tmdl|bim|json|pbir)$/i;
     const body = h2.closest('.step-body'), head = h2.closest('.step-head') || h2;
     const key = cfg.prefix + 'connect', get = k => { try { return localStorage.getItem(cfg.prefix + k); } catch (e) { return null; } }, set = (k, v) => { try { localStorage.setItem(cfg.prefix + k, v); } catch (e) {} };
     if (c.title) h2.textContent = c.title;
@@ -1803,6 +1847,8 @@ if(startBlank) $('#clearDone').hidden=false; else loadSample();
       const noDates = cfg.mode === 'dates' && !ta.value.trim();
       msg.innerHTML = '<div class="msg ' + (noDates ? 'warn' : 'ok') + '">' + (noDates ? '' : '&#10003; ') + 'Read <b>' + esc(r.name) + '</b>: ' + r.tables + ' tables, ' + r.measures + ' measures.' + (noDates ? ' It has no date columns, so set the years yourself in the next step.' : '') + (r.others.length ? ' This folder has more models (' + esc(r.others.join(', ')) + '); choose that project&rsquo;s own folder to use one of them.' : '') + (shared ? ' Every tool uses it now, so you don&rsquo;t connect again in the others.' : ' It&rsquo;s too large to share with the other tools (browser storage limit).') + ' Read it again after you change the model.</div>';
       render();
+      // pages that also check report pages read them from the same folder
+      if (c.report) document.dispatchEvent(new CustomEvent('sf-pbip-folder', { detail: { root, list } }));
     };
     const fail = e => { msg.innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(e.message || e) + '</div>'; };
     wrap.querySelector('[data-sc-pick]').addEventListener('click', async () => {
@@ -1821,7 +1867,7 @@ if(startBlank) $('#clearDone').hidden=false; else loadSample();
     input.addEventListener('change', async () => {
       const fl = [...input.files]; if (!fl.length) return;
       const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
-      try { await load(root, fl.filter(f => /\.(tmdl|bim)$/i.test(f.name)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }))); } catch (e) { fail(e); }
+      try { await load(root, fl.filter(f => FILE_RE.test(f.name)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }))); } catch (e) { fail(e); }
       input.value = '';
     });
     ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));

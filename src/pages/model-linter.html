@@ -361,7 +361,7 @@ ul.wl .mono{font-family:var(--mono);font-size:13px;overflow-wrap:anywhere}
       <div class="repbox" id="repBox">
         <div class="rep-head"><h3>Report pages <span class="muted">(optional)</span></h3>
           <span class="btns"><button type="button" class="btn" id="pickReport">Choose a PBIP folder</button><button type="button" class="btn" id="clearReport" hidden>Remove report pages</button></span></div>
-        <p class="note small" id="repIntro">Choose the project folder (or its <b>.Report</b> folder) of a report saved as a Power BI Project. Visible columns and every measure are then checked against each visual, filter, formatting rule and bookmark in it, and the report checks run: alt text, titles, hidden visuals, unused bookmarks, empty and crowded pages. If the folder also holds the semantic model, its field parameters are read so measures used only there count as used. If the folder holds several projects, you pick which reports to check, and each is read with its own semantic model. Files are read on this page; nothing is uploaded.</p>
+        <p class="note small" id="repIntro">Connected with a PBIP folder above? Its report pages are read from it too, so there&rsquo;s nothing to add here. Otherwise, choose the project folder (or its <b>.Report</b> folder) of a report saved as a Power BI Project. Visible columns and every measure are then checked against each visual, filter, formatting rule and bookmark in it, and the report checks run: alt text, titles, hidden visuals, unused bookmarks, empty and crowded pages. If the folder also holds the semantic model, its field parameters are read so measures used only there count as used. If the folder holds several projects, you pick which reports to check, and each is read with its own semantic model. Files are read on this page; nothing is uploaded.</p>
         <div class="drop" id="repDrop">or drop the folder here</div>
         <input type="file" id="repInput" webkitdirectory multiple hidden>
         <div id="repMsg"></div>
@@ -1863,7 +1863,7 @@ function walkEntry(entry, prefix, out){
     next();
   });
 }
-async function loadReport(root, list){
+async function loadReport(root, list, quiet){
   $('repMsg').innerHTML = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>';
   // a chosen .Report folder itself: its files have no ".Report/" above them, so add it back
   const norm = p => (/\.(Report|SemanticModel)$/i.test(root) && !/\.(Report|SemanticModel)\//i.test(p)) ? root + '/' + p.split('/').slice(1).join('/') : p;
@@ -1874,6 +1874,7 @@ async function loadReport(root, list){
   }
   const reps = ML.reportList(files).filter(r => r.pages);
   if (!reps.length) {
+    if (quiet) { $('repMsg').innerHTML = ''; return; }
     $('repMsg').innerHTML = '<div class="msg warn">No report pages were found in &ldquo;' + esc(root) + '&rdquo;. Choose a folder that holds a <b>.Report</b> folder, from a report saved as a Power BI Project (<b>File &gt; Save as &gt; Power BI project files</b>).</div>';
     return;
   }
@@ -2061,6 +2062,8 @@ function init(){
     if (b.id === 'copyAll') { copyText(tsv(state.result.findings.filter(f => !state.cfg.ignored[f.id])), b); return; }
     if (b.id === 'toggleIgn') { state.cfg.showIgnored = !state.cfg.showIgnored; renderResults(); persist(); }
   });
+  // a PBIP folder chosen in Connect your model brings its report pages too
+  document.addEventListener('sf-pbip-folder', e => loadReport(e.detail.root, e.detail.list, true).catch(err => { $('repMsg').innerHTML = '<div class="msg err">The report pages couldn&rsquo;t be read: ' + esc(err.message || err) + '</div>'; }));
   $('pickReport').addEventListener('click', async () => {
     if (window.showDirectoryPicker) {
       let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-model-linter', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; $('repInput').click(); return; }

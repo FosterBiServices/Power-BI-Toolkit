@@ -238,7 +238,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>KPI Measure Builder</h1>
-        <p class="lede">Export your model, build a Copilot prompt, then paste Copilot's answer back to get TMDL with correct tab indentation and your display folder applied.</p>
+        <p class="lede">Connect your model, describe the measures you need, copy the prompt into Copilot, then paste its answer back to get TMDL with correct tab indentation and your display folder applied.</p>
       </div>
       <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
@@ -247,19 +247,6 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
     </div>
     <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste a model export in Step 2 to start again.</div>
-    <div class="dest" role="group" aria-labelledby="destLbl">
-      <span class="lbl" id="destLbl">Where new measures go</span>
-      <div class="field">
-        <label for="targetTable">Home table</label>
-        <input type="text" id="targetTable" value="_Measures" spellcheck="false" autocomplete="off" list="destTables">
-      </div>
-      <div class="field">
-        <label for="targetFolder">Display folder <span class="muted">(use \ for subfolders)</span></label>
-        <input type="text" id="targetFolder" value="KPIs\ai_generated" spellcheck="false" autocomplete="off" style="width:240px" list="destFolders">
-      </div>
-      <span class="small muted dest-hint">Pick a table or folder from your model, type a new one, or clear the folder to put the measures at the top of the table.</span>
-      <datalist id="destTables"></datalist><datalist id="destFolders"></datalist>
-    </div>
     <div class="banner" id="exampleBanner" hidden>
       <span><strong>Example data loaded.</strong> The model, requests and Copilot response below are samples. Replace each box with your own.</span>
       <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
@@ -314,7 +301,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
     <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
-        <h2 id="s3">Describe the measures and copy the prompt</h2>
+        <h2 id="s3">Describe the measures</h2>
         <p>One measure per line, in plain English. Mention the grain or filter if it matters, for example "excluding returns" or "for the selected fiscal year".</p>
       </div>
       <textarea id="requests" class="req" aria-label="Measures you want"></textarea>
@@ -346,6 +333,29 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
         </div>
       </details>
 
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="s3b">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3b">Choose what Copilot sees and copy the prompt</h2>
+        <p>Where the new measures go, and which tables the prompt describes. Fewer tables make a shorter prompt.</p>
+      </div>
+        <div class="dest" role="group" aria-labelledby="destLbl">
+          <span class="lbl" id="destLbl">Where new measures go</span>
+          <div class="field">
+            <label for="targetTable">Home table</label>
+            <input type="text" id="targetTable" value="_Measures" spellcheck="false" autocomplete="off" list="destTables">
+          </div>
+          <div class="field">
+            <label for="targetFolder">Display folder <span class="muted">(use \ for subfolders)</span></label>
+            <input type="text" id="targetFolder" value="KPIs\ai_generated" spellcheck="false" autocomplete="off" style="width:240px" list="destFolders">
+          </div>
+          <span class="small muted dest-hint">Pick a table or folder from your model, type a new one, or clear the folder to put the measures at the top of the table.</span>
+          <datalist id="destTables"></datalist><datalist id="destFolders"></datalist>
+        </div>
       <div class="picker">
         <div class="picker-head">
           <h3>Tables to include</h3>
@@ -376,7 +386,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 
   <!-- STEP 4 -->
   <section class="step" aria-labelledby="s4">
-    <div class="step-num">Step<b>4</b></div>
+    <div class="step-num">Step<b>5</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s4">Paste Copilot's reply and get TMDL</h2>
@@ -1237,7 +1247,7 @@ function parseResponse(text){
     }
   }
   if (!res.measures.length) { res.measures = lenientJson(j); if (res.measures.length) res.format = 'json-repaired'; }
-  if (!res.measures.length) res.error = 'No measures were found in the reply. Copy the prompt again from Step 3 and make sure Copilot answers inside a code block with @@@ MEASURE @@@ blocks.';
+  if (!res.measures.length) res.error = 'No measures were found in the reply. Copy the prompt again from Step 4 and make sure Copilot answers inside a code block with @@@ MEASURE @@@ blocks.';
   return res;
 }
 function oneLineKeepBreaks(s){ return (s || '').replace(/\r/g, '').split('\n').map(x => x.trim()).filter(Boolean).join('\n'); }

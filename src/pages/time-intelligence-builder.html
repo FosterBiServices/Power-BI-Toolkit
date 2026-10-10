@@ -294,14 +294,6 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
     </div>
     <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Paste your model export in Step 1 to start again.</div>
-    <div class="dest" id="destBox" role="group" aria-labelledby="destLbl">
-      <span class="lbl" id="destLbl">Where new measures go</span>
-      <div class="field"><label for="target">Home table</label><input type="text" id="target" list="destTables" spellcheck="false" autocomplete="off"></div>
-      <div class="field"><label for="folder">Display folder <span class="muted">(use \ for subfolders)</span></label><input type="text" id="folder" list="destFolders" spellcheck="false" autocomplete="off" style="width:240px"></div>
-      <div class="field"><label for="folderMode">Arrange</label><select id="folderMode"><option value="fixed">All in this folder</option><option value="perMeasure">A subfolder per measure</option><option value="under">Inside each measure&rsquo;s own folder</option></select></div>
-      <span class="small muted dest-hint" id="destHint"></span>
-      <datalist id="destTables"></datalist><datalist id="destFolders"></datalist>
-    </div>
     <div class="banner" id="exampleBanner" hidden>
       <span><strong>Example loaded.</strong> The model and the picked measures and calculations are samples. Paste your own model export in Step 1 to start.</span>
       <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
@@ -404,6 +396,14 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       <div class="step-head">
         <h2 id="s4">Test, then add it to your model</h2>
         <p>Checks run as you go. Run the test query to compare a few numbers with a visual, then apply the TMDL script.</p>
+      </div>
+      <div class="dest" id="destBox" role="group" aria-labelledby="destLbl">
+        <span class="lbl" id="destLbl">Where new measures go</span>
+        <div class="field"><label for="target">Home table</label><input type="text" id="target" list="destTables" spellcheck="false" autocomplete="off"></div>
+        <div class="field"><label for="folder">Display folder <span class="muted">(use \ for subfolders)</span></label><input type="text" id="folder" list="destFolders" spellcheck="false" autocomplete="off" style="width:240px"></div>
+        <div class="field"><label for="folderMode">Arrange</label><select id="folderMode"><option value="fixed">All in this folder</option><option value="perMeasure">A subfolder per measure</option><option value="under">Inside each measure&rsquo;s own folder</option></select></div>
+        <span class="small muted dest-hint" id="destHint"></span>
+        <datalist id="destTables"></datalist><datalist id="destFolders"></datalist>
       </div>
       <div id="checks"></div>
       <div id="outBox">

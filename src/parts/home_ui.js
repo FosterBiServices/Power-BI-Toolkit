@@ -21,7 +21,7 @@ const TOOLS = [
   { free: true, file: 'theme-builder.html', name: 'Theme Builder', desc: 'A full report theme from one brand color: data palette, text, background, good and bad colors, font and styles for every common visual, checked for readability and color blindness.', tags: ['noai'] },
   { free: true, file: 'sheet-recon.html', name: 'Sheet Recon', desc: 'Compare two tables from Excel or CSV by key: rows found on only one side and every changed value. Cleans DAX column names, dates, numbers and blanks first.', tags: ['files', 'noai'] },
 ];
-const TAG = { files: '<span class="tag exp">Your Excel or CSV files</span>', opt: '<span class="tag opt">Export optional</span>', pbip: '<span class="tag exp">PBIP folder or your export</span>', exp: '<span class="tag exp">Uses your export</span>', dates: '<span class="tag exp">Date columns from your export</span>', ai: '<span class="tag ai">Copilot</span>', aiopt: '<span class="tag noai">Copilot optional</span>', noai: '<span class="tag noai">No AI</span>' };
+const TAG = { files: '<span class="tag opt">Your Excel or CSV files</span>', free: '<span class="tag opt">No model needed</span>', opt: '<span class="tag opt">Model optional</span>', exp: '<span class="tag exp">Uses your model</span>', ai: '<span class="tag ai">Copilot</span>', aiopt: '<span class="tag noai">Copilot optional</span>', noai: '<span class="tag noai">No AI</span>' };
 const $ = id => document.getElementById(id);
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function msg(level, html){ return '<div class="msg ' + level + '">' + html + '</div>'; }
@@ -30,11 +30,18 @@ function copyText(text, btn){
   const fallback = () => { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); if (ok) done(); };
   try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
 }
+let wasSaved;
 function renderSaved(){
   const v = SF_SUITE.get();
   $('saved').hidden = !v;
-  if (!v) return;
+  // the connect box opens on the page when no model is saved, and folds to one status line when one is
+  // (a paste keeps it open, so the confirmation stays in view)
+  if (wasSaved === undefined || (wasSaved && !v)) $('connectBox').open = !v;
+  wasSaved = !!v;
+  if (!v) { $('connectTitle').textContent = 'Connect your model once'; $('connectSub').innerHTML = 'Tools marked ' + TAG.exp + ' read it. Export it once here and every tool picks it up. The rest work without it.'; return; }
   const m = parseModel(v.text);
+  $('connectTitle').innerHTML = '&#10003; Connected: ' + esc(v.name || 'your model');
+  $('connectSub').textContent = m.tables.length + ' tables, ' + m.measures.length + ' measures, ' + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + new Date(v.savedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) + '. Every tool marked Uses your model reads it. Open to replace or remove it.';
   const d = new Date(v.savedAt);
   $('savedWhen').textContent = (v.name ? v.name + ' · ' : '') + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   $('savedStats').innerHTML = '<span class="stat"><b>' + m.tables.length + '</b> tables</span><span class="stat"><b>' + m.columns.length + '</b> columns</span><span class="stat"><b>' + m.measures.length + '</b> measures</span><span class="stat"><b>' + m.rels.length + '</b> relationships</span>' + (m.composite ? '<span class="stat remote">Composite model</span>' : '');
@@ -44,12 +51,11 @@ function renderSaved(){
   $('savedHist').innerHTML = h ? h + ' earlier export' + (h === 1 ? ' is' : 's are') + ' kept too, so <a href="model-compare.html">Model Compare</a> can show what changed. Saving a new export keeps the one it replaces.' : '';
 }
 function renderTools(){
-  const card = t => '<a class="tool" href="' + t.file + '"><span class="tn">' + esc(t.name) + '</span><span class="td">' + esc(t.desc) + '</span><span class="tags">' + (t.free ? t.tags.map(x => x === 'exp' || x === 'dates' ? 'opt' : x) : t.tags.filter(x => x !== 'exp')).map(x => TAG[x]).join('') + '</span></a>';
-  const FREE_ORDER = ['theme-builder.html', 'layout-designer.html', 'kpi-visualizer.html', 'date-table-generator.html', 'power-query-writer.html', 'power-query-explainer.html', 'dax-reviewer.html', 'sheet-recon.html'];
-  $('toolsFree').innerHTML = TOOLS.filter(t => t.free).sort((a, b) => FREE_ORDER.indexOf(a.file) - FREE_ORDER.indexOf(b.file)).map(card).join('');
-  $('tools').innerHTML = TOOLS.filter(t => !t.free).map(card).join('');
-  return;
-  $('tools').innerHTML = TOOLS.map(t => '<a class="tool" href="' + t.file + '"><span class="tn">' + esc(t.name) + '</span><span class="td">' + esc(t.desc) + '</span><span class="tags">' + t.tags.map(x => TAG[x]).join('') + '</span></a>').join('');
+  // a model tag first (needed, optional or not needed), then the Copilot tag
+  const modelTag = t => t.tags.includes('files') ? 'files' : !t.free ? 'exp' : t.tags.some(x => x === 'exp' || x === 'dates' || x === 'opt') ? 'opt' : 'free';
+  const card = t => '<a class="tool" href="' + t.file + '"><span class="tn">' + esc(t.name) + '</span><span class="td">' + esc(t.desc) + '</span><span class="tags">' + [modelTag(t)].concat(t.tags.filter(x => /ai/.test(x))).map(x => TAG[x]).join('') + '</span></a>';
+  const byFile = f => TOOLS.find(t => t.file === f);
+  $('tools').innerHTML = SF_SUITE.GROUPS.map((g, i) => '<section class="tools-sec" aria-labelledby="grp' + i + '"><h2 id="grp' + i + '">' + esc(g[0]) + '</h2><div class="tools">' + g[1].map(x => byFile(x[0])).filter(Boolean).map(card).join('') + '</div></section>').join('');
 }
 function save(){
   const text = $('exportInput').value;

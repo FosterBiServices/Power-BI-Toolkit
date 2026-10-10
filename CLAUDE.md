@@ -81,10 +81,10 @@ Things to know:
    `P+'tool-name.html'`.
 2. `build_site.py` HOOKS: add `'tool-name': "SF_SUITE.hook({...});"` or `''` if it doesn't use
    the model export.
-3. `suite.js` `S.TOOLS` (Switch tool menu order), `S.PREFIXES` (Clear all pages), plus `AI_TOOLS` and `PROMPTS` if it writes a
-   Copilot prompt.
-4. `home_ui.js` TOOLS card (`free: true` = works without the model export; `tags`), and
-   `FREE_ORDER` if free.
+3. `suite.js` `S.GROUPS` (its group and place: the home page and the Switch tool menu both follow it),
+   `S.NEXT` (its What next links, and links to it from related tools), `S.PREFIXES` (Clear all pages),
+   plus `AI_TOOLS` and `PROMPTS` if it writes a Copilot prompt.
+4. `home_ui.js` TOOLS card (`free: true` = works without the model export; `tags`).
 5. `site_readme.md`: a row in the table and the file list.
 6. A check in `src/tests/`.
 
@@ -99,10 +99,16 @@ Things to know:
   `step`, and hides the `exportOnly` elements unless Model export is chosen. `S.pbipExport()`
   turns a PBIP folder's TMDL (or model.bim) into export rows, so the tool reads it like an
   export. The choice is saved as `<prefix>connect`. Settings per page are in build_site.py HOOKS.
+  `connect.report: true` (Model Linter, About This Report) also reads the folder's report files and
+  sends them to the page as a `sf-pbip-folder` event, so report pages come from the same pick.
   A folder read in any tool is saved as the shared export with `source: 'pbip'`, so every other tool
   opens on it (unless it chose No model or its own export). The folder picker's handle is kept in
   IndexedDB (`sfpbi`, store `h`, key `pbip`) for the **Read it again** button.
-- Home link and Switch tool menu (`S.TOOLS`).
+- Home link and Switch tool menu, grouped by `S.GROUPS` (Design the report, Shape the data, Build the
+  model, Check it, Explain it: the order a report gets built). `S.TOOLS` is the flat list made from it.
+  The home page shows the same groups, under a **Connect your model once** box (the export query and
+  paste) that folds to one status line once a model is saved.
+- **What next** links above every tool's footer (`S.NEXT`).
 - Prompts as files: for every page in `PROMPTS` (prompt element → reply element) each prompt
   box gets **Download file**, a "Send it to Copilot as a file" note, and "Open a reply file"
   (.txt, .md, .json, .csv, .tsv, .docx). Copied and downloaded prompts get `READ_RULE` and

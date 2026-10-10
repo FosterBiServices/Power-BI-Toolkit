@@ -379,7 +379,7 @@ ul.cand li.ex b{font-weight:500;color:var(--muted)}
         </div>
         <div class="addbox">
           <h3>Report pages <span class="muted">(optional)</span></h3>
-          <p class="note small">For a report saved as a Power BI Project (<b>.pbip</b>): the page names and slicers feed the tips, and measures on more visuals rank higher as key measures. If the folder includes the semantic model, data sources are read from it too. Files are read on this page; nothing is uploaded.</p>
+          <p class="note small">Connected with a PBIP folder above? Its report pages are read from it too, so there&rsquo;s nothing to add here. Otherwise, for a report saved as a Power BI Project (<b>.pbip</b>): the page names and slicers feed the tips, and measures on more visuals rank higher as key measures. If the folder includes the semantic model, data sources are read from it too. Files are read on this page; nothing is uploaded.</p>
           <span class="btns"><button type="button" class="btn" id="pickReport">Choose a PBIP folder</button><button type="button" class="btn" id="clearReport" hidden>Remove</button></span>
           <div class="drop" id="repDrop">or drop the folder here</div>
           <input type="file" id="repInput" webkitdirectory multiple hidden>
@@ -2551,7 +2551,8 @@ function init(){
   hopt('hName', 'name'); hopt('hTable', 'table'); hopt('hFolder', 'folder'); hopt('hFont', 'font', 'input', el => Math.max(10, Math.min(28, +el.value || 16)));
   hopt('hAccent', 'accent'); hopt('hAccentPick', 'accent', 'input', el => el.value.toUpperCase()); hopt('hRefresh', 'refresh', 'change'); hopt('hTitle', 'title', 'change', el => el.checked);
 
-  // PBIP folder
+  // PBIP folder (one chosen in Connect your model is read here too, for report pages and sources)
+  document.addEventListener('sf-pbip-folder', e => loadFolder(e.detail.root, e.detail.list).catch(err => { $('repMsg').innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(err.message || err) + '</div>'; }));
   $('pickReport').addEventListener('click', async () => {
     if (window.showDirectoryPicker) {
       let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-about-report', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; $('repInput').click(); return; }

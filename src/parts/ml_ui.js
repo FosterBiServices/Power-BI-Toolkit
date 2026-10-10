@@ -41,7 +41,7 @@ function walkEntry(entry, prefix, out){
     next();
   });
 }
-async function loadReport(root, list){
+async function loadReport(root, list, quiet){
   $('repMsg').innerHTML = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>';
   // a chosen .Report folder itself: its files have no ".Report/" above them, so add it back
   const norm = p => (/\.(Report|SemanticModel)$/i.test(root) && !/\.(Report|SemanticModel)\//i.test(p)) ? root + '/' + p.split('/').slice(1).join('/') : p;
@@ -52,6 +52,7 @@ async function loadReport(root, list){
   }
   const reps = ML.reportList(files).filter(r => r.pages);
   if (!reps.length) {
+    if (quiet) { $('repMsg').innerHTML = ''; return; }
     $('repMsg').innerHTML = '<div class="msg warn">No report pages were found in &ldquo;' + esc(root) + '&rdquo;. Choose a folder that holds a <b>.Report</b> folder, from a report saved as a Power BI Project (<b>File &gt; Save as &gt; Power BI project files</b>).</div>';
     return;
   }
@@ -239,6 +240,8 @@ function init(){
     if (b.id === 'copyAll') { copyText(tsv(state.result.findings.filter(f => !state.cfg.ignored[f.id])), b); return; }
     if (b.id === 'toggleIgn') { state.cfg.showIgnored = !state.cfg.showIgnored; renderResults(); persist(); }
   });
+  // a PBIP folder chosen in Connect your model brings its report pages too
+  document.addEventListener('sf-pbip-folder', e => loadReport(e.detail.root, e.detail.list, true).catch(err => { $('repMsg').innerHTML = '<div class="msg err">The report pages couldn&rsquo;t be read: ' + esc(err.message || err) + '</div>'; }));
   $('pickReport').addEventListener('click', async () => {
     if (window.showDirectoryPicker) {
       let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-model-linter', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; $('repInput').click(); return; }

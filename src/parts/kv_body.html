@@ -70,12 +70,26 @@
   </section>
 
   <!-- STEP 3 -->
-  <section class="step" aria-labelledby="s2">
+  <section class="step" aria-labelledby="s3">
     <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
+        <h2 id="s3">Ways to show it</h2>
+        <p id="s3note">Ways that fit what you want readers to get come first. Pick one to see how to build it.</p>
+      </div>
+      <div class="field" id="kpiPickWrap"><label for="kpiPick">Options for</label><select id="kpiPick"></select></div>
+      <div id="sampleMsg"></div>
+      <div class="kv-grid" id="options"></div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
         <h2 id="s2">Status colors</h2>
-        <p>Good, neutral and bad, the way Excel&rsquo;s conditional formatting shows them. Change any color, or take them from your theme. An arrow always goes with the color, so it never relies on color alone.</p>
+        <p>Good, neutral and bad, the way Excel&rsquo;s conditional formatting shows them. The previews above and the measures you build use them. Change any color, or take them from your theme. An arrow always goes with the color, so it never relies on color alone.</p>
       </div>
       <div class="chips" id="colorPresets" role="group" aria-label="Color presets">
         <button type="button" class="chip" data-preset="excel">Excel styles</button>
@@ -90,20 +104,6 @@
       </div>
       <div class="kv-colors" id="colorRows"></div>
       <div class="field inline-f"><label for="band">Counts as neutral when within</label><span><input type="number" id="band" min="0" max="50" step="0.5" style="width:80px"> % of the target or comparison</span></div>
-    </div>
-  </section>
-
-  <!-- STEP 4 -->
-  <section class="step" aria-labelledby="s3">
-    <div class="step-num">Step<b>4</b></div>
-    <div class="step-body">
-      <div class="step-head">
-        <h2 id="s3">Ways to show it</h2>
-        <p id="s3note">Ways that fit what you want readers to get come first. Pick one to see how to build it.</p>
-      </div>
-      <div class="field" id="kpiPickWrap"><label for="kpiPick">Options for</label><select id="kpiPick"></select></div>
-      <div id="sampleMsg"></div>
-      <div class="kv-grid" id="options"></div>
     </div>
   </section>
 

@@ -401,7 +401,8 @@ function init(){
   hopt('hName', 'name'); hopt('hTable', 'table'); hopt('hFolder', 'folder'); hopt('hFont', 'font', 'input', el => Math.max(10, Math.min(28, +el.value || 16)));
   hopt('hAccent', 'accent'); hopt('hAccentPick', 'accent', 'input', el => el.value.toUpperCase()); hopt('hRefresh', 'refresh', 'change'); hopt('hTitle', 'title', 'change', el => el.checked);
 
-  // PBIP folder
+  // PBIP folder (one chosen in Connect your model is read here too, for report pages and sources)
+  document.addEventListener('sf-pbip-folder', e => loadFolder(e.detail.root, e.detail.list).catch(err => { $('repMsg').innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(err.message || err) + '</div>'; }));
   $('pickReport').addEventListener('click', async () => {
     if (window.showDirectoryPicker) {
       let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-about-report', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; $('repInput').click(); return; }

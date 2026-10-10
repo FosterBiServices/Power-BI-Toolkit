@@ -241,17 +241,18 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 .tag.ai{background:var(--info-soft);color:var(--info)}
 .tag.noai{background:var(--ok-soft);color:var(--ok)}
 .tag.opt{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
-.paths{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media (max-width:640px){.paths{grid-template-columns:1fr}}
-.path{display:flex;flex-direction:column;gap:4px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 16px}
-.path:hover{border-color:var(--accent);background:var(--accent-soft)}
-.path:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.path .pn{font-family:var(--cond);font-weight:600;font-size:18px;color:var(--accent)}
-.path .pd{font-size:14px;color:var(--muted);line-height:1.45}
-.group-head{display:flex;flex-direction:column;gap:6px;border-top:2px solid var(--line);padding-top:22px;scroll-margin-top:16px}
-.group-head h2{margin:0}
-.group-head p{margin:0;max-width:75ch}
-#freeH{scroll-margin-top:16px}
+.groups{display:flex;flex-direction:column;gap:26px}
+.groups .tools-sec h2{margin:0;font-size:22px}
+.connect{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px}
+.connect>summary{display:flex;flex-direction:column;gap:4px;padding:14px 18px 14px 40px;cursor:pointer;list-style:none;position:relative}
+.connect>summary::-webkit-details-marker{display:none}
+.connect>summary::before{content:"";position:absolute;left:18px;top:21px;width:8px;height:8px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(-45deg);transition:transform .15s}
+.connect[open]>summary::before{transform:rotate(45deg)}
+.connect>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:12px}
+.cn-title{font-family:var(--cond);font-weight:600;font-size:19px;color:var(--accent)}
+.cn-sub{font-size:14px;color:var(--muted);line-height:1.5}
+.connect-body{display:flex;flex-direction:column;gap:16px;padding:0 14px 16px}
+.connect-body>.note{margin:0 4px}
 .about ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;max-width:80ch}
 .disclaimer{border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);background:var(--warn-soft);border-radius:12px;padding:16px 20px;scroll-margin-top:16px}
 .disclaimer h2{margin:0}
@@ -274,79 +275,59 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>SF Power BI Toolkit</h1>
-        <p class="lede">Tools for designing, building and checking Power BI reports and models, with or without Copilot. Some work on their own; the rest read your model once you export it below.</p>
+        <p class="lede">Tools for designing, building, checking and explaining Power BI reports and models, with or without Copilot. They&rsquo;re grouped in the order a report gets built.</p>
       </div>
     </div>
   </header>
 
-  <nav class="paths" aria-label="Two ways to start">
-    <a class="path" href="#freeH"><span class="pn">No model needed</span><span class="pd">Themes, layouts, date tables, Power Query and DAX reviews. Open and start.</span></a>
-    <a class="path" href="#modelH"><span class="pn">Uses your model</span><span class="pd">Export your model once in two steps, then every tool below picks it up.</span></a>
-  </nav>
-
   <div class="msg warn disc-top" role="note"><b>Check everything before you use it.</b> AI can make mistakes, and generated output can be wrong. The toolkit is provided as is, without warranty, and you use it at your own risk. <a href="#disclaimer">Read the full disclaimer</a>.</div>
 
-  <section class="tools-sec" aria-labelledby="freeH">
-    <h2 id="freeH">Start right away: no model needed</h2>
-    <p class="muted">These tools work on their own. Tools marked <span class="tag opt">Export optional</span> also use your saved model export if there is one.</p>
-    <div class="tools" id="toolsFree"></div>
-  </section>
+  <details class="connect" id="connectBox">
+    <summary><span class="cn-title" id="connectTitle">Connect your model once</span><span class="cn-sub" id="connectSub">Tools marked <span class="tag exp">Uses your model</span> read it. Export it once here and every tool picks it up. The rest work without it.</span></summary>
+    <div class="connect-body">
+      <section class="step" aria-labelledby="h1s">
+        <div class="step-num">Step<b>1</b></div>
+        <div class="step-body">
+          <div class="step-head">
+            <h2 id="h1s">Export your model from Power BI Desktop</h2>
+            <p>One DAX query lists the model&rsquo;s tables, columns, measures (with their formulas and descriptions) and relationships. It reads the model&rsquo;s definition only, not your data.</p>
+          </div>
+          <ol class="how">
+            <li>Open your report in Power BI Desktop and select <b>DAX query view</b> on the left rail.</li>
+            <li>Paste the query below into a new query tab and select <b>Run</b>.</li>
+            <li>Above the results grid, select <b>Copy</b>. It copies every row with the column headers.</li>
+          </ol>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" id="copyQuery">Copy query</button></span></div>
+            <pre class="short" id="queryView"></pre>
+          </div>
+          <p class="note">Tip: rename the query tab to <i>Toolkit export</i> and keep it. DAX query view saves it in the file, so next time you only select Run and Copy.</p>
+        </div>
+      </section>
 
-  <div class="group-head" id="modelH">
-    <h2>Tools that use your model</h2>
-    <p class="muted">Export your model once from Power BI Desktop and paste it here. It&rsquo;s saved in this browser, and each of these tools loads it as it opens.</p>
-  </div>
-
-  <section class="step" aria-labelledby="h1s">
-    <div class="step-num">Step<b>1</b></div>
-    <div class="step-body">
-      <div class="step-head">
-        <h2 id="h1s">Export your model from Power BI Desktop</h2>
-        <p>One DAX query lists the model&rsquo;s tables, columns, measures (with their formulas and descriptions) and relationships. It reads the model&rsquo;s definition only, not your data.</p>
-      </div>
-      <ol class="how">
-        <li>Open your report in Power BI Desktop and select <b>DAX query view</b> on the left rail.</li>
-        <li>Paste the query below into a new query tab and select <b>Run</b>.</li>
-        <li>Above the results grid, select <b>Copy</b>. It copies every row with the column headers.</li>
-      </ol>
-      <div class="codebox">
-        <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" id="copyQuery">Copy query</button></span></div>
-        <pre class="short" id="queryView"></pre>
-      </div>
-      <p class="note">Tip: rename the query tab to <i>Toolkit export</i> and keep it. DAX query view saves it in the file, so next time you only select Run and Copy.</p>
+      <section class="step" aria-labelledby="h2s">
+        <div class="step-num">Step<b>2</b></div>
+        <div class="step-body">
+          <div class="step-head">
+            <h2 id="h2s">Paste it once</h2>
+            <p>It&rsquo;s saved in this browser and shared by every tool on this site. Paste a new export whenever the model changes.</p>
+          </div>
+          <div class="field"><label for="modelName">Model name <span class="muted">(optional, shown in each tool)</span></label><input type="text" id="modelName" placeholder="Sales model" autocomplete="off"></div>
+          <textarea id="exportInput" class="big" spellcheck="false" aria-label="Model export" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
+          <div id="saveMsg"></div>
+          <div class="saved" id="saved" hidden>
+            <div class="saved-head"><span class="saved-title">&#10003; Saved model export</span><span id="savedWhen" class="muted"></span></div>
+            <div class="stats" id="savedStats"></div>
+            <p class="note small" id="savedHist" hidden></p>
+            <div class="reply-actions"><button type="button" class="btn" id="clearSaved">Remove the saved export</button></div>
+          </div>
+        </div>
+      </section>
+      <p class="note">Saved your report as a Power BI Project (PBIP)? You can skip the export: choose <b>PBIP folder</b> in any tool&rsquo;s <b>Connect your model</b> step, and every other tool picks it up too.</p>
     </div>
-  </section>
+  </details>
 
-  <section class="step" aria-labelledby="h2s">
-    <div class="step-num">Step<b>2</b></div>
-    <div class="step-body">
-      <div class="step-head">
-        <h2 id="h2s">Paste it once</h2>
-        <p>It&rsquo;s saved in this browser and shared by every tool on this site. Paste a new export whenever the model changes.</p>
-      </div>
-      <div class="field"><label for="modelName">Model name <span class="muted">(optional, shown in each tool)</span></label><input type="text" id="modelName" placeholder="Sales model" autocomplete="off"></div>
-      <textarea id="exportInput" class="big" spellcheck="false" aria-label="Model export" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
-      <div id="saveMsg"></div>
-      <div class="saved" id="saved" hidden>
-        <div class="saved-head"><span class="saved-title">&#10003; Saved model export</span><span id="savedWhen" class="muted"></span></div>
-        <div class="stats" id="savedStats"></div>
-        <p class="note small" id="savedHist" hidden></p>
-        <div class="reply-actions"><button type="button" class="btn" id="clearSaved">Remove the saved export</button></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="step" aria-labelledby="h3s">
-    <div class="step-num">Step<b>3</b></div>
-    <div class="step-body">
-      <div class="step-head">
-        <h2 id="h3s">Choose a tool</h2>
-        <p>Each one reads the export you saved in Step 2. Tools marked <span class="tag ai">Copilot</span> write a prompt you paste into Copilot, then check its reply.</p>
-      </div>
-      <div class="tools" id="tools"></div>
-    </div>
-  </section>
-
+  <div class="groups" id="tools"></div>
 
   <section class="about">
     <h2>Good to know</h2>
@@ -1480,39 +1461,48 @@ function testQuery(measures){
       + '.brandbar a.logo-link{display:flex;flex:none;border-radius:6px}'
       + '.suite-disc{display:block;margin-top:6px;max-width:90ch;margin-left:auto;margin-right:auto;line-height:1.5}.suite-disc a{color:inherit}'
       + '.suite-ai{font-size:13.5px}'
+      + '.suite-next{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;border-top:1px solid var(--line);padding-top:16px;margin-top:8px}.suite-next-h{flex-basis:100%;font-family:var(--cond,var(--font-display,inherit));font-weight:600;font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}'
+      + '.suite-next a{display:flex;flex-direction:column;gap:2px;flex:1 1 220px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;padding:10px 14px}.suite-next a:hover{border-color:var(--accent)}.suite-next a b{color:var(--accent);font-family:var(--cond,var(--font-display,inherit));font-size:16px}.suite-next a span{font-size:13.5px;color:var(--muted)}'
       + '.suite-file{margin-top:8px}.suite-msg{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px}.suite-msg .btn{flex:none}'
       + '.suite-reply{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:4px 0}.suite-reply .btn{padding:4px 10px;font-size:13px}.suite-ok{color:var(--ok)}.suite-err{color:var(--err)}';
     document.head.appendChild(st);
   }
   // Navigation back to the home page and across tools
-  S.TOOLS = [
-    ['kpi-measure-builder.html', 'KPI Measure Builder'],
-    ['measure-describer.html', 'Measure Describer'],
-    ['prep-for-ai-writer.html', 'Prep for AI Writer'],
-    ['dax-reviewer.html', 'DAX Reviewer'],
-    ['validation-query-builder.html', 'Validation Query Builder'],
-    ['time-intelligence-builder.html', 'Time Intelligence Builder'],
-    ['field-parameter-builder.html', 'Field Parameter Builder'],
-    ['rls-role-generator.html', 'RLS Role Generator'],
-    ['model-linter.html', 'Model Linter'],
-    ['model-compare.html', 'Model Compare'],
-    ['model-documenter.html', 'Model Documenter'],
-    ['about-this-report.html', 'About This Report'],
-    ['power-query-writer.html', 'Power Query Writer'],
-    ['power-query-explainer.html', 'Power Query Explainer'],
-    ['date-table-generator.html', 'Date Table Generator'],
-    ['kpi-visualizer.html', 'KPI Visualizer'],
-    ['theme-builder.html', 'Theme Builder'],
-    ['layout-designer.html', 'Layout Designer'],
-    ['sheet-recon.html', 'Sheet Recon']
+  // Tools in the order a report gets built; the home page and the Switch tool menu use the same groups
+  S.GROUPS = [
+    ['Design the report', [
+      ['theme-builder.html', 'Theme Builder'],
+      ['layout-designer.html', 'Layout Designer'],
+      ['kpi-visualizer.html', 'KPI Visualizer']]],
+    ['Shape the data', [
+      ['power-query-writer.html', 'Power Query Writer'],
+      ['power-query-explainer.html', 'Power Query Explainer'],
+      ['date-table-generator.html', 'Date Table Generator']]],
+    ['Build the model', [
+      ['kpi-measure-builder.html', 'KPI Measure Builder'],
+      ['time-intelligence-builder.html', 'Time Intelligence Builder'],
+      ['field-parameter-builder.html', 'Field Parameter Builder'],
+      ['rls-role-generator.html', 'RLS Role Generator']]],
+    ['Check it', [
+      ['dax-reviewer.html', 'DAX Reviewer'],
+      ['model-linter.html', 'Model Linter'],
+      ['validation-query-builder.html', 'Validation Query Builder'],
+      ['model-compare.html', 'Model Compare'],
+      ['sheet-recon.html', 'Sheet Recon']]],
+    ['Explain it', [
+      ['measure-describer.html', 'Measure Describer'],
+      ['prep-for-ai-writer.html', 'Prep for AI Writer'],
+      ['about-this-report.html', 'About This Report'],
+      ['model-documenter.html', 'Model Documenter']]]
   ];
+  S.TOOLS = [].concat(...S.GROUPS.map(g => g[1]));
   const top = document.querySelector('header.top');
   if (top && !document.body.dataset.home && !document.getElementById('suiteNav')) {
     const here = (location.pathname.split('/').pop() || '').toLowerCase();
     const nav = document.createElement('nav'); nav.id = 'suiteNav'; nav.className = 'suite-nav'; nav.setAttribute('aria-label', 'Toolkit');
     nav.innerHTML = '<a class="home" href="' + HOME + '"><span aria-hidden="true">&larr;</span> Toolkit home</a>'
       + '<label class="switch"><span>Switch tool</span><select id="suiteSwitch">'
-      + S.TOOLS.map(t => '<option value="' + t[0] + '"' + (t[0] === here ? ' selected' : '') + '>' + esc(t[1]) + '</option>').join('')
+      + S.GROUPS.map(g => '<optgroup label="' + esc(g[0]) + '">' + g[1].map(t => '<option value="' + t[0] + '"' + (t[0] === here ? ' selected' : '') + '>' + esc(t[1]) + '</option>').join('') + '</optgroup>').join('')
       + '</select></label>';
     top.insertAdjacentElement('beforebegin', nav);
     nav.querySelector('select').addEventListener('change', e => { location.href = e.target.value; });
@@ -1528,6 +1518,38 @@ function testQuery(measures){
     const here2 = (location.pathname.split('/').pop() || '').toLowerCase();
     const hdr = document.querySelector('header.top');
     if (hdr && AI_TOOLS.includes(here2)) { const n = document.createElement('div'); n.className = 'msg warn suite-ai'; n.setAttribute('role', 'note'); n.innerHTML = '<b>AI can make mistakes.</b> This page checks Copilot&rsquo;s reply where it can, but not every error in logic or meaning. Review everything before you use it, only use AI tools your organization approves, and test on a copy of your model first. <a href="' + HOME + '#disclaimer">Disclaimer</a>'; hdr.insertAdjacentElement('afterend', n); }
+  }
+
+  // What next: a line above the footer pointing to the tools people usually use after this one
+  S.NEXT = {
+    'theme-builder.html': [['layout-designer.html', 'Plan a page with these colors'], ['kpi-visualizer.html', 'Show your KPIs in these colors']],
+    'layout-designer.html': [['kpi-visualizer.html', 'Choose how to show each KPI'], ['theme-builder.html', 'Build a theme to match']],
+    'kpi-visualizer.html': [['layout-designer.html', 'Place the cards on a page'], ['kpi-measure-builder.html', 'Write the measures behind a KPI']],
+    'power-query-writer.html': [['power-query-explainer.html', 'Comment or clean up a query you already have'], ['date-table-generator.html', 'Add a date table']],
+    'power-query-explainer.html': [['power-query-writer.html', 'Write a new query'], ['model-documenter.html', 'Document every query in the model']],
+    'date-table-generator.html': [['time-intelligence-builder.html', 'Add year to date, last year and growth']],
+    'kpi-measure-builder.html': [['dax-reviewer.html', 'Review a measure'], ['validation-query-builder.html', 'Check the results'], ['measure-describer.html', 'Describe the new measures']],
+    'time-intelligence-builder.html': [['field-parameter-builder.html', 'Let readers switch between the new measures'], ['validation-query-builder.html', 'Check the results']],
+    'field-parameter-builder.html': [['validation-query-builder.html', 'Check the results'], ['layout-designer.html', 'Plan the page it goes on']],
+    'rls-role-generator.html': [['model-linter.html', 'Check the model before you publish']],
+    'dax-reviewer.html': [['validation-query-builder.html', 'Check its results against a number you trust'], ['measure-describer.html', 'Write a description for it']],
+    'model-linter.html': [['model-documenter.html', 'Document the model'], ['model-compare.html', 'See what changed since the last export']],
+    'validation-query-builder.html': [['sheet-recon.html', 'Compare the results with a source file']],
+    'model-compare.html': [['model-documenter.html', 'Document the model as it is now']],
+    'sheet-recon.html': [['validation-query-builder.html', 'Get the Power BI numbers to compare']],
+    'measure-describer.html': [['prep-for-ai-writer.html', 'Describe tables and columns, and write Copilot instructions']],
+    'prep-for-ai-writer.html': [['about-this-report.html', 'Write the report\u2019s About page']],
+    'about-this-report.html': [['model-documenter.html', 'Make a full document of the model']],
+    'model-documenter.html': [['about-this-report.html', 'Write a short About page for report readers'], ['model-linter.html', 'Check the model']]
+  };
+  if (!document.body.dataset.home && !document.getElementById('suiteNext')) {
+    const nx = S.NEXT[(location.pathname.split('/').pop() || '').toLowerCase()], f = document.querySelector('footer');
+    if (nx && f) {
+      const name = file => (S.TOOLS.find(t => t[0] === file) || [, file])[1];
+      const n = document.createElement('nav'); n.id = 'suiteNext'; n.className = 'suite-next'; n.setAttribute('aria-label', 'What next');
+      n.innerHTML = '<span class="suite-next-h">What next</span>' + nx.map(x => '<a href="' + x[0] + '"><b>' + esc(name(x[0])) + '</b><span>' + esc(x[1]) + '</span></a>').join('');
+      f.insertAdjacentElement('beforebegin', n);
+    }
   }
 
   // Copilot prompts as files: every prompt can be downloaded as a .txt to attach in Copilot, with a short message
@@ -1694,15 +1716,17 @@ function testQuery(measures){
     let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { t = new TextDecoder('windows-1252').decode(buf); }
     return t.replace(/^﻿/, '');
   };
+  // files the Connect step reads: the model's TMDL (or model.bim), plus report files on pages that check report pages
+  let FILE_RE = /\.(tmdl|bim)$/i;
   async function walkHandle(dir, prefix, out){
     for await (const [name, h] of dir.entries()) {
       if (h.kind === 'directory') { if (!skipDir(name)) await walkHandle(h, prefix + '/' + name, out); }
-      else if (/\.(tmdl|bim)$/i.test(name)) out.push({ path: prefix + '/' + name, file: await h.getFile() });
+      else if (FILE_RE.test(name)) out.push({ path: prefix + '/' + name, file: await h.getFile() });
     }
   }
   function walkEntry(entry, prefix, out){
     return new Promise(resolve => {
-      if (entry.isFile) { if (/\.(tmdl|bim)$/i.test(entry.name)) entry.file(f => { out.push({ path: prefix + '/' + entry.name, file: f }); resolve(); }, () => resolve()); else resolve(); return; }
+      if (entry.isFile) { if (FILE_RE.test(entry.name)) entry.file(f => { out.push({ path: prefix + '/' + entry.name, file: f }); resolve(); }, () => resolve()); else resolve(); return; }
       if (skipDir(entry.name)) { resolve(); return; }
       const reader = entry.createReader(); const all = [];
       const next = () => reader.readEntries(batch => { if (!batch.length) { Promise.all(all.map(e => walkEntry(e, prefix + '/' + entry.name, out))).then(resolve); return; } all.push(...batch); next(); }, () => resolve());
@@ -1863,6 +1887,7 @@ function testQuery(measures){
   //   exportOnly: [selectors shown only for the export], title, lede, retitle: { h2 id: text } } }
   S.connect = (cfg, ta, bar) => {
     const c = cfg.connect, h2 = document.getElementById(c.step); if (!h2) return null;
+    if (c.report) FILE_RE = /\.(tmdl|bim|json|pbir)$/i;
     const body = h2.closest('.step-body'), head = h2.closest('.step-head') || h2;
     const key = cfg.prefix + 'connect', get = k => { try { return localStorage.getItem(cfg.prefix + k); } catch (e) { return null; } }, set = (k, v) => { try { localStorage.setItem(cfg.prefix + k, v); } catch (e) {} };
     if (c.title) h2.textContent = c.title;
@@ -1918,6 +1943,8 @@ function testQuery(measures){
       const noDates = cfg.mode === 'dates' && !ta.value.trim();
       msg.innerHTML = '<div class="msg ' + (noDates ? 'warn' : 'ok') + '">' + (noDates ? '' : '&#10003; ') + 'Read <b>' + esc(r.name) + '</b>: ' + r.tables + ' tables, ' + r.measures + ' measures.' + (noDates ? ' It has no date columns, so set the years yourself in the next step.' : '') + (r.others.length ? ' This folder has more models (' + esc(r.others.join(', ')) + '); choose that project&rsquo;s own folder to use one of them.' : '') + (shared ? ' Every tool uses it now, so you don&rsquo;t connect again in the others.' : ' It&rsquo;s too large to share with the other tools (browser storage limit).') + ' Read it again after you change the model.</div>';
       render();
+      // pages that also check report pages read them from the same folder
+      if (c.report) document.dispatchEvent(new CustomEvent('sf-pbip-folder', { detail: { root, list } }));
     };
     const fail = e => { msg.innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(e.message || e) + '</div>'; };
     wrap.querySelector('[data-sc-pick]').addEventListener('click', async () => {
@@ -1936,7 +1963,7 @@ function testQuery(measures){
     input.addEventListener('change', async () => {
       const fl = [...input.files]; if (!fl.length) return;
       const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
-      try { await load(root, fl.filter(f => /\.(tmdl|bim)$/i.test(f.name)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }))); } catch (e) { fail(e); }
+      try { await load(root, fl.filter(f => FILE_RE.test(f.name)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }))); } catch (e) { fail(e); }
       input.value = '';
     });
     ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
@@ -2011,7 +2038,7 @@ const TOOLS = [
   { free: true, file: 'theme-builder.html', name: 'Theme Builder', desc: 'A full report theme from one brand color: data palette, text, background, good and bad colors, font and styles for every common visual, checked for readability and color blindness.', tags: ['noai'] },
   { free: true, file: 'sheet-recon.html', name: 'Sheet Recon', desc: 'Compare two tables from Excel or CSV by key: rows found on only one side and every changed value. Cleans DAX column names, dates, numbers and blanks first.', tags: ['files', 'noai'] },
 ];
-const TAG = { files: '<span class="tag exp">Your Excel or CSV files</span>', opt: '<span class="tag opt">Export optional</span>', pbip: '<span class="tag exp">PBIP folder or your export</span>', exp: '<span class="tag exp">Uses your export</span>', dates: '<span class="tag exp">Date columns from your export</span>', ai: '<span class="tag ai">Copilot</span>', aiopt: '<span class="tag noai">Copilot optional</span>', noai: '<span class="tag noai">No AI</span>' };
+const TAG = { files: '<span class="tag opt">Your Excel or CSV files</span>', free: '<span class="tag opt">No model needed</span>', opt: '<span class="tag opt">Model optional</span>', exp: '<span class="tag exp">Uses your model</span>', ai: '<span class="tag ai">Copilot</span>', aiopt: '<span class="tag noai">Copilot optional</span>', noai: '<span class="tag noai">No AI</span>' };
 const $ = id => document.getElementById(id);
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function msg(level, html){ return '<div class="msg ' + level + '">' + html + '</div>'; }
@@ -2020,11 +2047,18 @@ function copyText(text, btn){
   const fallback = () => { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); if (ok) done(); };
   try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
 }
+let wasSaved;
 function renderSaved(){
   const v = SF_SUITE.get();
   $('saved').hidden = !v;
-  if (!v) return;
+  // the connect box opens on the page when no model is saved, and folds to one status line when one is
+  // (a paste keeps it open, so the confirmation stays in view)
+  if (wasSaved === undefined || (wasSaved && !v)) $('connectBox').open = !v;
+  wasSaved = !!v;
+  if (!v) { $('connectTitle').textContent = 'Connect your model once'; $('connectSub').innerHTML = 'Tools marked ' + TAG.exp + ' read it. Export it once here and every tool picks it up. The rest work without it.'; return; }
   const m = parseModel(v.text);
+  $('connectTitle').innerHTML = '&#10003; Connected: ' + esc(v.name || 'your model');
+  $('connectSub').textContent = m.tables.length + ' tables, ' + m.measures.length + ' measures, ' + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + new Date(v.savedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) + '. Every tool marked Uses your model reads it. Open to replace or remove it.';
   const d = new Date(v.savedAt);
   $('savedWhen').textContent = (v.name ? v.name + ' · ' : '') + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   $('savedStats').innerHTML = '<span class="stat"><b>' + m.tables.length + '</b> tables</span><span class="stat"><b>' + m.columns.length + '</b> columns</span><span class="stat"><b>' + m.measures.length + '</b> measures</span><span class="stat"><b>' + m.rels.length + '</b> relationships</span>' + (m.composite ? '<span class="stat remote">Composite model</span>' : '');
@@ -2034,12 +2068,11 @@ function renderSaved(){
   $('savedHist').innerHTML = h ? h + ' earlier export' + (h === 1 ? ' is' : 's are') + ' kept too, so <a href="model-compare.html">Model Compare</a> can show what changed. Saving a new export keeps the one it replaces.' : '';
 }
 function renderTools(){
-  const card = t => '<a class="tool" href="' + t.file + '"><span class="tn">' + esc(t.name) + '</span><span class="td">' + esc(t.desc) + '</span><span class="tags">' + (t.free ? t.tags.map(x => x === 'exp' || x === 'dates' ? 'opt' : x) : t.tags.filter(x => x !== 'exp')).map(x => TAG[x]).join('') + '</span></a>';
-  const FREE_ORDER = ['theme-builder.html', 'layout-designer.html', 'kpi-visualizer.html', 'date-table-generator.html', 'power-query-writer.html', 'power-query-explainer.html', 'dax-reviewer.html', 'sheet-recon.html'];
-  $('toolsFree').innerHTML = TOOLS.filter(t => t.free).sort((a, b) => FREE_ORDER.indexOf(a.file) - FREE_ORDER.indexOf(b.file)).map(card).join('');
-  $('tools').innerHTML = TOOLS.filter(t => !t.free).map(card).join('');
-  return;
-  $('tools').innerHTML = TOOLS.map(t => '<a class="tool" href="' + t.file + '"><span class="tn">' + esc(t.name) + '</span><span class="td">' + esc(t.desc) + '</span><span class="tags">' + t.tags.map(x => TAG[x]).join('') + '</span></a>').join('');
+  // a model tag first (needed, optional or not needed), then the Copilot tag
+  const modelTag = t => t.tags.includes('files') ? 'files' : !t.free ? 'exp' : t.tags.some(x => x === 'exp' || x === 'dates' || x === 'opt') ? 'opt' : 'free';
+  const card = t => '<a class="tool" href="' + t.file + '"><span class="tn">' + esc(t.name) + '</span><span class="td">' + esc(t.desc) + '</span><span class="tags">' + [modelTag(t)].concat(t.tags.filter(x => /ai/.test(x))).map(x => TAG[x]).join('') + '</span></a>';
+  const byFile = f => TOOLS.find(t => t.file === f);
+  $('tools').innerHTML = SF_SUITE.GROUPS.map((g, i) => '<section class="tools-sec" aria-labelledby="grp' + i + '"><h2 id="grp' + i + '">' + esc(g[0]) + '</h2><div class="tools">' + g[1].map(x => byFile(x[0])).filter(Boolean).map(card).join('') + '</div></section>').join('');
 }
 function save(){
   const text = $('exportInput').value;

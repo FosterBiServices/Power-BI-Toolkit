@@ -9,7 +9,7 @@
       <span id="clearMsg"><b>Clear all entries?</b> This resets the page, layout, visuals and colors, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
       <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
     </div>
-    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Start from a layout in Step 2.</div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Start from a layout in Step 1.</div>
     <div class="banner" id="exampleBanner" hidden>
       <span><strong>Example loaded.</strong> A sample sales page with a slicer panel. Change anything below to make it yours.</span>
       <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
@@ -17,12 +17,60 @@
   </header>
 
   <!-- STEP 1 -->
-  <section class="step" aria-labelledby="s1">
+  <section class="step" aria-labelledby="s2">
     <div class="step-num">Step<b>1</b></div>
     <div class="step-body">
       <div class="step-head">
+        <h2 id="s2">Layout and visuals</h2>
+        <p>Answer a few questions to get suggested layouts, or start from one of the layouts below. Then click any visual to change it, or an empty cell to add one. Visuals can span several columns and rows.</p>
+      </div>
+      <details class="suggest" id="suggestBox">
+        <summary><b>Suggest a layout</b> <span class="muted">(3-30-3: answer a few questions, get three layouts)</span></summary>
+        <div class="suggest-body">
+          <p class="note small">A good report page answers three questions in order. <b>3 seconds</b>: how are we doing? (headline KPIs top left, big numbers, status against target). <b>30 seconds</b>: where and why? (trend, simple bar charts, heatmaps, filters). <b>300 seconds</b>: which records? (details on demand: a formatted table or a drill-through page).</p>
+          <div class="sgrid">
+            <fieldset class="sq"><legend>3 s: headline numbers</legend>
+              <div class="field sm"><label for="sgK">KPIs</label><input type="number" id="sgK" min="0" max="8"></div>
+              <div class="field"><label for="sgT">With a target</label><select id="sgT"><option value="none">None</option><option value="some">Some (the top 2)</option><option value="all">All of them</option></select></div>
+            </fieldset>
+            <fieldset class="sq"><legend>30 s: patterns</legend>
+              <label class="chk"><input type="checkbox" id="sgTrend"> A trend over time</label>
+              <div class="field sm"><label for="sgB">Categories to compare</label><input type="number" id="sgB" min="0" max="4"></div>
+              <label class="chk"><input type="checkbox" id="sgGeo"> One of them is a location</label>
+              <label class="chk"><input type="checkbox" id="sgHeat"> Two categories at once (heatmap)</label>
+            </fieldset>
+            <fieldset class="sq"><legend>300 s: details</legend>
+              <div class="field"><label for="sgD">Individual records</label><select id="sgD"><option value="page">On this page</option><option value="drill">On a drill-through page</option><option value="none">Not needed</option></select></div>
+              <div class="field sm"><label for="sgF">Filters (slicers)</label><input type="number" id="sgF" min="0" max="8"></div>
+              <div class="field"><label for="sgP">Filters go</label><select id="sgP"><option value="auto">Where they fit best</option><option value="header">In the header</option><option value="side">In a side panel</option></select></div>
+            </fieldset>
+          </div>
+          <div class="btns"><button type="button" class="btn primary" id="sgGo">Suggest layouts</button></div>
+          <div id="sgOut" class="sg-out"></div>
+        </div>
+      </details>
+      <div class="field"><label>Start from a layout</label><div class="chips" id="templates" role="group" aria-label="Layouts"></div></div>
+      <div class="cfg">
+        <div class="field sm"><label for="cols">Columns</label><input type="number" id="cols" min="1" max="12"></div>
+        <div class="field sm"><label for="rows">Rows</label><input type="number" id="rows" min="1" max="12"></div>
+        <label class="chk inline"><input type="checkbox" id="showDims" checked> Show sizes</label>
+        <label class="chk inline"><input type="checkbox" id="showZones"> Show 3-30-3 zones</label>
+      </div>
+      <div class="designer">
+        <div class="canvas-wrap"><div id="canvas" class="canvas"></div></div>
+        <aside class="editor" id="editor" aria-live="polite"></aside>
+      </div>
+      <div id="layoutMsg" class="msgs"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
         <h2 id="s1">Page and spacing</h2>
-        <p>The same logic as an alignment guide: one margin around the page, one gap between visuals, and every width and height worked out so the edges line up.</p>
+        <p>The defaults suit most pages, so change these only if you need to. The same logic as an alignment guide: one margin around the page, one gap between visuals, and every width and height worked out so the edges line up.</p>
       </div>
       <div class="cfg">
         <div class="field"><label for="pName">Page name</label><input type="text" id="pName" autocomplete="off"></div>
@@ -91,54 +139,6 @@
         </div>
         <p class="note small">Sizes are capped so everything fits: the title keeps the room it needs, and the logo, cards and slicers share the rest. The logo sits on the left with the title after it. Cards, then slicers, line up on the right. Everything is centered top to bottom in the header. Click a header card or slicer in Step 2 to name it.</p>
       </div>
-    </div>
-  </section>
-
-  <!-- STEP 2 -->
-  <section class="step" aria-labelledby="s2">
-    <div class="step-num">Step<b>2</b></div>
-    <div class="step-body">
-      <div class="step-head">
-        <h2 id="s2">Layout and visuals</h2>
-        <p>Start from a layout, then click any visual to change it, or an empty cell to add one. Visuals can span several columns and rows.</p>
-      </div>
-      <details class="suggest" id="suggestBox">
-        <summary><b>Suggest a layout</b> <span class="muted">(3-30-3: answer a few questions, get three layouts)</span></summary>
-        <div class="suggest-body">
-          <p class="note small">A good report page answers three questions in order. <b>3 seconds</b>: how are we doing? (headline KPIs top left, big numbers, status against target). <b>30 seconds</b>: where and why? (trend, simple bar charts, heatmaps, filters). <b>300 seconds</b>: which records? (details on demand: a formatted table or a drill-through page).</p>
-          <div class="sgrid">
-            <fieldset class="sq"><legend>3 s: headline numbers</legend>
-              <div class="field sm"><label for="sgK">KPIs</label><input type="number" id="sgK" min="0" max="8"></div>
-              <div class="field"><label for="sgT">With a target</label><select id="sgT"><option value="none">None</option><option value="some">Some (the top 2)</option><option value="all">All of them</option></select></div>
-            </fieldset>
-            <fieldset class="sq"><legend>30 s: patterns</legend>
-              <label class="chk"><input type="checkbox" id="sgTrend"> A trend over time</label>
-              <div class="field sm"><label for="sgB">Categories to compare</label><input type="number" id="sgB" min="0" max="4"></div>
-              <label class="chk"><input type="checkbox" id="sgGeo"> One of them is a location</label>
-              <label class="chk"><input type="checkbox" id="sgHeat"> Two categories at once (heatmap)</label>
-            </fieldset>
-            <fieldset class="sq"><legend>300 s: details</legend>
-              <div class="field"><label for="sgD">Individual records</label><select id="sgD"><option value="page">On this page</option><option value="drill">On a drill-through page</option><option value="none">Not needed</option></select></div>
-              <div class="field sm"><label for="sgF">Filters (slicers)</label><input type="number" id="sgF" min="0" max="8"></div>
-              <div class="field"><label for="sgP">Filters go</label><select id="sgP"><option value="auto">Where they fit best</option><option value="header">In the header</option><option value="side">In a side panel</option></select></div>
-            </fieldset>
-          </div>
-          <div class="btns"><button type="button" class="btn primary" id="sgGo">Suggest layouts</button></div>
-          <div id="sgOut" class="sg-out"></div>
-        </div>
-      </details>
-      <div class="field"><label>Start from a layout</label><div class="chips" id="templates" role="group" aria-label="Layouts"></div></div>
-      <div class="cfg">
-        <div class="field sm"><label for="cols">Columns</label><input type="number" id="cols" min="1" max="12"></div>
-        <div class="field sm"><label for="rows">Rows</label><input type="number" id="rows" min="1" max="12"></div>
-        <label class="chk inline"><input type="checkbox" id="showDims" checked> Show sizes</label>
-        <label class="chk inline"><input type="checkbox" id="showZones"> Show 3-30-3 zones</label>
-      </div>
-      <div class="designer">
-        <div class="canvas-wrap"><div id="canvas" class="canvas"></div></div>
-        <aside class="editor" id="editor" aria-live="polite"></aside>
-      </div>
-      <div id="layoutMsg" class="msgs"></div>
     </div>
   </section>
 

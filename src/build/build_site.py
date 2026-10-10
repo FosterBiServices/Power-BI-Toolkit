@@ -18,8 +18,8 @@ HOOKS={
  'time-intelligence-builder':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kti.', open: 'modelBox', connect: { step: 's1', title: 'Connect your model', exportOnly: ['#modelBox'], open: 'modelBox' } });",
  'field-parameter-builder':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kfp.', open: 'modelBox', connect: { step: 's1', title: 'Connect your model', exportOnly: ['#modelBox'], open: 'modelBox' } });",
  'rls-role-generator':"SF_SUITE.hook({ input: 'modelInput', prefix: 'krl.', open: 'modelBox', connect: { step: 's1', title: 'Connect your model', exportOnly: ['#modelBox'], open: 'modelBox' } });",
- 'model-linter':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kml.', open: 'modelBox', connect: { step: 's1', title: 'Connect your model', exportOnly: ['#modelBox'], open: 'modelBox' } });",
- 'about-this-report':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kab.', open: 'modelBox', connect: { step: 's1', title: 'Connect your model', exportOnly: ['#modelBox'], open: 'modelBox' } });",
+ 'model-linter':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kml.', open: 'modelBox', connect: { step: 's1', title: 'Connect your model', report: true, exportOnly: ['#modelBox'], open: 'modelBox' } });",
+ 'about-this-report':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kab.', open: 'modelBox', connect: { step: 's1', title: 'Connect your model', report: true, exportOnly: ['#modelBox'], open: 'modelBox' } });",
  'model-compare':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kmc.', open: 'modelBox', connect: { step: 's1', lede: 'The model after your changes: from a PBIP folder, read straight from your project, or the export query you run in DAX query view.', exportOnly: ['#modelBox'], open: 'modelBox' } }); window.mcSuite && window.mcSuite(SF_SUITE);",
  'model-documenter':"SF_SUITE.hook({ input: 'exInput', prefix: 'kmdoc.' });",
  'kpi-visualizer':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kkv.', connect: { step: 's1', none: 'Type each KPI\u2019s measure name yourself. Names aren\u2019t checked.', exportOnly: ['#queryBox'], open: 'queryBox', lede: 'With your model, you pick KPIs from your measures (including ones in a measures table) and every name is checked before you copy the script.' } });",
@@ -63,17 +63,18 @@ css=L(7,217)+'''
 .tag.ai{background:var(--info-soft);color:var(--info)}
 .tag.noai{background:var(--ok-soft);color:var(--ok)}
 .tag.opt{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
-.paths{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media (max-width:640px){.paths{grid-template-columns:1fr}}
-.path{display:flex;flex-direction:column;gap:4px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 16px}
-.path:hover{border-color:var(--accent);background:var(--accent-soft)}
-.path:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.path .pn{font-family:var(--cond);font-weight:600;font-size:18px;color:var(--accent)}
-.path .pd{font-size:14px;color:var(--muted);line-height:1.45}
-.group-head{display:flex;flex-direction:column;gap:6px;border-top:2px solid var(--line);padding-top:22px;scroll-margin-top:16px}
-.group-head h2{margin:0}
-.group-head p{margin:0;max-width:75ch}
-#freeH{scroll-margin-top:16px}
+.groups{display:flex;flex-direction:column;gap:26px}
+.groups .tools-sec h2{margin:0;font-size:22px}
+.connect{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px}
+.connect>summary{display:flex;flex-direction:column;gap:4px;padding:14px 18px 14px 40px;cursor:pointer;list-style:none;position:relative}
+.connect>summary::-webkit-details-marker{display:none}
+.connect>summary::before{content:"";position:absolute;left:18px;top:21px;width:8px;height:8px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(-45deg);transition:transform .15s}
+.connect[open]>summary::before{transform:rotate(45deg)}
+.connect>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:12px}
+.cn-title{font-family:var(--cond);font-weight:600;font-size:19px;color:var(--accent)}
+.cn-sub{font-size:14px;color:var(--muted);line-height:1.5}
+.connect-body{display:flex;flex-direction:column;gap:16px;padding:0 14px 16px}
+.connect-body>.note{margin:0 4px}
 .about ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;max-width:80ch}
 .disclaimer{border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);background:var(--warn-soft);border-radius:12px;padding:16px 20px;scroll-margin-top:16px}
 .disclaimer h2{margin:0}

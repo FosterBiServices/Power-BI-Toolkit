@@ -50,34 +50,12 @@
   </section>
 
   <!-- STEP 3 -->
-  <section class="step" aria-labelledby="s2">
+  <section class="step" aria-labelledby="s3">
     <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
-        <h2 id="s2">Your checklist</h2>
-        <p>Turn rules on or off and set how serious each one is. Rules marked <span class="by page">Page + Copilot</span> are also checked here without AI; your own rules go to Copilot. Your checklist is saved in this browser.</p>
-      </div>
-      <div class="rules" id="rules"></div>
-      <div class="addrule">
-        <h3>Add your own rule</h3>
-        <div class="cfg">
-          <div class="field grow"><label for="nrName">Rule</label><input type="text" id="nrName" placeholder="Percent measures return blank, not 0, when there's nothing to compare"></div>
-          <div class="field"><label for="nrSev">Severity</label><select id="nrSev"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
-        </div>
-        <label class="lab" for="nrCheck">What Copilot should check <span class="hint">Optional. Be specific: what's wrong, and what good looks like.</span></label>
-        <textarea id="nrCheck" class="short-ta" placeholder="Any measure ending in % must return BLANK () when the denominator is blank or 0, so empty rows disappear from visuals."></textarea>
-        <div class="reply-actions"><button type="button" class="btn primary" id="nrAdd">Add rule</button><button type="button" class="linkbtn" id="rulesReset">Reset the built-in rules</button></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- STEP 4 -->
-  <section class="step" aria-labelledby="s3">
-    <div class="step-num">Step<b>4</b></div>
-    <div class="step-body">
-      <div class="step-head">
         <h2 id="s3">What the page found</h2>
-        <p>Checked without AI, straight away. Line numbers match the listing below.</p>
+        <p>Checked without AI against your checklist, straight away. Line numbers match the listing below. Change the checklist at the end of this step.</p>
       </div>
       <div id="autoOut"></div>
       <details class="extra" id="scanBox" hidden>
@@ -92,12 +70,29 @@
         <div class="codebox-bar"><span class="t">The measure</span></div>
         <pre class="tall numbered" id="codeView"></pre>
       </div>
+      <details class="extra" id="checklistBox">
+        <summary>Your checklist <span class="muted" id="rulesStat"></span></summary>
+        <div class="extra-body">
+          <p class="note">Turn rules on or off and set how serious each one is. Rules marked <span class="by page">Page + Copilot</span> are also checked here without AI; your own rules go to Copilot. Your checklist is saved in this browser.</p>
+          <div class="rules" id="rules"></div>
+          <div class="addrule">
+            <h3>Add your own rule</h3>
+            <div class="cfg">
+              <div class="field grow"><label for="nrName">Rule</label><input type="text" id="nrName" placeholder="Percent measures return blank, not 0, when there's nothing to compare"></div>
+              <div class="field"><label for="nrSev">Severity</label><select id="nrSev"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
+            </div>
+            <label class="lab" for="nrCheck">What Copilot should check <span class="hint">Optional. Be specific: what's wrong, and what good looks like.</span></label>
+            <textarea id="nrCheck" class="short-ta" placeholder="Any measure ending in % must return BLANK () when the denominator is blank or 0, so empty rows disappear from visuals."></textarea>
+            <div class="reply-actions"><button type="button" class="btn primary" id="nrAdd">Add rule</button><button type="button" class="linkbtn" id="rulesReset">Reset the built-in rules</button></div>
+          </div>
+        </div>
+      </details>
     </div>
   </section>
 
-  <!-- STEP 5 -->
+  <!-- STEP 4 -->
   <section class="step" aria-labelledby="s4">
-    <div class="step-num">Step<b>5</b></div>
+    <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s4">Ask Copilot for the full review</h2>
@@ -113,9 +108,9 @@
     </div>
   </section>
 
-  <!-- STEP 6 -->
+  <!-- STEP 5 -->
   <section class="step" aria-labelledby="s5">
-    <div class="step-num">Step<b>6</b></div>
+    <div class="step-num">Step<b>5</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s5">Paste Copilot&rsquo;s reply</h2>
