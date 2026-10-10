@@ -341,7 +341,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
     <div class="step-body">
       <div class="step-head">
         <h2 id="s2">Your dates</h2>
-        <p>Time intelligence needs a date table with one row per day for whole years, marked as a date table and related to your facts. The Date Table Generator can build one.</p>
+        <p>Time intelligence needs a date table with one row per day for whole years, related to your facts. The Date Table Generator can build one.</p>
       </div>
       <div class="cfg">
         <div class="field"><label for="dTable">Date table</label><select id="dTable"></select></div>
@@ -1568,8 +1568,8 @@ function tiCheck(model, cfg){
   else if (!col) add('err', 'Choose the date column of ' + qName(t.name) + ' in Step 2.');
   else {
     if (!/date/i.test(col.dataType || '')) add('err', qName(t.name) + bracket(col.name) + ' is a ' + (col.dataType || 'non-date') + ' column; time intelligence needs a date column.');
-    if (lc(t.category) !== 'time' && tiCalcDateTable(t)) add('warn', qName(t.name) + ' is a calculated date table (built with ' + (/CALENDARAUTO/i.test(t.calc) ? 'CALENDARAUTO' : 'CALENDAR') + '), which works here, but it isn\u2019t marked as a date table. Mark it (Table tools > Mark as date table, using ' + bracket(col.name) + ') so year-to-date and last-year results ignore filters on its other columns, like Month.');
-    else if (lc(t.category) !== 'time') add('warn', qName(t.name) + ' isn\u2019t marked as a date table. These calculations need a date table with one row for every day and no gaps; a fact table\u2019s date column won\u2019t do (the Date Table Generator builds a proper one). If ' + qName(t.name) + ' is a date table, mark it (Table tools > Mark as date table, using ' + bracket(col.name) + ') so year-to-date and last-year results ignore filters on its other columns, like Month.');
+    if (lc(t.category) !== 'time' && tiCalcDateTable(t)) add('warn', qName(t.name) + ' is a calculated date table (built with ' + (/CALENDARAUTO/i.test(t.calc) ? 'CALENDARAUTO' : 'CALENDAR') + ') and isn\u2019t marked as a date table. You can carry on: the measures work without it. Marking it (Table tools > Mark as date table, using ' + bracket(col.name) + ') is optional.');
+    else if (lc(t.category) !== 'time') add('warn', qName(t.name) + ' isn\u2019t marked as a date table. You can carry on: marking it is optional. Just make sure it has one row for every day and no gaps; a fact table\u2019s date column won\u2019t do (the Date Table Generator builds a proper one).');
     if (!model.rels.some(r => (lc(r.toTable) === lc(t.name) || lc(r.fromTable) === lc(t.name)))) add('warn', qName(t.name) + ' has no relationships in the export, so these calculations won’t filter your facts. Relate it to your fact tables first.');
     const dp = (cfg.dataDate || '').split('|');
     if (!tiDataRef(cfg) || !model.columns.some(c => lc(c.table) === lc(dp[0]) && lc(c.name) === lc(dp[1]))) add('err', 'Choose the fact date column that has your last date with data in Step 2.');

@@ -34,7 +34,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
     row({ Kind: 'Column', Table: 'Calendar', Name: 'Date', Type: 'DateTime' }),
     row({ Kind: 'Measure', Table: 'Sales', Name: 'Total Sales', Type: '#,0', Expression: 'SUM ( Sales[Amount] )' }),
     row({ Kind: 'Relationship', Table: 'Sales', Name: 'Order Date', Type: 'Many:One', Flags: 'OneDirection', ToTable: 'Calendar', ToColumn: 'Date' })].join('\n'));
-  console.log('calc date table:', await p.locator('#dTable').inputValue(), '|', await p.locator('#dTable option:checked').innerText(), '|', (await p.locator('#checks').innerText()).slice(0, 80), '| data date', await p.locator('#dataDate').inputValue(), '(expect Calendar, calculated date table, CALENDARAUTO warning, Sales|Order Date)');
+  console.log('calc date table:', await p.locator('#dTable').inputValue(), '|', await p.locator('#dTable option:checked').innerText(), '|', (await p.locator('#checks').innerText()).slice(0, 80), '| data date', await p.locator('#dataDate').inputValue(), '(expect Calendar, calculated date table, CALENDARAUTO optional-marking warning, Sales|Order Date)');
   await p.evaluate(() => localStorage.clear()); await p.setViewportSize({ width: 375, height: 800 }); await p.reload();
   console.log('mobile hscroll', await p.evaluate(() => document.documentElement.scrollWidth > innerWidth));
   console.log('errors', errs); await b.close();
