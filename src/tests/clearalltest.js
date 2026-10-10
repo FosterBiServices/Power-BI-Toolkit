@@ -12,7 +12,7 @@ const { chromium } = require('playwright');
   console.log('after page clear: pw goal kept', await p.evaluate(() => Object.keys(localStorage).some(k => k.startsWith('kpw.') && k !== 'kpw.blank')), '| export kept', await p.evaluate(() => !!SF_SUITE.get()), '(expect true true)');
   // Clear all pages
   await p.click('#clearEntries'); await p.click('#clearAllPages');
-  const left = await p.evaluate(() => Object.keys(localStorage).filter(k => !/\.blank$/.test(k)));
+  const left = await p.evaluate(() => Object.keys(localStorage).filter(k => !/\.blank(At)?$/.test(k)));
   console.log('after clear all: keys left', left, '| export', await p.evaluate(() => !!SF_SUITE.get()), '| done:', await p.locator('#clearDone').innerText(), '(expect only this page\'s empty state, false)');
   await p.goto('http://localhost:8765/power-query-writer.html');
   console.log('pw goal', JSON.stringify(await p.locator('#goal').inputValue()), '| banner', await p.locator('#exampleBanner').isVisible(), '(expect "" false)');
