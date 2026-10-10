@@ -16,11 +16,11 @@ function hl(code){
   return esc(code).split('\n').map(l => {
     if (/^\s*\/\//.test(l)) return '<span class="tok-com">' + l + '</span>';
     return l.replace(/(&quot;(?:[^&]|&(?!quot;))*?&quot;)/g, '<span class="tok-str">$1</span>')
-      .replace(/\b(createOrReplace|ref table|table|column|measure|calculationGroup|calculationItem|formatStringDefinition|DEFINE|MEASURE|EVALUATE|SUMMARIZECOLUMNS|ORDER BY|CALCULATE|DATESYTD|DATESQTD|DATESMTD|SAMEPERIODLASTYEAR|DATEADD|DATESINPERIOD|DIVIDE|VAR|RETURN|IF|NOT|ISBLANK|SELECTEDMEASURE|BLANK|MIN|MAX|TODAY|DATESBETWEEN|EOMONTH|EDATE|DATE|YEAR|MONTH|MOD)\b/g, '<span class="tok-kw">$1</span>');
+      .replace(/\b(createOrReplace|ref table|table|column|measure|calculationGroup|calculationItem|formatStringDefinition|DEFINE|MEASURE|EVALUATE|SUMMARIZECOLUMNS|ORDER BY|CALCULATE|DATESYTD|DATESQTD|DATESMTD|SAMEPERIODLASTYEAR|DATEADD|DATESINPERIOD|DIVIDE|VAR|RETURN|IF|NOT|ISBLANK|SELECTEDMEASURE|BLANK|MIN|MAX|MINX|AVERAGEX|CALCULATETABLE|PREVIOUSYEAR|PARALLELPERIOD|REMOVEFILTERS|COLUMN|TRUE|YEAR|MONTH)\b/g, '<span class="tok-kw">$1</span>');
   }).join('\n');
 }
 
-const blankCfg = () => ({ output: 'measures', dateTable: '', dateColumn: '', fyEnd: 12, basis: 'latest', hideFuture: false, calcs: ['ytd', 'pytd', 'yoyp'], names: {}, pctFormat: '0.0%',
+const blankCfg = () => ({ output: 'measures', dateTable: '', dateColumn: '', fyEnd: 12, basis: 'latest', dataDate: '', calcs: ['ytd', 'pytd', 'yoyp'], names: {}, pctFormat: '0.0%',
   measures: [], target: '', namePattern: 'suffix', folderMode: 'fixed', folder: 'Time Intelligence', groupTable: 'Time Intelligence', groupColumn: 'Show as', precedence: 10, testBy: '', testMeasure: '' });
 const state = { example: false, model: null, cfg: blankCfg(), out: {} };
 
@@ -50,6 +50,8 @@ function autoPick(){
     const first = m.measures.find(x => (c.measures || []).some(n => lc(n) === lc(x.name))) || m.measures[0];
     c.target = first ? first.table : '';
   }
+  const dd = tiDataDateOptions(m, c);
+  if (!dd.some(o => lc(o.v) === lc(c.dataDate))) c.dataDate = dd[0] ? dd[0].v : '';
   const byOpts = testByOptions();
   if (!byOpts.some(o => o.v === c.testBy)) { const y = byOpts.find(o => /\|year$/i.test(o.v)) || byOpts.find(o => /year/i.test(o.v)) || byOpts[0]; c.testBy = y ? y.v : ''; }
   if (!m.measures.some(x => lc(x.name) === lc(c.testMeasure))) c.testMeasure = (c.measures[0] || (m.measures[0] || {}).name || '');
@@ -71,18 +73,19 @@ function renderModel(){
 const opt = (v, t, sel) => '<option value="' + esc(v) + '"' + (sel ? ' selected' : '') + '>' + esc(t) + '</option>';
 function renderDates(){
   const m = state.model, c = state.cfg;
-  if (!m) { ['dTable', 'dCol'].forEach(id => { $(id).innerHTML = '<option value="">After Step 1</option>'; }); $('dateMsg').innerHTML = ''; }
+  if (!m) { ['dTable', 'dCol', 'dataDate'].forEach(id => { $(id).innerHTML = '<option value="">After Step 1</option>'; }); $('dateMsg').innerHTML = ''; }
   else {
     const withDates = m.tables.filter(t => m.columns.some(x => lc(x.table) === lc(t.name) && /date/i.test(x.dataType || '')));
     $('dTable').innerHTML = (withDates.length ? '' : '<option value="">No table has a date column</option>') + withDates.map(t => opt(t.name, t.name + (lc(t.category) === 'time' ? '  (date table)' : tiCalcDateTable(t) ? '  (calculated date table)' : ''), lc(t.name) === lc(c.dateTable))).join('');
+    const dd = tiDataDateOptions(m, c);
+    $('dataDate').innerHTML = dd.length ? dd.map(o => opt(o.v, o.t, lc(o.v) === lc(c.dataDate))).join('') : '<option value="">No fact date column</option>';
     $('dCol').innerHTML = m.columns.filter(x => lc(x.table) === lc(c.dateTable) && /date/i.test(x.dataType || '')).map(x => opt(x.name, x.name + (x.key ? '  (key)' : ''), lc(x.name) === lc(c.dateColumn))).join('');
   }
   $('fyEnd').innerHTML = TI_MONTHS.map((n, i) => opt(i + 1, n + (i === 11 ? ' (calendar year)' : ''), (+c.fyEnd || 12) === i + 1)).join('');
-  $('hideFuture').checked = !!c.hideFuture;
   $('basis').value = c.basis === 'context' ? 'context' : 'latest';
   $('basisHint').textContent = c.basis === 'context'
-    ? 'Each calculation uses every date in the filter: with no date in the visual, last year and previous month add up every date shifted back.'
-    : 'Each calculation starts from the latest date in the filter and works out its month, quarter or year from it. A card or total shows one period, and previous month or last year shifts back from that date.';
+    ? 'The pattern\u2019s measures as they are: each uses every date in the filter. With no date in the visual, last year and previous month add up every date shifted back.'
+    : 'The same pattern measures, worked out on the last date with data in the filter. A card or total shows one period (this year to date, last year in full, last month in full), and growth compares to the same day.';
 }
 function renderCalcs(){
   const c = state.cfg;
@@ -182,11 +185,11 @@ function init(){
     try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
     renderAll(); persist();
   });
-  $('dTable').addEventListener('change', () => { c().dateTable = $('dTable').value; c().dateColumn = ''; c().testBy = ''; change(); });
+  $('dTable').addEventListener('change', () => { c().dateTable = $('dTable').value; c().dateColumn = ''; c().dataDate = ''; c().testBy = ''; change(); });
   $('dCol').addEventListener('change', () => { c().dateColumn = $('dCol').value; change(); });
   $('fyEnd').addEventListener('change', () => { c().fyEnd = +$('fyEnd').value; change(); });
   $('basis').addEventListener('change', () => { c().basis = $('basis').value; change(); });
-  $('hideFuture').addEventListener('change', () => { c().hideFuture = $('hideFuture').checked; change(); });
+  $('dataDate').addEventListener('change', () => { c().dataDate = $('dataDate').value; change(); });
   $('outMeasures').addEventListener('click', () => { c().output = 'measures'; change(); });
   $('outGroup').addEventListener('click', () => { c().output = 'group'; change(); });
   $('calcs').addEventListener('change', e => {
