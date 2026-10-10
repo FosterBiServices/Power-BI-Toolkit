@@ -49,16 +49,20 @@
     <div class="step-body">
       <div class="step-head">
         <h2 id="s2">Your dates</h2>
-        <p>Time intelligence needs a date table with one row per day, related to your facts. The Date Table Generator can build one.</p>
+        <p>Time intelligence needs a date table with one row per day for whole years, related to your facts. The Date Table Generator can build one.</p>
       </div>
       <div class="cfg">
+        <div class="field"><label for="grain">Calendar</label><select id="grain"><option value="day">One row per day</option><option value="month">One row per month (month columns)</option></select></div>
         <div class="field"><label for="dTable">Date table</label><select id="dTable"></select></div>
-        <div class="field"><label for="dCol">Date column</label><select id="dCol"></select></div>
+        <div class="field" id="dColField"><label for="dCol">Date column</label><select id="dCol"></select></div>
         <div class="field"><label for="fyEnd">Year ends in</label><select id="fyEnd"></select></div>
-        <div class="field"><label for="basis">Work out periods from</label><select id="basis"><option value="latest">The latest date in the filter</option><option value="context">Every date in the filter</option></select></div>
+        <div class="field" id="dataDateField"><label for="dataDate" id="dataDateLbl">Last date with data from</label><select id="dataDate"></select></div>
+        <div class="field"><label for="basis">Work out periods from</label><select id="basis"><option value="latest">The last date with data in the filter</option><option value="context">Every date in the filter</option></select></div>
       </div>
+      <div class="cfg" id="monthCols" hidden></div>
       <p class="small muted" id="basisHint"></p>
-      <div class="opts"><label><input type="checkbox" id="hideFuture"> Show blank for dates after today <span class="hint">(stops last-year and year-to-date lines running on past today, and the latest date is never after today)</span></label></div>
+      <p class="small muted" id="dayNote">The measures follow SQLBI&rsquo;s <a href="https://www.daxpatterns.com/standard-time-related-calculations/" target="_blank" rel="noopener">standard time-related calculations</a> pattern. The script adds hidden helpers to your date table: a <span class="mono">DateWithSales</span> column (TRUE up to the last date with data) and, for measures, a <span class="mono">ShowValueForDates</span> measure, so nothing shows after your data ends and last year stops at the same day.</p>
+      <p class="small muted" id="monthNote" hidden>The measures follow SQLBI&rsquo;s <a href="https://www.daxpatterns.com/month-related-calculations/" target="_blank" rel="noopener">month-related calculations</a> pattern: they filter month columns instead of dates, so they work on a date table with one row per month (or per day, at month level). Columns you don&rsquo;t have are added as hidden calculated columns.</p>
       <div id="dateMsg"></div>
     </div>
   </section>
@@ -76,6 +80,7 @@
         <button type="button" role="radio" id="outGroup" aria-checked="false"><span class="tn">Calculation group</span><span class="td">One small table that applies each calculation to whatever measure is in the visual. Nothing to add when you add measures.</span></button>
       </div>
       <div class="calcs" id="calcs"></div>
+      <div class="msg info dep-ask" id="depAsk" hidden></div>
       <div class="cfg"><div class="field"><label for="pctFormat">Percent format</label><input type="text" id="pctFormat" autocomplete="off" placeholder="0.0%"></div></div>
 
       <div class="only-measures sub">
