@@ -104,7 +104,99 @@ const TI_CALCS_LATEST = [
   { key: 'r12', name: 'MAT', kind: 'value', label: 'Moving annual total: the 12 months to the last date', f: (b, cfg) => tiLatestValue(cfg, b.mat) },
   { key: 'r3avg', name: 'AVG 3M', kind: 'value', label: 'Daily average over the 3 months to the last date', f: (b, cfg) => tiAvg3m(cfg, b.cur, 'LastVisibleDate', tiLatest(cfg)) }
 ];
-function tiCalcList(cfg){ return (cfg || {}).basis === 'context' ? TI_CALCS : TI_CALCS_LATEST; }
+/* ---------- Month-based calendars: SQLBI's Month-related calculations pattern ----------
+   Filters month-level columns of the date table instead of dates: Year, Month Number (in year),
+   Year Month Number (sequential: Year * 12 + Month - 1) and Year Quarter Number. Missing sequential
+   and fiscal columns are added as hidden calculated columns worked out from Year and Month Number. */
+const TI_MCOLS = [
+  { key: 'y', label: 'Year', re: /^(calendar )?year( ?number)?$/i, add: 'Year Number', fromDate: true, f: (y, mn, fe, d) => 'YEAR ( ' + d + ' )' },
+  { key: 'mn', label: 'Month number', re: /^month ?(number|no\.?|num|of year|in year)$/i, add: 'Month Number', fromDate: true, f: (y, mn, fe, d) => 'MONTH ( ' + d + ' )' },
+  { key: 'ymn', label: 'Year Month Number', re: /^year ?month ?(number|index|seq(uence)?)$/i, add: 'Year Month Number', f: (y, mn) => y + ' * 12 + ' + mn + ' - 1' },
+  { key: 'yqn', label: 'Year Quarter Number', re: /^year ?quarter ?(number|index)$/i, add: 'Year Quarter Number', f: (y, mn) => y + ' * 4 + INT ( ( ' + mn + ' - 1 ) / 3 )' },
+  { key: 'fy', label: 'Fiscal Year Number', fiscal: true, re: /^fiscal ?year ?(number)?$/i, add: 'Fiscal Year Number', f: (y, mn, fe) => y + ' + IF ( ' + mn + ' > ' + fe + ', 1, 0 )' },
+  { key: 'fmn', label: 'Fiscal Month Number', fiscal: true, re: /^fiscal ?month ?(number|no\.?)$/i, add: 'Fiscal Month Number', f: (y, mn, fe) => 'MOD ( ' + mn + ' - ' + (fe + 1) + ', 12 ) + 1' }
+];
+const tiNumeric = c => /int|decimal|double|number|currency/i.test(c.dataType || '');
+function tiMonthColsNeeded(cfg){ const fiscal = (+cfg.fyEnd || 12) !== 12; return TI_MCOLS.filter(k => !k.fiscal || fiscal); }
+// the column names to use: picked, or the name of the column the script adds
+function tiMonthCols(cfg){
+  const o = {}, p = cfg.mcols || {};
+  tiMonthColsNeeded(cfg).forEach(k => { o[k.key] = (p[k.key] || '').trim() || k.add || ''; });
+  return o;
+}
+// a date column of the date table, to work out Year and Month number from when the table has none
+function tiMonthDateCol(model, cfg){
+  const cols = model.columns.filter(x => lc(x.table) === lc(cfg.dateTable) && /date/i.test(x.dataType || ''));
+  const c = cols.find(x => lc(x.name) === lc(cfg.dateColumn)) || cols.find(x => x.key) || cols[0];
+  return c ? c.name : '';
+}
+function tiMonthAdds(model, cfg){
+  const p = cfg.mcols || {}, c = tiMonthCols(cfg), T = qName(cfg.dateTable), fe = +cfg.fyEnd || 12, dc = tiMonthDateCol(model, cfg);
+  return tiMonthColsNeeded(cfg).filter(k => k.add && !(p[k.key] || '').trim() && !(k.fromDate && !dc) && !model.columns.some(x => lc(x.table) === lc(cfg.dateTable) && lc(x.name) === lc(k.add)))
+    .map(k => ({ name: k.add, expression: k.f(T + bracket(c.y), T + bracket(c.mn), fe, T + bracket(dc)) }));
+}
+// Each block is { pre: the VAR lines it needs, val: its expression }. Blocks share VAR names only where
+// the definition is the same, so growth measures can put both blocks' VARs in one list.
+function tiMonthBlocks(cfg, m){
+  const T = qName(cfg.dateTable), c = tiMonthCols(cfg), r = n => T + bracket(c[n]);
+  const fiscal = (+cfg.fyEnd || 12) !== 12, yc = fiscal ? r('fy') : r('y'), miy = fiscal ? r('fmn') : r('mn');
+  const rf = 'REMOVEFILTERS ( ' + T + ' )', ymn = r('ymn'), yqn = r('yqn');
+  const latest = cfg.basis !== 'context', fact = qName((cfg.dataDate || '').split('|')[0] || '');
+  const calc = (...f) => tiFn('CALCULATE', [m, rf].concat(f));
+  const blk = (pre, val) => ({ pre, val });
+  // the last month: in the filter, or (latest) the last month with data in the filter
+  const lastMonth = latest ? [tiVar('LastMonthWithData', tiFn('CALCULATE', ['MAX ( ' + ymn + ' )', 'REMOVEFILTERS ()', fact])), tiVar('LastMonthAvailable', 'MIN ( MAX ( ' + ymn + ' ), LastMonthWithData )')]
+    : [tiVar('LastMonthAvailable', 'MAX ( ' + ymn + ' )')];
+  const at = col => latest ? tiFn('CALCULATE', ['MAX ( ' + col + ' )', rf, ymn + ' = LastMonthAvailable']) : 'MAX ( ' + col + ' )';
+  const curYear = [tiVar('CurrentYearNumber', 'SELECTEDVALUE ( ' + yc + ' )'), tiVar('PreviousYearNumber', 'CurrentYearNumber - 1')];
+  const range = n => lastMonth.concat(tiVar('FirstMonth' + n, 'LastMonthAvailable - ' + (n - 1)));
+  return {
+    cur: blk([], m),
+    ytd: blk(lastMonth.concat(tiVar('LastYearAvailable', at(yc))), calc(ymn + ' <= LastMonthAvailable', yc + ' = LastYearAvailable')),
+    qtd: blk(lastMonth.concat(tiVar('LastYearQuarterAvailable', at(yqn))), calc(ymn + ' <= LastMonthAvailable', yqn + ' = LastYearQuarterAvailable')),
+    py: blk(curYear, calc(yc + ' = PreviousYearNumber', 'VALUES ( ' + miy + ' )')),
+    pyc: blk(lastMonth.concat(tiVar('LastYearAvailable', at(yc))), calc(yc + ' = LastYearAvailable - 1')),
+    pytd: latest
+      ? blk(lastMonth.concat(tiVar('LastYearAvailable', at(yc)), tiVar('LastMonthInYearAvailable', at(miy))), calc(miy + ' <= LastMonthInYearAvailable', yc + ' = LastYearAvailable - 1'))
+      : blk(curYear.concat(tiVar('LastMonthInYearAvailable', 'MAX ( ' + miy + ' )')), calc(miy + ' <= LastMonthInYearAvailable', yc + ' = PreviousYearNumber')),
+    pm: blk([tiVar('CurrentYearMonthNumber', 'SELECTEDVALUE ( ' + ymn + ' )')], calc(ymn + ' = CurrentYearMonthNumber - 1')),
+    lm: blk(lastMonth, calc(ymn + ' = LastMonthAvailable')),
+    pmc: blk(lastMonth, calc(ymn + ' = LastMonthAvailable - 1')),
+    mat: blk(range(12), calc(ymn + ' >= FirstMonth12', ymn + ' <= LastMonthAvailable')),
+    avg3m: blk(range(3).concat(tiVar('Period3M', tiFn('FILTER', ['ALL ( ' + ymn + ' )', ymn + ' >= FirstMonth3 && ' + ymn + ' <= LastMonthAvailable']))),
+      tiFn('IF', ['COUNTROWS ( Period3M ) >= 3', tiFn('CALCULATE', ['AVERAGEX ( Period3M, ' + m + ' )', rf])]))
+  };
+}
+function tiMonthValue(b){ return b.pre.length ? b.pre.concat(tiVar('Result', b.val), 'RETURN', '    Result').join('\n') : b.val; }
+function tiMonthGrowth(a, b, pct){ const pre = [...new Set(a.pre.concat(b.pre))]; return (pre.length ? pre.join('\n') + '\n' : '') + tiGrowth(a.val, b.val, pct); }
+// Every month in the filter: the pattern's measures as they are
+const TI_M_CALCS = [
+  { key: 'ytd', name: 'YTD', kind: 'value', label: 'Year to date', f: b => tiMonthValue(b.ytd) },
+  { key: 'qtd', name: 'QTD', kind: 'value', label: 'Quarter to date', f: b => tiMonthValue(b.qtd) },
+  { key: 'py', name: 'PY', kind: 'value', label: 'Same months last year', f: b => tiMonthValue(b.py) },
+  { key: 'pytd', name: 'PYTD', kind: 'value', label: 'Last year, year to date', f: b => tiMonthValue(b.pytd) },
+  { key: 'yoy', name: 'YOY', kind: 'value', label: 'Change on last year', f: b => tiMonthGrowth(b.cur, b.py) },
+  { key: 'yoyp', name: 'YOY %', kind: 'pct', label: 'Change on last year, %', f: b => tiMonthGrowth(b.cur, b.py, true) },
+  { key: 'ytdyoyp', name: 'YOYTD %', kind: 'pct', label: 'Year to date vs last year to date, %', f: b => tiMonthGrowth(b.ytd, b.pytd, true) },
+  { key: 'pm', name: 'PM', kind: 'value', label: 'Previous month', f: b => tiMonthValue(b.pm) },
+  { key: 'momp', name: 'MOM %', kind: 'pct', label: 'Change on previous month, %', f: b => tiMonthGrowth(b.cur, b.pm, true) },
+  { key: 'r12', name: 'MAT', kind: 'value', label: 'Moving annual total: the 12 months to the last month', f: b => tiMonthValue(b.mat) },
+  { key: 'r3avg', name: 'AVG 3M', kind: 'value', label: 'Monthly average over the last 3 months', f: b => tiMonthValue(b.avg3m) }
+];
+// Latest month with data (the default): one period on a card or total
+const TI_M_CALCS_LATEST = [
+  { key: 'ytd', name: 'YTD', kind: 'value', label: 'Year to the last month', f: b => tiMonthValue(b.ytd) },
+  { key: 'qtd', name: 'QTD', kind: 'value', label: 'Quarter to the last month', f: b => tiMonthValue(b.qtd) },
+  { key: 'py', name: 'PYC', kind: 'value', label: 'Previous year, whole year', f: b => tiMonthValue(b.pyc) },
+  { key: 'pytd', name: 'PYTD', kind: 'value', label: 'Last year, to the same month', f: b => tiMonthValue(b.pytd) },
+  { key: 'yoy', name: 'YOYTD', kind: 'value', label: 'Year to date vs last year to date', f: b => tiMonthGrowth(b.ytd, b.pytd) },
+  { key: 'yoyp', name: 'YOYTD %', kind: 'pct', label: 'Year to date vs last year to date, %', f: b => tiMonthGrowth(b.ytd, b.pytd, true) },
+  { key: 'pm', name: 'PMC', kind: 'value', label: 'Previous month, whole month', f: b => tiMonthValue(b.pmc) },
+  { key: 'momp', name: 'MOM %', kind: 'pct', label: 'Last month vs the month before, %', f: b => tiMonthGrowth(b.lm, b.pmc, true) },
+  { key: 'r12', name: 'MAT', kind: 'value', label: 'Moving annual total: the 12 months to the last month', f: b => tiMonthValue(b.mat) },
+  { key: 'r3avg', name: 'AVG 3M', kind: 'value', label: 'Monthly average over the 3 months to the last month', f: b => tiMonthValue(b.avg3m) }
+];
+function tiCalcList(cfg){ cfg = cfg || {}; return cfg.grain === 'month' ? (cfg.basis === 'context' ? TI_M_CALCS : TI_M_CALCS_LATEST) : cfg.basis === 'context' ? TI_CALCS : TI_CALCS_LATEST; }
 const TI_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const TI_LAST_DAY = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 // A DAX date table: CALENDAR ( … ) or CALENDARAUTO ( … ) in a calculated table
@@ -123,14 +215,15 @@ function tiHelpers(model, cfg){
   const hasCol = model.columns.some(c => lc(c.table) === lc(cfg.dateTable) && lc(c.name) === lc(TI_DWS));
   const hasMeasure = model.measures.some(m => lc(m.name) === lc(TI_SVD));
   const f = tiDataRef(cfg), d = tiDateRef(cfg);
+  if (cfg.grain === 'month') return { columns: tiMonthAdds(model, cfg), measure: null };
   return {
-    column: hasCol ? null : { name: TI_DWS, expression: d + ' <= MAX ( ' + f + ' )' },
+    columns: hasCol ? [] : [{ name: TI_DWS, expression: d + ' <= MAX ( ' + f + ' )' }],
     measure: hasMeasure || cfg.output === 'group' ? null : { name: TI_SVD, expression: [tiVar('LastDateWithData', tiFn('CALCULATE', ['MAX ( ' + f + ' )', 'REMOVEFILTERS ()'])),
       tiVar('FirstDateVisible', 'MIN ( ' + d + ' )'), tiVar('Result', 'FirstDateVisible <= LastDateWithData'), 'RETURN', '    Result'].join('\n') }
   };
 }
 function tiCalcName(cfg, c){ const o = (cfg.names || {})[c.key]; return (o || '').trim() || c.name; }
-function tiExpr(cfg, c, measureExpr){ return c.f(tiBlocks(cfg, measureExpr), cfg); }
+function tiExpr(cfg, c, measureExpr){ return c.f(cfg.grain === 'month' ? tiMonthBlocks(cfg, measureExpr) : tiBlocks(cfg, measureExpr), cfg); }
 function tiSelectedCalcs(cfg){ return tiCalcList(cfg).filter(c => (cfg.calcs || []).includes(c.key)); }
 function tiMeasureName(cfg, base, c){
   const n = tiCalcName(cfg, c);
@@ -158,6 +251,7 @@ function tiCheck(model, cfg){
   const t = model.tables.find(x => lc(x.name) === lc(cfg.dateTable || ''));
   const col = t && model.columns.find(c => lc(c.table) === lc(t.name) && lc(c.name) === lc(cfg.dateColumn || ''));
   if (!cfg.dateTable || !t) add('err', 'Choose your date table in Step 2.');
+  else if (cfg.grain === 'month') tiMonthCheck(model, cfg, t, add);
   else if (!col) add('err', 'Choose the date column of ' + qName(t.name) + ' in Step 2.');
   else {
     if (!/date/i.test(col.dataType || '')) add('err', qName(t.name) + bracket(col.name) + ' is a ' + (col.dataType || 'non-date') + ' column; time intelligence needs a date column.');
@@ -168,7 +262,7 @@ function tiCheck(model, cfg){
     if (!tiDataRef(cfg) || !model.columns.some(c => lc(c.table) === lc(dp[0]) && lc(c.name) === lc(dp[1]))) add('err', 'Choose the fact date column that has your last date with data in Step 2.');
     else {
       const h = tiHelpers(model, cfg);
-      if (!h.column) add('info', 'Uses the ' + bracket(TI_DWS) + ' column already in ' + qName(t.name) + '. It should be TRUE for dates up to the last date with data.');
+      if (!h.columns.length) add('info', 'Uses the ' + bracket(TI_DWS) + ' column already in ' + qName(t.name) + '. It should be TRUE for dates up to the last date with data.');
       if (!h.measure && cfg.output !== 'group') add('info', 'Uses the ' + bracket(TI_SVD) + ' measure already in the model. It should be TRUE when the first date in the filter is on or before the last date with data.');
       if (model.measures.some(x => lc(x.table) === lc(t.name) && lc(x.name) === lc(TI_DWS)) || model.columns.some(x => lc(x.table) === lc(t.name) && lc(x.name) === lc(TI_SVD))) add('err', qName(t.name) + ' already has an object named ' + TI_DWS + ' or ' + TI_SVD + ' of the wrong kind; rename it first.');
     }
@@ -176,7 +270,7 @@ function tiCheck(model, cfg){
   const calcs = tiSelectedCalcs(cfg);
   if (!calcs.length) add('err', 'Pick at least one calculation in Step 3.');
   const m = +cfg.fyEnd || 12;
-  if (m % 3 !== 0 && calcs.some(c => c.key === 'qtd')) add('warn', 'QTD uses calendar quarters (Jan–Mar, Apr–Jun…), which don’t line up with a fiscal year ending in ' + TI_MONTHS[m - 1] + '.');
+  if (m % 3 !== 0 && calcs.some(c => c.key === 'qtd') && cfg.grain !== 'month') add('warn', 'QTD uses calendar quarters (Jan–Mar, Apr–Jun…), which don’t line up with a fiscal year ending in ' + TI_MONTHS[m - 1] + '.');
   const names = calcs.map(c => lc(tiCalcName(cfg, c)));
   const dupN = names.filter((n, i) => names.indexOf(n) !== i);
   if (dupN.length) add('err', 'Two calculations have the same name: ' + [...new Set(dupN)].join(', ') + '.');
@@ -215,6 +309,21 @@ function tiCheck(model, cfg){
   }
   return out;
 }
+function tiMonthCheck(model, cfg, t, add){
+  const p = cfg.mcols || {}, cols = model.columns.filter(c => lc(c.table) === lc(t.name));
+  tiMonthColsNeeded(cfg).forEach(k => {
+    const n = (p[k.key] || '').trim();
+    if (!n) { if (k.fromDate && !tiMonthDateCol(model, cfg)) add('err', 'Choose the ' + k.label + ' column of ' + qName(t.name) + ' in Step 2 (it has no date column to work it out from).'); return; }
+    const c = cols.find(x => lc(x.name) === lc(n));
+    if (!c) add('err', qName(t.name) + ' has no column ' + bracket(n) + '.');
+    else if (!tiNumeric(c)) add('err', qName(t.name) + bracket(n) + ' is a ' + (c.dataType || 'text') + ' column; ' + k.label + ' needs to be a number.');
+  });
+  const adds = tiMonthAdds(model, cfg);
+  if (adds.length) add('info', 'The script adds hidden ' + adds.map(a => bracket(a.name)).join(', ') + (adds.length === 1 ? ' column' : ' columns') + ' to ' + qName(t.name) + ', worked out from the table\u2019s own columns.');
+  if (p.ymn && !adds.length) add('info', 'Year Month Number must count months in order across years (for example Year \u00d7 12 + Month \u2212 1), not YYYYMM.');
+  if (cfg.basis !== 'context' && !(cfg.dataDate || '').split('|')[0]) add('err', 'Choose the fact table that has your data in Step 2.');
+  if (!model.rels.some(r => (lc(r.toTable) === lc(t.name) || lc(r.fromTable) === lc(t.name)))) add('warn', qName(t.name) + ' has no relationships in the export, so these calculations won\u2019t filter your facts. Relate it to your fact tables first.');
+}
 function tiIndentBlock(expr, indent){ return exprLines(expr).map(l => l ? indent + l : ''); }
 function tiPushObject(L, kind, name, expr){
   const T = TAB, lines = exprLines(expr);
@@ -224,9 +333,9 @@ function tiPushObject(L, kind, name, expr){
 // DateWithSales and ShowValueForDates (hidden), in the date table
 function tiPushHelpers(L, model, cfg){
   const T = TAB, h = tiHelpers(model, cfg);
-  if (h.column) { tiPushObject(L, 'column', h.column.name, h.column.expression); L.push(T + T + T + 'isHidden', T + T + T + 'summarizeBy: none', ''); }
+  h.columns.forEach(c => { tiPushObject(L, 'column', c.name, c.expression); L.push(T + T + T + 'isHidden', T + T + T + 'summarizeBy: none', ''); });
   if (h.measure) { tiPushObject(L, 'measure', h.measure.name, h.measure.expression); L.push(T + T + T + 'isHidden', T + T + T + 'displayFolder: Time intelligence helpers', ''); }
-  return !!(h.column || h.measure);
+  return !!(h.columns.length || h.measure);
 }
 function tiTmdl(model, cfg){
   const T = TAB, L = ['createOrReplace', ''];
@@ -290,7 +399,7 @@ function tiTestQuery(model, cfg){
     lines.forEach(l => L.push(l ? I + I + l.replace(/^\t+/, t => I.repeat(t.length)) : ''));
   };
   const h = tiHelpers(model, cfg);
-  if (h.column) def('COLUMN', cfg.dateTable, h.column.name, h.column.expression);
+  h.columns.forEach(c => def('COLUMN', cfg.dateTable, c.name, c.expression));
   if (h.measure) def('MEASURE', cfg.dateTable, h.measure.name, h.measure.expression);
   plan.forEach(p => def('MEASURE', cfg.target.trim(), p.name, p.expression));
   L.push('EVALUATE', 'SUMMARIZECOLUMNS (', I + byRef + ',');

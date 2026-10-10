@@ -8,7 +8,7 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 /* ---------- Time Intelligence Builder ---------- */
 .msg.info{background:var(--info-soft);color:var(--info)}
 .tabbar button[aria-checked="true"]{border:2px solid var(--accent);padding:11px 15px;background:var(--accent-soft);box-shadow:inset 0 -4px 0 var(--gold)}
-.only-measures[hidden],.only-group[hidden],#outBox[hidden],#destBox[hidden]{display:none!important}
+.only-measures[hidden],#monthCols[hidden],.field[hidden],.only-group[hidden],#outBox[hidden],#destBox[hidden]{display:none!important}
 .dest-hint{width:100%;font-size:12.5px}
 .dest select{max-width:100%}
 .cfg{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end}
