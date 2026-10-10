@@ -88,8 +88,8 @@
     <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
-        <h2 id="s2">Status colors</h2>
-        <p>Good, neutral and bad, the way Excel&rsquo;s conditional formatting shows them. The previews above and the measures you build use them. Change any color, or take them from your theme. An arrow always goes with the color, so it never relies on color alone.</p>
+        <h2 id="s2">Colors</h2>
+        <p>Status colors are good, neutral and bad, the way Excel&rsquo;s conditional formatting shows them. Card colors are everything else: background, text, lines and the accent. The previews above and the measures you build use them all. Change any color, or take them from your theme. An arrow always goes with a status color, so it never relies on color alone.</p>
       </div>
       <div class="chips" id="colorPresets" role="group" aria-label="Color presets">
         <button type="button" class="chip" data-preset="excel">Excel styles</button>
@@ -102,8 +102,12 @@
         <textarea id="themeJson" class="short" spellcheck="false" aria-label="Theme JSON" placeholder="Paste your report theme JSON (it reads good, neutral and bad)"></textarea>
         <div class="reply-actions"><button type="button" class="btn" id="openTheme">Open a theme file</button><input type="file" id="themeFile" accept=".json,application/json" hidden></div>
       </div>
+      <h3 class="kv-h3">Status colors</h3>
       <div class="kv-colors" id="colorRows"></div>
       <div class="field inline-f"><label for="band">Counts as neutral when within</label><span><input type="number" id="band" min="0" max="50" step="0.5" style="width:80px"> % of the target or comparison</span></div>
+      <h3 class="kv-h3">Card colors</h3>
+      <div class="kv-inkrow" id="inkRows"></div>
+      <div class="reply-actions"><button type="button" class="btn" id="inkReset">Use the starting card colors</button></div>
     </div>
   </section>
 
@@ -121,6 +125,7 @@
         <div class="field" id="trendWrap"><label for="trendCol">Trend by <span class="muted">(a date or number column)</span></label><input type="text" id="trendCol" list="trendCols" autocomplete="off" spellcheck="false" placeholder="'Date'[Month Start]"></div>
         <div class="field" id="periodsWrap"><label for="periods">Periods</label><input type="number" id="periods" min="2" max="36" style="width:80px"></div>
         <div class="field" id="htmlSizeWrap"><label for="htmlW">Visual size in Power BI <span class="muted">(width &times; height, pixels)</span></label><span class="kv-wh"><input type="number" id="htmlW" min="40" max="2000" style="width:80px" aria-label="Width in pixels"> &times; <input type="number" id="htmlH" min="40" max="2000" style="width:80px" aria-label="Height in pixels"></span></div>
+        <div class="field" id="refPosWrap" hidden><span class="lbl" id="refPosLbl">Reference labels</span><div class="seg" role="radiogroup" aria-labelledby="refPosLbl"><label><input type="radio" name="refPos" value="below" id="refBelow"><span>Under the value</span></label><label><input type="radio" name="refPos" value="right" id="refRight"><span>Right of the value</span></label></div></div>
         <div class="field" id="scoreWrap"><label for="scoreTable">Scorecard table name</label><input type="text" id="scoreTable" autocomplete="off" placeholder="KPI Scorecard"></div>
       </div>
       <div id="htmlFit" class="kv-fit" hidden></div>

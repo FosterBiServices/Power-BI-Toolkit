@@ -20,7 +20,7 @@ function hl(code){
   }).join('\n');
 }
 const clone = o => JSON.parse(JSON.stringify(o));
-const blankCfg = () => ({ mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard', htmlW: KV_HTML_W, htmlH: KV_HTML_H, htmlLayout: 'auto' });
+const blankCfg = () => ({ mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), ink: clone(KV_INK_DEF), refPos: 'below', band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard', htmlW: KV_HTML_W, htmlH: KV_HTML_H, htmlLayout: 'auto' });
 const state = { example: false, model: null, kpis: [], cfg: blankCfg(), out: {} };
 const FIELDS = ['label', 'measure', 'format', 'better', 'target', 'compare', 'compareLabel', 'pv.value', 'pv.target', 'pv.compare', 'pv.trend'];
 // field paths: 'label', 'pv.value', 'ctx.0.ref'
@@ -134,6 +134,9 @@ function kpiFromMeasure(x){
 }
 
 /* ---------- Step 4: colors ---------- */
+function tbInk(){
+  try { if (localStorage.getItem('ktb.blank') === '1') return null; return kvThemeInk(JSON.parse(localStorage.getItem('ktb.cfg') || 'null')); } catch (e) { return null; }
+}
 function tbColors(){
   try { if (localStorage.getItem('ktb.blank') === '1') return null; return kvThemeColors(JSON.parse(localStorage.getItem('ktb.cfg') || 'null')); } catch (e) { return null; }
 }
@@ -147,13 +150,16 @@ function renderColors(){
     + '<span class="kv-lab" style="background:' + c[s].fill + ';color:' + c[s].text + '">' + sample + '</span>'
     + (kvContrast(c[s].text, c[s].fill) < 4.5 ? '<span class="pill warn">hard to read</span>' : '') + '</div>';
   $('colorRows').innerHTML = row('good', 'Good', '▲ +6.2% vs target') + row('neutral', 'Neutral', '► +0.4% vs target') + row('bad', 'Bad', '▼ -4.1% vs target');
+  const P = kvInk(state.cfg);
+  $('inkRows').innerHTML = KV_INK_KEYS.map(([x, name]) => '<label class="kv-cin kv-ink"><input type="color" data-ink="' + x + '" value="' + P[x] + '"> ' + name + ' <span class="mono small">' + P[x] + '</span></label>').join('')
+    + (kvContrast(P.text, P.bg) < 4.5 ? '<span class="pill warn">Text is hard to read on the background</span>' : '');
   if (document.activeElement !== $('band')) $('band').value = state.cfg.band;
 }
 function applyPreset(p){
   state.cfg.preset = p; let msg = '';
   if (p === 'excel') state.cfg.colors = clone(KV_EXCEL);
   if (p === 'scale') state.cfg.colors = clone(KV_SCALE);
-  if (p === 'tb') { const t = tbColors(); if (t) { state.cfg.colors = t; msg = '<div class="msg ok">Good, neutral and bad from the theme saved in <a href="theme-builder.html">Theme Builder</a>, with lighter fills made from them.</div>'; } else msg = '<div class="msg info">No theme is saved in <a href="theme-builder.html">Theme Builder</a> in this browser yet. Build one there, or paste a theme file.</div>'; }
+  if (p === 'tb') { const t = tbColors(); if (t) { state.cfg.colors = t; const ink = tbInk(); if (ink) state.cfg.ink = ink; msg = '<div class="msg ok">Status and card colors from the theme saved in <a href="theme-builder.html">Theme Builder</a>, with lighter fills made from them.</div>'; } else msg = '<div class="msg info">No theme is saved in <a href="theme-builder.html">Theme Builder</a> in this browser yet. Build one there, or paste a theme file.</div>'; }
   if (p === 'json') readThemeJson();
   $('presetMsg').innerHTML = msg;
 }
@@ -161,21 +167,26 @@ function readThemeJson(){
   const t = $('themeJson').value.trim(); if (!t) { $('presetMsg').innerHTML = ''; return; }
   let o = null; try { o = JSON.parse(t); } catch (e) {}
   const c = kvThemeColors(o);
-  if (c) { state.cfg.colors = c; $('presetMsg').innerHTML = '<div class="msg ok">Good, neutral and bad from your theme' + (o.name ? ' (' + esc(o.name) + ')' : '') + ', with lighter fills made from them.</div>'; }
+  if (c) { state.cfg.colors = c; const ink = kvThemeInk(o); if (ink) state.cfg.ink = ink; $('presetMsg').innerHTML = '<div class="msg ok">Status' + (ink ? ' and card' : '') + ' colors from your theme' + (o.name ? ' (' + esc(o.name) + ')' : '') + ', with lighter fills made from them.</div>'; }
   else $('presetMsg').innerHTML = '<div class="msg err">' + (o ? 'This theme has no good and bad colors. Theme files list them as "good", "neutral" and "bad".' : 'This isn’t valid JSON. Paste the whole theme file.') + '</div>';
 }
 
 /* ---------- Step 3: options ---------- */
-const KIND = { native: 'Power BI visual', svg: 'SVG measure', core: 'Core visuals', html: 'HTML measure' };
+const KIND = { native: 'Power BI visual', svg: 'SVG measure', core: 'Core visuals', html: 'HTML measure', design: 'SVG card' };
 function currentKpi(){ return state.kpis[Math.min(state.cfg.sel, state.kpis.length - 1)] || null; }
 function chosenOption(){
-  if (state.cfg.mode === 'row') return KV_ROW_OPTIONS.find(o => o.id === state.cfg.rowOption) || KV_ROW_OPTIONS[0];
+  if (state.cfg.mode === 'row') return rowOptions().find(o => o.id === state.cfg.rowOption) || rowOptions()[0];
   const k = currentKpi(); if (!k) return null;
   const r = kvRanked(k), pick = r.find(x => x.o.id === state.cfg.option && x.ok);
   return (pick || r[0]).o;
 }
+// The previews use the card colors from Step 4
+function inkVars(el){ const P = kvInk(state.cfg); ['bg', 'text', 'muted', 'track'].forEach(x => el.style.setProperty('--kv-' + x, P[x])); }
+// Row layouts the KPIs can use: bullet charts only when a KPI has a target
+const rowOptions = () => KV_ROW_OPTIONS.filter(o => o.id !== 'rbullet' || state.kpis.some(x => kvHas(x).target));
 function renderOptions(){
   const row = state.cfg.mode === 'row', k = currentKpi();
+  inkVars($('options')); inkVars($('htmlFit'));
   $('kpiPickWrap').hidden = row || state.kpis.length < 2;
   $('kpiPick').innerHTML = state.kpis.map((x, i) => '<option value="' + i + '"' + (i === state.cfg.sel ? ' selected' : '') + '>' + esc(kvName(x)) + '</option>').join('');
   if (!state.kpis.length) { $('options').innerHTML = '<p class="note">Add a KPI in Step 2 to see the options.</p>'; $('sampleMsg').innerHTML = ''; return; }
@@ -184,24 +195,24 @@ function renderOptions(){
   $('sampleMsg').innerHTML = sample ? '<div class="msg info">Some preview numbers are made up because none were typed. Add yours under &ldquo;Numbers for the preview&rdquo; in Step 2.</div>' : '';
   $('s3note').textContent = row ? 'Each layout shows all your KPIs. Pick one to see how to build it.' : 'Ways that fit what you want readers to get come first. Pick one to see how to build it.';
   if (row) {
-    $('options').innerHTML = KV_ROW_OPTIONS.map(o => '<article class="kv-opt wide' + (o === chosen ? ' on' : '') + '">'
+    $('options').innerHTML = rowOptions().map(o => '<article class="kv-opt wide' + (o === chosen ? ' on' : '') + '">'
       + '<div class="kv-opt-head"><h3>' + esc(o.name) + '</h3><span class="pill replace">' + KIND[o.kind] + '</span></div>'
       + '<div class="kv-canvas">' + kvRowPreview(o.id, state.kpis, state.cfg) + '</div>'
       + '<p class="small"><b>Fits:</b> ' + esc(o.fits) + '</p><p class="small"><b>Avoid:</b> ' + esc(o.avoid) + '</p>'
       + '<button type="button" class="btn' + (o === chosen ? ' primary' : '') + '" data-opt="' + o.id + '" aria-pressed="' + (o === chosen) + '">' + (o === chosen ? '&#10003; Building this' : 'Build this') + '</button></article>').join('');
     return;
   }
-  const h = kvHas(k), ranked = kvRanked(k), it = KV_INTENTS.find(x => x.id === kvIntent(k));
-  const firstOther = ranked.findIndex(x => !x.fit), firstOff = ranked.findIndex(x => !x.ok);
+  // only the ways this KPI's fields can support are shown
+  const h = kvHas(k), ranked = kvRanked(k).filter(x => x.ok), it = KV_INTENTS.find(x => x.id === kvIntent(k));
+  const firstOther = ranked.findIndex(x => !x.fit);
   const head = (t, p) => '<div class="kv-grouphead"><h3>' + t + '</h3>' + (p ? '<p class="small muted">' + p + '</p>' : '') + '</div>';
-  $('options').innerHTML = ranked.map(({ o, ok }, idx) => {
-    const pre = idx === 0 && ranked[0].fit ? head('Fits what you want: ' + esc(it.name.charAt(0).toLowerCase() + it.name.slice(1)), '') : idx === firstOther && ok ? head(firstOther === 0 ? 'Ways to show it' : 'Other ways', firstOther === 0 ? 'Nothing fits that yet: ' + (kvIntent(k) === 'goal' ? 'add a target' : kvIntent(k) === 'change' ? 'add a comparison' : 'add a context line') + ' in Step 2.' : 'They show something else about the KPI.') : idx === firstOff ? head('Needs more in Step 2', '') : '';
-    return pre + optCard(o, ok, k, h, chosen);
+  $('options').innerHTML = ranked.map(({ o }, idx) => {
+    const pre = idx === 0 && ranked[0].fit ? head('Fits what you want: ' + esc(it.name.charAt(0).toLowerCase() + it.name.slice(1)), '') : idx === firstOther ? head(firstOther === 0 ? 'Ways to show it' : 'Other ways', firstOther === 0 ? '' : 'They show something else about the KPI.') : '';
+    return pre + optCard(o, k, h, chosen);
   }).join('');
 }
-function optCard(o, ok, k, h, chosen){
+function optCard(o, k, h, chosen){
   {
-    if (!ok) return '<article class="kv-opt off"><div class="kv-opt-head"><h3>' + esc(o.name) + '</h3><span class="pill skip">' + KIND[o.kind] + '</span></div><p class="small muted">' + esc(KV_NEED[o.need] || '') + '. ' + esc(o.fits) + '</p></article>';
     return '<article class="kv-opt' + (o === chosen ? ' on' : '') + '">'
       + '<div class="kv-opt-head"><h3>' + esc(o.name) + '</h3><span class="pill replace">' + KIND[o.kind] + '</span></div>'
       + '<div class="kv-canvas">' + kvPreview(o.id, k, state.cfg) + '</div>'
@@ -235,17 +246,38 @@ function kvSteps(id, kpis, cfg){
   const refLabel = x => [
     FP('Visual &gt; Reference labels') + ': turn them on and add a label. For its value (Data), pick ' + B(kvMName(x, 'Status Label')) + '. Turn the label&rsquo;s title off, or call it &ldquo;' + (kvHas(x).target ? 'vs target' : 'vs ' + esc((x.compareLabel || '').trim() || 'last period')) + '&rdquo;.',
     'For the reference label&rsquo;s value color, ' + FX(kvMName(x, 'Status Color')) + '. Leave its background off: a background fills the whole label area under the value, not just the text. For a colored pill like Excel&rsquo;s, use the HTML card.'];
-  const ctxLabels = x => kvCtx(x).slice(0, KV_CTX_MAX).map((c, j) => FP('Visual &gt; Reference labels') + ': add ' + (j || id === 'cardvar' ? 'another' : 'a') + ' label with value ' + B(kvCtxName(x, j)) + ' (&ldquo;' + esc(kvCtxSample(x, c)) + '&rdquo; in the preview). Turn its title off and make its value grey (#605E5C): it&rsquo;s context, not good or bad.');
+  const ctxLabels = x => kvCtx(x).slice(0, KV_CTX_MAX).map((c, j) => FP('Visual &gt; Reference labels') + ': add ' + (j || id === 'cardvar' ? 'another' : 'a') + ' label with value ' + B(kvCtxName(x, j)) + ' (&ldquo;' + esc(kvCtxSample(x, c)) + '&rdquo; in the preview). Turn its title off and make its value your label color (' + kvInk(cfg).muted + '): it&rsquo;s context, not good or bad.');
+  // Reference labels to the right of the callout value (Step 5 choice)
+  const right = usesRef(id, kpis, cfg) && kvRight(cfg);
+  const rightSteps = right ? [
+    FP('Visual &gt; Cards &gt; Layout') + ': set Arrangement to <b>Horizontal</b> and Order to <b>Callout</b>, then <b>Reference labels</b>. The labels move to the right of the value.',
+    'Under the same Layout, set <b>Callout size</b> to about 55%. Lower it if the labels are cut off; raise it if the value is.',
+    FP('Visual &gt; Reference labels layout') + ': set the vertical alignment to <b>Middle</b> and turn the background off. For a line between the value and the labels, turn on <b>Divider</b> if your version has it.'] : [];
+  const wide = (a, b) => right ? b : a;
   const finish = (alt, size) => ({ title: 'Finish', steps: [
     'Drag the corners until nothing is cut off' + (size ? '; about ' + size + ' pixels works' : '') + '. To set it exactly, use ' + FP('General &gt; Properties &gt; Size') + '.',
     FP('General &gt; Title') + ': name the period, like &ldquo;' + esc(kvName(k)) + ', year to date&rdquo;, so readers know what they&rsquo;re looking at.',
     alt ? FP('General &gt; Alt text') + ': ' + FX(alt) + ', so screen readers hear the status too.' : '',
     'Test it: change a slicer or filter and check the number' + (alt ? ', color and arrow change' : ' changes') + ' with it.'].filter(Boolean) });
+  const ds = KV_DESIGNS[id] || (id === 'rlist' ? kvListEls(kpis, cfg, false) : null);
+  if (ds) {
+    const pic = id === 'rlist' ? 'KPI List Card' : kvMName(k, 'Card'), P = kvInk(cfg);
+    G.push({ title: 'Add the visual', steps: [newCard, 'Drag <b>' + esc(m) + '</b> into the <b>Data</b> field well. The card needs a value to show the picture; you hide the value next.'] });
+    G.push({ title: 'Show the card picture', tip, steps: [
+      'Turn ' + FP('Visual &gt; Image') + ' on (the card image, not the callout image). Take the image from data (called Image URL or Select from data, depending on your version), select <b>fx</b> if asked, and pick ' + B(pic) + '. Set Image fit to <b>Fit</b>.',
+      FP('Visual &gt; Callout value') + ', <b>Label</b> and <b>Reference labels</b>: turn them off, so only the picture shows.',
+      FP('Visual &gt; Cards') + ' and ' + FP('General &gt; Effects') + ': turn the background, border and shadow off. The picture has its own background (' + P.bg + ') and rounded corners.',
+      FP('General &gt; Properties &gt; Size') + ': about ' + (ds.w + 16) + ' wide and ' + (ds.h + 16) + ' high, so the picture shows at its real size (' + ds.w + ' &times; ' + ds.h + ').',
+      'In a table instead: add ' + B(pic) + ' as its only column and set ' + FP('Visual &gt; Image size') + ' to ' + ds.h + ' high and ' + ds.w + ' wide. To hide the header, rename the column to a single space.',
+      'Colors come from Step 4 on this page. To change them, change them there and paste the script again.'] });
+    G.push({ title: 'Finish', steps: [FP('General &gt; Title') + ': turn it off; the picture already shows the name.', 'Test it: change a slicer or filter and check the numbers and colors change with it.'] });
+    return G;
+  }
   const svg = { bullet: ['Bullet', 120, 24], progress: ['Progress', 120, 24], spark: ['Sparkline', 120, 32], varbar: ['Variance Bar', 120, 24], slope: ['Slope', 120, 32], waffle: ['Waffle', 60, 60] }[id];
   if (svg) {
     const pic = kvMName(k, svg[0]), st = status(k);
     G.push({ title: 'Add the visual', steps: [newCard, 'Drag <b>' + esc(m) + '</b> from the Data pane into the visual&rsquo;s <b>Data</b> field well.'] });
-    G.push({ title: 'Format it', tip, steps: [callout].concat(st ? refLabel(k) : [], [
+    G.push({ title: 'Format it', tip, steps: [callout].concat(st ? refLabel(k) : [], rightSteps, [
       FP('Visual &gt; Images') + ': turn images on and set Image type to <b>Image URL</b>. For the URL, ' + FX(pic) + '.',
       'Under Images, set Position to <b>Bottom</b> (or Right) and the size to about ' + svg[1] + ' wide and ' + svg[2] + ' high.',
       'In a table or matrix instead: add ' + B(pic) + ' as a column and set ' + FP('Visual &gt; Image size') + ' to ' + svg[2] + ' high and ' + svg[1] + ' wide. The script already marks it as an Image URL, so it shows as a picture.']) });
@@ -278,25 +310,25 @@ function kvSteps(id, kpis, cfg){
     case 'ctxlabel': case 'ctxsub': case 'ctxtip': {
       const cs = kvCtx(k).slice(0, KV_CTX_MAX), names = cs.map((c, j) => kvCtxName(k, j));
       G.push({ title: 'Add the visual', steps: [newCard, 'Drag <b>' + esc(m) + '</b> into the <b>Data</b> field well.'] });
-      if (id === 'ctxlabel') G.push({ title: 'Format it', tip, steps: [callout].concat(ctxLabels(k)) });
+      if (id === 'ctxlabel') G.push({ title: 'Format it', tip, steps: [callout].concat(ctxLabels(k), rightSteps) });
       if (id === 'ctxsub') G.push({ title: 'Format it', tip, steps: [callout,
         FP('General &gt; Title') + ': turn the title on and type ' + esc(kvName(k)) + ' as its text.',
-        'Under Title, turn <b>Subtitle</b> on. For its text, ' + FX(names[0]) + '. Make it a size or two smaller than the title, in grey (#605E5C).'].concat(names[1] ? ['Your second context line doesn&rsquo;t fit in the subtitle. Add it as a reference label: ' + FP('Visual &gt; Reference labels') + ', value ' + B(names[1]) + '.'] : [])
+        'Under Title, turn <b>Subtitle</b> on. For its text, ' + FX(names[0]) + '. Make it a size or two smaller than the title, in your label color (' + kvInk(cfg).muted + ').'].concat(names[1] ? ['Your second context line doesn&rsquo;t fit in the subtitle. Add it as a reference label: ' + FP('Visual &gt; Reference labels') + ', value ' + B(names[1]) + '.'] : [])
         .concat([FP('Visual &gt; Label') + ' (the category label under the value): turn it off; the title already names the KPI.']) });
       if (id === 'ctxtip') G.push({ title: 'Format it', tip, steps: [callout,
         'Drag ' + names.map(B).join(' and ') + ' into the visual&rsquo;s <b>Tooltips</b> field well.',
         'In the Tooltips well, double-click each one and rename it for readers, like &ldquo;' + cs.map((c, j) => esc(kvCtxTipName(c, j))).join('&rdquo; and &ldquo;') + '&rdquo;.',
         'Check ' + FP('General &gt; Tooltips') + ' is on. Hover the card to see them.'] });
-      G.push(finish('', '220 &times; 140'));
+      G.push(finish('', id === 'ctxlabel' ? wide('220 &times; 140', '320 &times; 110') : '220 &times; 140'));
       break;
     }
     case 'cardvar':
       G.push({ title: 'Add the visual', steps: [newCard, 'Drag <b>' + esc(m) + '</b> into the <b>Data</b> field well.'] });
-      G.push({ title: 'Format it', tip, steps: [callout].concat(refLabel(k), ctxLabels(k)) });
-      G.push(finish(kvMName(k, 'Status Label'), '250 &times; 150')); break;
+      G.push({ title: 'Format it', tip, steps: [callout].concat(refLabel(k), ctxLabels(k), rightSteps) });
+      G.push(finish(kvMName(k, 'Status Label'), wide('250 &times; 150', '340 &times; 110'))); break;
     case 'core':
       G.push({ title: 'Add the card', steps: [newCard, 'Drag <b>' + esc(m) + '</b> into the <b>Data</b> field well.'] });
-      G.push({ title: 'Format the card', tip, steps: [callout].concat(status(k) ? refLabel(k) : []) });
+      G.push({ title: 'Format the card', tip, steps: [callout].concat(status(k) ? refLabel(k) : [], rightSteps) });
       G.push({ title: 'Add the area chart under it', steps: [
         'Select an empty spot, then select <b>Area chart</b> in the Visualizations pane.',
         'X-axis: ' + trend + '. Y-axis: <b>' + esc(m) + '</b>.',
@@ -325,9 +357,10 @@ function kvSteps(id, kpis, cfg){
         'At the top of the Visual tab, set <b>Apply settings to</b> (Series) to one KPI at a time. Then:'];
       if (each.length) steps.push('<ul>' + each.map(x => '<li>' + x + '</li>').join('') + '</ul>');
       steps.push('For each one, ' + FP('Visual &gt; Reference labels') + ': add a label and pick its Status Label; for the value color, select <b>fx</b>, Format style <b>Field value</b>, and pick its Status Color. Leave the label background off; it would fill the whole label area.');
+      if (right) steps.push(...rightSteps.map(x => x + ' Keep &ldquo;Apply settings to&rdquo; on <b>All</b> for this.'));
       if (pic) steps.push('And ' + FP('Visual &gt; Images') + ': turn images on, set Image type to <b>Image URL</b>, select <b>fx</b> &gt; Field value and pick its ' + pic + ' measure. Position <b>Bottom</b>.' + (id === 'rbullet' ? ' KPIs without a target get no bullet.' : ''));
       G.push({ title: 'Format it', tip, steps });
-      G.push(finish('', 'about 220 wide per card, so ' + (kpis.length * 230) + ' &times; ' + (pic ? 170 : 150))); break;
+      G.push(finish('', 'about ' + wide(220, 300) + ' wide per card, so ' + (kpis.length * wide(230, 310)) + ' &times; ' + (pic ? 170 : wide(150, 110)))); break;
     }
     case 'rtable': {
       const t = qName(kvScoreTable(cfg));
@@ -343,6 +376,11 @@ function kvSteps(id, kpis, cfg){
   }
   return G;
 }
+// Options whose setup uses the card's reference labels, so they can go to the right of the value
+function usesRef(id, kpis, cfg){
+  if (['cardvar', 'ctxlabel'].includes(id)) return true;
+  return ['core', 'bullet', 'progress', 'spark', 'varbar', 'waffle', 'rcards', 'rspark', 'rbullet'].includes(id) && kpis.some(x => kvHas(x).base && (x.measure || '').trim());
+}
 function renderBuild(){
   const o = chosenOption(), row = state.cfg.mode === 'row';
   const kpis = row ? state.kpis : (currentKpi() ? [currentKpi()] : []);
@@ -351,9 +389,10 @@ function renderBuild(){
   const plan = kvPlan(kpis, state.cfg, o.id);
   $('buildKind').textContent = plan.length ? 'The script adds ' + plan.length + ' measure' + (plan.length > 1 ? 's' : '') + (o.id === 'rtable' ? ' and the scorecard table' : '') + ' to your model. Below the script, step-by-step setup in Power BI says where each one goes.' : 'Nothing to add to your model. The steps below set it up in Power BI.';
   $('buildCfg').hidden = !plan.length;
-  const spark = plan.some(m => /Sparkline/.test(m.name));
+  const spark = plan.some(m => /Sparkline/.test(m.name) || m.usesTrend);
   $('trendWrap').hidden = !spark && o.id !== 'kpi' && o.id !== 'core'; $('periodsWrap').hidden = !spark; $('scoreWrap').hidden = o.id !== 'rtable'; $('htmlSizeWrap').hidden = o.id !== 'html'; renderHtmlFit(o.id === 'html' ? kpis[0] : null);
-  if (!plan.length && (o.id === 'kpi' || o.id === 'core')) $('buildCfg').hidden = false;
+  const ref = usesRef(o.id, kpis, state.cfg); $('refPosWrap').hidden = !ref; $('refBelow').checked = !kvRight(state.cfg); $('refRight').checked = kvRight(state.cfg);
+  if (!plan.length && (o.id === 'kpi' || o.id === 'core' || ref)) $('buildCfg').hidden = false;
   if (!plan.length) ['homeTable', 'folder'].forEach(id => { $(id).closest('.field').hidden = true; }); else ['homeTable', 'folder'].forEach(id => { $(id).closest('.field').hidden = false; });
   syncInputs();
   $('setupHead').hidden = false;
@@ -364,7 +403,7 @@ function renderBuild(){
   $('outBox').hidden = !!errs.length;
   if (errs.length) { state.out = {}; return; }
   state.out.tmdl = kvTmdl(kpis, state.cfg, o.id); state.out.test = kvTestQuery(kpis, state.cfg, o.id);
-  state.out.html = o.id === 'html' ? '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + kvHtmlEsc(kvName(kpis[0])) + '</title></head>\n<body style="margin:16px;background:#F3F2F1">\n<div style="width:' + (kvHtmlLayout(kpis[0], state.cfg).size.w - KV_HTML_EDGE) + 'px">\n' + kvHtmlCard(kpis[0], state.cfg) + '\n</div>\n</body></html>\n' : '';
+  state.out.html = o.id === 'html' ? '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + kvHtmlEsc(kvName(kpis[0])) + '</title></head>\n<body style="margin:16px">\n<div style="width:' + (kvHtmlLayout(kpis[0], state.cfg).size.w - KV_HTML_EDGE) + 'px">\n' + kvHtmlCard(kpis[0], state.cfg) + '\n</div>\n</body></html>\n' : '';
   $('htmlBox').hidden = !state.out.html; $('htmlView').textContent = state.out.html;
   $('tmdlView').innerHTML = hl(state.out.tmdl); $('testView').innerHTML = hl(state.out.test);
 }
@@ -400,7 +439,7 @@ function init(){
   $('exportView').textContent = DAX_QUERY;
   const saved = store.get('model');
   let kpis = null, cfg = null; try { kpis = JSON.parse(store.get('kpis') || 'null'); cfg = JSON.parse(store.get('cfg') || 'null'); } catch (e) {}
-  if (cfg) state.cfg = Object.assign(blankCfg(), cfg);
+  if (cfg) { state.cfg = Object.assign(blankCfg(), cfg); state.cfg.ink = kvInk(cfg); }
   if (saved && saved.trim()) $('modelInput').value = saved;
   if (kpis && kpis.length) state.kpis = kpis.map(k => Object.assign(kvBlankKpi(), k, { pv: Object.assign(kvBlankKpi().pv, k.pv || {}), ctx: Array.isArray(k.ctx) ? k.ctx.slice(0, KV_CTX_MAX).map(c => Object.assign(kvBlankCtx(c.kind), c)) : [] }));
   else if (!(saved && saved.trim()) && store.get('blank') !== '1') { state.kpis = clone(KV_EX_KPIS); Object.assign(state.cfg, KV_EX_CFG); setExample(true); }
@@ -477,6 +516,15 @@ function init(){
     renderLive(); persist();
   });
   $('colorRows').addEventListener('change', () => renderColors());
+  $('inkRows').addEventListener('input', e => {
+    const x = e.target.dataset.ink; if (!x) return;
+    state.cfg.ink = kvInk(state.cfg); state.cfg.ink[x] = kvHex(e.target.value) || state.cfg.ink[x];
+    const sp = e.target.parentElement.querySelector('.mono'); if (sp) sp.textContent = state.cfg.ink[x];
+    renderLive(); persist();
+  });
+  $('inkRows').addEventListener('change', () => renderColors());
+  $('inkReset').addEventListener('click', () => { state.cfg.ink = clone(KV_INK_DEF); renderColors(); renderLive(); persist(); });
+  ['refBelow', 'refRight'].forEach(id => $(id).addEventListener('change', () => { state.cfg.refPos = $('refRight').checked ? 'right' : 'below'; renderLive(); persist(); }));
   $('band').addEventListener('input', () => { const v = parseFloat($('band').value); state.cfg.band = isFinite(v) ? Math.max(0, Math.min(50, v)) : 0; renderLive(); persist(); });
   $('kpiPick').addEventListener('change', () => { state.cfg.sel = +$('kpiPick').value; renderLive(); persist(); });
   $('options').addEventListener('click', e => {

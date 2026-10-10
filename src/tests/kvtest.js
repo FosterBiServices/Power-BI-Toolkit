@@ -19,7 +19,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   }
   // KPI without target: Orders
   await p.selectOption('#kpiPick', '3');
-  console.log('Orders off options:', (await p.locator('#options .kv-opt.off h3').allInnerTexts()).join(', '));
+  console.log('Orders: options it can\'t support are hidden', await p.locator('#options .kv-opt.off').count(), '(expect 0)');
   // lower is better: Return Rate status should be bad (4.6% vs 4% target)
   await p.selectOption('#kpiPick', '2'); await p.click('[data-opt="cardvar"]');
   console.log('Return Rate label:', await p.locator('.kv-opt.on .kv-lab').first().innerText(), '(expect down arrow? no: up +15.0% vs target, in bad colors)');
