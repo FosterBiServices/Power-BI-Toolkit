@@ -22,6 +22,6 @@ const { chromium } = require('playwright');
   await p.locator('#modelInput').press('End'); await p.locator('#modelInput').type(' ');
   console.log('shared now:', await p.evaluate(() => SF_SUITE.get().source || 'export'), '(expect export)');
   await p.goto(U('model-linter')); console.log('model-linter after an export elsewhere:', (await state()).choice, '(expect PBIP folder)');
-  await p.goto(U('index')); console.log('home:', (await p.locator('#savedWhen').innerText().catch(() => '')).slice(0, 60));
+  await p.goto(U('index')); console.log('home:', (await p.locator('#connectTitle').innerText().catch(() => '')), '|', (await p.locator('#connectSub').innerText().catch(() => '')).slice(0, 60), '(expect Connected, saved: the export pasted last)');
   console.log('errors', errs); await b.close();
 })();

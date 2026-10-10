@@ -83,6 +83,8 @@ function activeRules(){
 function ruleName(id){ const r = activeRules().find(x => x.id === id); return r ? r.name : id === 'OTHER' ? 'Other problem' : id; }
 function ruleSev(id){ const r = activeRules().find(x => x.id === id); return r ? r.sev : 'medium'; }
 function renderRules(){
+  const on = activeRules().filter(r => r.on).length;
+  $('rulesStat').textContent = '(' + on + ' rule' + (on === 1 ? '' : 's') + ' on; open to change)';
   const sevSel = (id, v) => '<select data-act="sev" data-id="' + id + '" aria-label="Severity">' + ['high', 'medium', 'low'].map(s => '<option value="' + s + '"' + (v === s ? ' selected' : '') + '>' + s[0].toUpperCase() + s.slice(1) + '</option>').join('') + '</select>';
   $('rules').innerHTML = activeRules().map(r => '<div class="rule' + (r.on ? '' : ' off') + '"><label class="rchk"><input type="checkbox" data-act="on" data-id="' + r.id + '"' + (r.on ? ' checked' : '') + '><span><b>' + esc(r.name) + '</b><span class="rtext">' + esc(r.check || '') + '</span></span></label>'
     + '<span class="rmeta"><span class="by ' + (r.auto ? 'page' : 'ai') + '">' + (r.auto ? 'Page + Copilot' : 'Copilot') + '</span>' + sevSel(r.id, r.sev) + (r.auto ? '' : '<button type="button" class="linkbtn" data-act="del" data-id="' + r.id + '">Remove</button>') + '</span></div>').join('');

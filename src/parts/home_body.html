@@ -1,79 +1,59 @@
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>SF Power BI Toolkit</h1>
-        <p class="lede">Tools for designing, building and checking Power BI reports and models, with or without Copilot. Some work on their own; the rest read your model once you export it below.</p>
+        <p class="lede">Tools for designing, building, checking and explaining Power BI reports and models, with or without Copilot. They&rsquo;re grouped in the order a report gets built.</p>
       </div>
     </div>
   </header>
 
-  <nav class="paths" aria-label="Two ways to start">
-    <a class="path" href="#freeH"><span class="pn">No model needed</span><span class="pd">Themes, layouts, date tables, Power Query and DAX reviews. Open and start.</span></a>
-    <a class="path" href="#modelH"><span class="pn">Uses your model</span><span class="pd">Export your model once in two steps, then every tool below picks it up.</span></a>
-  </nav>
-
   <div class="msg warn disc-top" role="note"><b>Check everything before you use it.</b> AI can make mistakes, and generated output can be wrong. The toolkit is provided as is, without warranty, and you use it at your own risk. <a href="#disclaimer">Read the full disclaimer</a>.</div>
 
-  <section class="tools-sec" aria-labelledby="freeH">
-    <h2 id="freeH">Start right away: no model needed</h2>
-    <p class="muted">These tools work on their own. Tools marked <span class="tag opt">Export optional</span> also use your saved model export if there is one.</p>
-    <div class="tools" id="toolsFree"></div>
-  </section>
+  <details class="connect" id="connectBox">
+    <summary><span class="cn-title" id="connectTitle">Connect your model once</span><span class="cn-sub" id="connectSub">Tools marked <span class="tag exp">Uses your model</span> read it. Export it once here and every tool picks it up. The rest work without it.</span></summary>
+    <div class="connect-body">
+      <section class="step" aria-labelledby="h1s">
+        <div class="step-num">Step<b>1</b></div>
+        <div class="step-body">
+          <div class="step-head">
+            <h2 id="h1s">Export your model from Power BI Desktop</h2>
+            <p>One DAX query lists the model&rsquo;s tables, columns, measures (with their formulas and descriptions) and relationships. It reads the model&rsquo;s definition only, not your data.</p>
+          </div>
+          <ol class="how">
+            <li>Open your report in Power BI Desktop and select <b>DAX query view</b> on the left rail.</li>
+            <li>Paste the query below into a new query tab and select <b>Run</b>.</li>
+            <li>Above the results grid, select <b>Copy</b>. It copies every row with the column headers.</li>
+          </ol>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" id="copyQuery">Copy query</button></span></div>
+            <pre class="short" id="queryView"></pre>
+          </div>
+          <p class="note">Tip: rename the query tab to <i>Toolkit export</i> and keep it. DAX query view saves it in the file, so next time you only select Run and Copy.</p>
+        </div>
+      </section>
 
-  <div class="group-head" id="modelH">
-    <h2>Tools that use your model</h2>
-    <p class="muted">Export your model once from Power BI Desktop and paste it here. It&rsquo;s saved in this browser, and each of these tools loads it as it opens.</p>
-  </div>
-
-  <section class="step" aria-labelledby="h1s">
-    <div class="step-num">Step<b>1</b></div>
-    <div class="step-body">
-      <div class="step-head">
-        <h2 id="h1s">Export your model from Power BI Desktop</h2>
-        <p>One DAX query lists the model&rsquo;s tables, columns, measures (with their formulas and descriptions) and relationships. It reads the model&rsquo;s definition only, not your data.</p>
-      </div>
-      <ol class="how">
-        <li>Open your report in Power BI Desktop and select <b>DAX query view</b> on the left rail.</li>
-        <li>Paste the query below into a new query tab and select <b>Run</b>.</li>
-        <li>Above the results grid, select <b>Copy</b>. It copies every row with the column headers.</li>
-      </ol>
-      <div class="codebox">
-        <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" id="copyQuery">Copy query</button></span></div>
-        <pre class="short" id="queryView"></pre>
-      </div>
-      <p class="note">Tip: rename the query tab to <i>Toolkit export</i> and keep it. DAX query view saves it in the file, so next time you only select Run and Copy.</p>
+      <section class="step" aria-labelledby="h2s">
+        <div class="step-num">Step<b>2</b></div>
+        <div class="step-body">
+          <div class="step-head">
+            <h2 id="h2s">Paste it once</h2>
+            <p>It&rsquo;s saved in this browser and shared by every tool on this site. Paste a new export whenever the model changes.</p>
+          </div>
+          <div class="field"><label for="modelName">Model name <span class="muted">(optional, shown in each tool)</span></label><input type="text" id="modelName" placeholder="Sales model" autocomplete="off"></div>
+          <textarea id="exportInput" class="big" spellcheck="false" aria-label="Model export" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
+          <div id="saveMsg"></div>
+          <div class="saved" id="saved" hidden>
+            <div class="saved-head"><span class="saved-title">&#10003; Saved model export</span><span id="savedWhen" class="muted"></span></div>
+            <div class="stats" id="savedStats"></div>
+            <p class="note small" id="savedHist" hidden></p>
+            <div class="reply-actions"><button type="button" class="btn" id="clearSaved">Remove the saved export</button></div>
+          </div>
+        </div>
+      </section>
+      <p class="note">Saved your report as a Power BI Project (PBIP)? You can skip the export: choose <b>PBIP folder</b> in any tool&rsquo;s <b>Connect your model</b> step, and every other tool picks it up too.</p>
     </div>
-  </section>
+  </details>
 
-  <section class="step" aria-labelledby="h2s">
-    <div class="step-num">Step<b>2</b></div>
-    <div class="step-body">
-      <div class="step-head">
-        <h2 id="h2s">Paste it once</h2>
-        <p>It&rsquo;s saved in this browser and shared by every tool on this site. Paste a new export whenever the model changes.</p>
-      </div>
-      <div class="field"><label for="modelName">Model name <span class="muted">(optional, shown in each tool)</span></label><input type="text" id="modelName" placeholder="Sales model" autocomplete="off"></div>
-      <textarea id="exportInput" class="big" spellcheck="false" aria-label="Model export" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
-      <div id="saveMsg"></div>
-      <div class="saved" id="saved" hidden>
-        <div class="saved-head"><span class="saved-title">&#10003; Saved model export</span><span id="savedWhen" class="muted"></span></div>
-        <div class="stats" id="savedStats"></div>
-        <p class="note small" id="savedHist" hidden></p>
-        <div class="reply-actions"><button type="button" class="btn" id="clearSaved">Remove the saved export</button></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="step" aria-labelledby="h3s">
-    <div class="step-num">Step<b>3</b></div>
-    <div class="step-body">
-      <div class="step-head">
-        <h2 id="h3s">Choose a tool</h2>
-        <p>Each one reads the export you saved in Step 2. Tools marked <span class="tag ai">Copilot</span> write a prompt you paste into Copilot, then check its reply.</p>
-      </div>
-      <div class="tools" id="tools"></div>
-    </div>
-  </section>
-
+  <div class="groups" id="tools"></div>
 
   <section class="about">
     <h2>Good to know</h2>

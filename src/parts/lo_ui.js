@@ -181,8 +181,8 @@ function renderColors(){
 function renderOut(){
   const L = state.L, c = state.cfg, col = state.col, st = state.look.style;
   state.out.wf = LR.wireframe(L, c, col, st, { font: state.look.font });
-  state.out.bg = LR.background(L, c, col, st);
-  state.out.tsv = LO.positionsTsv(L);
+  state.out.bg = LR.background(L, c, col, st, { font: state.look.font });
+  state.out.tsv = LO.positionsTsv(L, st);
   $('wfThumb').innerHTML = state.out.wf; $('bgThumb').innerHTML = state.out.bg;
   const rows = state.out.tsv.split('\n').map(r => r.split('\t'));
   $('posTable').innerHTML = '<thead><tr>' + rows[0].map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + rows.slice(1).map(r => '<tr>' + r.map((v, i) => '<td' + (i > 1 ? ' class="num"' : '') + '>' + esc(v) + '</td>').join('') + '</tr>').join('') + '</tbody>';

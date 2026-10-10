@@ -154,8 +154,16 @@ const LO = (() => {
   let measure = (text, size) => String(text).length * size * 0.56;
   const setMeasure = fn => { measure = fn; };
   const r2 = v => Math.round(v * 100) / 100;
-  function positionsTsv(L){
-    return ['Visual\tType\tX\tY\tWidth\tHeight'].concat(L.items.filter(o => !o.band || o.id === 'header' || o.id === 'title').map(o => [o.id === 'header' ? 'Header band' : o.title || typeOf(o.type).label, o.id === 'header' ? 'Shape / background' : o.id === 'title' ? 'Text box (title)' : o.logo ? 'Image (logo)' : typeOf(o.type).label, r2(o.x), r2(o.y), r2(o.w), r2(o.h)].join('\t'))).join('\n');
+  // a visual's area inside its card: clear of the rounded corners, with the same padding the wireframe's sample visuals use
+  function inset(o, radius){ return Math.max(Math.min(12, o.w * 0.06, o.h * 0.08), Math.ceil((+radius || 0) * 0.3)); }
+  function positionsTsv(L, st){
+    st = st || {};
+    const cards = st.cards !== 'none', onCard = o => cards && !o.band && !o.logo && (o.region !== 'header' || o.tile) && (o.region !== 'side' || st.side === 'none');
+    return ['Visual\tType\tX\tY\tWidth\tHeight\tInner X\tInner Y\tInner width\tInner height'].concat(L.items.filter(o => !o.band || o.id === 'header' || o.id === 'title').map(o => {
+      const p = onCard(o) ? inset(o, st.radius) : null;
+      return [o.id === 'header' ? 'Header band' : o.title || typeOf(o.type).label, o.id === 'header' ? 'Shape / background' : o.id === 'title' ? 'Title (drawn on the background)' : o.logo ? 'Image (logo)' : typeOf(o.type).label, r2(o.x), r2(o.y), r2(o.w), r2(o.h)]
+        .concat(p == null ? ['', '', '', ''] : [r2(o.x + p), r2(o.y + p), r2(o.w - 2 * p), r2(o.h - 2 * p)]).join('\t');
+    })).join('\n');
   }
 
   // Header holds only cards and slicers: set how many of each (cards first), keeping their names
@@ -174,5 +182,5 @@ const LO = (() => {
     return c;
   }
 
-  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, layout, positionsTsv, setHeaderCounts, upgrade, setMeasure };
+  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
 })();

@@ -9,7 +9,7 @@
       <span id="clearMsg"><b>Clear all entries?</b> This resets the page, layout, visuals and colors, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
       <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
     </div>
-    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Start from a layout in Step 2.</div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Start from a layout in Step 3.</div>
     <div class="banner" id="exampleBanner" hidden>
       <span><strong>Example loaded.</strong> A sample sales page with a slicer panel. Change anything below to make it yours.</span>
       <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
@@ -95,12 +95,47 @@
   </section>
 
   <!-- STEP 2 -->
-  <section class="step" aria-labelledby="s2">
+  <section class="step" aria-labelledby="s3">
     <div class="step-num">Step<b>2</b></div>
     <div class="step-body">
       <div class="step-head">
+        <h2 id="s3">Look</h2>
+        <p>Colors for the background design and the sample visuals. Take them from a theme or pick your own, then adjust any of them.</p>
+      </div>
+      <div class="cfg">
+        <div class="field"><label for="colorSrc">Colors from</label><select id="colorSrc"><option value="tb">The theme saved in the Theme Builder</option><option value="file">An existing theme file</option><option value="pick">My own picks</option></select></div>
+        <div class="field"><label for="font">Font</label><select id="font"><option>Segoe UI</option><option>Segoe UI Semibold</option><option>Arial</option><option>Calibri</option><option>DIN</option><option>Georgia</option><option>Tahoma</option><option>Trebuchet MS</option><option>Verdana</option></select></div>
+      </div>
+      <div id="srcBox"></div>
+      <div class="colors" id="colors"></div>
+      <div class="cfg">
+        <div class="field sm"><label for="radius">Corners <span class="muted">(px)</span></label><input type="number" id="radius" min="0" max="40"></div>
+        <div class="field"><label for="cards">Visual cards</label><select id="cards"><option value="all">A card behind every visual</option><option value="none">No cards</option></select></div>
+        <label class="chk inline"><input type="checkbox" id="border"> Border</label>
+      </div>
+      <div class="shadowbox">
+        <label class="chk"><input type="checkbox" id="shOn"> <b>Shadow</b> <span class="muted">(on every container: header, side panel and visual cards)</span></label>
+        <div class="cfg" id="shCfg">
+          <div class="field sm"><label for="shX">X</label><input type="number" id="shX" min="-50" max="50"></div>
+          <div class="field sm"><label for="shY">Y</label><input type="number" id="shY" min="-50" max="50"></div>
+          <div class="field sm"><label for="shBlur">Blur</label><input type="number" id="shBlur" min="0" max="100"></div>
+          <div class="field sm"><label for="shSpread">Spread</label><input type="number" id="shSpread" min="0" max="50"></div>
+          <div class="field"><label for="shColor">Color</label><span class="crow-in"><label class="cpick sm"><input type="color" id="shColorPick" aria-label="Shadow color"></label><input type="text" class="hex" id="shColor" spellcheck="false"></span></div>
+          <div class="field sm"><label for="shOp">Opacity <span class="muted">(%)</span></label><input type="number" id="shOp" min="0" max="100"></div>
+          <button type="button" class="linkbtn" id="shReset">Default (0, 4, 16, 0, #1F3A5F, 35%)</button>
+        </div>
+      </div>
+      <label class="chk figma"><input type="checkbox" id="figmaOn"> <span><b>I use Figma</b> <span class="muted">(adds Figma-ready copies of the drawings, with named layers)</span></span></label>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
         <h2 id="s2">Layout and visuals</h2>
-        <p>Start from a layout, then click any visual to change it, or an empty cell to add one. Visuals can span several columns and rows.</p>
+        <p>Answer a few questions to get suggested layouts, or start from one of the layouts below. Then click any visual to change it, or an empty cell to add one. Visuals can span several columns and rows.</p>
       </div>
       <details class="suggest" id="suggestBox">
         <summary><b>Suggest a layout</b> <span class="muted">(3-30-3: answer a few questions, get three layouts)</span></summary>
@@ -142,41 +177,6 @@
     </div>
   </section>
 
-  <!-- STEP 3 -->
-  <section class="step" aria-labelledby="s3">
-    <div class="step-num">Step<b>3</b></div>
-    <div class="step-body">
-      <div class="step-head">
-        <h2 id="s3">Look</h2>
-        <p>Colors for the background design and the sample visuals. Take them from a theme or pick your own, then adjust any of them.</p>
-      </div>
-      <div class="cfg">
-        <div class="field"><label for="colorSrc">Colors from</label><select id="colorSrc"><option value="tb">The theme saved in the Theme Builder</option><option value="file">An existing theme file</option><option value="pick">My own picks</option></select></div>
-        <div class="field"><label for="font">Font</label><select id="font"><option>Segoe UI</option><option>Segoe UI Semibold</option><option>Arial</option><option>Calibri</option><option>DIN</option><option>Georgia</option><option>Tahoma</option><option>Trebuchet MS</option><option>Verdana</option></select></div>
-      </div>
-      <div id="srcBox"></div>
-      <div class="colors" id="colors"></div>
-      <div class="cfg">
-        <div class="field sm"><label for="radius">Corners <span class="muted">(px)</span></label><input type="number" id="radius" min="0" max="40"></div>
-        <div class="field"><label for="cards">Visual cards</label><select id="cards"><option value="all">A card behind every visual</option><option value="none">No cards</option></select></div>
-        <label class="chk inline"><input type="checkbox" id="border"> Border</label>
-      </div>
-      <div class="shadowbox">
-        <label class="chk"><input type="checkbox" id="shOn"> <b>Shadow</b> <span class="muted">(on every container: header, side panel and visual cards)</span></label>
-        <div class="cfg" id="shCfg">
-          <div class="field sm"><label for="shX">X</label><input type="number" id="shX" min="-50" max="50"></div>
-          <div class="field sm"><label for="shY">Y</label><input type="number" id="shY" min="-50" max="50"></div>
-          <div class="field sm"><label for="shBlur">Blur</label><input type="number" id="shBlur" min="0" max="100"></div>
-          <div class="field sm"><label for="shSpread">Spread</label><input type="number" id="shSpread" min="0" max="50"></div>
-          <div class="field"><label for="shColor">Color</label><span class="crow-in"><label class="cpick sm"><input type="color" id="shColorPick" aria-label="Shadow color"></label><input type="text" class="hex" id="shColor" spellcheck="false"></span></div>
-          <div class="field sm"><label for="shOp">Opacity <span class="muted">(%)</span></label><input type="number" id="shOp" min="0" max="100"></div>
-          <button type="button" class="linkbtn" id="shReset">Default (0, 4, 16, 0, #1F3A5F, 35%)</button>
-        </div>
-      </div>
-      <label class="chk figma"><input type="checkbox" id="figmaOn"> <span><b>I use Figma</b> <span class="muted">(adds Figma-ready copies of the drawings, with named layers)</span></span></label>
-    </div>
-  </section>
-
   <!-- STEP 4 -->
   <section class="step" aria-labelledby="s4">
     <div class="step-num">Step<b>4</b></div>
@@ -207,12 +207,13 @@
         <h3>Into Figma</h3>
         <ol class="how">
           <li><b>Copy for Figma</b>, then in Figma select a page and press <b>Ctrl+V</b>. The drawing arrives as one frame of editable shapes, with layers named Page, Header, Side-panel and Card-&lt;visual&gt;. Your logo and header image come along as images.</li>
-          <li>Refine it there (shapes, icons, gradients). Shadows come through as SVG filters; if one doesn’t, add a Drop shadow effect with the same X, Y, Blur, Spread, color and opacity as in Step 3. Hide the sample visuals layer before exporting the background.</li>
+          <li>Refine it there (shapes, icons, gradients). Shadows come through as SVG filters; if one doesn’t, add a Drop shadow effect with the same X, Y, Blur, Spread, color and opacity as in Step 2. Hide the sample visuals layer before exporting the background.</li>
           <li>Export the background frame as PNG at 1&times; (the page size) and set it as the canvas background in Power BI Desktop, as above.</li>
         </ol>
       </div>
       <h3>Positions <span class="muted small">(Format pane &gt; General &gt; Properties: Size and Position)</span></h3>
       <div class="tablewrap"><table class="pos" id="posTable"></table></div>
+      <p class="note small"><b>Inner X, Y, width and height</b>: where to put a visual so it stays inside its card, clear of the rounded corners. Use them when the visual keeps its own background or border; with the visual&rsquo;s background off, the outer position works too.</p>
       <div class="btns"><button type="button" class="btn" data-copy="tsv">Copy positions for Excel</button></div>
     </div>
   </section>

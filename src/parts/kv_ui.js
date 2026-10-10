@@ -133,7 +133,7 @@ function kpiFromMeasure(x){
   return k;
 }
 
-/* ---------- Step 3: colors ---------- */
+/* ---------- Step 4: colors ---------- */
 function tbColors(){
   try { if (localStorage.getItem('ktb.blank') === '1') return null; return kvThemeColors(JSON.parse(localStorage.getItem('ktb.cfg') || 'null')); } catch (e) { return null; }
 }
@@ -165,7 +165,7 @@ function readThemeJson(){
   else $('presetMsg').innerHTML = '<div class="msg err">' + (o ? 'This theme has no good and bad colors. Theme files list them as "good", "neutral" and "bad".' : 'This isn’t valid JSON. Paste the whole theme file.') + '</div>';
 }
 
-/* ---------- Step 4: options ---------- */
+/* ---------- Step 3: options ---------- */
 const KIND = { native: 'Power BI visual', svg: 'SVG measure', core: 'Core visuals', html: 'HTML measure' };
 function currentKpi(){ return state.kpis[Math.min(state.cfg.sel, state.kpis.length - 1)] || null; }
 function chosenOption(){
