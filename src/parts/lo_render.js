@@ -40,7 +40,8 @@ const LR = (() => {
     const hdr = L.items.find(o => o.id === 'header');
     if (hdr && st.header !== 'none') {
       // a header image fills the band like Figma's image fill (cover), as a pattern Figma reads back as an image fill
-      const img = headerImage(st), box = st.header === 'bleed' ? [0, 0, W, hdr.y + hdr.h] : [hdr.x, hdr.y, hdr.w, hdr.h];
+      // a full-width bar rounds its lower corners like everything else: it starts above the page by the corner size
+      const img = headerImage(st), box = st.header === 'bleed' ? [0, -r, W, hdr.y + hdr.h + r] : [hdr.x, hdr.y, hdr.w, hdr.h];
       const fill = img ? 'url(#lo-header-fill)' : col.header;
       let defs2 = '';
       if (img) {
@@ -49,9 +50,14 @@ const LR = (() => {
           + '<image id="lo-header-image" width="' + img.w + '" height="' + img.h + '" preserveAspectRatio="none" xlink:href="' + img.src + '"/></defs>';
       }
       if (defs2) out.push(defs2);
-      if (st.header === 'bleed') out.push(rect('Header', box[0], box[1], box[2], box[3], fill, ' rx="0"'));
+      if (st.header === 'bleed') out.push(rect('Header', box[0], box[1], box[2], box[3], fill));
       else if (st.header === 'line') out.push(rect('Header-line', hdr.x, hdr.y + hdr.h - 3, hdr.w, 3, col.accent, ' rx="1.5"'));
       else out.push(rect('Header', box[0], box[1], box[2], box[3], fill, sh));
+    }
+    const ttl = L.items.find(o => o.id === 'title');
+    if (hdr && ttl) {
+      const font = "'" + (opts.font || 'Segoe UI').replace(/'/g, '') + "', 'Segoe UI', Arial, sans-serif", onBand = st.header === 'band' || st.header === 'bleed';
+      out.push('<text id="Header-title" x="' + f(ttl.x) + '" y="' + f(hdr.y + hdr.h / 2 + ttl.fontSize * 0.34) + '" font-size="' + ttl.fontSize + '" font-weight="700" fill="' + (onBand ? col.headerText : col.text) + '" font-family="' + font + '">' + esc(ttl.title) + '</text>');
     }
     const logo = L.items.find(o => o.id === 'logo');
     if (logo && logo.src && c.header.logo && c.header.logo.inBg) out.push('<image id="Logo" xlink:href="' + logo.src + '" x="' + f(logo.x) + '" y="' + f(logo.y) + '" width="' + f(logo.w) + '" height="' + f(logo.h) + '" preserveAspectRatio="xMidYMid meet"/>');
@@ -69,8 +75,8 @@ const LR = (() => {
   }
 
   /* ----- a sketch of each visual type inside its box ----- */
-  function sketch(o, col, font){
-    const pad = Math.min(12, o.w * 0.06, o.h * 0.08), titleH = o.h > 70 && o.title && !['card', 'kpi', 'slicer', 'text', 'button', 'image'].includes(LO.typeOf(o.type).kind) ? 22 : 0;
+  function sketch(o, col, font, radius){
+    const pad = LO.inset(o, radius), titleH = o.h > 70 && o.title && !['card', 'kpi', 'slicer', 'text', 'button', 'image'].includes(LO.typeOf(o.type).kind) ? 22 : 0;
     const x = o.x + pad, y = o.y + pad + titleH, w = Math.max(4, o.w - 2 * pad), h = Math.max(4, o.h - 2 * pad - titleH);
     const d = col.data, R = rnd(o.id + o.type), s = [];
     const t = (tx, ty, txt, size, fill, anchor, weight) => '<text x="' + f(tx) + '" y="' + f(ty) + '" font-size="' + size + '" fill="' + fill + '" font-family="' + font + '"' + (anchor ? ' text-anchor="' + anchor + '"' : '') + (weight ? ' font-weight="' + weight + '"' : '') + '>' + esc(txt) + '</text>';
@@ -188,17 +194,11 @@ const LR = (() => {
       guides = '<g id="Grid">' + gl.join('') + '</g>';
     }
     // grid guides sit on the page, under the visual cards, so they never tint a visual
-    out.push(background(L, c, col, st, { inner: true, afterPage: guides }));
+    out.push(background(L, c, col, st, { inner: true, afterPage: guides, font: opts.font }));
     if (opts.empty) L.empty.forEach(([a, b]) => { const g = L.grid; out.push('<g class="cell" data-cell="' + a + ',' + b + '" tabindex="0" role="button" aria-label="Add a visual in column ' + (a + 1) + ', row ' + (b + 1) + '"><rect x="' + f(g.x[a] + 2) + '" y="' + f(g.y[b] + 2) + '" width="' + f(g.w[a] - 4) + '" height="' + f(g.h[b] - 4) + '" rx="6" fill="' + col.accent + '" fill-opacity=".04" stroke="' + col.accent + '" stroke-opacity=".45" stroke-dasharray="6 5"/><text x="' + f(g.x[a] + g.w[a] / 2) + '" y="' + f(g.y[b] + g.h[b] / 2 + 5) + '" text-anchor="middle" font-size="14" fill="' + col.accent + '" font-family="' + font + '">+ Add a visual</text></g>'); });
-    const hdr = L.items.find(o => o.id === 'header');
-    const ttl = L.items.find(o => o.id === 'title');
-    if (hdr && ttl) {
-      const onBand = st.header === 'band' || st.header === 'bleed';
-      out.push('<text id="Header-title" x="' + f(ttl.x) + '" y="' + f(hdr.y + hdr.h / 2 + ttl.fontSize * 0.34) + '" font-size="' + ttl.fontSize + '" font-weight="700" fill="' + (onBand ? col.headerText : col.text) + '" font-family="' + font + '">' + esc(ttl.title) + '</text>');
-    }
     L.items.filter(o => !o.band).forEach(o => {
       const sel = opts.selected === o.id;
-      out.push('<g class="vis" data-id="' + o.id + '"' + (opts.hit ? ' tabindex="0" role="button" aria-label="' + esc((o.title || LO.typeOf(o.type).label) + ', ' + LO.typeOf(o.type).label) + '"' : '') + ' id="' + (opts.ids === false ? '' : 'Visual-' + idName(o.title || LO.typeOf(o.type).label)) + '">' + (o.tile ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="' + Math.min(+st.radius || 0, 8, o.h / 3) + '" fill="' + col.card + '"' + (st.shadow ? ' filter="url(#lo-shadow)"' : '') + '/>' : '') + sketch(o, o.logo && !(st.header === 'band' || st.header === 'bleed') ? Object.assign({}, col, { headerText: col.text }) : col, font)
+      out.push('<g class="vis" data-id="' + o.id + '"' + (opts.hit ? ' tabindex="0" role="button" aria-label="' + esc((o.title || LO.typeOf(o.type).label) + ', ' + LO.typeOf(o.type).label) + '"' : '') + ' id="' + (opts.ids === false ? '' : 'Visual-' + idName(o.title || LO.typeOf(o.type).label)) + '">' + (o.tile ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="' + Math.min(+st.radius || 0, 8, o.h / 3) + '" fill="' + col.card + '"' + (st.shadow ? ' filter="url(#lo-shadow)"' : '') + '/>' : '') + sketch(o, o.logo && !(st.header === 'band' || st.header === 'bleed') ? Object.assign({}, col, { headerText: col.text }) : col, font, st.radius)
         + (opts.hit ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" fill="transparent"' + (sel ? ' stroke="' + col.select + '" stroke-width="3"' : '') + (st.radius ? ' rx="' + st.radius + '"' : '') + '/>' : '') + '</g>');
       const zone = o.zone || (o.type === 'slicer' ? '30' : '');
       if (opts.zones && zone) { const zc = { '3': '#0B7A75', '30': '#1F6FB2', '300': '#5B3E96' }[zone], zt = zone + ' s', zw = 12 + zt.length * 6.4, zh = 18, zx = o.x + o.w - zw - 6, zy = o.y + 6;

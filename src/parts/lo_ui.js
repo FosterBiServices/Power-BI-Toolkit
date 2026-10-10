@@ -112,7 +112,7 @@ function renderEditor(){
   if (s.region === 'header') { $('editor').innerHTML = '<h3>Header</h3><div class="field"><label for="edTitle">Title</label><input type="text" id="edTitle" value="' + esc(c.header.title || '') + '" autocomplete="off"></div><p class="note small">Its height is in Step 1.</p>' + quick; return; }
   const it = s.item, where = s.region === 'g' ? 'Grid' : s.region === 't' ? 'Card strip' : s.region === 'h' ? 'Header' : 'Side panel';
   let h = '<h3>' + (s.region === 'h' ? 'Header ' + (it.type === 'card' ? 'card' : 'slicer') : where + ' visual') + '</h3>'
-    + (s.region === 'h' ? '<p class="note small">Header items are cards or slicers. Change how many of each in Step 2.</p>' : '<div class="field"><label for="edType">Visual</label>' + typeSelect('edType', it.type) + '</div>')
+    + (s.region === 'h' ? '<p class="note small">Header items are cards or slicers. Change how many of each in Step 1.</p>' : '<div class="field"><label for="edType">Visual</label>' + typeSelect('edType', it.type) + '</div>')
     + '<div class="field"><label for="edTitle">Title</label><input type="text" id="edTitle" value="' + esc(it.title || '') + '" autocomplete="off"></div>';
   if (s.region === 'g') {
     const g = c.grid;
@@ -181,8 +181,8 @@ function renderColors(){
 function renderOut(){
   const L = state.L, c = state.cfg, col = state.col, st = state.look.style;
   state.out.wf = LR.wireframe(L, c, col, st, { font: state.look.font });
-  state.out.bg = LR.background(L, c, col, st);
-  state.out.tsv = LO.positionsTsv(L);
+  state.out.bg = LR.background(L, c, col, st, { font: state.look.font });
+  state.out.tsv = LO.positionsTsv(L, st);
   $('wfThumb').innerHTML = state.out.wf; $('bgThumb').innerHTML = state.out.bg;
   const rows = state.out.tsv.split('\n').map(r => r.split('\t'));
   $('posTable').innerHTML = '<thead><tr>' + rows[0].map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + rows.slice(1).map(r => '<tr>' + r.map((v, i) => '<td' + (i > 1 ? ' class="num"' : '') + '>' + esc(v) + '</td>').join('') + '</tr>').join('') + '</tbody>';

@@ -67,9 +67,9 @@ const LP = (() => {
     const hdr = L.items.find(o => o.id === 'header');
     const onBand = st.header === 'band' || st.header === 'bleed';
     const hi = hdrRid && LR.headerImage(st);
-    if (hdr && hi) { const bleed = st.header === 'bleed', b = bleed ? [0, 0, W, hdr.y + hdr.h] : [hdr.x, hdr.y, hdr.w, hdr.h];
-      out.push(pic('Header', hdrRid, b[0], b[1], b[2], b[3], { crop: cover(hi.w, hi.h, b[2], b[3]), radius: bleed ? 0 : r, shadow: bleed ? '' : sh })); }
-    else if (hdr && st.header === 'bleed') out.push(shape('Header', 0, 0, W, hdr.y + hdr.h, { fill: col.header, pad: 0 }));
+    if (hdr && hi) { const bleed = st.header === 'bleed', b = bleed ? [0, -r, W, hdr.y + hdr.h + r] : [hdr.x, hdr.y, hdr.w, hdr.h];
+      out.push(pic('Header', hdrRid, b[0], b[1], b[2], b[3], { crop: cover(hi.w, hi.h, b[2], b[3]), radius: r, shadow: bleed ? '' : sh })); }
+    else if (hdr && st.header === 'bleed') out.push(shape('Header', 0, -r, W, hdr.y + hdr.h + r, { fill: col.header, radius: r, pad: 0 }));
     else if (hdr && st.header === 'band') out.push(shape('Header', hdr.x, hdr.y, hdr.w, hdr.h, Object.assign({ fill: col.header, radius: r, shadow: sh, pad: 0 })));
     else if (hdr && st.header === 'line') out.push(shape('Header underline', hdr.x, hdr.y + hdr.h - 3, hdr.w, 3, { fill: col.accent, pad: 0 }));
     const side = L.items.find(o => o.id === 'side');
