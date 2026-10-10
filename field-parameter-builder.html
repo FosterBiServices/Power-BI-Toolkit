@@ -2081,11 +2081,16 @@ init();
     // On opening: load the saved export when this page shows its example or is empty (and wasn't cleared on purpose)
     const v = S.get();
     let blank = false; try { blank = localStorage.getItem(cfg.prefix + 'blank') === '1'; } catch (e) {}
+    // A cleared page stays empty, but an export saved (or a folder read) after it was cleared is the user's own: use it
+    const atKey = cfg.prefix + 'blankAt';
+    let blankAt = 0; try { blankAt = +localStorage.getItem(atKey) || 0; if (blank && !blankAt) { blankAt = Date.now(); localStorage.setItem(atKey, String(blankAt)); } } catch (e) {}
+    const newer = !!(v && blank && (v.savedAt || 0) > blankAt);
+    document.addEventListener('click', e => { if (e.target.closest('#clearYes, #clearAllPages, #clearAll')) setTimeout(() => { try { if (localStorage.getItem(cfg.prefix + 'blank') === '1') localStorage.setItem(atKey, String(Date.now())); } catch (e) {} }, 0); });
     // ...or when this page is still on an older saved export it took from the toolkit
     // A model read from a PBIP folder in another tool is used here too, unless this page chose No model or its own export
     const ch = conn ? conn.choice() : '', fromPbip = v && v.source === 'pbip';
     const allowed = !conn || (fromPbip ? ch !== 'none' && (ch !== 'export' || following() || exampleShowing()) : !['pbip', 'none'].includes(ch));
-    if (v && valueFor(v) && ta.value.trim() !== valueFor(v).trim() && allowed && (exampleShowing() || (!ta.value.trim() && !blank) || (ta.value.trim() && (following() || (fromPbip && ch === 'pbip'))))) use();
+    if (v && valueFor(v) && ta.value.trim() !== valueFor(v).trim() && allowed && (exampleShowing() || (!ta.value.trim() && (!blank || newer)) || (ta.value.trim() && (following() || (fromPbip && ch === 'pbip'))))) use();
     else render();
     window.addEventListener('storage', e => { if (e.key === KEY) render(); });
     window.addEventListener('sfpbi-cleared', () => { note = ''; render(); });
@@ -2379,7 +2384,8 @@ init();
     try {
       Object.keys(localStorage).filter(k => k.startsWith('sfpbi.') || S.PREFIXES.some(p => k.startsWith(p))).forEach(k => localStorage.removeItem(k));
       // each page then opens empty instead of bringing its example back
-      S.PREFIXES.forEach(p => localStorage.setItem(p + 'blank', '1'));
+      const now = String(Date.now());
+      S.PREFIXES.forEach(p => { localStorage.setItem(p + 'blank', '1'); localStorage.setItem(p + 'blankAt', now); });
     } catch (e) {}
     try { const o = indexedDB.open('sfpbi', 1); o.onupgradeneeded = () => o.result.createObjectStore('h'); o.onsuccess = () => { try { o.result.transaction('h', 'readwrite').objectStore('h').delete('pbip'); } catch (e) {} }; } catch (e) {}
     window.dispatchEvent(new Event('sfpbi-cleared'));
