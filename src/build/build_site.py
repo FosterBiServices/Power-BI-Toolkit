@@ -23,6 +23,7 @@ HOOKS={
  'model-compare':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kmc.', open: 'modelBox', connect: { step: 's1', lede: 'The model after your changes: from a PBIP folder, read straight from your project, or the export query you run in DAX query view.', exportOnly: ['#modelBox'], open: 'modelBox' } }); window.mcSuite && window.mcSuite(SF_SUITE);",
  'model-documenter':"SF_SUITE.hook({ input: 'exInput', prefix: 'kmdoc.' });",
  'kpi-visualizer':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kkv.', connect: { step: 's1', none: 'Type each KPI\u2019s measure name yourself. Names aren\u2019t checked.', exportOnly: ['#queryBox'], open: 'queryBox', lede: 'With your model, you pick KPIs from your measures (including ones in a measures table) and every name is checked before you copy the script.' } });",
+ 'chart-patterns':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kcp.', connect: { step: 's1', none: 'Type the measure and column names yourself. Names aren\\u2019t checked.', exportOnly: ['#queryBox'], open: 'queryBox', lede: 'With your model, you pick the measure and columns from lists and every name is checked before you copy the script.' } });",
  'theme-builder':"",
  'layout-designer':"",
  'power-query-explainer':"",

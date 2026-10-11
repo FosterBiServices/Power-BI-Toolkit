@@ -2745,7 +2745,8 @@ init();
     ['Design the report', [
       ['theme-builder.html', 'Theme Builder'],
       ['layout-designer.html', 'Layout Designer'],
-      ['kpi-visualizer.html', 'KPI Visualizer']]],
+      ['kpi-visualizer.html', 'KPI Visualizer'],
+      ['chart-patterns.html', 'Chart Patterns']]],
     ['Shape the data', [
       ['power-query-writer.html', 'Power Query Writer'],
       ['power-query-explainer.html', 'Power Query Explainer'],
@@ -2796,7 +2797,8 @@ init();
   S.NEXT = {
     'theme-builder.html': [['layout-designer.html', 'Plan a page with these colors'], ['kpi-visualizer.html', 'Show your KPIs in these colors']],
     'layout-designer.html': [['kpi-visualizer.html', 'Choose how to show each KPI'], ['theme-builder.html', 'Build a theme to match']],
-    'kpi-visualizer.html': [['layout-designer.html', 'Place the cards on a page'], ['kpi-measure-builder.html', 'Write the measures behind a KPI']],
+    'kpi-visualizer.html': [['layout-designer.html', 'Place the cards on a page'], ['chart-patterns.html', 'Charts of many items, with share labels or paging'], ['kpi-measure-builder.html', 'Write the measures behind a KPI']],
+    'chart-patterns.html': [['kpi-visualizer.html', 'Showing a single number? Choose a KPI card'], ['theme-builder.html', 'Set the combo chart bubble size in your theme'], ['layout-designer.html', 'Place the chart on a page']],
     'power-query-writer.html': [['power-query-explainer.html', 'Comment or clean up a query you already have'], ['date-table-generator.html', 'Add a date table']],
     'power-query-explainer.html': [['power-query-writer.html', 'Write a new query'], ['model-documenter.html', 'Document every query in the model']],
     'date-table-generator.html': [['time-intelligence-builder.html', 'Add year to date, last year and growth']],
@@ -3267,7 +3269,7 @@ init();
   };
 
   // ---------- Clear all pages: every tool's saved work, the saved export (and its history) and the remembered PBIP folder ----------
-  S.PREFIXES = ['kmb.', 'kmd.', 'kpa.', 'kdr.', 'kvq.', 'kti.', 'kfp.', 'krl.', 'kml.', 'kmc.', 'kmdoc.', 'kab.', 'kpw.', 'kpq.', 'kdt.', 'kkv.', 'ktb.', 'klo.', 'ksr.'];
+  S.PREFIXES = ['kmb.', 'kmd.', 'kpa.', 'kdr.', 'kvq.', 'kti.', 'kfp.', 'krl.', 'kml.', 'kmc.', 'kmdoc.', 'kab.', 'kpw.', 'kpq.', 'kdt.', 'kkv.', 'kcp.', 'ktb.', 'klo.', 'ksr.'];
   S.clearAll = () => {
     try {
       Object.keys(localStorage).filter(k => k.startsWith('sfpbi.') || S.PREFIXES.some(p => k.startsWith(p))).forEach(k => localStorage.removeItem(k));

@@ -20,6 +20,10 @@ const { chromium } = require('playwright');
   // font
   await p.selectOption('#font', 'Calibri'); const j = JSON.parse(await p.locator('#jsonView').textContent());
   console.log('font:', j.textClasses.title.fontFace, '| no Segoe left:', !JSON.stringify(j).includes('"Segoe UI"'), '| no placeholders:', !JSON.stringify(j).includes('themecolor'), '| dataColors', j.dataColors.length);
+  console.log('bubble default: no combo lineStyles', !(j.visualStyles.lineClusteredColumnComboChart['*'].lineStyles), '(expect true)');
+  await p.selectOption('#bubble', '30'); const jb = JSON.parse(await p.locator('#jsonView').textContent()); const cc = jb.visualStyles.lineClusteredColumnComboChart['*'];
+  console.log('bubble 30:', JSON.stringify(cc.lineStyles), '| title kept', !!cc.title, '(expect [{"markerSize":30}] true)');
+  await p.reload(); console.log('bubble saved', await p.locator('#bubble').inputValue(), '(expect 30)');
   await p.fill('#tName', 'Northwind Blue');
   const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#download')]); console.log('download', dl.suggestedFilename());
   // count / style

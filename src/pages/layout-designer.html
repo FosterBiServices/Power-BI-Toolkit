@@ -721,6 +721,9 @@ const TB = (function(){
     if (r.visual) Object.keys(vs).forEach(v => { if (v === 'page') return; const b = vs[v] && vs[v]['*'] && vs[v]['*'].background; if (Array.isArray(b)) b.forEach(x => { x.show = true; x.transparency = 0; }); });
     // Text boxes, shapes, images and buttons sit on the page, so they stay see-through
     if (r.visual) PAGE_OBJECTS.forEach(v => { const s = vs[v] = vs[v] || {}; s['*'] = s['*'] || {}; s['*'].background = [{ show: false, transparency: 100 }]; });
+    // Combo chart marker size: big enough for a marker to read as a labeled bubble over each column
+    const bub = Math.round(+o.bubble || 0);
+    if (bub > 0) { const cc = vs.lineClusteredColumnComboChart = vs.lineClusteredColumnComboChart || {}; cc['*'] = cc['*'] || {}; const ls = cc['*'].lineStyles; cc['*'].lineStyles = [Object.assign({}, Array.isArray(ls) && ls[0] || {}, { markerSize: bub })]; }
     const pg = vs.page = vs.page || {}; pg['*'] = pg['*'] || {};
     pg['*'].background = [{ color: { solid: { color: r.page } }, transparency: 0 }];
     pg['*'].outspace = [{ color: { solid: { color: r.page } }, transparency: 0 }];
