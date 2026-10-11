@@ -61,6 +61,7 @@ input:focus-visible + .filebtn,.filebtn:focus-within{outline:2px solid var(--acc
 .sgv .sg-ask{flex-basis:100%;display:flex;flex-direction:column;gap:6px;font-size:13px}
 .sgv .btn{margin-left:auto}
 .field[hidden]{display:none}
+.sg-head{grid-column:1/-1;margin:0}
 .sg-tips{grid-column:1/-1;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:10px 14px}
 .sg-tips h4{margin:0 0 6px;font-size:14px}
 .sg-tips ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.45}

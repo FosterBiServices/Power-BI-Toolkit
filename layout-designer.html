@@ -287,6 +287,7 @@ input:focus-visible + .filebtn,.filebtn:focus-within{outline:2px solid var(--acc
 .sgv .sg-ask{flex-basis:100%;display:flex;flex-direction:column;gap:6px;font-size:13px}
 .sgv .btn{margin-left:auto}
 .field[hidden]{display:none}
+.sg-head{grid-column:1/-1;margin:0}
 .sg-tips{grid-column:1/-1;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:10px 14px}
 .sg-tips h4{margin:0 0 6px;font-size:14px}
 .sg-tips ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.45}
@@ -1995,7 +1996,8 @@ function renderSuggestions(){
   const list = state.sgOut; if (!list) { $('sgOut').innerHTML = ''; return; }
   const col = state.col, st = state.look.style, zc = { '3 s': 'z3', '30 s': 'z30', '300 s': 'z300', 'Page': 'zpg' };
   const tips = (list[0] && list[0].tips) || [];
-  let h = tips.length ? '<div class="sg-tips"><h4>Design tips for your visuals</h4><ul>' + tips.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul></div>' : '';
+  let h = '<p class="sg-head note small"><b>These update as you change your answers.</b> Your page below changes only when you click <b>Use this layout</b>.</p>';
+  h += tips.length ? '<div class="sg-tips"><h4>Design tips for your visuals</h4><ul>' + tips.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul></div>' : '';
   h += list.map((v, i) => {
     const L = LO.layout(v.cfg), svg = LR.wireframe(L, v.cfg, col, st, { zones: true, font: state.look.font, ids: false });
     return '<div class="sg' + (v.recommended ? ' rec' : '') + '"><h4>' + esc(v.name) + (v.recommended ? '<span class="rec-tag">Best fit</span>' : '') + '</h4><p class="blurb">' + esc(v.blurb) + '</p>' + svg
@@ -2183,7 +2185,7 @@ function init(){
     if (/^add/.test(a) && $('edTitle')) { $('edTitle').focus(); $('edTitle').select(); }
   });
   // 3-30-300 suggestions
-  const sgSaved = () => { store.set('sg', JSON.stringify(state.sg)); renderSgNote(); if (state.sgOut) { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); } };
+  const sgSaved = () => { store.set('sg', JSON.stringify(state.sg)); renderSgNote(); state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); };
   const sgChange = () => { const g = state.sg;
     g.kpis = Math.max(0, Math.min(8, num($('sgK').value, 4))); g.targets = $('sgT').value;
     if ($('sgD').value !== 'page') g.detailTitle = ''; g.detail = $('sgD').value; g.detailRows = Math.max(3, Math.min(50, num($('sgRows').value, 10))); g.filters = Math.max(0, Math.min(8, num($('sgF').value, 3))); g.filterPlace = $('sgP').value;
