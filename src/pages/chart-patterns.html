@@ -273,6 +273,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 .cp-grp h4{margin:0;font-family:var(--cond);font-size:16px;color:var(--accent)}
 .cp-sw{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.25);vertical-align:-1px;margin-right:4px}
 .cp-pre{margin:6px 0;white-space:pre;overflow-x:auto}
+.cp-sub{margin:4px 0 0;padding-left:18px;list-style:disc}.cp-sub li{margin:2px 0}
 .cp-theme{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;padding:12px 14px;background:var(--surface)}
 .cp-theme h3{margin:0!important}
 .cp-theme p{margin:0}
@@ -1626,17 +1627,22 @@ function cpSteps(p, f, out, esc){
       b('Title') + ': your title. ' + b('Subtitle') + ': on, then select ' + b('fx') + ', Format style ' + b('Field value') + ', and pick ' + q('[' + N.subtitle + ']') + '.']]);
   }
   if (p.id === 'bubbles') {
+    const sub = list => '<ul class="cp-sub">' + list.map(x => '<li>' + x + '</li>').join('') + '</ul>';
     G.push(['Add the chart', [
-      'Add a ' + b('Line and clustered column chart') + '. Put ' + q(cpRef(cat)) + ' on the ' + b('X-axis') + ', ' + q('[' + cpMeasure(f.measure) + ']') + ' on ' + b('Column y-axis') + ', and ' + q('[' + N.marker + ']') + ' then ' + q('[' + N.label + ']') + ' on ' + b('Line y-axis') + '.',
+      'Add a ' + b('Line and clustered column chart') + '. Put ' + q(cpRef(cat)) + ' on the ' + b('X-axis') + ', ' + q('[' + cpMeasure(f.measure) + ']') + ' on ' + b('Column y-axis') + ', and ' + q('[' + N.marker + ']') + ' then ' + q('[' + N.label + ']') + ' on ' + b('Line y-axis') + '. Both of these go on the Line y-axis, not the Column y-axis.',
       'Sort it by ' + b(cpMeasure(f.measure)) + ', descending.']]);
     G.push(['Format it', [
       b('Y-axis') + ': off. In ' + b('Y-axis') + ' > ' + b('Range') + ', select ' + b('fx') + ' next to ' + b('Maximum') + ', Format style ' + b('Field value') + ', and pick ' + q('[' + N.axisMax + ']') + '. This leaves room above the columns.',
       b('Secondary y-axis') + ': off, so the bubbles use the same scale as the columns.',
       b('Legend') + ': off. ' + b('Columns') + ' > ' + b('Color') + ': ' + sw(bar) + '.',
       b('Lines') + ': for both ' + b(N.marker) + ' and ' + b(N.label) + ', turn the line off (only markers show).',
-      b('Markers') + ': on for ' + b(N.marker) + ', shape circle, color ' + sw(cpMix(bar, '#FFFFFF', 0.8)) + '. Off for ' + b(N.label) + '. Leave the marker size alone: the theme sets it (below).',
-      b('Data labels') + ': on. For ' + b(cpMeasure(f.measure)) + ': position ' + b('Outside end') + ', color ' + sw(lab) + '. For ' + b(N.marker) + ': off.',
-      'For ' + b(N.label) + ': on, position ' + b('Above') + ', size 9, and in ' + b('Value') + ' set ' + b('Field') + ' to ' + q('[' + N.pct + ']') + ', color ' + sw(lab) + '. The label lands in the bubble.',
+      b('Markers') + ': on. In ' + b('Apply settings to') + ', pick each series in turn:' + sub([
+        b(N.marker) + ': ' + b('Show for this series') + ' on, shape circle, color ' + sw(cpMix(bar, '#FFFFFF', 0.8)) + '.',
+        b(N.label) + ': ' + b('Show for this series') + ' off.']) + 'Leave the marker size alone: the theme sets it (below).',
+      b('Data labels') + ': on. In ' + b('Apply settings to') + ', pick each series in turn:' + sub([
+        b(cpMeasure(f.measure)) + ': position ' + b('Outside end') + ', color ' + sw(lab) + '.',
+        b(N.marker) + ': ' + b('Show for this series') + ' off.',
+        b(N.label) + ': ' + b('Show for this series') + ' on, position ' + b('Above') + ', size 9. In ' + b('Value') + ', set ' + b('Field') + ' to ' + q('[' + N.pct + ']') + ' (the % of total), color ' + sw(lab) + '. The % lands in the bubble.']),
       b('Title') + ': your title. ' + b('Subtitle') + ': on, ' + b('fx') + ' > ' + b('Field value') + ' > ' + q('[' + N.subtitle + ']') + '.']]);
     G.push(['Add the stems', [
       'Open the ' + b('Analytics') + ' pane (the magnifying glass) > ' + b('Error bars') + ' > series ' + b(cpMeasure(f.measure)) + ': turn it on.',

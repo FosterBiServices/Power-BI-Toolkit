@@ -43,6 +43,7 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 .cp-grp h4{margin:0;font-family:var(--cond);font-size:16px;color:var(--accent)}
 .cp-sw{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.25);vertical-align:-1px;margin-right:4px}
 .cp-pre{margin:6px 0;white-space:pre;overflow-x:auto}
+.cp-sub{margin:4px 0 0;padding-left:18px;list-style:disc}.cp-sub li{margin:2px 0}
 .cp-theme{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;padding:12px 14px;background:var(--surface)}
 .cp-theme h3{margin:0!important}
 .cp-theme p{margin:0}
