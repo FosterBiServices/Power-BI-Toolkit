@@ -1,0 +1,151 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Chart Patterns</h1>
+        <p class="lede">Bar, column and line charts with something extra: a % of total label above each bar, bubbles over the columns, a ranked list a page at a time, or a highlighted stretch of time. You get the measures as a TMDL script and the steps to build the chart in Power BI&rsquo;s own visuals. No AI needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This removes your fields, the model you connected and your color choices, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Connect your model or type your fields to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> The fields are samples (Sales by Product). Connect your model or type in any field to start with your own.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Connect your model</h2>
+        <p>With your model, you pick the measure and columns from lists and every name is checked before you copy the script.</p>
+      </div>
+        <details class="extra" id="queryBox">
+          <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+          <div class="extra-body">
+            <ol class="how">
+              <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+              <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+            </ol>
+            <div class="codebox">
+              <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+              <pre class="short" id="exportView"></pre>
+            </div>
+          </div>
+        </details>
+        <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+      <div class="stats" id="modelStats"></div>
+      <div id="modelMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">What should readers see?</h2>
+        <p>Pick a pattern. Each one uses Power BI&rsquo;s own charts, set up in a way the Format pane alone doesn&rsquo;t give you.</p>
+      </div>
+      <div class="cp-grid" id="patterns"></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Your fields</h2>
+        <p id="fieldsLede">The measure to chart and the column to chart it by.</p>
+      </div>
+      <div class="cp-fields" id="fields"></div>
+      <datalist id="measureNames"></datalist><datalist id="columnNames"></datalist><datalist id="dateNames"></datalist><datalist id="tableNames"></datalist>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Look</h2>
+        <p>Colors for the bars and the labels. The build steps use them. Pick your own, or take your brand colors from Theme Builder.</p>
+      </div>
+      <div class="cp-look">
+        <div class="cp-lookset">
+          <div class="field" id="orientWrap"><span class="lbl" id="orientLbl">Direction</span>
+            <div class="seg" role="radiogroup" aria-labelledby="orientLbl">
+              <label><input type="radio" name="orient" value="bar" id="orientBar"><span>Bars (across)</span></label>
+              <label><input type="radio" name="orient" value="column" id="orientCol"><span>Columns (up)</span></label>
+            </div>
+          </div>
+          <div class="cp-colors" id="colors"></div>
+          <div class="reply-actions"><button type="button" class="btn" id="fromTheme">Use my Theme Builder colors</button><span class="small muted" id="themeMsg"></span></div>
+          <div class="cp-extra" id="extra"></div>
+        </div>
+        <div class="cp-canvas" id="preview" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 5 -->
+  <section class="step" aria-labelledby="s5">
+    <div class="step-num">Step<b>5</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s5">Build it: <span id="buildName"></span></h2>
+        <p>Add the measures first, then build the chart. Test on a copy of your report.</p>
+      </div>
+      <div id="checks"></div>
+      <div id="outBox">
+        <h3>1. Check the measures first <span class="muted small">(DAX query view, optional)</span></h3>
+        <p class="note small">Run it after step 2 to see the new measures for each item before you build the chart.</p>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">DAX query: test</span><span class="r"><button class="btn" type="button" data-copy="test">Copy query</button></span></div>
+          <pre class="short" id="testView"></pre>
+        </div>
+        <h3>2. Add them to your model <span class="muted small">(TMDL view)</span></h3>
+        <p class="note small">In Power BI Desktop, open <b>TMDL view</b>, paste the script into a new tab and select <b>Apply</b>. <span id="tmdlNote"></span></p>
+        <div class="codebox">
+          <div class="codebox-bar"><span class="t">TMDL script</span><span class="r"><button class="btn primary" type="button" data-copy="tmdl">Copy script</button></span></div>
+          <pre class="tall" id="tmdlView"></pre>
+        </div>
+        <div id="themeStep" class="cp-theme" hidden>
+          <h3>3. Update your report theme <span class="muted small">(required for this pattern)</span></h3>
+          <div class="msg warn"><b>This chart needs a change to your report theme.</b> Power BI&rsquo;s default marker is too small to hold a label, so without this step the bubbles show as small dots. The size is set in the theme, so this changes only line and clustered column charts.</div>
+          <ol class="kv-steps cp-steps">
+            <li>In Power BI Desktop, select <b>View</b> &gt; <b>Themes</b> (the dropdown arrow) &gt; <b>Save current theme</b>, and save the .json file.</li>
+            <li>Select <b>Open your theme file</b> below and pick that file. <label class="btn cp-file">Open your theme file<input type="file" id="themeFile" accept=".json,application/json" hidden></label></li>
+            <li>Check the bubble size in Step 4 (now <b id="bubbleNow"></b>), then select <button type="button" class="btn primary" id="themeDl" disabled>Download updated theme</button> The page adds the marker size and keeps everything else in your file.</li>
+            <li>In Power BI Desktop, select <b>View</b> &gt; <b>Themes</b> &gt; <b>Browse for themes</b> and pick the downloaded file.</li>
+          </ol>
+          <div id="themeFileMsg"></div>
+          <p class="small">Made your theme in <a href="theme-builder.html">Theme Builder</a>? Set <b>Combo chart bubble size</b> in its Step 2, download it again and import that instead.</p>
+          <details class="extra"><summary>Prefer to edit the theme file yourself?</summary><div class="extra-body">
+            <ol class="kv-steps cp-steps">
+              <li>Save the current theme as above and open it in Notepad.</li>
+              <li>Find <code>"visualStyles"</code>. Inside it, look for <code>"lineClusteredColumnComboChart"</code>.</li>
+              <li>If it&rsquo;s <b>not there</b>, add this inside <code>"visualStyles"</code>, with a comma after the entry before it:
+                <div class="codebox"><div class="codebox-bar"><span class="t">JSON</span><span class="r"><button class="btn" type="button" data-copy="snippet">Copy</button></span></div><pre class="short" id="snippetView"></pre></div></li>
+              <li>If it <b>is there</b>, don&rsquo;t add a second one: a second copy replaces the first and drops its settings. Inside its <code>"*": { ... }</code>, add <code>"lineStyles": [ { "markerSize": <span class="bubbleN"></span> } ]</code> with a comma before it. If <code>"lineStyles"</code> is already there, add <code>"markerSize": <span class="bubbleN"></span></code> inside its <code>{ }</code> instead.</li>
+              <li>Save the file, then <b>View</b> &gt; <b>Themes</b> &gt; <b>Browse for themes</b> and pick it.</li>
+            </ol>
+          </div></details>
+          <p class="note small">Don&rsquo;t set a marker size on the chart in the Format pane afterwards: a size set on the chart overrides the theme. If you import a different theme later, do this again.</p>
+        </div>
+        <h3 id="stepsHead">3. Build the chart in Power BI</h3>
+        <p class="note small">Names in the Format pane can differ a little between Power BI versions. Format settings are under <b>Format your visual</b> (the paintbrush) &gt; <b>Visual</b>.</p>
+        <div class="cp-build" id="steps"></div>
+        <h3 id="checkHead">4. Check it</h3>
+        <ul class="cp-check" id="checkList"></ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your fields and choices are saved only in this browser.</footer>
+</div>

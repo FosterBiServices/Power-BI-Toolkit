@@ -138,6 +138,7 @@ Things to know:
 | power-query-explainer | kpq. | no (own export, or a PBIP folder) | yes |
 | date-table-generator | kdt. | optional | no |
 | kpi-visualizer | kkv. | optional, or a PBIP folder | no |
+| chart-patterns | kcp. | optional, or a PBIP folder | no |
 | theme-builder | ktb. | no | no |
 | layout-designer | klo. | no | no |
 | sheet-recon | ksr. (Clear entries flag only; files are never stored) | no | no |
@@ -164,6 +165,8 @@ needs internet (or set `XLSX_FILE` to a local `xlsx.full.min.js` 0.18.5).
 ## Not yet checked in real Power BI or Copilot
 
 - Prompt files in Copilot (attaching the downloaded prompt; Copilot's file reply).
+- Chart Patterns: the TMDL scripts, the Format-pane steps and the combo chart marker size in a theme
+  (written from the PBIP skills in Power-BI-Portfolio/AI/skills, not yet built by hand in Desktop).
 
 Checked on a real model in Power BI Desktop 2.158 (Oct 2026): the About This Report data
 sources query, the Model Linter dependencies query, the shared export, and Model Compare on a
