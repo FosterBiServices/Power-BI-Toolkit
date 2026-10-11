@@ -51,7 +51,7 @@ const { chromium } = require('playwright');
   // good / neutral / bad default to Excel's conditional formatting colors
   await p.evaluate(() => localStorage.clear()); await p.reload();
   const je = JSON.parse(await p.locator('#jsonView').textContent()), js = JSON.stringify(je);
-  console.log('excel default', je.good, je.neutral, je.bad, '(expect #C6EFCE #FFEB9C #FFC7CE) | dark text', js.includes('#006100'), js.includes('#9C5700'), js.includes('#9C0006'), '(expect true true true)', '| preset pressed', await p.locator('[data-sent="0"]').getAttribute('aria-pressed'), '(expect true)');
+  console.log('excel default', je.good, je.neutral, je.bad, '(expect #006100 #9C5700 #9C0006)', '| preset pressed', await p.locator('[data-sent="0"]').getAttribute('aria-pressed'), '(expect true)');
   console.log('checks:', await p.locator('#checks').innerText());
   await p.evaluate(() => document.getElementById('s3').scrollIntoView()); await p.screenshot({ path: 'tb_excel.png' });
   await p.click('[data-sent="2"]'); console.log('blue/orange', JSON.parse(await p.locator('#jsonView').textContent()).good, '(expect #1D6FA3)');

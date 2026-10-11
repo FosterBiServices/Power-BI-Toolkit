@@ -15,8 +15,8 @@ function copyText(text, btn){
 
 const BG_PRESETS = [['White', '#FFFFFF'], ['Off-white', '#F7F7F5'], ['Light grey', '#EEF0F3'], ['Dark', '#1F1F1F'], ['Navy dark', '#111827']];
 const VIS_PRESETS = [['Transparent', 'transparent'], ['White', '#FFFFFF'], ['Light grey', '#F3F4F6'], ['Soft grey', '#E9EBEE'], ['Dark grey', '#2B2B2B']];
-const SENT_PRESETS = [['Excel conditional formatting', '#C6EFCE', '#FFEB9C', '#FFC7CE'], ['Green / red', '#0F6E3A', '#8C8C8C', '#E8615A'], ['Blue / orange (color-blind safe)', '#1D6FA3', '#8C8C8C', '#E07B39']];
-const blankCfg = () => ({ name: '', seeds: ['#1F6FB2'], style: 'varied', count: 8, overrides: {}, background: '#FFFFFF', visualBg: 'transparent', textMode: 'brand', textColor: '#252423', font: 'Segoe UI', good: '#C6EFCE', neutral: '#FFEB9C', bad: '#FFC7CE', bubble: 0 });
+const SENT_PRESETS = [['Excel conditional formatting', '#006100', '#9C5700', '#9C0006'], ['Green / red', '#0F6E3A', '#8C8C8C', '#E8615A'], ['Blue / orange (color-blind safe)', '#1D6FA3', '#8C8C8C', '#E07B39']];
+const blankCfg = () => ({ name: '', seeds: ['#1F6FB2'], style: 'varied', count: 8, overrides: {}, background: '#FFFFFF', visualBg: 'transparent', textMode: 'brand', textColor: '#252423', font: 'Segoe UI', good: '#006100', neutral: '#9C5700', bad: '#9C0006', bubble: 0 });
 const EX_CFG = () => Object.assign(blankCfg(), { name: 'Contoso Retail', seeds: ['#1F6FB2', '#7A4FA3'], visualBg: '#F3F4F6' });
 const state = { example: false, cfg: blankCfg(), out: {}, alt: -1 };
 
@@ -125,7 +125,7 @@ function renderPreview(){
   const wfChart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pv-svg">' + wfs + '</svg>';
   const rows = [['North', '$1.42M', '+6.1%', 'good'], ['South', '$0.98M', '-2.4%', 'bad'], ['East', '$1.05M', '+1.2%', 'good'], ['West', '$0.76M', '0.0%', 'neutral']];
   const table = '<table class="pv-table"><thead><tr>' + ['Region', 'Sales', 'vs LY'].map(h => '<th style="background:' + dc[0] + ';color:' + r.background + '">' + h + '</th>').join('') + '</tr></thead><tbody>'
-    + rows.map(([a, b, c2, s]) => '<tr style="border-bottom:1px solid ' + r.grey10 + '"><td style="color:' + dc[0] + '">' + a + '</td><td style="color:' + dc[0] + '">' + b + '</td><td style="color:' + (s === 'good' ? r.goodText : s === 'bad' ? r.badText : r.neutralText) + ';font-weight:600' + (TB.EXCEL_FONT[r[s]] ? ';background:' + r[s] : '') + '">' + c2 + '</td></tr>').join('') + '</tbody></table>';
+    + rows.map(([a, b, c2, s]) => '<tr style="border-bottom:1px solid ' + r.grey10 + '"><td style="color:' + dc[0] + '">' + a + '</td><td style="color:' + dc[0] + '">' + b + '</td><td style="color:' + (s === 'good' ? r.goodText : s === 'bad' ? r.badText : r.neutralText) + ';font-weight:600">' + c2 + '</td></tr>').join('') + '</tbody></table>';
   const box = r.visual ? 'background:' + r.visual + ';box-shadow:0 1px 3px rgba(0,0,0,.12)' : 'background:transparent;box-shadow:none;outline:1px dashed ' + r.grey10;
   const tile = (title, body) => '<div class="pv-tile" style="' + box + '"><div class="pv-title" style="color:' + dc[0] + '">' + title + '</div>' + body + '</div>';
   $('preview').style.cssText = 'background:' + r.page + ';color:' + r.text + ';font-family:' + font;
