@@ -18,7 +18,7 @@ const VIS_PRESETS = [['Transparent', 'transparent'], ['White', '#FFFFFF'], ['Lig
 const SENT_PRESETS = [['Green / red', '#0F6E3A', '#8C8C8C', '#E8615A'], ['Blue / orange (color-blind safe)', '#1D6FA3', '#8C8C8C', '#E07B39']];
 const blankCfg = () => ({ name: '', seeds: ['#1F6FB2'], style: 'varied', count: 8, overrides: {}, background: '#FFFFFF', visualBg: 'transparent', textMode: 'brand', textColor: '#252423', font: 'Segoe UI', good: '#0F6E3A', neutral: '#8C8C8C', bad: '#E8615A', bubble: 0 });
 const EX_CFG = () => Object.assign(blankCfg(), { name: 'Contoso Retail', seeds: ['#1F6FB2', '#7A4FA3'], visualBg: '#F3F4F6' });
-const state = { example: false, cfg: blankCfg(), out: {} };
+const state = { example: false, cfg: blankCfg(), out: {}, alt: -1 };
 
 function persist(){ store.set('cfg', JSON.stringify(state.example ? blankCfg() : state.cfg)); }
 function setExample(on){ state.example = on; $('exampleBanner').hidden = !on; }
@@ -50,10 +50,28 @@ function renderSeeds(){
   $('style').value = c.style; $('count').value = String(c.count);
   if (document.activeElement !== $('tName')) $('tName').value = c.name;
 }
+// Suggested (not brand) colors get "Other options"; a shades palette is a ladder of one hue, so it has none
+const canAlt = i => state.cfg.style !== 'shades' && i >= state.cfg.seeds.length;
 function renderSwatches(){
   const c = state.cfg, dc = dataColors();
-  $('swatches').innerHTML = dc.map((h, i) => '<div class="sw' + (c.overrides[i] ? ' changed' : '') + '">' + colorRow('dc' + i, (i + 1) + (i < c.seeds.length ? ' · brand' : ''), h, badge(h, surface())) + '</div>').join('');
+  if (!canAlt(state.alt) || state.alt >= dc.length) state.alt = -1;
+  $('swatches').innerHTML = dc.map((h, i) => '<div class="sw' + (c.overrides[i] ? ' changed' : '') + '">' + colorRow('dc' + i, (i + 1) + (i < c.seeds.length ? ' · brand' : ''), h, badge(h, surface()))
+    + (canAlt(i) ? '<button type="button" class="linkbtn alt-btn" data-alt="' + i + '" aria-expanded="' + (state.alt === i) + '" aria-controls="altPanel">Other options</button>' : '') + '</div>'
+    + (state.alt === i ? '<div class="alt-panel" id="altPanel" role="region" aria-label="Other options for color ' + (i + 1) + '"></div>' : '')).join('');
+  renderAlt();
   $('resetPalette').hidden = !Object.keys(c.overrides).length;
+}
+/* Other colors for the open swatch: they fit the brand and the colors around them, so only this one changes */
+function renderAlt(){
+  const box = $('altPanel'), i = state.alt; if (!box || i < 0) return;
+  const c = state.cfg, dc = dataColors(), cur = dc[i];
+  const alts = TB.alternatives(dc, i, surface());
+  const base = TB.palette(c.seeds, +c.count || 8, c.style)[i];
+  box.innerHTML = '<div class="alt-head"><span><b>Instead of ' + esc(cur) + '</b> <span class="muted">(color ' + (i + 1) + ')</span></span><button type="button" class="ib" data-altclose aria-label="Close other options">&#10005;</button></div>'
+    + '<p class="note small">Each one suits your brand, stays clear of green, red and amber, can be seen on the background, and stands apart from your other data colors, so the rest of the palette can stay as it is.</p>'
+    + (alts.length ? '<div class="alt-list">' + alts.map(a => '<button type="button" class="alt" data-pick="' + a.hex + '"><span class="alt-dot" style="background:' + a.hex + '"></span><span class="alt-txt"><b>' + esc(a.name) + '</b> <span class="mono">' + a.hex + '</span><span class="alt-why">' + esc(a.why) + '</span></span></button>').join('') + '</div>'
+      : '<div class="msg info">Your palette is full enough that no other color stands apart from the rest. Try fewer data colors.</div>')
+    + (c.overrides[i] && base ? '<div class="reply-actions"><button type="button" class="linkbtn" data-pick="' + base + '">Go back to the suggested color, ' + base + '</button></div>' : '');
 }
 function renderSettings(){
   const c = state.cfg;
@@ -148,7 +166,7 @@ function syncValues(){
   $('textRow').hidden = c.textMode !== 'custom';
   $('resetPalette').hidden = !Object.keys(c.overrides).length;
 }
-function refresh(){ syncValues(); renderPreview(); renderOut(); }
+function refresh(){ syncValues(); renderAlt(); renderPreview(); renderOut(); }
 
 /* ---------- init ---------- */
 function setColor(key, hex){
@@ -158,7 +176,7 @@ function setColor(key, hex){
   else c[key] = h;
   return true;
 }
-function resetAll(){ state.cfg = blankCfg(); setExample(false); renderAll(); }
+function resetAll(){ state.cfg = blankCfg(); state.alt = -1; setExample(false); renderAll(); }
 function init(){
   let cfg = null; try { cfg = JSON.parse(store.get('cfg') || 'null'); } catch (e) {}
   if (cfg && store.get('blank') !== '1' && JSON.stringify(cfg) !== JSON.stringify(blankCfg())) state.cfg = Object.assign(blankCfg(), cfg);
@@ -179,6 +197,13 @@ function init(){
   $('style').addEventListener('change', () => { state.cfg.style = $('style').value; state.cfg.overrides = {}; change(true); });
   $('count').addEventListener('change', () => { state.cfg.count = +$('count').value; change(true); });
   $('resetPalette').addEventListener('click', () => { state.cfg.overrides = {}; change(true); });
+  $('swatches').addEventListener('click', e => {
+    const t = e.target.closest('[data-alt]');
+    if (t) { const i = +t.dataset.alt; state.alt = state.alt === i ? -1 : i; renderSwatches(); const f = state.alt >= 0 ? document.querySelector('#altPanel [data-pick]') : document.querySelector('[data-alt="' + i + '"]'); if (f) f.focus(); return; }
+    if (e.target.closest('[data-altclose]')) { const i = state.alt; state.alt = -1; renderSwatches(); const b = document.querySelector('[data-alt="' + i + '"]'); if (b) b.focus(); return; }
+    const pk = e.target.closest('[data-pick]');
+    if (pk && state.alt >= 0 && setColor('dc' + state.alt, pk.dataset.pick)) { change(true); const f = document.querySelector('#altPanel [data-pick]'); if (f) f.focus(); }
+  });
   $('bgPresets').addEventListener('click', e => { const b = e.target.closest('[data-bg]'); if (!b) return; state.cfg.background = b.dataset.bg; if (state.cfg.textMode === 'custom' && TB.contrast(state.cfg.textColor, surface()) < 4.5) state.cfg.textColor = TB.isDark(surface()) ? '#F3F2F1' : '#252423'; change(false); });
   $('visPresets').addEventListener('click', e => { const b = e.target.closest('[data-vis]'); if (!b) return; state.cfg.visualBg = b.dataset.vis; if (state.cfg.textMode === 'custom' && TB.contrast(state.cfg.textColor, surface()) < 4.5) state.cfg.textColor = TB.isDark(surface()) ? '#F3F2F1' : '#252423'; change(false); });
   $('sentPresets').addEventListener('click', e => { const b = e.target.closest('[data-sent]'); if (!b) return; const p = SENT_PRESETS[+b.dataset.sent]; Object.assign(state.cfg, { good: p[1], neutral: p[2], bad: p[3] }); change(false); });
