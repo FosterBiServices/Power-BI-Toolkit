@@ -30,7 +30,7 @@ const { chromium } = require('playwright');
   await p.evaluate(() => localStorage.clear()); await p.reload();
   await p.click('[data-rmseed="1"]'); await p.locator('[data-h=seed0]').fill('#386AA5');
   const pal = await p.$$eval('#swatches [data-h]', els => els.map(e => e.value));
-  console.log('palette', pal.join(' '), '| no teal:', !pal.includes('#25A79B'), '(expect true)', '| brand slot has no Other options:', await p.locator('#swatches .sw').first().locator('[data-alt]').count(), '(expect 0)');
+  console.log('palette', pal.join(' '), '| color 3', pal[2], '(expect #25A79B)', '| brand slot has no Other options:', await p.locator('#swatches .sw').first().locator('[data-alt]').count(), '(expect 0)');
   await p.click('[data-alt="2"]');
   const alts = await p.$$eval('#altPanel .alt', els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
   console.log('options for color 3:', alts.length, '(expect 3-5)'); alts.forEach(a => console.log('   ', a));

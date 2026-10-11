@@ -47,13 +47,12 @@ const TB = (function(){
     return toHex([0.29275 * r + 0.70725 * g, 0.29275 * r + 0.70725 * g, -0.02234 * r + 0.02234 * g + b].map(v => delin(clamp(v, 0, 1))));
   }
 
-  /* Suggested colors stay out of the greens, reds and ambers (OKLCH hue), which readers take as good, bad and warning.
-     Suggestions start past teal (hue 215), which reads as green next to blues. */
-  const SAFE_FROM = 215, SAFE_TO = 335;
+  /* Suggested colors stay out of the greens, reds and ambers (OKLCH hue), which readers take as good, bad and warning */
+  const SAFE_FROM = 185, SAFE_TO = 335;
   function family(h){
     const [L, C, H] = toLch(h);
     if (C < 0.04) return '';
-    if (H >= 115 && H < 200) return 'green';
+    if (H >= 115 && H < 170) return 'green';
     if (H < 45 || H >= 345) return 'red';
     if (H >= 45 && H < 110) return 'amber';
     return '';
@@ -90,7 +89,7 @@ const TB = (function(){
     const tone = L < 0.42 ? 'Dark ' : L > 0.74 ? 'Light ' : '';
     if (C < 0.045) return tone + (H > 200 && H < 300 && C > 0.015 ? 'slate' : 'grey');
     const f = family(h); if (f) return tone + f;
-    const n = H < 235 ? (L < 0.55 ? 'steel blue' : 'sky blue') : H < 268 ? 'blue' : H < 288 ? 'indigo' : H < 312 ? 'purple' : 'plum';
+    const n = H < 210 ? 'teal' : H < 235 ? (L < 0.55 ? 'steel blue' : 'sky blue') : H < 268 ? 'blue' : H < 288 ? 'indigo' : H < 312 ? 'purple' : 'plum';
     return tone + n;
   }
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
