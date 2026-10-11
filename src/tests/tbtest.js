@@ -47,6 +47,14 @@ const { chromium } = require('playwright');
   console.log('390px hscroll with options open', await p.evaluate(() => document.documentElement.scrollWidth > innerWidth), '(expect false)');
   await p.evaluate(() => document.getElementById('altPanel').scrollIntoView()); await p.screenshot({ path: 'tb_alt_mobile.png' });
   await p.setViewportSize({ width: 1250, height: 950 });
+  console.log('ratio note', (await p.locator('#s2').locator('xpath=../..').innerText()).includes('readable as text'), '(expect true)');
+  // good / neutral / bad default to Excel's conditional formatting colors
+  await p.evaluate(() => localStorage.clear()); await p.reload();
+  const je = JSON.parse(await p.locator('#jsonView').textContent()), js = JSON.stringify(je);
+  console.log('excel default', je.good, je.neutral, je.bad, '(expect #C6EFCE #FFEB9C #FFC7CE) | dark text', js.includes('#006100'), js.includes('#9C5700'), js.includes('#9C0006'), '(expect true true true)', '| preset pressed', await p.locator('[data-sent="0"]').getAttribute('aria-pressed'), '(expect true)');
+  console.log('checks:', await p.locator('#checks').innerText());
+  await p.evaluate(() => document.getElementById('s3').scrollIntoView()); await p.screenshot({ path: 'tb_excel.png' });
+  await p.click('[data-sent="2"]'); console.log('blue/orange', JSON.parse(await p.locator('#jsonView').textContent()).good, '(expect #1D6FA3)');
   // count / style
   await p.selectOption('#count', '12'); await p.selectOption('#style', 'shades'); console.log('12 shades', await p.locator('#swatches .sw').count(), '| shades have no Other options', await p.locator('[data-alt]').count(), '(expect 0)');
   await p.evaluate(() => localStorage.clear()); await p.setViewportSize({ width: 375, height: 800 }); await p.reload();

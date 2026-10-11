@@ -137,6 +137,11 @@ const TB = (function(){
     return out.map(x => ({ hex: x.hex, name: x.name, why: x.why }));
   }
 
+  /* Excel's conditional formatting fills (Green Fill with Dark Green Text, Yellow Fill with Dark Yellow Text,
+     Light Red Fill with Dark Red Text). Status text uses Excel's dark text color for that fill */
+  const EXCEL_FONT = { '#C6EFCE': '#006100', '#FFEB9C': '#9C5700', '#FFC7CE': '#9C0006' };
+  const statusText = (c, bg) => EXCEL_FONT[c] && contrast(EXCEL_FONT[c], bg) >= 4.5 ? EXCEL_FONT[c] : readable(c, bg, 4.5);
+
   /* Every color the theme uses, derived from a few choices */
   function roles(o){
     const page = norm(o.background) || '#FFFFFF';
@@ -154,7 +159,7 @@ const TB = (function(){
       grey70: mix(neutralText, bg, 0.35),   // secondary text, second-level elements
       grey45: mix(neutralText, bg, 0.55),   // light labels
       grey10: mix(neutralText, bg, 0.9),    // borders, first-level elements
-      goodText: readable(good, bg, 4.5), badText: readable(bad, bg, 4.5), neutralText: readable(neutral, bg, 4.5)
+      goodText: statusText(good, bg), badText: statusText(bad, bg), neutralText: statusText(neutral, bg)
     };
   }
 
@@ -225,6 +230,6 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { EXCEL_FONT, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/
