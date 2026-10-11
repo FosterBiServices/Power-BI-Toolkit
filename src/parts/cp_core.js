@@ -217,7 +217,7 @@ function cpSteps(p, f, out, esc){
   if (p.id === 'bubbles') {
     const sub = list => '<ul class="cp-sub">' + list.map(x => '<li>' + x + '</li>').join('') + '</ul>';
     G.push(['Add the chart', [
-      'Add a ' + b('Line and clustered column chart') + '. Put ' + q(cpRef(cat)) + ' on the ' + b('X-axis') + ', ' + q('[' + cpMeasure(f.measure) + ']') + ' on ' + b('Column y-axis') + ', and ' + q('[' + N.marker + ']') + ' then ' + q('[' + N.label + ']') + ' on ' + b('Line y-axis') + '. Both of these go on the Line y-axis, not the Column y-axis.',
+      'Add a ' + b('Line and clustered column chart') + '. Put ' + q(cpRef(cat)) + ' on the ' + b('X-axis') + ', ' + q('[' + cpMeasure(f.measure) + ']') + ' on ' + b('Column y-axis') + '. Then on the ' + b('Line y-axis') + ' place ' + q('[' + N.marker + ']') + ' and ' + q('[' + N.label + ']') + '.',
       'Sort it by ' + b(cpMeasure(f.measure)) + ', descending.']]);
     G.push(['Format it', [
       b('Y-axis') + ': off. In ' + b('Y-axis') + ' > ' + b('Range') + ', select ' + b('fx') + ' next to ' + b('Maximum') + ', Format style ' + b('Field value') + ', and pick ' + q('[' + N.axisMax + ']') + '. This leaves room above the columns.',
