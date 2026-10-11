@@ -367,6 +367,12 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
           <div class="crow" id="badRow"></div>
         </div>
       </div>
+      <div class="box">
+        <h3>Combo chart bubble size</h3>
+        <p class="note small">For a line and clustered column chart that shows a bubble with a label over each column. Power BI&rsquo;s default marker is too small for that, so the theme sets it. Only markers you turn on change, and only in that chart type.</p>
+        <div class="field"><label for="bubble">Marker size</label>
+          <select id="bubble"><option value="0">Power BI default (no change)</option><option value="20">20</option><option value="25">25</option><option value="30">30 (fits most labels)</option><option value="35">35</option><option value="40">40</option></select></div>
+      </div>
     </div>
   </section>
 
@@ -553,6 +559,9 @@ const TB = (function(){
     if (r.visual) Object.keys(vs).forEach(v => { if (v === 'page') return; const b = vs[v] && vs[v]['*'] && vs[v]['*'].background; if (Array.isArray(b)) b.forEach(x => { x.show = true; x.transparency = 0; }); });
     // Text boxes, shapes, images and buttons sit on the page, so they stay see-through
     if (r.visual) PAGE_OBJECTS.forEach(v => { const s = vs[v] = vs[v] || {}; s['*'] = s['*'] || {}; s['*'].background = [{ show: false, transparency: 100 }]; });
+    // Combo chart marker size: big enough for a marker to read as a labeled bubble over each column
+    const bub = Math.round(+o.bubble || 0);
+    if (bub > 0) { const cc = vs.lineClusteredColumnComboChart = vs.lineClusteredColumnComboChart || {}; cc['*'] = cc['*'] || {}; const ls = cc['*'].lineStyles; cc['*'].lineStyles = [Object.assign({}, Array.isArray(ls) && ls[0] || {}, { markerSize: bub })]; }
     const pg = vs.page = vs.page || {}; pg['*'] = pg['*'] || {};
     pg['*'].background = [{ color: { solid: { color: r.page } }, transparency: 0 }];
     pg['*'].outspace = [{ color: { solid: { color: r.page } }, transparency: 0 }];
@@ -603,7 +612,7 @@ function copyText(text, btn){
 const BG_PRESETS = [['White', '#FFFFFF'], ['Off-white', '#F7F7F5'], ['Light grey', '#EEF0F3'], ['Dark', '#1F1F1F'], ['Navy dark', '#111827']];
 const VIS_PRESETS = [['Transparent', 'transparent'], ['White', '#FFFFFF'], ['Light grey', '#F3F4F6'], ['Soft grey', '#E9EBEE'], ['Dark grey', '#2B2B2B']];
 const SENT_PRESETS = [['Green / red', '#0F6E3A', '#8C8C8C', '#E8615A'], ['Blue / orange (color-blind safe)', '#1D6FA3', '#8C8C8C', '#E07B39']];
-const blankCfg = () => ({ name: '', seeds: ['#1F6FB2'], style: 'varied', count: 8, overrides: {}, background: '#FFFFFF', visualBg: 'transparent', textMode: 'brand', textColor: '#252423', font: 'Segoe UI', good: '#0F6E3A', neutral: '#8C8C8C', bad: '#E8615A' });
+const blankCfg = () => ({ name: '', seeds: ['#1F6FB2'], style: 'varied', count: 8, overrides: {}, background: '#FFFFFF', visualBg: 'transparent', textMode: 'brand', textColor: '#252423', font: 'Segoe UI', good: '#0F6E3A', neutral: '#8C8C8C', bad: '#E8615A', bubble: 0 });
 const EX_CFG = () => Object.assign(blankCfg(), { name: 'Contoso Retail', seeds: ['#1F6FB2', '#7A4FA3'], visualBg: '#F3F4F6' });
 const state = { example: false, cfg: blankCfg(), out: {} };
 
@@ -616,7 +625,7 @@ function dataColors(){
   const base = TB.palette(c.seeds, +c.count || 8, c.style);
   return base.map((h, i) => TB.norm(c.overrides[i]) || h);
 }
-function opts(){ const c = state.cfg; return { name: c.name, dataColors: dataColors(), background: c.background, visualBg: c.visualBg, textMode: c.textMode, textColor: c.textColor, font: c.font, good: c.good, neutral: c.neutral, bad: c.bad }; }
+function opts(){ const c = state.cfg; return { name: c.name, dataColors: dataColors(), background: c.background, visualBg: c.visualBg, textMode: c.textMode, textColor: c.textColor, font: c.font, good: c.good, neutral: c.neutral, bad: c.bad, bubble: +c.bubble || 0 }; }
 
 // what text and chart marks sit on: the visual background, or the page when visuals are transparent
 function surface(){ const c = state.cfg; return TB.norm(c.visualBg) || TB.norm(c.background) || '#FFFFFF'; }
@@ -654,6 +663,7 @@ function renderSettings(){
   $('textRow').hidden = c.textMode !== 'custom';
   $('textRow').innerHTML = colorRow('textColor', 'Text color', c.textColor, badge(c.textColor, surface()));
   $('font').value = c.font;
+  $('bubble').value = String(+c.bubble || 0);
   $('sentPresets').innerHTML = SENT_PRESETS.map(([n, g, u, b], i) => '<button type="button" class="chip" data-sent="' + i + '" aria-pressed="' + (TB.norm(c.good) === g && TB.norm(c.bad) === b) + '"><span class="dot" style="background:' + g + '"></span><span class="dot" style="background:' + b + '"></span>' + esc(n) + '</button>').join('');
   $('goodRow').innerHTML = colorRow('good', 'Good / increase', c.good);
   $('neutralRow').innerHTML = colorRow('neutral', 'Neutral / other', c.neutral);
@@ -770,6 +780,7 @@ function init(){
   $('sentPresets').addEventListener('click', e => { const b = e.target.closest('[data-sent]'); if (!b) return; const p = SENT_PRESETS[+b.dataset.sent]; Object.assign(state.cfg, { good: p[1], neutral: p[2], bad: p[3] }); change(false); });
   $('textMode').addEventListener('change', () => { state.cfg.textMode = $('textMode').value; change(false); });
   $('font').addEventListener('change', () => { state.cfg.font = $('font').value; change(false); });
+  $('bubble').addEventListener('change', () => { state.cfg.bubble = +$('bubble').value || 0; change(false); });
   $('download').addEventListener('click', () => {
     if (!state.out.json) return;
     const url = URL.createObjectURL(new Blob([state.out.json], { type: 'application/json' }));
