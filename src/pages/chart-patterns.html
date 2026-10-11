@@ -1646,7 +1646,7 @@ function cpSteps(p, f, out, esc){
       b('Title') + ': your title. ' + b('Subtitle') + ': on, ' + b('fx') + ' > ' + b('Field value') + ' > ' + q('[' + N.subtitle + ']') + '.']]);
     G.push(['Add the stems', [
       'Open the ' + b('Analytics') + ' pane (the magnifying glass) > ' + b('Error bars') + ' > series ' + b(cpMeasure(f.measure)) + ': turn it on.',
-      'In ' + b('Options') + ', set ' + b('Upper bound') + ' to ' + q('[' + N.marker + ']') + ' and leave Lower bound empty. Turn ' + b('Make limits relative to measure') + ' off if you see it.',
+      'In ' + b('Options') + ', set ' + b('Upper bound') + ' to ' + q('[' + N.marker + ']') + ' and leave Lower bound empty. Set ' + b('Relationship to measure') + ' to ' + b('Absolute') + ', not Relative: ' + b(N.marker) + ' is the height of the bubble, not a distance above the column. (Some versions show ' + b('Make limits relative to measure') + ' instead: turn it off.)',
       b('Bar') + ': on, color ' + sw(cpMix(bar, '#FFFFFF', 0.55)) + ', width 1. ' + b('Tooltip') + ': off. The stem now runs from the top of each column up to its bubble.']]);
   }
   if (p.id === 'paging') {
