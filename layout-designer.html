@@ -547,6 +547,7 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
             </fieldset>
             <fieldset class="sq"><legend>300 s: details</legend>
               <div class="field"><label for="sgD">Individual records</label><select id="sgD"><option value="page">On this page</option><option value="drill">On a drill-through page</option><option value="none">Not needed</option></select></div>
+              <p class="small muted lim" id="sgDNote"></p>
               <div class="field sm" id="sgRowsWrap"><label for="sgRows">Rows before scrolling</label><input type="number" id="sgRows" min="3" max="50"></div>
               <div class="field sm"><label for="sgF">Filters (slicers)</label><input type="number" id="sgF" min="0" max="8"></div>
               <div class="field"><label for="sgP">Filters go</label><select id="sgP"><option value="auto">Where they fit best</option><option value="header">In the header</option><option value="side">In a side panel</option></select></div>
@@ -1954,10 +1955,16 @@ function renderEditor(){
 }
 
 /* ---------- 3-30-300 suggestions ---------- */
+// say what the 300 s choice adds, and point out a table already in the list that may be the details
+function renderSgNote(){
+  const g = state.sg, tbl = (g.visuals || []).find(v => v.type === 'tableEx' || v.type === 'pivotTable');
+  $('sgDNote').textContent = g.detail === 'page' ? 'Adds a details table to this page, on top of your visuals.' + (tbl ? ' If “' + (tbl.title || 'your table') + '” is your details table, choose Not needed.' : '') : g.detail === 'drill' ? 'Nothing extra on this page; lay out the drill-through page after.' : '';
+}
 function renderSuggestInputs(){
   const g = state.sg, set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
   set('sgK', g.kpis); $('sgT').value = g.targets;
   $('sgD').value = g.detail; set('sgRows', g.detailRows); $('sgRowsWrap').hidden = g.detail !== 'page';
+  renderSgNote();
   set('sgF', g.filters); $('sgP').value = g.filterPlace;
   renderSgList();
 }
@@ -2171,7 +2178,7 @@ function init(){
     if (/^add/.test(a) && $('edTitle')) { $('edTitle').focus(); $('edTitle').select(); }
   });
   // 3-30-300 suggestions
-  const sgSaved = () => { store.set('sg', JSON.stringify(state.sg)); if (state.sgOut) { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); } };
+  const sgSaved = () => { store.set('sg', JSON.stringify(state.sg)); renderSgNote(); if (state.sgOut) { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); } };
   const sgChange = () => { const g = state.sg;
     g.kpis = Math.max(0, Math.min(8, num($('sgK').value, 4))); g.targets = $('sgT').value;
     g.detail = $('sgD').value; g.detailRows = Math.max(3, Math.min(50, num($('sgRows').value, 10))); g.filters = Math.max(0, Math.min(8, num($('sgF').value, 3))); g.filterPlace = $('sgP').value;
