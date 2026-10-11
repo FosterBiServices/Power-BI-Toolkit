@@ -184,7 +184,7 @@ function renderEditor(){
 // say what the 300 s choice adds, and point out a table already in the list that may be the details
 function renderSgNote(){
   const g = state.sg, tbl = (g.visuals || []).find(v => v.type === 'tableEx' || v.type === 'pivotTable');
-  $('sgDNote').textContent = g.detail === 'page' ? 'Adds a details table to this page, on top of your visuals.' + (tbl ? ' If “' + (tbl.title || 'your table') + '” is your details table, choose Not needed.' : '') : g.detail === 'drill' ? 'Nothing extra on this page; lay out the drill-through page after.' : '';
+  $('sgDNote').textContent = g.detail === 'page' ? (g.detailTitle ? 'Your details table “' + g.detailTitle + '” goes on this page.' : 'Adds a details table to this page, on top of your visuals.') + (tbl && !g.detailTitle ? ' If “' + (tbl.title || 'your table') + '” is your details table, choose Not needed.' : '') : g.detail === 'drill' ? 'Nothing extra on this page; lay out the drill-through page after.' : '';
 }
 function renderSuggestInputs(){
   const g = state.sg, set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
@@ -209,7 +209,10 @@ function renderSgList(){
       + '<div class="field sm"><label for="sgvN' + i + '">Categories <span class="muted">(' + t.unit + ')</span></label><input type="number" id="sgvN' + i + '" data-k="n" min="1" max="500" value="' + esc(v.n) + '"></div>'
       + '<div class="field sm"><label for="sgvShow' + i + '">Before scrolling</label><input type="number" id="sgvShow' + i + '" data-k="show" min="1" max="500" value="' + (t.scrolls ? esc(v.show) : '') + '" placeholder="' + (t.scrolls ? 'All' : 'n/a') + '"' + (t.scrolls ? '' : ' disabled') + '></div>'
       + '<button type="button" class="btn small danger-t" data-rm="' + i + '" aria-label="Remove ' + esc(v.title || t.label) + '">Remove</button>'
-      + '<p class="small muted hint" data-hint="' + i + '">' + esc(sgHint(v)) + '</p></div>'; }).join('') : '<p class="small muted">No visuals yet. Add the charts this page needs.</p>';
+      + '<p class="small muted hint" data-hint="' + i + '">' + esc(sgHint(v)) + '</p>'
+      // a table or matrix is usually the 300-second details, not a 30-second pattern: ask
+      + ((v.type === 'tableEx' || v.type === 'pivotTable') && !v.ok30 ? '<div class="sg-ask msg info"><span>Is “' + esc(v.title || t.label) + '” your 300 s details (individual records)? In the 30 s level a ' + (v.type === 'pivotTable' ? 'matrix works as a heatmap' : 'table usually slows people down') + '.</span><span class="btns"><button type="button" class="btn small primary" data-as300="' + i + '">Yes, make it the details</button><button type="button" class="btn small" data-keep30="' + i + '">No, keep it here</button></span></div>' : '')
+      + '</div>'; }).join('') : '<p class="small muted">No visuals yet. Add the charts this page needs.</p>';
   $('sgAdd').disabled = list.length >= 8;
 }
 function renderSuggestions(){
@@ -407,7 +410,7 @@ function init(){
   const sgSaved = () => { store.set('sg', JSON.stringify(state.sg)); renderSgNote(); if (state.sgOut) { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); } };
   const sgChange = () => { const g = state.sg;
     g.kpis = Math.max(0, Math.min(8, num($('sgK').value, 4))); g.targets = $('sgT').value;
-    g.detail = $('sgD').value; g.detailRows = Math.max(3, Math.min(50, num($('sgRows').value, 10))); g.filters = Math.max(0, Math.min(8, num($('sgF').value, 3))); g.filterPlace = $('sgP').value;
+    if ($('sgD').value !== 'page') g.detailTitle = ''; g.detail = $('sgD').value; g.detailRows = Math.max(3, Math.min(50, num($('sgRows').value, 10))); g.filters = Math.max(0, Math.min(8, num($('sgF').value, 3))); g.filterPlace = $('sgP').value;
     renderSuggestInputs(); sgSaved(); };
   ['sgK', 'sgF', 'sgRows'].forEach(id => $(id).addEventListener('input', sgChange));
   ['sgT', 'sgD', 'sgP'].forEach(id => $(id).addEventListener('change', sgChange));
@@ -422,9 +425,14 @@ function init(){
   });
   $('sgList').addEventListener('change', e => {
     const t = e.target, row = t.closest('[data-i]'); if (!row) return; const i = +row.dataset.i, v = state.sg.visuals[i]; if (!v) return;
-    if (t.dataset.k === 'type') { v.type = t.value; if (!LS.vt(v.type).scrolls) v.show = ''; t.blur(); renderSgList(); sgSaved(); const n = $('sgvType' + i); if (n) n.focus(); }
+    if (t.dataset.k === 'type') { v.type = t.value; v.ok30 = false; if (!LS.vt(v.type).scrolls) v.show = ''; if ($('sgList').contains(document.activeElement)) document.activeElement.blur(); renderSgList(); sgSaved(); const n = $('sgvType' + i); if (n) n.focus(); }
   });
-  $('sgList').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (!b) return; state.sg.visuals.splice(+b.dataset.rm, 1); renderSgList(); sgSaved(); const n = $('sgList').querySelector('[data-rm]') || $('sgAdd'); n.focus(); });
+  $('sgList').addEventListener('click', e => {
+    const y = e.target.closest('[data-as300]'), k = e.target.closest('[data-keep30]'), g = state.sg;
+    // move it to the 300 s box: details on this page, named and sized from it
+    if (y) { const v = g.visuals.splice(+y.dataset.as300, 1)[0]; g.detail = 'page'; g.detailTitle = v.title || ''; g.detailRows = Math.max(3, Math.min(50, +v.show || +v.n || 10)); renderSuggestInputs(); sgSaved(); $('sgD').focus(); return; }
+    if (k) { g.visuals[+k.dataset.keep30].ok30 = true; renderSgList(); sgSaved(); return; }
+    const b = e.target.closest('[data-rm]'); if (!b) return; state.sg.visuals.splice(+b.dataset.rm, 1); renderSgList(); sgSaved(); const n = $('sgList').querySelector('[data-rm]') || $('sgAdd'); n.focus(); });
   $('sgAdd').addEventListener('click', () => { const l = state.sg.visuals; if (l.length >= 8) return; l.push({ type: 'clusteredBarChart', title: 'New visual', n: 8, show: '' }); renderSgList(); sgSaved(); const n = $('sgvType' + (l.length - 1)); if (n) n.focus(); });
   $('sgGo').addEventListener('click', () => { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); const f = $('sgOut').querySelector('[data-usesg]'); if (f) f.focus(); });
   $('sgOut').addEventListener('click', e => {

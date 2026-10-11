@@ -65,7 +65,11 @@ const { chromium } = require('playwright');
   // donut with 9 slices gets advice; non-scrolling types disable "before scrolling"
   console.log('300 s note:', await p.locator('#sgDNote').innerText());
   await p.click('#sgAdd'); await p.selectOption('#sgvType3', 'donutChart'); await p.fill('#sgvN3', '9');
-  await p.selectOption('#sgvType3', 'tableEx'); console.log('300 s note with a table:', await p.locator('#sgDNote').innerText()); await p.selectOption('#sgvType3', 'donutChart');
+  await p.selectOption('#sgvType3', 'tableEx'); console.log('300 s note with a table:', await p.locator('#sgDNote').innerText(), '| asks', await p.locator('[data-as300="3"]').count());
+  await p.click('[data-keep30="3"]'); console.log('kept in 30 s, asks', await p.locator('[data-as300]').count());
+  await p.selectOption('#sgvType3', 'pivotTable'); await p.fill('#sgvTitle3', 'County detail'); await p.click('[data-as300="3"]');
+  console.log('moved: visuals', await p.locator('#sgList .sgv').count(), '| detail', await p.locator('#sgD').inputValue(), '| note', await p.locator('#sgDNote').innerText(), '| in suggestions', await p.evaluate(() => state.sgOut[0].cfg.items.filter(i => i.zone === '300').map(i => i.title).join()));
+  await p.click('#sgAdd'); await p.selectOption('#sgvType3', 'donutChart');
   console.log('donut show disabled', await p.locator('#sgvShow3').isDisabled(), '| hint', await p.locator('[data-hint="3"]').innerText());
   await p.locator('[data-usesg="0"]').click();
   console.log('used: grid', JSON.stringify(await p.evaluate(() => state.cfg.grid)), '| page', await p.evaluate(() => state.cfg.w + 'x' + state.cfg.h), '| msgs', JSON.stringify(await p.locator('#layoutMsg').innerText()));

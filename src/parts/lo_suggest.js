@@ -36,7 +36,8 @@ const LS = (() => {
       o.visuals = v;
     }
     ['trend', 'breakdowns', 'geo', 'heatmap'].forEach(k => delete o[k]);
-    o.visuals = o.visuals.slice(0, 8).map(x => ({ type: VT[x.type] ? x.type : 'clusteredBarChart', title: String(x.title || ''), n: Math.max(1, Math.min(500, +x.n || 1)), show: x.show === '' || x.show == null || !(+x.show > 0) ? '' : Math.max(1, Math.min(500, +x.show)) }));
+    o.visuals = o.visuals.slice(0, 8).map(x => ({ type: VT[x.type] ? x.type : 'clusteredBarChart', title: String(x.title || ''), n: Math.max(1, Math.min(500, +x.n || 1)), show: x.show === '' || x.show == null || !(+x.show > 0) ? '' : Math.max(1, Math.min(500, +x.show)), ok30: !!x.ok30 }));
+    o.detailTitle = String(o.detailTitle || '');
     o.detailRows = Math.max(3, Math.min(50, +o.detailRows || 10));
     return o;
   }
@@ -77,7 +78,7 @@ const LS = (() => {
     const v30 = (inp.visuals || []).map(v => { const nd = need(v); tips.push(...nd.tips); return { type: v.type, title: v.title || vt(v.type).label, zone: '30', need: { w: nd.w, h: nd.h } }; });
     const rows = Math.max(3, Math.min(50, +inp.detailRows || 10));
     const detailNeed = { w: 560, h: 64 + rows * 24 + 26 };
-    const detail = inp.detail === 'page' ? { type: 'tableEx', title: 'Details: individual records', zone: '300', need: detailNeed } : null;
+    const detail = inp.detail === 'page' ? { type: 'tableEx', title: inp.detailTitle || 'Details: individual records', zone: '300', need: detailNeed } : null;
     const nF = Math.max(0, Math.min(8, +inp.filters | 0));
     const place = inp.filterPlace === 'auto' ? (nF <= 3 ? 'header' : 'side') : inp.filterPlace;
     return { strip, v30, detail, nF, place, nK, nT, tips, rows };
