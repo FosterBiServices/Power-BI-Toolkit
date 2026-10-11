@@ -38,8 +38,8 @@ const fs = require('fs'), path = require('path');
   console.log('subtitle uses fmt:', (await tmdl()).includes('FORMAT ( _value, "\\$#,0" )'));
   await p.fill('#f_category', "'Product'[Colour]"); console.log('bad column:', await p.locator('#checks .msg.err').innerText());
   await p.fill('#f_category', "'Product'[Category]");
-  await p.click('[data-pick=paging]'); await p.fill('#f_item', "'Customer'[Customer Name]"); await p.fill('#f_key', "'Customer'[CustomerKey]");
-  console.log('paging checks:', (await p.locator('#checks').innerText()).slice(0, 80), '| ALL keys', (await tmdl()).includes("ALL ( 'Customer'[CustomerKey], 'Customer'[Customer Name] )"));
+  await p.click('[data-pick=paging]'); await p.fill('#f_item', "'Customer'[Customer Name]");
+  console.log('paging checks:', (await p.locator('#checks').innerText()).slice(0, 80), '| unique rank', (await tmdl()).includes("ORDERBY ( [Total Sales], DESC, 'Customer'[Customer Name], ASC )"), '| page count', (await tmdl()).includes("FILTER ( ALL ( 'Customer'[Customer Name] ), NOT ISBLANK ( [Total Sales] ) )"), '(expect true true)');
   await p.reload(); console.log('saved after reload: measure', await p.locator('#f_measure').inputValue(), '| pattern', await p.locator('.cp-opt.on h3').innerText());
   // clear entries
   await p.click('#clearEntries'); await p.click('#clearYes'); await p.reload();

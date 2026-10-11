@@ -50,7 +50,7 @@ const CP_PATTERNS = [
 ];
 const cpPattern = id => CP_PATTERNS.find(p => p.id === id) || CP_PATTERNS[0];
 
-const CP_DEF = { measure: 'Sales', fmt: '', category: "'Product'[Category]", item: "'Customer'[Customer Name]", key: '', date: "'Date'[Date]", axis: "'Date'[Month]",
+const CP_DEF = { measure: 'Sales', fmt: '', category: "'Product'[Category]", item: "'Customer'[Customer Name]", date: "'Date'[Date]", axis: "'Date'[Month]",
   table: '_Measures', folder: 'Chart Patterns', orient: 'bar', pct: '0.0%', headroom: 20, perPage: 5, maxItems: 20, maxPages: 50, bubble: 30,
   bar: '#1F6FB2', accent: '#5B4B9A', label: '#404040' };
 
@@ -61,7 +61,7 @@ function cpNames(p, f){
   if (p.id === 'labels') Object.assign(N, { spacer: v + ' Label Spacer', selected: 'Selected ' + cat });
   if (p.id === 'stacked') Object.assign(N, { spacer: v + ' % Spacer' });
   if (p.id === 'bubbles') Object.assign(N, { label: v + ' Bubble Label', marker: v + ' Bubble Position', axisMax: v + ' Bubble Axis Max' });
-  if (p.id === 'paging') Object.assign(N, { alpha: it + ' Alphabetical Rank', rank: it + ' Rank', rankLabel: it + ' Rank Label', spacer: v + ' Rank Badge',
+  if (p.id === 'paging') Object.assign(N, { rank: it + ' Rank', rankLabel: it + ' Rank Label', spacer: v + ' Rank Badge',
     axisMax: v + ' Page Axis Max', axisMin: v + ' Page Axis Min', subtitle: v + ' Page Subtitle',
     itemsTable: 'Items per Page', itemsValue: 'Items per Page Value', itemFilter: 'Item Filter', pagesTable: 'Page Number', pagesValue: 'Page Number Value', pageFilter: 'Page Filter' });
   if (p.id === 'window') Object.assign(N, { dates: 'Window Dates', start: 'Window Start', end: 'Window End', calc: 'In Window' });
@@ -75,13 +75,11 @@ function cpCheck(p, f, model){
   if (!v) add('err', 'Enter the measure to chart.');
   const cols = { category: 'the category column', item: 'the column with the items to rank', date: 'the date column for the slicer', axis: 'the date column on the chart’s axis' };
   p.needs.filter(n => cols[n]).forEach(n => { if (!cpCol(f[n])) add('err', 'Enter ' + cols[n] + ' as \'Table\'[Column].'); });
-  if (p.id === 'paging' && f.key && !cpCol(f.key)) add('err', 'Enter the key column as \'Table\'[Column], or leave it empty.');
   if (!model) return out;
   const hasM = n => model.measures.some(m => lc(m.name) === lc(n));
   const hasC = c => c && model.columns.some(x => lc(x.table) === lc(c.table) && lc(x.name) === lc(c.column));
   if (v && !hasM(v)) add('err', 'The model has no measure called [' + v + '].');
   p.needs.filter(n => cols[n]).forEach(n => { const c = cpCol(f[n]); if (c && !hasC(c)) add('err', 'The model has no column ' + cpRef(c) + '.'); });
-  if (p.id === 'paging' && cpCol(f.key) && !hasC(cpCol(f.key))) add('err', 'The model has no column ' + cpRef(cpCol(f.key)) + '.');
   if (f.table.trim() && !model.tables.some(t => lc(t.name) === lc(f.table.trim()))) add('err', 'The model has no table called ' + f.table.trim() + ' for the new measures.');
   const N = cpNames(p, f), taken = Object.keys(N).filter(k => !/Table$|^dates$|^calc$/.test(k)).map(k => N[k]).filter(hasM);
   if (taken.length) add('warn', 'The model already has ' + taken.map(x => '[' + x + ']').join(', ') + '. The script replaces ' + (taken.length > 1 ? 'them' : 'it') + '.');
@@ -100,7 +98,7 @@ function tableReaches(model, a, b){
 /* ---------- measures and tables ---------- */
 function cpOut(p, f){
   const N = cpNames(p, f), V = bracket(cpMeasure(f.measure)), fmt = (f.fmt || '#,0').replace(/"/g, '');
-  const cat = cpCol(f.category), it = cpCol(f.item), key = cpCol(f.key);
+  const cat = cpCol(f.category), it = cpCol(f.item);
   const M = [], T = [], m = (name, expression, formatString) => M.push({ name, expression, formatString: formatString || '' });
   const pct = (all) => m(N.pct, 'DIVIDE ( ' + V + ', CALCULATE ( ' + V + ', ' + all + ' ) )', f.pct || '0.0%');
   const subtitle = (lead, total) => m(N.subtitle, 'VAR _value = ' + total + '\nRETURN\n' + cpDaxStr(lead) + ' & FORMAT ( _value, ' + cpDaxStr(fmt) + ' )');
@@ -125,22 +123,22 @@ function cpOut(p, f){
     subtitle(vName + ' (all ' + lc(cat.column) + '): ', 'CALCULATE ( ' + V + ', REMOVEFILTERS ( ' + cpRef(cat) + ' ) )');
   }
   if (p.id === 'paging') {
-    const keys = key && !(lc(key.table) === lc(it.table) && lc(key.column) === lc(it.column)) ? cpRef(key) + ', ' + cpRef(it) : cpRef(it);
-    const rankAll = 'RANKX ( ALL ( ' + keys + ' ), ' + V + ' ) - DIVIDE ( ' + bracket(N.alpha) + ', 1000000 )';
-    m(N.alpha, 'VAR _current = SELECTEDVALUE ( ' + cpRef(it) + ' )\nRETURN\n    COUNTROWS ( FILTER ( ALL ( ' + cpRef(it) + ' ), ' + cpRef(it) + ' <= _current ) )', '0');
-    m(N.rank, 'IF ( ISBLANK ( ' + V + ' ), BLANK (),\n    ' + rankAll + '\n)', '0');
-    m(N.rankLabel, 'IF ( ISBLANK ( ' + V + ' ), BLANK (),\n    "#" & FORMAT ( ' + rankAll + ', "#,0" )\n)');
+    // A unique rank with no gaps: ties are broken by name, so every page holds exactly its share.
+    // ALL ( item ) keeps the rank from following the chart's own Item Filter.
+    const I = cpRef(it);
+    m(N.rank, 'IF (\n    ISBLANK ( ' + V + ' ) || NOT HASONEVALUE ( ' + I + ' ),\n    BLANK (),\n    RANK (\n        ALL ( ' + I + ' ),\n        ORDERBY ( ' + V + ', DESC, ' + I + ', ASC )\n    )\n)', '0');
+    m(N.rankLabel, 'VAR _rank = ' + bracket(N.rank) + '\nRETURN\n    IF ( ISBLANK ( _rank ), BLANK (), "#" & FORMAT ( _rank, "#,0" ) )');
     m(N.axisMax, 'CALCULATE ( MAXX ( VALUES ( ' + cpRef(it) + ' ), ' + V + ' ), REMOVEFILTERS ( ' + cpTbl(it.table) + ' ) ) * 1.15', '0');
     m(N.axisMin, '-0.2 * ' + bracket(N.axisMax), '0');
     m(N.spacer, 'IF ( ISBLANK ( ' + V + ' ), BLANK (), -0.15 * ' + bracket(N.axisMax) + ' )');
-    m(N.subtitle, 'VAR _all = CALCULATE ( ' + V + ', REMOVEFILTERS ( ' + keys + ' ) )\nRETURN\n    "Shown: " & FORMAT ( ' + V + ', ' + cpDaxStr(fmt) + ' ) & " | All: " & FORMAT ( _all, ' + cpDaxStr(fmt) + ' )');
+    m(N.subtitle, 'VAR _all = CALCULATE ( ' + V + ', REMOVEFILTERS ( ' + I + ' ) )\nRETURN\n    "Shown: " & FORMAT ( ' + V + ', ' + cpDaxStr(fmt) + ' ) & " | All: " & FORMAT ( _all, ' + cpDaxStr(fmt) + ' )');
     const per = Math.max(1, Math.round(+f.perPage || 5)), maxI = Math.max(per, Math.round(+f.maxItems || 20)), maxP = Math.max(2, Math.round(+f.maxPages || 50));
     T.push({ name: N.itemsTable, column: N.itemsTable, source: 'GENERATESERIES ( 1, ' + maxI + ', 1 )', measures: [
       { name: N.itemsValue, expression: 'SELECTEDVALUE ( ' + cpTbl(N.itemsTable) + bracket(N.itemsTable) + ', ' + per + ' )', formatString: '0' },
       { name: N.itemFilter, expression: 'VAR _page = ' + bracket(N.pagesValue) + '\nVAR _items = ' + bracket(N.itemsValue) + '\nVAR _rank = ' + bracket(N.rank) + '\nRETURN\n    IF ( ISBLANK ( ' + V + ' ), 0,\n        IF ( _rank > ( _page - 1 ) * _items && _rank <= _page * _items, 1, 0 )\n    )', formatString: '0' }] });
     T.push({ name: N.pagesTable, column: N.pagesTable, source: 'GENERATESERIES ( 1, ' + maxP + ', 1 )', measures: [
       { name: N.pagesValue, expression: 'SELECTEDVALUE ( ' + cpTbl(N.pagesTable) + bracket(N.pagesTable) + ', 1 )', formatString: '0' },
-      { name: N.pageFilter, expression: 'VAR _count =\n    COUNTROWS ( FILTER ( ALLSELECTED ( ' + cpRef(it) + ' ), ' + V + ' > 0 ) )\nVAR _pages = ROUNDUP ( DIVIDE ( _count, ' + bracket(N.itemsValue) + ' ), 0 )\nRETURN\n    IF ( SELECTEDVALUE ( ' + cpTbl(N.pagesTable) + bracket(N.pagesTable) + ' ) <= _pages, 1, 0 )', formatString: '0' }] });
+      { name: N.pageFilter, expression: 'VAR _count =\n    COUNTROWS ( FILTER ( ALL ( ' + I + ' ), NOT ISBLANK ( ' + V + ' ) ) )\nVAR _pages = ROUNDUP ( DIVIDE ( _count, ' + bracket(N.itemsValue) + ' ), 0 )\nRETURN\n    IF ( SELECTEDVALUE ( ' + cpTbl(N.pagesTable) + bracket(N.pagesTable) + ' ) <= _pages, 1, 0 )', formatString: '0' }] });
   }
   if (p.id === 'window') {
     const d = cpCol(f.date), dc = { table: N.dates, column: d.column };
@@ -179,7 +177,7 @@ function cpTest(p, f, out){
   if (p.id === 'labels') return by(cpCol(f.category), [N.spacer, N.selected, N.pct]);
   if (p.id === 'stacked') return by(cpCol(f.category), [N.spacer, N.pct]);
   if (p.id === 'bubbles') return by(cpCol(f.category), [N.pct, N.label, N.marker, N.axisMax]);
-  if (p.id === 'paging') return by(cpCol(f.item), [N.rank, N.rankLabel, N.spacer, N.axisMax, N.axisMin]).replace('One row per item.', 'One row per item. Rank should run 1, 2, 3 with no ties.');
+  if (p.id === 'paging') return by(cpCol(f.item), [N.rank, N.rankLabel, N.spacer, N.axisMax, N.axisMin]).replace('One row per item.', 'One row per item. Rank should run 1, 2, 3 with no repeats or gaps.');
   return ['// Run in DAX query view after applying the script.', '// Start and End should be the first and last dates in ' + N.dates + '.', 'EVALUATE', 'ROW (', TAB + '"Start", ' + bracket(N.start) + ',', TAB + '"End", ' + bracket(N.end) + ',', TAB + '"Dates", COUNTROWS ( ' + cpTbl(N.dates) + ' )', ')'].join('\n');
 }
 

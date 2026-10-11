@@ -15,12 +15,12 @@ function hl(code){
   return esc(code).split('\n').map(l => {
     if (/^\s*\/\//.test(l)) return '<span class="tok-com">' + l + '</span>';
     return l.replace(/(&quot;(?:[^&]|&(?!quot;))*?&quot;)/g, '<span class="tok-str">$1</span>')
-      .replace(/\b(createOrReplace|ref|table|column|measure|partition|calculated|EVALUATE|SUMMARIZECOLUMNS|ORDER BY|ROW|VAR|RETURN|IF|FORMAT|DIVIDE|CALCULATE|ALLSELECTED|REMOVEFILTERS|SELECTEDVALUE|MAXX|MIN|MAX|RANKX|ALL|FILTER|COUNTROWS|VALUES|GENERATESERIES|ISBLANK|BLANK|displayFolder|formatString|sourceColumn|dataType|summarizeBy|mode|source)\b/g, '<span class="tok-kw">$1</span>');
+      .replace(/\b(createOrReplace|ref|table|column|measure|partition|calculated|EVALUATE|SUMMARIZECOLUMNS|ORDER BY|ROW|VAR|RETURN|IF|FORMAT|DIVIDE|CALCULATE|ALLSELECTED|REMOVEFILTERS|SELECTEDVALUE|MAXX|MIN|MAX|RANKX|RANK|ORDERBY|HASONEVALUE|DESC|ASC|ALL|FILTER|COUNTROWS|VALUES|GENERATESERIES|ISBLANK|BLANK|displayFolder|formatString|sourceColumn|dataType|summarizeBy|mode|source)\b/g, '<span class="tok-kw">$1</span>');
   }).join('\n');
 }
 const clone = o => JSON.parse(JSON.stringify(o));
 const EX_KEYS = ['measure', 'category', 'item', 'date', 'axis'];
-const blankCfg = () => { const c = Object.assign({ pattern: 'labels' }, clone(CP_DEF)); EX_KEYS.concat(['key', 'fmt']).forEach(k => { c[k] = ''; }); return c; };
+const blankCfg = () => { const c = Object.assign({ pattern: 'labels' }, clone(CP_DEF)); EX_KEYS.concat(['fmt']).forEach(k => { c[k] = ''; }); return c; };
 const exCfg = () => Object.assign({ pattern: 'labels' }, clone(CP_DEF), { fmt: '\\$#,0' });
 const state = { example: false, model: null, cfg: blankCfg(), out: {}, page: 1, theme: null };
 
@@ -75,8 +75,7 @@ function renderPatterns(){
 const FIELD_DEFS = {
   measure: ['Measure to chart', 'Sales', 'measureNames'],
   category: ['Category column', "'Product'[Category]", 'columnNames'],
-  item: ['Items to rank', "'Customer'[Customer Name]", 'columnNames'],
-  key: ['Key column <span class="muted">(optional, if names repeat)</span>', "'Customer'[Customer Key]", 'columnNames'],
+  item: ['Items to rank <span class="muted">(one name per item)</span>', "'Customer'[Customer Name]", 'columnNames'],
   date: ['Date column for the slicer', "'Date'[Date]", 'dateNames'],
   axis: ['Date column on the chart&rsquo;s axis', "'Date'[Month]", 'columnNames'],
   fmt: ['Number format for the subtitle', '\\$#,0', ''],
@@ -86,7 +85,6 @@ const FIELD_DEFS = {
 };
 function fieldKeys(p){
   const k = p.needs.slice();
-  if (p.id === 'paging') k.splice(2, 0, 'key');
   if (['labels', 'stacked', 'bubbles', 'paging'].includes(p.id)) k.push('fmt');
   if (p.group === 'share') k.push('pct');
   return k.concat(['table', 'folder']);
