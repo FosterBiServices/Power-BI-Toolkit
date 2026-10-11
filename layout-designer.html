@@ -702,6 +702,60 @@ const TB = (function(){
     return out;
   }
 
+  /* A plain name for a color, for the alternatives list */
+  function colorName(h){
+    const [L, C, H] = toLch(h);
+    const tone = L < 0.42 ? 'Dark ' : L > 0.74 ? 'Light ' : '';
+    if (C < 0.045) return tone + (H > 200 && H < 300 && C > 0.015 ? 'slate' : 'grey');
+    const f = family(h); if (f) return tone + f;
+    const n = H < 210 ? 'teal' : H < 235 ? (L < 0.55 ? 'steel blue' : 'sky blue') : H < 268 ? 'blue' : H < 288 ? 'indigo' : H < 312 ? 'purple' : 'plum';
+    return tone + n;
+  }
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  /* Other colors for data color i, for when the suggested one doesn't suit.
+     Each one fits the brand, stays out of green, red and amber, can be seen on the background
+     (3:1, the minimum for chart marks) and stands apart from every other data color, so the rest can stay. */
+  function alternatives(colors, i, bg, k){
+    colors = colors.map(norm); bg = norm(bg) || '#FFFFFF'; k = k || 5;
+    const cur = colors[i], brand = colors[0], others = colors.filter((c, j) => j !== i && c);
+    if (!cur || !brand) return [];
+    const [Lc] = toLch(cur), [Lb, Cb, Hb] = toLch(brand);
+    const Ct = clamp(Cb, 0.09, 0.16), dark = isDark(bg);
+    const minD = c => others.length ? Math.min(...others.map(o => deltaE(o, c))) : 99;
+    const out = [];
+    // strict first (3:1 contrast, well apart); relaxed only to fill the list when the palette is crowded,
+    // and never less apart from the others than the color it replaces
+    let need = 3, gap = 10;
+    const curD = minD(cur);
+    const ok = c => c && !family(c) && contrast(c, bg) >= need && deltaE(c, cur) >= 8 && minD(c) >= gap && out.every(x => deltaE(x.hex, c) >= 9);
+    const add = (c, why) => { if (out.length < k && ok(c)) { out.push({ hex: c, name: cap(colorName(c)), why }); return true; } return false; };
+    const Ls = [0, -0.07, 0.07, -0.14, 0.14].map(d => clamp(Lc + d, 0.3, 0.88));
+    // the most distinct from the other colors, preferring a lightness close to the color it replaces
+    const best = (pool, why) => {
+      const scored = pool.filter(ok).map(c => [c, minD(c) - Math.abs(toLch(c)[0] - Lc) * 40]);
+      scored.sort((x, y) => y[1] - x[1]); return scored.length ? add(scored[0][0], why) : false;
+    };
+    const inSafe = h => h >= SAFE_FROM && h <= SAFE_TO;
+    const pool = []; for (let h = SAFE_FROM; h <= SAFE_TO; h += 5) Ls.forEach(L => pool.push(fromLch(L, Ct, h)));
+    const APART = 'Stands apart from your other data colors, so its series is easy to pick out';
+    for (const [n, g] of [[3, 10], [2.2, Math.min(7, curD)]]) {
+      need = n; gap = g;
+      // 1. a lighter or darker shade of the brand: always goes with it
+      const lighter = dark ? Lb < 0.7 : Lb < 0.5;
+      if (!out.some(x => x.shade)) for (const d of [0.14, 0.2, 0.26, 0.32]) if (add(fromLch(clamp(Lb + (lighter ? d : -d), 0.3, 0.9), Cb * (lighter ? 0.85 : 1), Hb), (lighter ? 'A lighter' : 'A darker') + ' shade of your brand color, so it always goes with it')) { out[out.length - 1].shade = true; break; }
+      // 2. next to the brand on the color wheel
+      if (!family(brand) && !out.some(x => x.near)) { const near = [30, -30, 45, -45, 60, -60].map(d => (Hb + d + 360) % 360).filter(inSafe); if (best(near.flatMap(h => Ls.map(L => fromLch(L, Ct, h))), 'Next to your brand color on the color wheel, so the two sit well together')) out[out.length - 1].near = true; }
+      // 3. hues that stand apart from everything already in the palette
+      for (let m = 0; m < 2; m++) best(pool, APART);
+      // 4. a quiet slate in the brand's hue: good for a total, a target or an "other" series
+      if (!out.some(x => x.slate) && best(Ls.map(L => fromLch(L, 0.035, Hb)), 'A quiet grey in your brand\u2019s hue, for a less important series such as Other or a target')) out[out.length - 1].slate = true;
+      while (out.length < k && best(pool, APART));
+      if (out.length >= k) break;
+    }
+    return out.map(x => ({ hex: x.hex, name: x.name, why: x.why }));
+  }
+
   /* Every color the theme uses, derived from a few choices */
   function roles(o){
     const page = norm(o.background) || '#FFFFFF';
@@ -790,7 +844,7 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { family, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/
 

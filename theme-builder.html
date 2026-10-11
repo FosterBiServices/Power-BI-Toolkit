@@ -284,6 +284,18 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
 .out-head{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
 .out-head .btns{display:flex;gap:8px;flex-wrap:wrap}
 .fname{font-family:var(--mono);font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.swatches{grid-auto-flow:dense}
+.sw .alt-btn{margin-top:6px;font-size:12.5px}
+.alt-panel{grid-column:1/-1;border:1px solid var(--accent);border-radius:12px;background:var(--surface-2);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.alt-panel .note{margin:0}
+.alt-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.alt-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.alt{display:flex;gap:10px;align-items:flex-start;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px 10px;cursor:pointer;color:var(--ink);font:inherit;font-size:13px}
+.alt:hover,.alt:focus-visible{border-color:var(--accent)}
+.alt-dot{flex:none;width:34px;height:34px;border-radius:8px;border:1px solid rgba(0,0,0,.15)}
+.alt-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.alt-txt .mono{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.alt-why{font-size:12px;color:var(--muted)}
 
 </style>
 </head>
@@ -337,9 +349,10 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
     <div class="step-body">
       <div class="step-head">
         <h2 id="s2">Fine-tune</h2>
-        <p>Change any data color, and choose the page and visual backgrounds, text, good and bad colors and the font. Everything else in the theme follows from these.</p>
+        <p>Change any data color. Don&rsquo;t like a suggested one? <b>Other options</b> under it lists colors that fit instead. Then choose the page and visual backgrounds, text, good and bad colors and the font. Everything else in the theme follows from these.</p>
       </div>
       <h3>Data colors <span class="muted small">(series colors, in order)</span></h3>
+      <p class="note small">The ratio on each color is its contrast with the background it sits on: how much it stands out, from 1:1 (invisible) to 21:1 (black on white). <span class="cr ok">4.5:1</span> or more is readable as text, such as titles and labels. <span class="cr warn">3:1</span> to 4.5:1 is fine for bars, lines and slices, but too light for text. <span class="cr err">Under 3:1</span> is hard to see; keep it for big shapes or less important series.</p>
       <div class="swatches" id="swatches"></div>
       <div class="reply-actions"><button type="button" class="linkbtn" id="resetPalette">Undo my changes to the data colors</button></div>
 
@@ -360,7 +373,7 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
         </div>
         <div class="box">
           <h3>Good, neutral and bad</h3>
-          <p class="note small">Used for waterfall increases and decreases, KPI status, and conditional formatting.</p>
+          <p class="note small">Used for waterfall increases and decreases, KPI status, and conditional formatting. The default is the dark green, dark yellow and dark red text colors from Excel&rsquo;s conditional formatting.</p>
           <div class="chips" id="sentPresets" role="group" aria-label="Good and bad presets"></div>
           <div class="crow" id="goodRow"></div>
           <div class="crow" id="neutralRow"></div>
@@ -502,6 +515,60 @@ const TB = (function(){
     return out;
   }
 
+  /* A plain name for a color, for the alternatives list */
+  function colorName(h){
+    const [L, C, H] = toLch(h);
+    const tone = L < 0.42 ? 'Dark ' : L > 0.74 ? 'Light ' : '';
+    if (C < 0.045) return tone + (H > 200 && H < 300 && C > 0.015 ? 'slate' : 'grey');
+    const f = family(h); if (f) return tone + f;
+    const n = H < 210 ? 'teal' : H < 235 ? (L < 0.55 ? 'steel blue' : 'sky blue') : H < 268 ? 'blue' : H < 288 ? 'indigo' : H < 312 ? 'purple' : 'plum';
+    return tone + n;
+  }
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  /* Other colors for data color i, for when the suggested one doesn't suit.
+     Each one fits the brand, stays out of green, red and amber, can be seen on the background
+     (3:1, the minimum for chart marks) and stands apart from every other data color, so the rest can stay. */
+  function alternatives(colors, i, bg, k){
+    colors = colors.map(norm); bg = norm(bg) || '#FFFFFF'; k = k || 5;
+    const cur = colors[i], brand = colors[0], others = colors.filter((c, j) => j !== i && c);
+    if (!cur || !brand) return [];
+    const [Lc] = toLch(cur), [Lb, Cb, Hb] = toLch(brand);
+    const Ct = clamp(Cb, 0.09, 0.16), dark = isDark(bg);
+    const minD = c => others.length ? Math.min(...others.map(o => deltaE(o, c))) : 99;
+    const out = [];
+    // strict first (3:1 contrast, well apart); relaxed only to fill the list when the palette is crowded,
+    // and never less apart from the others than the color it replaces
+    let need = 3, gap = 10;
+    const curD = minD(cur);
+    const ok = c => c && !family(c) && contrast(c, bg) >= need && deltaE(c, cur) >= 8 && minD(c) >= gap && out.every(x => deltaE(x.hex, c) >= 9);
+    const add = (c, why) => { if (out.length < k && ok(c)) { out.push({ hex: c, name: cap(colorName(c)), why }); return true; } return false; };
+    const Ls = [0, -0.07, 0.07, -0.14, 0.14].map(d => clamp(Lc + d, 0.3, 0.88));
+    // the most distinct from the other colors, preferring a lightness close to the color it replaces
+    const best = (pool, why) => {
+      const scored = pool.filter(ok).map(c => [c, minD(c) - Math.abs(toLch(c)[0] - Lc) * 40]);
+      scored.sort((x, y) => y[1] - x[1]); return scored.length ? add(scored[0][0], why) : false;
+    };
+    const inSafe = h => h >= SAFE_FROM && h <= SAFE_TO;
+    const pool = []; for (let h = SAFE_FROM; h <= SAFE_TO; h += 5) Ls.forEach(L => pool.push(fromLch(L, Ct, h)));
+    const APART = 'Stands apart from your other data colors, so its series is easy to pick out';
+    for (const [n, g] of [[3, 10], [2.2, Math.min(7, curD)]]) {
+      need = n; gap = g;
+      // 1. a lighter or darker shade of the brand: always goes with it
+      const lighter = dark ? Lb < 0.7 : Lb < 0.5;
+      if (!out.some(x => x.shade)) for (const d of [0.14, 0.2, 0.26, 0.32]) if (add(fromLch(clamp(Lb + (lighter ? d : -d), 0.3, 0.9), Cb * (lighter ? 0.85 : 1), Hb), (lighter ? 'A lighter' : 'A darker') + ' shade of your brand color, so it always goes with it')) { out[out.length - 1].shade = true; break; }
+      // 2. next to the brand on the color wheel
+      if (!family(brand) && !out.some(x => x.near)) { const near = [30, -30, 45, -45, 60, -60].map(d => (Hb + d + 360) % 360).filter(inSafe); if (best(near.flatMap(h => Ls.map(L => fromLch(L, Ct, h))), 'Next to your brand color on the color wheel, so the two sit well together')) out[out.length - 1].near = true; }
+      // 3. hues that stand apart from everything already in the palette
+      for (let m = 0; m < 2; m++) best(pool, APART);
+      // 4. a quiet slate in the brand's hue: good for a total, a target or an "other" series
+      if (!out.some(x => x.slate) && best(Ls.map(L => fromLch(L, 0.035, Hb)), 'A quiet grey in your brand\u2019s hue, for a less important series such as Other or a target')) out[out.length - 1].slate = true;
+      while (out.length < k && best(pool, APART));
+      if (out.length >= k) break;
+    }
+    return out.map(x => ({ hex: x.hex, name: x.name, why: x.why }));
+  }
+
   /* Every color the theme uses, derived from a few choices */
   function roles(o){
     const page = norm(o.background) || '#FFFFFF';
@@ -590,7 +657,7 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { family, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/
 
@@ -611,10 +678,10 @@ function copyText(text, btn){
 
 const BG_PRESETS = [['White', '#FFFFFF'], ['Off-white', '#F7F7F5'], ['Light grey', '#EEF0F3'], ['Dark', '#1F1F1F'], ['Navy dark', '#111827']];
 const VIS_PRESETS = [['Transparent', 'transparent'], ['White', '#FFFFFF'], ['Light grey', '#F3F4F6'], ['Soft grey', '#E9EBEE'], ['Dark grey', '#2B2B2B']];
-const SENT_PRESETS = [['Green / red', '#0F6E3A', '#8C8C8C', '#E8615A'], ['Blue / orange (color-blind safe)', '#1D6FA3', '#8C8C8C', '#E07B39']];
-const blankCfg = () => ({ name: '', seeds: ['#1F6FB2'], style: 'varied', count: 8, overrides: {}, background: '#FFFFFF', visualBg: 'transparent', textMode: 'brand', textColor: '#252423', font: 'Segoe UI', good: '#0F6E3A', neutral: '#8C8C8C', bad: '#E8615A', bubble: 0 });
+const SENT_PRESETS = [['Excel conditional formatting', '#006100', '#9C5700', '#9C0006'], ['Green / red', '#0F6E3A', '#8C8C8C', '#E8615A'], ['Blue / orange (color-blind safe)', '#1D6FA3', '#8C8C8C', '#E07B39']];
+const blankCfg = () => ({ name: '', seeds: ['#1F6FB2'], style: 'varied', count: 8, overrides: {}, background: '#FFFFFF', visualBg: 'transparent', textMode: 'brand', textColor: '#252423', font: 'Segoe UI', good: '#006100', neutral: '#9C5700', bad: '#9C0006', bubble: 0 });
 const EX_CFG = () => Object.assign(blankCfg(), { name: 'Contoso Retail', seeds: ['#1F6FB2', '#7A4FA3'], visualBg: '#F3F4F6' });
-const state = { example: false, cfg: blankCfg(), out: {} };
+const state = { example: false, cfg: blankCfg(), out: {}, alt: -1 };
 
 function persist(){ store.set('cfg', JSON.stringify(state.example ? blankCfg() : state.cfg)); }
 function setExample(on){ state.example = on; $('exampleBanner').hidden = !on; }
@@ -637,7 +704,7 @@ function colorRow(key, label, value, extra){
 }
 function badge(fg, bg){
   const r = TB.contrast(fg, bg), cls = r >= 4.5 ? 'ok' : r >= 3 ? 'warn' : 'err';
-  return '<span class="cr ' + cls + '" title="Contrast with the background it sits on">' + r.toFixed(1) + ':1</span>';
+  return '<span class="cr ' + cls + '" title="Contrast with the background it sits on. 4.5:1 or more works for text, 3:1 or more for bars and lines.">' + r.toFixed(1) + ':1</span>';
 }
 function renderSeeds(){
   const c = state.cfg;
@@ -646,10 +713,28 @@ function renderSeeds(){
   $('style').value = c.style; $('count').value = String(c.count);
   if (document.activeElement !== $('tName')) $('tName').value = c.name;
 }
+// Suggested (not brand) colors get "Other options"; a shades palette is a ladder of one hue, so it has none
+const canAlt = i => state.cfg.style !== 'shades' && i >= state.cfg.seeds.length;
 function renderSwatches(){
   const c = state.cfg, dc = dataColors();
-  $('swatches').innerHTML = dc.map((h, i) => '<div class="sw' + (c.overrides[i] ? ' changed' : '') + '">' + colorRow('dc' + i, (i + 1) + (i < c.seeds.length ? ' · brand' : ''), h, badge(h, surface())) + '</div>').join('');
+  if (!canAlt(state.alt) || state.alt >= dc.length) state.alt = -1;
+  $('swatches').innerHTML = dc.map((h, i) => '<div class="sw' + (c.overrides[i] ? ' changed' : '') + '">' + colorRow('dc' + i, (i + 1) + (i < c.seeds.length ? ' · brand' : ''), h, badge(h, surface()))
+    + (canAlt(i) ? '<button type="button" class="linkbtn alt-btn" data-alt="' + i + '" aria-expanded="' + (state.alt === i) + '" aria-controls="altPanel">Other options</button>' : '') + '</div>'
+    + (state.alt === i ? '<div class="alt-panel" id="altPanel" role="region" aria-label="Other options for color ' + (i + 1) + '"></div>' : '')).join('');
+  renderAlt();
   $('resetPalette').hidden = !Object.keys(c.overrides).length;
+}
+/* Other colors for the open swatch: they fit the brand and the colors around them, so only this one changes */
+function renderAlt(){
+  const box = $('altPanel'), i = state.alt; if (!box || i < 0) return;
+  const c = state.cfg, dc = dataColors(), cur = dc[i];
+  const alts = TB.alternatives(dc, i, surface());
+  const base = TB.palette(c.seeds, +c.count || 8, c.style)[i];
+  box.innerHTML = '<div class="alt-head"><span><b>Instead of ' + esc(cur) + '</b> <span class="muted">(color ' + (i + 1) + ')</span></span><button type="button" class="ib" data-altclose aria-label="Close other options">&#10005;</button></div>'
+    + '<p class="note small">Each one suits your brand, stays clear of green, red and amber, can be seen on the background, and stands apart from your other data colors, so the rest of the palette can stay as it is.</p>'
+    + (alts.length ? '<div class="alt-list">' + alts.map(a => '<button type="button" class="alt" data-pick="' + a.hex + '"><span class="alt-dot" style="background:' + a.hex + '"></span><span class="alt-txt"><b>' + esc(a.name) + '</b> <span class="mono">' + a.hex + '</span><span class="alt-why">' + esc(a.why) + '</span></span></button>').join('') + '</div>'
+      : '<div class="msg info">Your palette is full enough that no other color stands apart from the rest. Try fewer data colors.</div>')
+    + (c.overrides[i] && base ? '<div class="reply-actions"><button type="button" class="linkbtn" data-pick="' + base + '">Go back to the suggested color, ' + base + '</button></div>' : '');
 }
 function renderSettings(){
   const c = state.cfg;
@@ -664,7 +749,7 @@ function renderSettings(){
   $('textRow').innerHTML = colorRow('textColor', 'Text color', c.textColor, badge(c.textColor, surface()));
   $('font').value = c.font;
   $('bubble').value = String(+c.bubble || 0);
-  $('sentPresets').innerHTML = SENT_PRESETS.map(([n, g, u, b], i) => '<button type="button" class="chip" data-sent="' + i + '" aria-pressed="' + (TB.norm(c.good) === g && TB.norm(c.bad) === b) + '"><span class="dot" style="background:' + g + '"></span><span class="dot" style="background:' + b + '"></span>' + esc(n) + '</button>').join('');
+  $('sentPresets').innerHTML = SENT_PRESETS.map(([n, g, u, b], i) => '<button type="button" class="chip" data-sent="' + i + '" aria-pressed="' + (TB.norm(c.good) === g && TB.norm(c.neutral) === u && TB.norm(c.bad) === b) + '"><span class="dot" style="background:' + g + '"></span>' + (i ? '' : '<span class="dot" style="background:' + u + '"></span>') + '<span class="dot" style="background:' + b + '"></span>' + esc(n) + '</button>').join('');
   $('goodRow').innerHTML = colorRow('good', 'Good / increase', c.good);
   $('neutralRow').innerHTML = colorRow('neutral', 'Neutral / other', c.neutral);
   $('badRow').innerHTML = colorRow('bad', 'Bad / decrease', c.bad);
@@ -740,11 +825,11 @@ function syncValues(){
   const vis = TB.norm(c.visualBg);
   document.querySelectorAll('#visPresets [data-vis]').forEach(b => b.setAttribute('aria-pressed', b.dataset.vis === 'transparent' ? !vis : vis === b.dataset.vis));
   $('visRow').hidden = !vis;
-  document.querySelectorAll('#sentPresets [data-sent]').forEach(b => { const p = SENT_PRESETS[+b.dataset.sent]; b.setAttribute('aria-pressed', TB.norm(c.good) === p[1] && TB.norm(c.bad) === p[3]); });
+  document.querySelectorAll('#sentPresets [data-sent]').forEach(b => { const p = SENT_PRESETS[+b.dataset.sent]; b.setAttribute('aria-pressed', TB.norm(c.good) === p[1] && TB.norm(c.neutral) === p[2] && TB.norm(c.bad) === p[3]); });
   $('textRow').hidden = c.textMode !== 'custom';
   $('resetPalette').hidden = !Object.keys(c.overrides).length;
 }
-function refresh(){ syncValues(); renderPreview(); renderOut(); }
+function refresh(){ syncValues(); renderAlt(); renderPreview(); renderOut(); }
 
 /* ---------- init ---------- */
 function setColor(key, hex){
@@ -754,7 +839,7 @@ function setColor(key, hex){
   else c[key] = h;
   return true;
 }
-function resetAll(){ state.cfg = blankCfg(); setExample(false); renderAll(); }
+function resetAll(){ state.cfg = blankCfg(); state.alt = -1; setExample(false); renderAll(); }
 function init(){
   let cfg = null; try { cfg = JSON.parse(store.get('cfg') || 'null'); } catch (e) {}
   if (cfg && store.get('blank') !== '1' && JSON.stringify(cfg) !== JSON.stringify(blankCfg())) state.cfg = Object.assign(blankCfg(), cfg);
@@ -775,6 +860,13 @@ function init(){
   $('style').addEventListener('change', () => { state.cfg.style = $('style').value; state.cfg.overrides = {}; change(true); });
   $('count').addEventListener('change', () => { state.cfg.count = +$('count').value; change(true); });
   $('resetPalette').addEventListener('click', () => { state.cfg.overrides = {}; change(true); });
+  $('swatches').addEventListener('click', e => {
+    const t = e.target.closest('[data-alt]');
+    if (t) { const i = +t.dataset.alt; state.alt = state.alt === i ? -1 : i; renderSwatches(); const f = state.alt >= 0 ? document.querySelector('#altPanel [data-pick]') : document.querySelector('[data-alt="' + i + '"]'); if (f) f.focus(); return; }
+    if (e.target.closest('[data-altclose]')) { const i = state.alt; state.alt = -1; renderSwatches(); const b = document.querySelector('[data-alt="' + i + '"]'); if (b) b.focus(); return; }
+    const pk = e.target.closest('[data-pick]');
+    if (pk && state.alt >= 0 && setColor('dc' + state.alt, pk.dataset.pick)) { change(true); const f = document.querySelector('#altPanel [data-pick]'); if (f) f.focus(); }
+  });
   $('bgPresets').addEventListener('click', e => { const b = e.target.closest('[data-bg]'); if (!b) return; state.cfg.background = b.dataset.bg; if (state.cfg.textMode === 'custom' && TB.contrast(state.cfg.textColor, surface()) < 4.5) state.cfg.textColor = TB.isDark(surface()) ? '#F3F2F1' : '#252423'; change(false); });
   $('visPresets').addEventListener('click', e => { const b = e.target.closest('[data-vis]'); if (!b) return; state.cfg.visualBg = b.dataset.vis; if (state.cfg.textMode === 'custom' && TB.contrast(state.cfg.textColor, surface()) < 4.5) state.cfg.textColor = TB.isDark(surface()) ? '#F3F2F1' : '#252423'; change(false); });
   $('sentPresets').addEventListener('click', e => { const b = e.target.closest('[data-sent]'); if (!b) return; const p = SENT_PRESETS[+b.dataset.sent]; Object.assign(state.cfg, { good: p[1], neutral: p[2], bad: p[3] }); change(false); });
