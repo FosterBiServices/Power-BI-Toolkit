@@ -170,6 +170,11 @@ const LO = (() => {
       const p = onCard(o) ? inset(o, st.radius) : null;
       return [o.id === 'header' ? 'Header band' : o.title || typeOf(o.type).label, o.id === 'header' ? 'Shape / background' : o.id === 'title' ? 'Title (drawn on the background)' : o.logo ? 'Image (logo)' : typeOf(o.type).label, r2(o.x), r2(o.y), r2(o.w), r2(o.h)]
         .concat(p == null ? ['', '', '', ''] : [r2(o.x + p), r2(o.y + p), r2(o.w - 2 * p), r2(o.h - 2 * p)]).join('\t');
+    }), (L.empty || []).map(([a, b]) => {
+      // grid cells with no visual yet: their background box, so a visual can be placed on it later
+      const G = L.grid, o = { x: G.x[a], y: G.y[b], w: G.w[a], h: G.h[b] }, p = cards ? inset(o, st.radius) : null;
+      return ['Empty box (column ' + (a + 1) + ', row ' + (b + 1) + ')', cards ? 'Background box' : 'Grid cell', r2(o.x), r2(o.y), r2(o.w), r2(o.h)]
+        .concat(p == null ? ['', '', '', ''] : [r2(o.x + p), r2(o.y + p), r2(o.w - 2 * p), r2(o.h - 2 * p)]).join('\t');
     })).join('\n');
   }
 

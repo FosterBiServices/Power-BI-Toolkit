@@ -96,6 +96,16 @@ function renderCanvas(){
   $('layoutMsg').innerHTML = L.probs.map(p => '<div class="msg ' + p.level + '">' + esc(p.text) + '</div>').join('');
 }
 /* ---------- column widths and row heights ---------- */
+// when the column (or row) count changes, visuals that filled the whole width (or height) still do, and none hangs off the grid;
+// spans are worked out from where they were when the field took focus, so typing "12" (1, then 12) doesn't stretch everything on the way.
+let spanBase = null;
+function fitSpans(ax, to){
+  const sp = ax === 'c' ? 'cs' : 'rs', g = state.cfg.grid, k = ax + (state.cfg.items.length);
+  if (!spanBase || spanBase.k !== k) spanBase = { k, from: +g[ax === 'c' ? 'cols' : 'rows'], spans: state.cfg.items.map(it => Math.max(1, it[sp] || 1)) };
+  const from = spanBase.from;
+  state.cfg.items.forEach((it, i) => { const at = it[ax], n = spanBase.spans[i];
+    it[sp] = at === 0 && n === from ? to : at < to && at + n > to ? to - at : n; });
+}
 const PRESETS = { 2: [['1/3 + 2/3', [1, 2]], ['2/3 + 1/3', [2, 1]], ['1/4 + 3/4', [1, 3]], ['3/4 + 1/4', [3, 1]]], 3: [['1/2 + 1/4 + 1/4', [2, 1, 1]], ['1/4 + 1/2 + 1/4', [1, 2, 1]], ['1/4 + 1/4 + 1/2', [1, 1, 2]], ['1/6 + 1/3 + 1/2', [1, 2, 3]]], 4: [['2/5 + 1/5 × 3', [2, 1, 1, 1]], ['1/5 × 3 + 2/5', [1, 1, 1, 2]]] };
 const AX = { c: ['cols', 'colW'], r: ['rows', 'rowH'] };
 // the grid's column (c) or row (r) sizes as percentages that add up to 100
@@ -323,8 +333,9 @@ function init(){
   $('stripH').addEventListener('input', () => { state.cfg.strip.h = Math.max(20, num($('stripH').value, 100)); edited(); });
   // step 2
   $('templates').addEventListener('click', e => { const b = e.target.closest('[data-tpl]'); if (!b) return; state.cfg = LO.fromTemplate(b.dataset.tpl, state.cfg); state.sel = null; edited({ editor: true }); });
-  $('cols').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); if (n !== g.cols) g.colW = null; g.cols = n; edited({ editor: true }); });
-  $('rows').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); if (n !== g.rows) g.rowH = null; g.rows = n; edited({ editor: true }); });
+  ['cols', 'rows'].forEach(id => $(id).addEventListener('focus', () => { spanBase = null; }));
+  $('cols').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); if (n !== g.cols) { g.colW = null; fitSpans('c', n); } g.cols = n; edited({ editor: true }); });
+  $('rows').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); if (n !== g.rows) { g.rowH = null; fitSpans('r', n); } g.rows = n; edited({ editor: true }); });
   // column widths and row heights: typed, presets, or dragged on the canvas
   ['colW', 'rowH'].forEach(id => {
     $(id).addEventListener('input', e => { const t = e.target; if (!t.dataset.ax) return; const v = parseFloat(t.value); if (isNaN(v)) return; setShare(t.dataset.ax, +t.dataset.i, v); edited(); });

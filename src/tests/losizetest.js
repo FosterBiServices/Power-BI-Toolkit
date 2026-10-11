@@ -33,6 +33,14 @@ const { chromium } = require('playwright');
   await p.locator('#rowH [data-pre="2,1"]').click(); await p.reload(); console.log('restored rowH', JSON.stringify(await p.evaluate(() => state.cfg.grid.rowH)));
   await p.screenshot({ path: 'losize_1.png', fullPage: false, clip: { x: 0, y: (await p.locator('#s2').boundingBox()).y - 20, width: 1300, height: 900 } });
 
+  // column count: the example's full-width trend keeps filling the width; typing 12 doesn't stretch on the way
+  await p.evaluate(() => localStorage.clear()); await p.reload();
+  const span = () => p.evaluate(() => state.cfg.items.map(i => i.title + ':' + i.c + '+' + i.cs).join(' | '));
+  console.log('example spans', await span());
+  await p.locator('#cols').focus(); await p.fill('#cols', '3'); console.log('3 cols', await span(), '(expect Sales trend:0+3)');
+  await p.fill('#cols', '1'); await p.fill('#cols', '12'); await p.fill('#cols', '4'); console.log('1 then 12 then 4', await span(), '(expect Sales trend:0+4, the others 1 wide)');
+  // empty boxes are in the positions table
+  console.log('empty rows', await p.$$eval('#posTable tbody tr', a => a.filter(r => r.innerText.startsWith('Empty box')).length), '(expect', await p.locator('#canvas .cell').count(), ')', '|', (await p.locator('#posTable tbody tr').last().innerText()).replace(/\t/g, ' '));
   // ---- suggestions ----
   await p.evaluate(() => { document.getElementById('suggestBox').open = true; });
   console.log('default visuals', await p.locator('#sgList .sgv').count(), '| hint 3:', await p.locator('[data-hint="2"]').innerText());
