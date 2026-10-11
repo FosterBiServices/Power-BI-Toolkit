@@ -272,8 +272,23 @@ input:focus-visible + .filebtn,.filebtn:focus-within{outline:2px solid var(--acc
 .suggest>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .suggest-body{padding:0 14px 14px;display:flex;flex-direction:column;gap:12px}
 .suggest-body .note{margin:0;max-width:95ch}
-.sgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-@media (max-width:820px){.sgrid{grid-template-columns:1fr}}
+.sgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.6fr) minmax(0,1fr);gap:12px}
+@media (max-width:1100px){.sgrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.sq-vis{grid-column:1/-1;order:3}}
+@media (max-width:620px){.sgrid{grid-template-columns:1fr}.sq-vis{order:0}}
+.sq .note{margin:0}
+.sg-list{display:flex;flex-direction:column;gap:8px}
+.sgv{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.sgv .field{min-width:0}
+.sgv select{width:auto;max-width:100%}
+.sgv .grow{flex:1 1 160px}
+.sgv .grow input{width:100%;font-family:var(--sans)}
+.sgv .field.sm input{width:84px}
+.sgv .hint{flex-basis:100%;margin:0}
+.sgv .btn{margin-left:auto}
+.field[hidden]{display:none}
+.sg-tips{grid-column:1/-1;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:10px 14px}
+.sg-tips h4{margin:0 0 6px;font-size:14px}
+.sg-tips ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.45}
 .sq{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:10px 12px;display:flex;flex-direction:column;gap:10px;min-width:0;margin:0}
 .sq legend{font-weight:700;font-size:14px;padding:0 4px}
 .sq select{width:100%}
@@ -287,7 +302,7 @@ input:focus-visible + .filebtn,.filebtn:focus-within{outline:2px solid var(--acc
 .sg svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:6px}
 .sg ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.45}
 .sg li b{display:inline-block;min-width:46px;border-radius:999px;padding:1px 7px;margin-right:6px;color:#fff;text-align:center;font-size:11.5px}
-.sg li b.z3{background:#0B7A75}.sg li b.z30{background:#1F6FB2}.sg li b.z300{background:#5B3E96}
+.sg li b.z3{background:#0B7A75}.sg li b.z30{background:#1F6FB2}.sg li b.z300{background:#5B3E96}.sg li b.zpg{background:#4A5568}
 .sg .msg{font-size:12.5px}
 .sg-note{grid-column:1/-1}
 .pptx-card{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px}
@@ -305,6 +320,18 @@ input:focus-visible + .filebtn,.filebtn:focus-within{outline:2px solid var(--acc
 .canvas-wrap{min-width:0}
 .canvas svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:#fff}
 .canvas .vis,.canvas .cell{cursor:pointer;outline:none}
+.canvas .gut{outline:none;touch-action:none}
+.canvas .gut-c{cursor:col-resize}.canvas .gut-r{cursor:row-resize}
+.canvas .gut .grip{opacity:.3;transition:opacity .15s}
+.canvas .gut:hover .grip,.canvas .gut:focus-visible .grip,body.dragging .canvas .gut .grip{opacity:1}
+.canvas .gut:focus-visible .grip{stroke:var(--gold);stroke-width:2}
+body.dragging{user-select:none}body.drag-c,body.drag-c *{cursor:col-resize!important}body.drag-r,body.drag-r *{cursor:row-resize!important}
+.sizes{display:flex;flex-wrap:wrap;gap:10px 28px;align-items:flex-start}
+.sizes .note{flex-basis:100%;margin:0}
+.wts{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.wt{display:flex;align-items:center;gap:4px}
+.wt input{width:72px}
+.chips.sm .chip{font-size:12.5px;padding:3px 9px}
 .canvas .vis:hover rect:last-child{stroke:var(--gold);stroke-width:2}
 .canvas .vis:focus-visible rect:last-child,.canvas .cell:focus-visible rect{stroke:var(--gold);stroke-width:3;stroke-dasharray:none}
 .editor{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -498,25 +525,25 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
     <div class="step-body">
       <div class="step-head">
         <h2 id="s2">Layout and visuals</h2>
-        <p>Answer a few questions to get suggested layouts, or start from one of the layouts below. Then click any visual to change it, or an empty cell to add one. Visuals can span several columns and rows.</p>
+        <p>Answer a few questions to get suggested layouts, or start from one of the layouts below. Then click any visual to change it, or an empty cell to add one. Visuals can span several columns and rows, and columns and rows can be any size.</p>
       </div>
       <details class="suggest" id="suggestBox">
-        <summary><b>Suggest a layout</b> <span class="muted">(3-30-3: answer a few questions, get three layouts)</span></summary>
+        <summary><b>Suggest a layout</b> <span class="muted">(3-30-300: list your visuals, get layouts sized for them)</span></summary>
         <div class="suggest-body">
-          <p class="note small">A good report page answers three questions in order. <b>3 seconds</b>: how are we doing? (headline KPIs top left, big numbers, status against target). <b>30 seconds</b>: where and why? (trend, simple bar charts, heatmaps, filters). <b>300 seconds</b>: which records? (details on demand: a formatted table or a drill-through page).</p>
+          <p class="note small">A good report page answers three questions in order. <b>3 seconds</b>: how are we doing? (headline KPIs top left, big numbers, status against target). <b>30 seconds</b>: where and why? (trend, bar charts, maps, heatmaps, filters). <b>300 seconds</b>: which records? (details on demand: a formatted table, or a drill-through page so this page stays clean).</p>
           <div class="sgrid">
             <fieldset class="sq"><legend>3 s: headline numbers</legend>
               <div class="field sm"><label for="sgK">KPIs</label><input type="number" id="sgK" min="0" max="8"></div>
               <div class="field"><label for="sgT">With a target</label><select id="sgT"><option value="none">None</option><option value="some">Some (the top 2)</option><option value="all">All of them</option></select></div>
             </fieldset>
-            <fieldset class="sq"><legend>30 s: patterns</legend>
-              <label class="chk"><input type="checkbox" id="sgTrend"> A trend over time</label>
-              <div class="field sm"><label for="sgB">Categories to compare</label><input type="number" id="sgB" min="0" max="4"></div>
-              <label class="chk"><input type="checkbox" id="sgGeo"> One of them is a location</label>
-              <label class="chk"><input type="checkbox" id="sgHeat"> Two categories at once (heatmap)</label>
+            <fieldset class="sq sq-vis"><legend>30 s: your visuals</legend>
+              <p class="note small">For each one: how many categories it has (bars, lines, slices, rows), and how many to show before a scroll bar. Sizes follow from these.</p>
+              <div id="sgList" class="sg-list"></div>
+              <div class="btns"><button type="button" class="btn small" id="sgAdd">+ Add a visual</button></div>
             </fieldset>
             <fieldset class="sq"><legend>300 s: details</legend>
               <div class="field"><label for="sgD">Individual records</label><select id="sgD"><option value="page">On this page</option><option value="drill">On a drill-through page</option><option value="none">Not needed</option></select></div>
+              <div class="field sm" id="sgRowsWrap"><label for="sgRows">Rows before scrolling</label><input type="number" id="sgRows" min="3" max="50"></div>
               <div class="field sm"><label for="sgF">Filters (slicers)</label><input type="number" id="sgF" min="0" max="8"></div>
               <div class="field"><label for="sgP">Filters go</label><select id="sgP"><option value="auto">Where they fit best</option><option value="header">In the header</option><option value="side">In a side panel</option></select></div>
             </fieldset>
@@ -530,7 +557,12 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
         <div class="field sm"><label for="cols">Columns</label><input type="number" id="cols" min="1" max="12"></div>
         <div class="field sm"><label for="rows">Rows</label><input type="number" id="rows" min="1" max="12"></div>
         <label class="chk inline"><input type="checkbox" id="showDims" checked> Show sizes</label>
-        <label class="chk inline"><input type="checkbox" id="showZones"> Show 3-30-3 zones</label>
+        <label class="chk inline"><input type="checkbox" id="showZones"> Show 3-30-300 zones</label>
+      </div>
+      <div class="sizes">
+        <div class="field"><label id="colWLbl">Column widths <span class="muted">(% of the grid)</span></label><div class="wts" id="colW" role="group" aria-labelledby="colWLbl"></div></div>
+        <div class="field"><label id="rowHLbl">Row heights <span class="muted">(% of the grid)</span></label><div class="wts" id="rowH" role="group" aria-labelledby="rowHLbl"></div></div>
+        <p class="note small">Or drag the handles between columns and rows on the page. Margin and gap stay the same; sizes snap to twelfths (hold Shift for any size).</p>
       </div>
       <div class="designer">
         <div class="canvas-wrap"><div id="canvas" class="canvas"></div></div>
@@ -819,17 +851,24 @@ const LO = (() => {
     return upgrade(c);
   }
 
-  /* n sizes filling `total` with `gap` between them.
-     fit: whole pixels that add up exactly (spare pixels go to the first ones);
+  /* n sizes filling `total` with `gap` between them, in proportion to `weights` (even when left out).
+     fit: whole pixels that add up exactly (spare pixels go to the sizes that lost the most to rounding, the first ones on ties);
      roundup: every size rounded up, as on the Alignment page (can run a pixel or two past the edge) */
-  function split(total, n, gap, rounding){
+  function split(total, n, gap, rounding, weights){
     if (n <= 0) return [];
     const avail = total - gap * (n - 1);
-    if (rounding === 'roundup') return Array(n).fill(Math.ceil(avail / n));
-    if (rounding === 'exact') return Array(n).fill(Math.round(avail / n * 100) / 100);
-    const b = Math.floor(avail / n), rem = avail - b * n;
-    return Array.from({ length: n }, (_, i) => b + (i < rem ? 1 : 0));
+    const wt = Array.isArray(weights) && weights.length === n && weights.every(v => +v > 0) ? weights.map(Number) : Array(n).fill(1);
+    const sum = wt.reduce((a, b) => a + b, 0), raw = wt.map(v => avail * v / sum);
+    if (rounding === 'roundup') return raw.map(v => Math.ceil(v - 1e-9));
+    if (rounding === 'exact') return raw.map(v => Math.round(v * 100) / 100);
+    const out = raw.map(v => Math.floor(v + 1e-9)); let rem = Math.round(avail - out.reduce((a, b) => a + b, 0));
+    const order = raw.map((v, i) => [v - out[i], i]).sort((a, b) => (Math.abs(b[0] - a[0]) < 1e-9 ? 0 : b[0] - a[0]) || a[1] - b[1]);
+    for (let k = 0; rem > 0 && k < order.length; k++, rem--) out[order[k][1]]++;
+    return out;
   }
+  // grid.colW / grid.rowH: relative sizes of the columns and rows; null (or the wrong length) means even
+  const weightsOf = (arr, n) => Array.isArray(arr) && arr.length === n && arr.every(v => +v > 0) ? arr.map(Number) : null;
+  const isEven = arr => !arr || arr.every(v => Math.abs(v - arr[0]) < 1e-9);
   const starts = (origin, sizes, gap) => { const out = []; let x = origin; sizes.forEach(s => { out.push(x); x += s + gap; }); return out; };
 
   // Everything on the page, positioned: [{ id, region, type, title, x, y, w, h }] + problems
@@ -895,7 +934,7 @@ const LO = (() => {
       top += sh + g;
     }
     const cols = Math.max(1, +c.grid.cols || 1), rows = Math.max(1, +c.grid.rows || 1);
-    const gw = split(cw, cols, g, R), gh = split(H - m - top, rows, g, R);
+    const gw = split(cw, cols, g, R, weightsOf(c.grid.colW, cols)), gh = split(H - m - top, rows, g, R, weightsOf(c.grid.rowH, rows));
     const gx = starts(left, gw, g), gy = starts(top, gh, g);
     const grid = { cols, rows, x: gx, y: gy, w: gw, h: gh, left, top, right, bottom: H - m };
     const taken = {};
@@ -946,7 +985,7 @@ const LO = (() => {
     return c;
   }
 
-  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
+  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, weightsOf, isEven, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
 })();
 
 
@@ -1156,6 +1195,20 @@ const LR = (() => {
         if (o.w > zw + 12 && o.h > zh + 8) out.push('<g class="zone"><rect x="' + f(zx) + '" y="' + f(zy) + '" width="' + f(zw) + '" height="' + zh + '" rx="9" fill="' + zc + '"/><text x="' + f(zx + zw / 2) + '" y="' + f(zy + 12.5) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF" font-family="' + font + '">' + zt + '</text></g>'); }
       if (opts.dims && o.h >= 44) out.push('<text x="' + f(o.x + o.w - 6) + '" y="' + f(o.y + o.h - 6) + '" font-size="10" text-anchor="end" fill="' + col.muted + '" font-family="Consolas, monospace">' + Math.round(o.w) + '×' + Math.round(o.h) + ' @ ' + Math.round(o.x) + ',' + Math.round(o.y) + '</text>');
     });
+    // handles between columns and rows, for resizing on the canvas
+    if (opts.handles) {
+      const g = L.grid, gap = +c.gap || 0, hw = Math.max(14, gap), gh = [], gi = L.items.filter(o => o.region === 'grid');
+      // runs of cells along a boundary that no visual spans across, so the handle never covers a visual
+      const runs = (n, across) => { const out = []; let s0 = -1; for (let k = 0; k <= n; k++) { const free = k < n && !gi.some(o => across(o, k)); if (free && s0 < 0) s0 = k; if (!free && s0 >= 0) { out.push([s0, k - 1]); s0 = -1; } } return out; };
+      const longest = (rs, pos, size) => rs.reduce((a, r) => { const len = pos[r[1]] + size[r[1]] - pos[r[0]]; return !a || len > a.len ? { a: pos[r[0]], len } : a; }, null);
+      g.x.slice(0, -1).forEach((x, i) => { const mx = x + g.w[i] + gap / 2, rs = runs(g.rows, (o, r) => o.c <= i && o.c + o.cs - 1 > i && o.r <= r && o.r + o.rs - 1 >= r); if (!rs.length) return;
+        const lg = longest(rs, g.y, g.h), my = lg.a + lg.len / 2;
+        gh.push('<g class="gut gut-c" data-gut="c' + i + '" tabindex="0" role="separator" aria-orientation="vertical" aria-label="Width of columns ' + (i + 1) + ' and ' + (i + 2) + '" aria-valuenow="' + Math.round(g.w[i]) + '">' + rs.map(r => '<rect x="' + f(mx - hw / 2) + '" y="' + f(g.y[r[0]]) + '" width="' + f(hw) + '" height="' + f(g.y[r[1]] + g.h[r[1]] - g.y[r[0]]) + '" fill="transparent"/>').join('') + '<rect class="grip" x="' + f(mx - 3) + '" y="' + f(my - 22) + '" width="6" height="44" rx="3" fill="' + col.accent + '"/></g>'); });
+      g.y.slice(0, -1).forEach((y, i) => { const my = y + g.h[i] + gap / 2, rs = runs(g.cols, (o, k) => o.r <= i && o.r + o.rs - 1 > i && o.c <= k && o.c + o.cs - 1 >= k); if (!rs.length) return;
+        const lg = longest(rs, g.x, g.w), mx = lg.a + lg.len / 2;
+        gh.push('<g class="gut gut-r" data-gut="r' + i + '" tabindex="0" role="separator" aria-orientation="horizontal" aria-label="Height of rows ' + (i + 1) + ' and ' + (i + 2) + '" aria-valuenow="' + Math.round(g.h[i]) + '">' + rs.map(r => '<rect x="' + f(g.x[r[0]]) + '" y="' + f(my - hw / 2) + '" width="' + f(g.x[r[1]] + g.w[r[1]] - g.x[r[0]]) + '" height="' + f(hw) + '" fill="transparent"/>').join('') + '<rect class="grip" x="' + f(mx - 22) + '" y="' + f(my - 3) + '" width="44" height="6" rx="3" fill="' + col.accent + '"/></g>'); });
+      out.push('<g id="Handles">' + gh.join('') + '</g>');
+    }
     const defs = st.shadow ? '' : '';
     return '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"' + (opts.cls ? ' class="' + opts.cls + '"' : '') + '>' + defs + out.join('') + '</svg>';
   }
@@ -1388,41 +1441,99 @@ const LP = (() => {
   return { build, zip };
 })();
 
-
-/* ---------- Layout Designer: 3-30-3 layout suggestions ----------
+/* ---------- Layout Designer: 3-30-300 layout suggestions ----------
    3 seconds: headline KPIs top left, big numbers, status against target.
-   30 seconds: trend and breakdowns (bars, map, heatmap) to spot patterns and weak spots.
+   30 seconds: the visuals people use to spot patterns, each sized for the categories it shows.
    300 seconds: details on demand: formatted records here or on a drill-through page. */
 const LS = (() => {
-  const CATS = ['Region', 'Product', 'Channel', 'Segment'];
   const KPI_NAMES = ['Sales', 'Margin %', 'Orders', 'Customers', 'Avg order value', 'Returns', 'Units', 'Growth %'];
-  const blankInput = () => ({ kpis: 4, targets: 'some', trend: true, breakdowns: 2, geo: false, heatmap: false, detail: 'page', filters: 3, filterPlace: 'auto' });
+  const SLICERS = ['Year', 'Region', 'Product', 'Channel', 'Segment', 'Month', 'Customer', 'Category'];
+
+  /* Visuals people can list for the 30-second level: [visualType, label, what a category is, scrolls in Power BI] */
+  const VTYPES = [
+    ['clusteredBarChart', 'Bar chart', 'bars', true], ['barChart', 'Stacked bar chart', 'bars', true],
+    ['clusteredColumnChart', 'Column chart', 'columns', true], ['columnChart', 'Stacked column chart', 'columns', true],
+    ['lineChart', 'Line chart', 'lines', false], ['areaChart', 'Area chart', 'areas', false], ['lineClusteredColumnComboChart', 'Line and column chart', 'columns', true],
+    ['waterfallChart', 'Waterfall', 'steps', true], ['funnel', 'Funnel', 'stages', false],
+    ['donutChart', 'Donut chart', 'slices', false], ['pieChart', 'Pie chart', 'slices', false], ['treemap', 'Treemap', 'boxes', false],
+    ['map', 'Map', 'locations', false], ['scatterChart', 'Scatter chart', 'points', false],
+    ['pivotTable', 'Matrix (heatmap)', 'rows', true], ['tableEx', 'Table', 'rows', true]
+  ];
+  const VT = Object.fromEntries(VTYPES.map(t => [t[0], { id: t[0], label: t[1], unit: t[2], scrolls: t[3] }]));
+  const vt = id => VT[id] || { id, label: LO.typeOf(id).label, unit: 'categories', scrolls: false };
+
+  const blankInput = () => ({ kpis: 4, targets: 'some', visuals: [
+    { type: 'lineChart', title: 'Sales trend this year vs last', n: 2, show: '' },
+    { type: 'clusteredBarChart', title: 'Sales by region', n: 6, show: '' },
+    { type: 'clusteredBarChart', title: 'Sales by product', n: 25, show: 10 }
+  ], detail: 'page', detailRows: 10, filters: 3, filterPlace: 'auto' });
+  // older saved answers had trend / breakdowns / geo / heatmap instead of a list of visuals
+  function normInput(g){
+    const o = Object.assign(blankInput(), g || {});
+    if (!Array.isArray(g && g.visuals)) {
+      const v = [];
+      if (o.trend) v.push({ type: 'lineChart', title: 'Sales trend this year vs last', n: 2, show: '' });
+      const cats = ['Region', 'Product', 'Channel', 'Segment'];
+      for (let i = 0; i < Math.max(0, Math.min(4, +o.breakdowns | 0)); i++) v.push(i === 0 && o.geo ? { type: 'map', title: 'Sales by location', n: 20, show: '' } : { type: 'clusteredBarChart', title: 'Sales by ' + cats[i].toLowerCase(), n: 8, show: '' });
+      if (o.heatmap) v.push({ type: 'pivotTable', title: 'Heatmap: region × month', n: 8, show: '' });
+      o.visuals = v;
+    }
+    ['trend', 'breakdowns', 'geo', 'heatmap'].forEach(k => delete o[k]);
+    o.visuals = o.visuals.slice(0, 8).map(x => ({ type: VT[x.type] ? x.type : 'clusteredBarChart', title: String(x.title || ''), n: Math.max(1, Math.min(500, +x.n || 1)), show: x.show === '' || x.show == null || !(+x.show > 0) ? '' : Math.max(1, Math.min(500, +x.show)) }));
+    o.detailRows = Math.max(3, Math.min(50, +o.detailRows || 10));
+    return o;
+  }
+
+  /* The room a visual needs to be read without squinting, in page pixels (Power BI's default fonts),
+     plus advice on how it shows its categories. */
+  const shownOf = v => vt(v.type).scrolls && +v.show > 0 ? Math.min(+v.n, +v.show) : +v.n;
+  function need(v){
+    const t = vt(v.type), n = Math.max(1, +v.n || 1), k = shownOf(v), tips = [];
+    let w = 300, h = 220;
+    switch (t.unit) {
+      case 'bars': w = 300; h = Math.max(180, 70 + k * 26); break;
+      case 'columns': case 'steps': w = Math.max(300, 90 + k * 40); h = 240; break;
+      case 'lines': case 'areas': w = 400; h = 230; break;
+      case 'stages': w = 300; h = Math.max(200, 60 + k * 36); break;
+      case 'slices': w = 260; h = 220; break;
+      case 'boxes': w = 300; h = 220; break;
+      case 'locations': w = 380; h = 300; break;
+      case 'points': w = 320; h = 260; break;
+      case 'rows': w = v.type === 'pivotTable' ? 460 : 420; h = Math.max(180, 64 + k * 24 + 26); break;
+    }
+    const name = '“' + (v.title || t.label) + '”';
+    if (t.scrolls && k < n) tips.push(name + ' shows ' + k + ' of ' + n + ' ' + t.unit + '; the rest scroll. Sort by value so the biggest come first, or use a Top N filter with an “Others” ' + (t.unit === 'rows' ? 'row' : t.unit.replace(/s$/, '')) + ' so nothing hides.');
+    else if (t.scrolls && n > 15) tips.push(name + ' shows all ' + n + ' ' + t.unit + ', which takes about ' + (t.unit === 'columns' || t.unit === 'steps' ? w + ' px of width' : h + ' px of height') + '. Set how many to show before scrolling (10 to 12 reads well), or use a Top N filter.');
+    if ((t.unit === 'columns' || t.unit === 'steps') && k > 12) tips.push(name + ': over 12 columns crowd the axis labels. A bar chart fits long lists better.');
+    if (t.unit === 'slices' && n > 5) tips.push(name + ' has ' + n + ' slices; past 5 they’re hard to compare. Use a bar chart, or group the small ones into “Others”.');
+    if ((t.unit === 'lines' || t.unit === 'areas') && n > 5) tips.push(name + ' has ' + n + ' ' + t.unit + '; past 5 it gets tangled. Highlight one and gray the rest, or use small multiples.');
+    if (t.unit === 'boxes' && n > 12) tips.push(name + ': over 12 boxes leave tiny, unlabeled tiles. Group the small ones, or use a bar chart.');
+    if (t.unit === 'stages' && n > 7) tips.push(name + ': a funnel reads best with 7 stages or fewer.');
+    return { w, h, tips };
+  }
 
   function parts(inp){
     const nK = Math.max(0, Math.min(8, +inp.kpis | 0));
     const nT = inp.targets === 'all' ? nK : inp.targets === 'some' ? Math.min(nK, 2) : 0;
     const strip = Array.from({ length: nK }, (_, i) => ({ type: i < nT ? 'kpi' : 'card', title: KPI_NAMES[i] + (i < nT ? ' vs target' : ''), zone: '3' }));
-    const v30 = [];
-    if (inp.trend) v30.push({ type: 'lineChart', title: 'Sales trend this year vs last', zone: '30' });
-    const nB = Math.max(0, Math.min(4, +inp.breakdowns | 0));
-    for (let i = 0; i < nB; i++) v30.push(i === 0 && inp.geo ? { type: 'map', title: 'Sales by location', zone: '30' } : { type: 'clusteredBarChart', title: 'Sales by ' + CATS[i].toLowerCase(), zone: '30' });
-    if (inp.heatmap) v30.push({ type: 'pivotTable', title: 'Heatmap: region × month', zone: '30' });
-    const detail = inp.detail === 'page' ? { type: 'tableEx', title: 'Details: individual records', zone: '300' } : null;
+    const tips = [];
+    const v30 = (inp.visuals || []).map(v => { const nd = need(v); tips.push(...nd.tips); return { type: v.type, title: v.title || vt(v.type).label, zone: '30', need: { w: nd.w, h: nd.h } }; });
+    const rows = Math.max(3, Math.min(50, +inp.detailRows || 10));
+    const detailNeed = { w: 560, h: 64 + rows * 24 + 26 };
+    const detail = inp.detail === 'page' ? { type: 'tableEx', title: 'Details: individual records', zone: '300', need: detailNeed } : null;
     const nF = Math.max(0, Math.min(8, +inp.filters | 0));
     const place = inp.filterPlace === 'auto' ? (nF <= 3 ? 'header' : 'side') : inp.filterPlace;
-    return { strip, v30, detail, nF, place, nK, nT };
+    return { strip, v30, detail, nF, place, nK, nT, tips, rows };
   }
 
   // base config: keep the page, spacing, header style, logo and title; set header/strip/side from the answers
   function frame(base, p){
     const c = JSON.parse(JSON.stringify(base));
     c.header.on = true;
-    const cards = (c.header.items || []).filter(x => x.type === 'card').length;
     LO.setHeaderCounts(c.header, 0, p.place === 'header' ? p.nF : 0);
-    c.header.items.forEach((x, i) => { x.title = ['Year', 'Region', 'Product', 'Channel', 'Segment', 'Month', 'Customer', 'Category'][i] || x.title; });
-    c.side = p.place === 'side' && p.nF ? { pos: 'right', w: 220, itemH: 60, items: Array.from({ length: p.nF }, (_, i) => ({ type: 'slicer', title: ['Year', 'Region', 'Product', 'Channel', 'Segment', 'Month', 'Customer', 'Category'][i] })) } : { pos: 'none', w: 220, itemH: 64, items: [] };
+    c.header.items.forEach((x, i) => { x.title = SLICERS[i] || x.title; });
+    c.side = p.place === 'side' && p.nF ? { pos: 'right', w: 220, itemH: 60, items: Array.from({ length: p.nF }, (_, i) => ({ type: 'slicer', title: SLICERS[i] })) } : { pos: 'none', w: 220, itemH: 64, items: [] };
     c.strip = { on: p.strip.length > 0, h: p.nT ? 110 : 100, items: p.strip.map(x => Object.assign({}, x)) };
-    void cards;
     return c;
   }
   const at = (x, c, r, cs, rs) => Object.assign({}, x, { c, r, cs: cs || 1, rs: rs || 1 });
@@ -1444,14 +1555,18 @@ const LS = (() => {
     if (p.detail) items.push(at(p.detail, 0, r, cols)), r++;
     return { cols, rows: Math.max(1, r), items };
   }
-  // B: the trend across the top, breakdowns (and details) side by side below
+  // B: the lead visual (a trend, if there is one) across the top, the rest (and details) side by side below
   function trendLed(p){
-    const [lead, ...rest] = p.v30;
+    const li = p.v30.findIndex(x => x.type === 'lineChart' || x.type === 'areaChart' || x.type === 'lineClusteredColumnComboChart');
+    const list = li > 0 ? [p.v30[li]].concat(p.v30.filter((_, i) => i !== li)) : p.v30;
+    const [lead, ...rest] = list;
     if (!lead) return stacked(p);
     const below = rest.concat(p.detail ? [p.detail] : []);
     const cols = Math.max(1, Math.min(4, below.length || 1)), items = [at(lead, 0, 0, cols)];
-    below.forEach((x, i) => items.push(at(x, i, 1)));
-    return { cols, rows: below.length ? 2 : 1, items };
+    below.slice(0, 4).forEach((x, i) => items.push(at(x, i, 1)));
+    // more than 4 below: a third row
+    below.slice(4).forEach((x, i) => items.push(at(x, i % cols, 2 + Math.floor(i / cols))));
+    return { cols, rows: below.length ? 1 + Math.ceil(below.length / cols) : 1, items };
   }
   // C: patterns on the left, a tall details table (or the lead visual) on the right
   function side(p){
@@ -1466,29 +1581,95 @@ const LS = (() => {
     return { cols, rows, items };
   }
 
-  function explain(p, kind){
+  /* Relative sizes snapped to twelfths of the grid, so splits land on clean fractions (1/3 + 2/3, 1/4 + 1/2 + 1/4 ...).
+     Returns null when the split is even. */
+  function snap12(needs){
+    const n = needs.length; if (n < 2) return null;
+    const tot = needs.reduce((a, b) => a + b, 0), parts = n <= 6 ? 12 : n * 2;
+    const ideal = needs.map(v => v / tot * parts), u = ideal.map(v => Math.max(1, Math.round(v)));
+    let s = u.reduce((a, b) => a + b, 0);
+    while (s > parts) { let j = -1; u.forEach((v, i) => { if (v > 1 && (j < 0 || v - ideal[i] > u[j] - ideal[j])) j = i; }); if (j < 0) break; u[j]--; s--; }
+    while (s < parts) { let j = 0; u.forEach((v, i) => { if (ideal[i] - v > ideal[j] - u[j]) j = i; }); u[j]++; s++; }
+    return u.every(v => v === u[0]) ? null : u.map(v => Math.round(v / parts * 10000) / 100);
+  }
+  /* Size the grid's columns and rows to what each visual needs, and say whether it fits the page. */
+  function fitGrid(c){
+    const g = +c.gap, cols = c.grid.cols, rows = c.grid.rows;
+    const colNeed = Array(cols).fill(160), rowNeed = Array(rows).fill(150);
+    c.items.forEach(x => { if (!x.need) return;
+      const pw = (x.need.w - g * (x.cs - 1)) / x.cs, ph = (x.need.h - g * (x.rs - 1)) / x.rs;
+      for (let a = x.c; a < x.c + x.cs; a++) colNeed[a] = Math.max(colNeed[a], pw);
+      for (let b = x.r; b < x.r + x.rs; b++) rowNeed[b] = Math.max(rowNeed[b], ph); });
+    c.grid.colW = snap12(colNeed); c.grid.rowH = snap12(rowNeed);
+    const L0 = LO.layout(c), G = L0.grid;
+    const needH = rowNeed.reduce((a, b) => a + b, 0) + g * (rows - 1), needW = colNeed.reduce((a, b) => a + b, 0) + g * (cols - 1);
+    const availH = G.bottom - G.top, availW = G.right - G.left;
+    const tight = L0.items.filter(o => o.region === 'grid' && c.items[o.idx] && c.items[o.idx].need && (o.w < c.items[o.idx].need.w * 0.9 || o.h < c.items[o.idx].need.h * 0.9));
+    return { needH, needW, availH, availW, overH: needH - availH, overW: needW - availW, tight: tight.map(o => o.title), top: G.top };
+  }
+
+  function explain(p, v){
     const w = [];
-    w.push(['3 s', p.nK ? p.nK + ' headline KPI' + (p.nK === 1 ? '' : 's') + ' top left in large, bold numbers' + (p.nT ? '; ' + p.nT + ' as KPI visual' + (p.nT === 1 ? '' : 's') + ' showing status against target, colored with your good and bad colors' : '') + '.' : 'No headline KPIs: consider at least one, so the page answers “how are we doing?” at a glance.']);
-    const bits = p.v30.map(x => x.type === 'lineChart' ? 'a trend line' : x.type === 'map' ? 'a map' : x.type === 'pivotTable' ? 'a heatmap (matrix with conditional formatting)' : 'a bar chart').reduce((a, b) => { a[b] = (a[b] || 0) + 1; return a; }, {});
-    const list = Object.entries(bits).map(([k, n]) => n > 1 ? n + ' ' + k.replace(/^a /, '').replace('chart', 'charts') : k).join(', ');
-    w.push(['30 s', (list ? list.charAt(0).toUpperCase() + list.slice(1) + ' to spot patterns and weak categories. Sort bars by value and use conditional formatting to flag the ones below target.' : 'No trend or breakdowns yet: add one to explain what drives the KPIs.') + (p.nF ? ' ' + p.nF + ' slicer' + (p.nF === 1 ? '' : 's') + (p.place === 'header' ? ' in the header' : ' in a side panel on the right, so the KPIs keep the top-left spot') + '.' : '')]);
-    w.push(['300 s', p.detail ? (kind === 'side' ? 'A tall details table on the right, for scanning individual records next to the charts, away from the top-left KPI spot.' : kind === 'trend' ? 'A details table beside the breakdowns, below the trend: individual records, formatted, with totals.' : 'Details across the bottom: individual records, formatted, with totals, below everything that needs a first look.') : 'Details on a drill-through page: right-click a bar or point to see its records. Use \u201cStart the detail page\u201d to lay it out.']);
+    w.push(['3 s', p.nK ? p.nK + ' headline KPI' + (p.nK === 1 ? '' : 's') + ' top left in large, bold numbers' + (p.nT ? '; ' + p.nT + ' as KPI visual' + (p.nT === 1 ? '' : 's') + ' showing status against target, colored with your good and bad colors' : '') + '.' + (p.nK > 5 ? ' Five or fewer read at a glance; move the rest to a tooltip or a second page.' : '') : 'No headline KPIs: consider at least one, so the page answers “how are we doing?” at a glance.']);
+    const bits = p.v30.map(x => vt(x.type).label.toLowerCase()).reduce((a, b) => { a[b] = (a[b] || 0) + 1; return a; }, {});
+    const list = Object.entries(bits).map(([k, n]) => n > 1 ? n + ' ' + k.replace(/chart$/, 'charts').replace(/map$/, 'maps').replace(/table$/, 'tables').replace(/^matrix/, 'matrices') : (/^[aeiou]/.test(k) ? 'an ' : 'a ') + k).join(', ');
+    w.push(['30 s', (list ? list.charAt(0).toUpperCase() + list.slice(1) + ', each sized for the categories it shows. Sort bars by value and use conditional formatting to flag the ones below target.' : 'No visuals listed yet: add the charts that explain what drives the KPIs.') + (p.nF ? ' ' + p.nF + ' slicer' + (p.nF === 1 ? '' : 's') + (p.place === 'header' ? ' in the header' : ' in a side panel on the right, so the KPIs keep the top-left spot') + '.' : '')]);
+    const drill = 'Details on a drill-through page: right-click a bar or point to see its records. Use “Start the detail page” to lay it out.';
+    w.push(['300 s', v.drill ? drill + ' Moving them there gives this page’s visuals the room they need.' : p.detail ? (v.id === 'side' ? 'A tall details table on the right, for scanning individual records next to the charts, away from the top-left KPI spot.' : v.id === 'trend' ? 'A details table beside the other visuals, below the lead visual: individual records, formatted, with totals.' : 'Details across the bottom: individual records, formatted, with totals, below everything that needs a first look.') + ' ' + p.rows + ' rows show before it scrolls.' : drill]);
+    const f = v.fit, pg = v.cfg.w + ' × ' + v.cfg.h;
+    const taller = +v.cfg.h > Math.round(+v.cfg.w * 9 / 16) + 1;
+    w.push(['Page', !v.tall && +v.cfg.h > +v.cfg.w ? pg + ': a portrait page, for print or PDF.' + (f.tight.length ? ' ' + f.tight.length + ' visual' + (f.tight.length === 1 ? ' is' : 's are') + ' squeezed: show fewer categories or move details to a drill-through page.' : '')
+      : v.tall || taller ? pg + ': taller than 16:9 so every visual gets the room it needs. People scroll down to see it all; in the Power BI service set View to Fit to width.'
+      : v.large ? pg + ': a larger 16:9 page gives side-by-side visuals more room. It still fits a screen; Power BI scales it to fit.'
+      : f.tight.length ? pg + ': ' + f.tight.length + ' visual' + (f.tight.length === 1 ? ' is' : 's are') + ' squeezed (' + f.tight.slice(0, 3).map(t => '“' + t + '”').join(', ') + (f.tight.length > 3 ? ' …' : '') + '). Show fewer categories before scrolling, move details to a drill-through page, or use a taller page.'
+      : pg + ' (16:9): everything fits on one screen with no scrolling. Columns and rows are sized to what each visual needs; adjust them in the grid below.']);
     return w;
   }
 
+  const sameShape = v => JSON.stringify([v.cfg.w, v.cfg.h, v.cfg.grid, v.cfg.items.map(i => [i.type, i.c, i.r, i.cs, i.rs])]);
   function suggest(inp, base){
-    const p = parts(inp), out = [];
-    const make = (id, name, fn, blurb) => { const g = fn(p), c = frame(base, p); c.grid = { cols: g.cols, rows: g.rows }; c.items = g.items; return { id, name, blurb, cfg: c, why: explain(p, id) }; };
+    inp = normInput(inp);
+    const p = parts(inp);
+    const make = (id, name, fn, blurb, opt) => {
+      opt = opt || {}; const q = opt.noDetail ? Object.assign({}, p, { detail: null }) : p;
+      const g = fn(q), c = frame(base, q); c.grid = { cols: g.cols, rows: g.rows }; c.items = g.items;
+      // start from a 16:9 page at the page's width, so the layout fits a screen; taller pages only when the visuals need them
+      if (+c.h > Math.round(+c.w * 9 / 16) && +c.h <= +c.w) c.h = Math.round(+c.w * 9 / 16);
+      if (opt.large) { c.w = 1920; c.h = 1080; }
+      let fit = fitGrid(c);
+      if (opt.tall) { c.h = Math.min(4000, Math.ceil((fit.top + fit.needH + +c.margin) / 20) * 20); fit = fitGrid(c); }
+      c.items.forEach(x => { delete x.need; });
+      return { id, name, blurb, cfg: c, fit, drill: !!opt.noDetail || !p.detail, tall: !!opt.tall, large: !!opt.large };
+    };
     const A = make('stacked', 'KPIs, then patterns, then details', stacked, 'Reads top to bottom in the 3-30-300 order. The safest choice.');
-    const B = make('trend', 'Trend-led', trendLed, 'The trend gets the full width; breakdowns sit side by side beneath it.');
+    const B = make('trend', 'Trend-led', trendLed, 'The lead visual gets the full width; the rest sit side by side beneath it.');
     const C = make('side', p.detail ? 'Details alongside' : 'One focus visual', side, p.detail ? 'Charts on the left, a tall details table on the right.' : 'The lead visual gets a tall column on the left; the rest sit beside it.');
     // rank: which reads best for these answers
     let order = [A, B, C];
+    const hasTrend = p.v30.some(x => /line|area/i.test(x.type));
     if (p.detail && p.v30.length >= 3) order = [C, A, B];
-    else if (inp.trend && p.v30.length >= 3 && !p.detail) order = [B, A, C];
+    else if (hasTrend && p.v30.length >= 3 && !p.detail) order = [B, A, C];
+    // fits: every visual gets at least 90% of the room it needs
+    const fits = v => !v.tight, fns = { stacked, trend: trendLed, side };
+    const mk = (...a) => { const v = make(...a); v.tight = v.fit.tight.length > 0; return v; };
+    order.forEach(v => { v.tight = v.fit.tight.length > 0; });
+    const extra = [];
+    const lead = order.find(fits) || order.slice().sort((a, b) => (a.fit.overW > 2) - (b.fit.overW > 2) || a.fit.overH - b.fit.overH)[0];
+    // the 300-second level can always move to a drill-through page
+    if (p.detail) extra.push(mk(lead.id === 'side' ? 'stacked' : lead.id, 'Details on a drill-through page', lead.id === 'side' ? stacked : fns[lead.id], 'Keeps this page to the 3- and 30-second levels, so the visuals get more room; records move to a drill-through page.', { noDetail: true }));
+    if (!order.some(fits)) {
+      if (lead.fit.overW > 2 && +base.w < 1920) extra.push(mk(lead.id, 'Larger page', fns[lead.id], 'The same layout on a 1920 × 1080 page, so visuals side by side get their width.', { large: true }));
+      if (lead.fit.overH > 2) extra.push(mk(lead.id, 'Taller page', fns[lead.id], 'The same layout on a taller page, so every visual shows its categories without squeezing.', { tall: true }));
+    }
+    const all = order.concat(extra);
+    const ranked = all.filter(fits).concat(extra.filter(v => !fits(v)), order.filter(v => !fits(v)));
     const seen = new Set(), res = [];
-    order.forEach(v => { const k = JSON.stringify(v.cfg.grid) + JSON.stringify(v.cfg.items.map(i => [i.c, i.r, i.cs, i.rs])); if (!seen.has(k)) { seen.add(k); res.push(v); } });
-    res.forEach((v, i) => { v.recommended = i === 0; const L = LO.layout(v.cfg); v.probs = L.probs; const small = L.items.filter(o => o.region === 'grid' && (o.h < 140 || o.w < 180)); if (small.length) v.probs = v.probs.concat([{ level: 'info', text: small.length + ' visual' + (small.length === 1 ? ' is' : 's are') + ' small at this page size. A taller page (1280 × 960) or fewer visuals gives them more room.' }]); });
+    ranked.forEach(v => { const k = sameShape(v); if (!seen.has(k) && res.length < 4) { seen.add(k); res.push(v); } });
+    const tips = p.tips.slice();
+    const nVis = p.v30.length + (p.detail ? 1 : 0);
+    if (nVis > 7) tips.push(nVis + ' visuals below the KPIs compete for attention. Six or fewer reads best: split the page in two, or move some to tooltips or a drill-through page.');
+    res.forEach((v, i) => { v.recommended = i === 0 && fits(v); v.why = explain(p, v); v.tips = tips;
+      const L = LO.layout(v.cfg); v.probs = L.probs; });
     return res;
   }
 
@@ -1499,7 +1680,7 @@ const LS = (() => {
     return c;
   }
 
-  return { blankInput, suggest, detailPage };
+  return { VTYPES, vt, need, shownOf, blankInput, normInput, suggest, detailPage };
 })();
 
 
@@ -1596,8 +1777,46 @@ function renderPage(){
 function renderTemplates(){ $('templates').innerHTML = LO.TEMPLATES.map(t => '<button type="button" class="chip" data-tpl="' + t.id + '">' + esc(t.name) + '</button>').join(''); }
 function renderCanvas(){
   const L = state.L, col = state.col;
-  $('canvas').innerHTML = LR.wireframe(L, state.cfg, Object.assign({}, col), state.look.style, { hit: true, empty: true, grid: true, selected: state.sel, dims: state.dims, zones: state.zones, font: state.look.font, ids: false });
+  $('canvas').innerHTML = LR.wireframe(L, state.cfg, Object.assign({}, col), state.look.style, { hit: true, empty: true, grid: true, handles: true, selected: state.sel, dims: state.dims, zones: state.zones, font: state.look.font, ids: false });
   $('layoutMsg').innerHTML = L.probs.map(p => '<div class="msg ' + p.level + '">' + esc(p.text) + '</div>').join('');
+}
+/* ---------- column widths and row heights ---------- */
+const PRESETS = { 2: [['1/3 + 2/3', [1, 2]], ['2/3 + 1/3', [2, 1]], ['1/4 + 3/4', [1, 3]], ['3/4 + 1/4', [3, 1]]], 3: [['1/2 + 1/4 + 1/4', [2, 1, 1]], ['1/4 + 1/2 + 1/4', [1, 2, 1]], ['1/4 + 1/4 + 1/2', [1, 1, 2]], ['1/6 + 1/3 + 1/2', [1, 2, 3]]], 4: [['2/5 + 1/5 × 3', [2, 1, 1, 1]], ['1/5 × 3 + 2/5', [1, 1, 1, 2]]] };
+const AX = { c: ['cols', 'colW'], r: ['rows', 'rowH'] };
+// the grid's column (c) or row (r) sizes as percentages that add up to 100
+function pcts(ax){ const g = state.cfg.grid, n = +g[AX[ax][0]], w = LO.weightsOf(g[AX[ax][1]], n) || Array(n).fill(1), t = w.reduce((a, b) => a + b, 0); return w.map(v => v / t * 100); }
+function setW(ax, arr){ const g = state.cfg.grid; const r = arr.map(v => Math.round(v * 100) / 100); g[AX[ax][1]] = LO.isEven(r) ? null : r; }
+// one column (or row) to `pct` %, the others sharing the rest in their current proportions
+function setShare(ax, i, pct){
+  const p = pcts(ax), n = p.length; if (n < 2) return;
+  const v = Math.max(3, Math.min(100 - 3 * (n - 1), pct)), rest = 100 - p[i];
+  setW(ax, p.map((x, j) => j === i ? v : rest > 0 ? x / rest * (100 - v) : (100 - v) / (n - 1)));
+}
+const fmtPct = v => String(Math.round(v * 10) / 10);
+function renderSizes(){
+  ['c', 'r'].forEach(ax => {
+    const box = $(ax === 'c' ? 'colW' : 'rowH'), p = pcts(ax), n = p.length, name = ax === 'c' ? 'Column' : 'Row';
+    const a = document.activeElement;
+    if (a && box.contains(a) && a.matches('input')) { box.querySelectorAll('input[data-i]').forEach(el => { if (el !== a) el.value = fmtPct(p[+el.dataset.i]); }); return; }
+    if (n < 2) { box.innerHTML = '<span class="small muted">One ' + name.toLowerCase() + ': it fills the grid.</span>'; return; }
+    const g = state.cfg.grid, cur = LO.weightsOf(g[AX[ax][1]], n);
+    const same = w => { if (!cur) return false; const t = w.reduce((x, y) => x + y, 0), tc = cur.reduce((x, y) => x + y, 0); return w.every((v, j) => Math.abs(v / t - cur[j] / tc) < 0.002); };
+    box.innerHTML = p.map((v, i) => '<label class="wt"><span class="small muted">' + (i + 1) + '</span><input type="number" data-ax="' + ax + '" data-i="' + i + '" min="3" max="' + (100 - 3 * (n - 1)) + '" step="any" value="' + fmtPct(v) + '" aria-label="' + name + ' ' + (i + 1) + ' (% of the grid)"></label>').join('')
+      + '<span class="chips sm"><button type="button" class="chip' + (!cur ? ' on' : '') + '" data-ax="' + ax + '" data-pre="even">Even</button>' + (PRESETS[n] || []).map(([lbl, w]) => '<button type="button" class="chip" aria-pressed="' + same(w) + '" data-ax="' + ax + '" data-pre="' + w.join(',') + '">' + esc(lbl) + '</button>').join('') + '</span>';
+  });
+}
+// drag a handle between two columns (or rows) to share their room differently
+function moveGutter(ax, i, toPx, free){
+  const G = state.L.grid, gap = +state.cfg.gap || 0, p = pcts(ax);
+  const availPx = (ax === 'c' ? G.w : G.h).reduce((a, b) => a + b, 0); if (availPx <= 0) return;
+  const start = p.slice(0, i).reduce((a, b) => a + b, 0), end = start + p[i] + p[i + 1];
+  // where the pointer is, as % of the grid's room (gaps left out)
+  let b = (toPx - gap / 2 - (ax === 'c' ? G.x[0] : G.y[0]) - gap * i) / availPx * 100;
+  if (!free) b = Math.round(b / (100 / 12)) * (100 / 12);
+  const min = Math.max(free ? 1 : 100 / 12, 40 / availPx * 100);
+  if (end - start < 2 * min) return;
+  b = Math.max(start + min, Math.min(end - min, b));
+  const q = p.slice(); q[i] = b - start; q[i + 1] = end - b; setW(ax, q);
 }
 function typeSelect(id, cur, only){
   const list = only ? LO.TYPES.filter(t => only.includes(t[0])) : LO.TYPES;
@@ -1629,24 +1848,45 @@ function renderEditor(){
   $('editor').innerHTML = h + quick;
 }
 
-/* ---------- 3-30-3 suggestions ---------- */
+/* ---------- 3-30-300 suggestions ---------- */
 function renderSuggestInputs(){
   const g = state.sg, set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
-  set('sgK', g.kpis); $('sgT').value = g.targets; $('sgTrend').checked = !!g.trend; set('sgB', g.breakdowns); $('sgGeo').checked = !!g.geo; $('sgHeat').checked = !!g.heatmap;
-  $('sgD').value = g.detail; set('sgF', g.filters); $('sgP').value = g.filterPlace;
-  $('sgGeo').disabled = !(+g.breakdowns > 0);
+  set('sgK', g.kpis); $('sgT').value = g.targets;
+  $('sgD').value = g.detail; set('sgRows', g.detailRows); $('sgRowsWrap').hidden = g.detail !== 'page';
+  set('sgF', g.filters); $('sgP').value = g.filterPlace;
+  renderSgList();
+}
+function sgHint(v){
+  const t = LS.vt(v.type), nd = LS.need(v), k = LS.shownOf(v);
+  return 'Needs about ' + nd.w + ' × ' + nd.h + ' px' + (t.scrolls && k < +v.n ? ', showing ' + k + ' of ' + v.n + ' ' + t.unit + ' (the rest scroll)' : '') + '.' + (nd.tips.length && !(t.scrolls && k < +v.n && nd.tips.length === 1) ? ' ' + nd.tips[nd.tips.length - 1].replace(/^“[^”]*”:? ?/, '').replace(/^./, c => c.toUpperCase()) : '');
+}
+function renderSgList(){
+  const list = state.sg.visuals, box = $('sgList');
+  const a = document.activeElement;
+  if (a && box.contains(a) && a.matches('input')) { box.querySelectorAll('[data-hint]').forEach(el => { const v = list[+el.dataset.hint]; if (v) el.textContent = sgHint(v); }); return; }
+  box.innerHTML = list.length ? list.map((v, i) => { const t = LS.vt(v.type);
+    return '<div class="sgv" data-i="' + i + '">'
+      + '<div class="field"><label for="sgvType' + i + '">Visual</label><select id="sgvType' + i + '" data-k="type">' + LS.VTYPES.map(x => '<option value="' + x[0] + '"' + (x[0] === v.type ? ' selected' : '') + '>' + esc(x[1]) + '</option>').join('') + '</select></div>'
+      + '<div class="field grow"><label for="sgvTitle' + i + '">Title</label><input type="text" id="sgvTitle' + i + '" data-k="title" value="' + esc(v.title) + '" autocomplete="off"></div>'
+      + '<div class="field sm"><label for="sgvN' + i + '">Categories <span class="muted">(' + t.unit + ')</span></label><input type="number" id="sgvN' + i + '" data-k="n" min="1" max="500" value="' + esc(v.n) + '"></div>'
+      + '<div class="field sm"><label for="sgvShow' + i + '">Before scrolling</label><input type="number" id="sgvShow' + i + '" data-k="show" min="1" max="500" value="' + (t.scrolls ? esc(v.show) : '') + '" placeholder="' + (t.scrolls ? 'All' : 'n/a') + '"' + (t.scrolls ? '' : ' disabled') + '></div>'
+      + '<button type="button" class="btn small danger-t" data-rm="' + i + '" aria-label="Remove ' + esc(v.title || t.label) + '">Remove</button>'
+      + '<p class="small muted hint" data-hint="' + i + '">' + esc(sgHint(v)) + '</p></div>'; }).join('') : '<p class="small muted">No visuals yet. Add the charts this page needs.</p>';
+  $('sgAdd').disabled = list.length >= 8;
 }
 function renderSuggestions(){
   const list = state.sgOut; if (!list) { $('sgOut').innerHTML = ''; return; }
-  const esc2 = esc, col = state.col, st = state.look.style;
-  let h = list.map((v, i) => {
+  const col = state.col, st = state.look.style, zc = { '3 s': 'z3', '30 s': 'z30', '300 s': 'z300', 'Page': 'zpg' };
+  const tips = (list[0] && list[0].tips) || [];
+  let h = tips.length ? '<div class="sg-tips"><h4>Design tips for your visuals</h4><ul>' + tips.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul></div>' : '';
+  h += list.map((v, i) => {
     const L = LO.layout(v.cfg), svg = LR.wireframe(L, v.cfg, col, st, { zones: true, font: state.look.font, ids: false });
-    return '<div class="sg' + (v.recommended ? ' rec' : '') + '"><h4>' + esc2(v.name) + (v.recommended ? '<span class="rec-tag">Best fit</span>' : '') + '</h4><p class="blurb">' + esc2(v.blurb) + '</p>' + svg
-      + '<ul>' + v.why.map(([z, t]) => '<li><b class="z' + z.replace(' s', '') + '">' + z + '</b>' + esc2(t) + '</li>').join('') + '</ul>'
-      + (v.probs || []).map(p => '<div class="msg ' + p.level + '">' + esc2(p.text) + '</div>').join('')
+    return '<div class="sg' + (v.recommended ? ' rec' : '') + '"><h4>' + esc(v.name) + (v.recommended ? '<span class="rec-tag">Best fit</span>' : '') + '</h4><p class="blurb">' + esc(v.blurb) + '</p>' + svg
+      + '<ul>' + v.why.map(([z, t]) => '<li><b class="' + (zc[z] || 'zpg') + '">' + z + '</b>' + esc(t) + '</li>').join('') + '</ul>'
+      + (v.probs || []).map(p => '<div class="msg ' + p.level + '">' + esc(p.text) + '</div>').join('')
       + '<div class="btns"><button type="button" class="btn' + (v.recommended ? ' primary' : '') + '" data-usesg="' + i + '">Use this layout</button></div></div>';
   }).join('');
-  if (state.sg.detail === 'drill') h += '<div class="msg info sg-note">For the 300-second level, build a drill-through page next: <button type="button" class="btn small" id="sgDetail">Start the detail page</button> lays out a details matrix with a filter panel. In Power BI Desktop, add the fields people drill on to the page&rsquo;s <b>Drill through</b> well.</div>';
+  if (state.sg.detail === 'drill' || (state.sg.detail === 'page' && list.some(v => v.drill))) h += '<div class="msg info sg-note">For the 300-second level, build a drill-through page next: <button type="button" class="btn small" id="sgDetail">Start the detail page</button> lays out a details matrix with a filter panel. In Power BI Desktop, add the fields people drill on to the page&rsquo;s <b>Drill through</b> well.</div>';
   $('sgOut').innerHTML = h;
 }
 
@@ -1695,8 +1935,8 @@ function renderOut(){
 const _mctx = document.createElement('canvas').getContext('2d');
 LO.setMeasure((text, size) => { _mctx.font = '700 ' + size + 'px "' + (state.look.font || 'Segoe UI') + '", "Segoe UI", Arial, sans-serif'; return _mctx.measureText(String(text)).width + 4; });
 function compute(){ state.col = colors(); state.L = LO.layout(state.cfg); }
-function renderAll(){ compute(); renderPage(); renderCanvas(); renderEditor(); renderLook(); renderOut(); }
-function refresh(opts){ compute(); renderPage(); renderCanvas(); if (opts && opts.editor) renderEditor(); if (opts && opts.look) renderLook(); else renderColors(); renderOut(); persist(); }
+function renderAll(){ compute(); renderPage(); renderCanvas(); renderSizes(); renderEditor(); renderLook(); renderOut(); }
+function refresh(opts){ compute(); renderPage(); renderCanvas(); renderSizes(); if (opts && opts.editor) renderEditor(); if (opts && opts.look) renderLook(); else renderColors(); renderOut(); persist(); }
 
 /* ---------- init ---------- */
 function resetAll(){ state.customSize = false; state.cfg = blankCfg(); state.look = blankLook(); state.sel = null; setExample(false); renderAll(); }
@@ -1709,7 +1949,7 @@ function init(){
   if (!cfg && look) state.look = Object.assign(blankLook(), look);
   // older saved looks: shadow was 'soft' / 'strong'
   if (typeof state.look.style.shadow === 'string') { state.look.style.shadow = !!state.look.style.shadow; state.look.style.sh = state.look.style.sh || Object.assign({}, LR.SH_DEFAULT); }
-  try { const g = JSON.parse(store.get('sg') || 'null'); if (g) state.sg = Object.assign(LS.blankInput(), g); } catch (e) {}
+  try { const g = JSON.parse(store.get('sg') || 'null'); if (g) state.sg = LS.normInput(g); } catch (e) {}
   if (!cfg) $('suggestBox').open = true;
   renderAll(); renderSuggestInputs();
   // logos saved before they were stored as PNG or JPEG: convert once, so Figma and PowerPoint get them
@@ -1768,8 +2008,29 @@ function init(){
   $('stripH').addEventListener('input', () => { state.cfg.strip.h = Math.max(20, num($('stripH').value, 100)); edited(); });
   // step 2
   $('templates').addEventListener('click', e => { const b = e.target.closest('[data-tpl]'); if (!b) return; state.cfg = LO.fromTemplate(b.dataset.tpl, state.cfg); state.sel = null; edited({ editor: true }); });
-  $('cols').addEventListener('input', () => { state.cfg.grid.cols = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); edited({ editor: true }); });
-  $('rows').addEventListener('input', () => { state.cfg.grid.rows = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); edited({ editor: true }); });
+  $('cols').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); if (n !== g.cols) g.colW = null; g.cols = n; edited({ editor: true }); });
+  $('rows').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); if (n !== g.rows) g.rowH = null; g.rows = n; edited({ editor: true }); });
+  // column widths and row heights: typed, presets, or dragged on the canvas
+  ['colW', 'rowH'].forEach(id => {
+    $(id).addEventListener('input', e => { const t = e.target; if (!t.dataset.ax) return; const v = parseFloat(t.value); if (isNaN(v)) return; setShare(t.dataset.ax, +t.dataset.i, v); edited(); });
+    $(id).addEventListener('change', e => { if (e.target.dataset.ax) { const a = e.target; a.blur(); renderSizes(); const n = $(id).querySelector('[data-i="' + a.dataset.i + '"]'); if (n) n.focus(); } });
+    $(id).addEventListener('click', e => { const b = e.target.closest('[data-pre]'); if (!b) return; const ax = b.dataset.ax; if (b.dataset.pre === 'even') state.cfg.grid[AX[ax][1]] = null; else setW(ax, b.dataset.pre.split(',').map(Number)); edited(); });
+  });
+  let drag = null, raf = 0;
+  const svgPt = e => { const sv = $('canvas').querySelector('svg'), r = sv.getBoundingClientRect(); return { x: (e.clientX - r.left) * state.cfg.w / r.width, y: (e.clientY - r.top) * state.cfg.h / r.height }; };
+  $('canvas').addEventListener('pointerdown', e => { const h = e.target.closest('[data-gut]'); if (!h) return; e.preventDefault(); drag = { ax: h.dataset.gut[0], i: +h.dataset.gut.slice(1) }; document.body.classList.add('dragging', drag.ax === 'c' ? 'drag-c' : 'drag-r'); });
+  window.addEventListener('pointermove', e => { if (!drag) return; const pt = svgPt(e), free = e.shiftKey; cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { if (!drag) return; moveGutter(drag.ax, drag.i, drag.ax === 'c' ? pt.x : pt.y, free); compute(); renderCanvas(); renderSizes(); }); });
+  const endDrag = () => { if (!drag) return; drag = null; document.body.classList.remove('dragging', 'drag-c', 'drag-r'); edited(); };
+  window.addEventListener('pointerup', endDrag); window.addEventListener('pointercancel', endDrag);
+  $('canvas').addEventListener('keydown', e => {
+    const h = e.target.closest('[data-gut]'); if (!h) return; const ax = h.dataset.gut[0], i = +h.dataset.gut.slice(1);
+    const dir = (ax === 'c' ? { ArrowLeft: -1, ArrowRight: 1 } : { ArrowUp: -1, ArrowDown: 1 })[e.key]; if (!dir) return; e.preventDefault();
+    const p = pcts(ax), b = p.slice(0, i + 1).reduce((x, y) => x + y, 0), step = 100 / 12;
+    const nb = e.shiftKey ? b + dir : (dir > 0 ? Math.floor(b / step + 1e-6) + 1 : Math.ceil(b / step - 1e-6) - 1) * step;
+    const G = state.L.grid, gap = +state.cfg.gap || 0;
+    moveGutter(ax, i, (ax === 'c' ? G.x[0] : G.y[0]) + gap * i + gap / 2 + nb / 100 * (ax === 'c' ? G.w : G.h).reduce((x, y) => x + y, 0), e.shiftKey);
+    edited(); const n = $('canvas').querySelector('[data-gut="' + ax + i + '"]'); if (n) n.focus();
+  });
   $('showDims').addEventListener('change', () => { state.dims = $('showDims').checked; renderCanvas(); });
   const pick = el => {
     const v = el.closest('[data-id]'), cell = el.closest('[data-cell]');
@@ -1795,13 +2056,29 @@ function init(){
     edited({ editor: true });
     if (/^add/.test(a) && $('edTitle')) { $('edTitle').focus(); $('edTitle').select(); }
   });
-  // 3-30-3 suggestions
+  // 3-30-300 suggestions
+  const sgSaved = () => { store.set('sg', JSON.stringify(state.sg)); if (state.sgOut) { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); } };
   const sgChange = () => { const g = state.sg;
-    g.kpis = Math.max(0, Math.min(8, num($('sgK').value, 4))); g.targets = $('sgT').value; g.trend = $('sgTrend').checked; g.breakdowns = Math.max(0, Math.min(4, num($('sgB').value, 2)));
-    g.geo = $('sgGeo').checked && g.breakdowns > 0; g.heatmap = $('sgHeat').checked; g.detail = $('sgD').value; g.filters = Math.max(0, Math.min(8, num($('sgF').value, 3))); g.filterPlace = $('sgP').value;
-    store.set('sg', JSON.stringify(g)); renderSuggestInputs(); if (state.sgOut) { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); } };
-  ['sgK', 'sgB', 'sgF'].forEach(id => $(id).addEventListener('input', sgChange));
-  ['sgT', 'sgTrend', 'sgGeo', 'sgHeat', 'sgD', 'sgP'].forEach(id => $(id).addEventListener('change', sgChange));
+    g.kpis = Math.max(0, Math.min(8, num($('sgK').value, 4))); g.targets = $('sgT').value;
+    g.detail = $('sgD').value; g.detailRows = Math.max(3, Math.min(50, num($('sgRows').value, 10))); g.filters = Math.max(0, Math.min(8, num($('sgF').value, 3))); g.filterPlace = $('sgP').value;
+    renderSuggestInputs(); sgSaved(); };
+  ['sgK', 'sgF', 'sgRows'].forEach(id => $(id).addEventListener('input', sgChange));
+  ['sgT', 'sgD', 'sgP'].forEach(id => $(id).addEventListener('change', sgChange));
+  $('sgList').addEventListener('input', e => {
+    const t = e.target, row = t.closest('[data-i]'); if (!row || !t.dataset.k) return; const v = state.sg.visuals[+row.dataset.i]; if (!v) return;
+    const k = t.dataset.k;
+    if (k === 'title') v.title = t.value;
+    else if (k === 'n') v.n = Math.max(1, Math.min(500, Math.round(num(t.value, 1))));
+    else if (k === 'show') v.show = t.value === '' ? '' : Math.max(1, Math.min(500, Math.round(num(t.value, 1))));
+    else return;
+    renderSgList(); sgSaved();
+  });
+  $('sgList').addEventListener('change', e => {
+    const t = e.target, row = t.closest('[data-i]'); if (!row) return; const i = +row.dataset.i, v = state.sg.visuals[i]; if (!v) return;
+    if (t.dataset.k === 'type') { v.type = t.value; if (!LS.vt(v.type).scrolls) v.show = ''; t.blur(); renderSgList(); sgSaved(); const n = $('sgvType' + i); if (n) n.focus(); }
+  });
+  $('sgList').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (!b) return; state.sg.visuals.splice(+b.dataset.rm, 1); renderSgList(); sgSaved(); const n = $('sgList').querySelector('[data-rm]') || $('sgAdd'); n.focus(); });
+  $('sgAdd').addEventListener('click', () => { const l = state.sg.visuals; if (l.length >= 8) return; l.push({ type: 'clusteredBarChart', title: 'New visual', n: 8, show: '' }); renderSgList(); sgSaved(); const n = $('sgvType' + (l.length - 1)); if (n) n.focus(); });
   $('sgGo').addEventListener('click', () => { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); const f = $('sgOut').querySelector('[data-usesg]'); if (f) f.focus(); });
   $('sgOut').addEventListener('click', e => {
     const u = e.target.closest('[data-usesg]');

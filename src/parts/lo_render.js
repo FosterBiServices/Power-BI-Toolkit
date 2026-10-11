@@ -205,6 +205,20 @@ const LR = (() => {
         if (o.w > zw + 12 && o.h > zh + 8) out.push('<g class="zone"><rect x="' + f(zx) + '" y="' + f(zy) + '" width="' + f(zw) + '" height="' + zh + '" rx="9" fill="' + zc + '"/><text x="' + f(zx + zw / 2) + '" y="' + f(zy + 12.5) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF" font-family="' + font + '">' + zt + '</text></g>'); }
       if (opts.dims && o.h >= 44) out.push('<text x="' + f(o.x + o.w - 6) + '" y="' + f(o.y + o.h - 6) + '" font-size="10" text-anchor="end" fill="' + col.muted + '" font-family="Consolas, monospace">' + Math.round(o.w) + '×' + Math.round(o.h) + ' @ ' + Math.round(o.x) + ',' + Math.round(o.y) + '</text>');
     });
+    // handles between columns and rows, for resizing on the canvas
+    if (opts.handles) {
+      const g = L.grid, gap = +c.gap || 0, hw = Math.max(14, gap), gh = [], gi = L.items.filter(o => o.region === 'grid');
+      // runs of cells along a boundary that no visual spans across, so the handle never covers a visual
+      const runs = (n, across) => { const out = []; let s0 = -1; for (let k = 0; k <= n; k++) { const free = k < n && !gi.some(o => across(o, k)); if (free && s0 < 0) s0 = k; if (!free && s0 >= 0) { out.push([s0, k - 1]); s0 = -1; } } return out; };
+      const longest = (rs, pos, size) => rs.reduce((a, r) => { const len = pos[r[1]] + size[r[1]] - pos[r[0]]; return !a || len > a.len ? { a: pos[r[0]], len } : a; }, null);
+      g.x.slice(0, -1).forEach((x, i) => { const mx = x + g.w[i] + gap / 2, rs = runs(g.rows, (o, r) => o.c <= i && o.c + o.cs - 1 > i && o.r <= r && o.r + o.rs - 1 >= r); if (!rs.length) return;
+        const lg = longest(rs, g.y, g.h), my = lg.a + lg.len / 2;
+        gh.push('<g class="gut gut-c" data-gut="c' + i + '" tabindex="0" role="separator" aria-orientation="vertical" aria-label="Width of columns ' + (i + 1) + ' and ' + (i + 2) + '" aria-valuenow="' + Math.round(g.w[i]) + '">' + rs.map(r => '<rect x="' + f(mx - hw / 2) + '" y="' + f(g.y[r[0]]) + '" width="' + f(hw) + '" height="' + f(g.y[r[1]] + g.h[r[1]] - g.y[r[0]]) + '" fill="transparent"/>').join('') + '<rect class="grip" x="' + f(mx - 3) + '" y="' + f(my - 22) + '" width="6" height="44" rx="3" fill="' + col.accent + '"/></g>'); });
+      g.y.slice(0, -1).forEach((y, i) => { const my = y + g.h[i] + gap / 2, rs = runs(g.cols, (o, k) => o.r <= i && o.r + o.rs - 1 > i && o.c <= k && o.c + o.cs - 1 >= k); if (!rs.length) return;
+        const lg = longest(rs, g.x, g.w), mx = lg.a + lg.len / 2;
+        gh.push('<g class="gut gut-r" data-gut="r' + i + '" tabindex="0" role="separator" aria-orientation="horizontal" aria-label="Height of rows ' + (i + 1) + ' and ' + (i + 2) + '" aria-valuenow="' + Math.round(g.h[i]) + '">' + rs.map(r => '<rect x="' + f(g.x[r[0]]) + '" y="' + f(my - hw / 2) + '" width="' + f(g.x[r[1]] + g.w[r[1]] - g.x[r[0]]) + '" height="' + f(hw) + '" fill="transparent"/>').join('') + '<rect class="grip" x="' + f(mx - 22) + '" y="' + f(my - 3) + '" width="44" height="6" rx="3" fill="' + col.accent + '"/></g>'); });
+      out.push('<g id="Handles">' + gh.join('') + '</g>');
+    }
     const defs = st.shadow ? '' : '';
     return '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"' + (opts.cls ? ' class="' + opts.cls + '"' : '') + '>' + defs + out.join('') + '</svg>';
   }

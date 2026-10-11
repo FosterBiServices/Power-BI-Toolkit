@@ -55,17 +55,24 @@ const LO = (() => {
     return upgrade(c);
   }
 
-  /* n sizes filling `total` with `gap` between them.
-     fit: whole pixels that add up exactly (spare pixels go to the first ones);
+  /* n sizes filling `total` with `gap` between them, in proportion to `weights` (even when left out).
+     fit: whole pixels that add up exactly (spare pixels go to the sizes that lost the most to rounding, the first ones on ties);
      roundup: every size rounded up, as on the Alignment page (can run a pixel or two past the edge) */
-  function split(total, n, gap, rounding){
+  function split(total, n, gap, rounding, weights){
     if (n <= 0) return [];
     const avail = total - gap * (n - 1);
-    if (rounding === 'roundup') return Array(n).fill(Math.ceil(avail / n));
-    if (rounding === 'exact') return Array(n).fill(Math.round(avail / n * 100) / 100);
-    const b = Math.floor(avail / n), rem = avail - b * n;
-    return Array.from({ length: n }, (_, i) => b + (i < rem ? 1 : 0));
+    const wt = Array.isArray(weights) && weights.length === n && weights.every(v => +v > 0) ? weights.map(Number) : Array(n).fill(1);
+    const sum = wt.reduce((a, b) => a + b, 0), raw = wt.map(v => avail * v / sum);
+    if (rounding === 'roundup') return raw.map(v => Math.ceil(v - 1e-9));
+    if (rounding === 'exact') return raw.map(v => Math.round(v * 100) / 100);
+    const out = raw.map(v => Math.floor(v + 1e-9)); let rem = Math.round(avail - out.reduce((a, b) => a + b, 0));
+    const order = raw.map((v, i) => [v - out[i], i]).sort((a, b) => (Math.abs(b[0] - a[0]) < 1e-9 ? 0 : b[0] - a[0]) || a[1] - b[1]);
+    for (let k = 0; rem > 0 && k < order.length; k++, rem--) out[order[k][1]]++;
+    return out;
   }
+  // grid.colW / grid.rowH: relative sizes of the columns and rows; null (or the wrong length) means even
+  const weightsOf = (arr, n) => Array.isArray(arr) && arr.length === n && arr.every(v => +v > 0) ? arr.map(Number) : null;
+  const isEven = arr => !arr || arr.every(v => Math.abs(v - arr[0]) < 1e-9);
   const starts = (origin, sizes, gap) => { const out = []; let x = origin; sizes.forEach(s => { out.push(x); x += s + gap; }); return out; };
 
   // Everything on the page, positioned: [{ id, region, type, title, x, y, w, h }] + problems
@@ -131,7 +138,7 @@ const LO = (() => {
       top += sh + g;
     }
     const cols = Math.max(1, +c.grid.cols || 1), rows = Math.max(1, +c.grid.rows || 1);
-    const gw = split(cw, cols, g, R), gh = split(H - m - top, rows, g, R);
+    const gw = split(cw, cols, g, R, weightsOf(c.grid.colW, cols)), gh = split(H - m - top, rows, g, R, weightsOf(c.grid.rowH, rows));
     const gx = starts(left, gw, g), gy = starts(top, gh, g);
     const grid = { cols, rows, x: gx, y: gy, w: gw, h: gh, left, top, right, bottom: H - m };
     const taken = {};
@@ -182,5 +189,5 @@ const LO = (() => {
     return c;
   }
 
-  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
+  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, weightsOf, isEven, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
 })();

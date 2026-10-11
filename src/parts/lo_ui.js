@@ -92,8 +92,46 @@ function renderPage(){
 function renderTemplates(){ $('templates').innerHTML = LO.TEMPLATES.map(t => '<button type="button" class="chip" data-tpl="' + t.id + '">' + esc(t.name) + '</button>').join(''); }
 function renderCanvas(){
   const L = state.L, col = state.col;
-  $('canvas').innerHTML = LR.wireframe(L, state.cfg, Object.assign({}, col), state.look.style, { hit: true, empty: true, grid: true, selected: state.sel, dims: state.dims, zones: state.zones, font: state.look.font, ids: false });
+  $('canvas').innerHTML = LR.wireframe(L, state.cfg, Object.assign({}, col), state.look.style, { hit: true, empty: true, grid: true, handles: true, selected: state.sel, dims: state.dims, zones: state.zones, font: state.look.font, ids: false });
   $('layoutMsg').innerHTML = L.probs.map(p => '<div class="msg ' + p.level + '">' + esc(p.text) + '</div>').join('');
+}
+/* ---------- column widths and row heights ---------- */
+const PRESETS = { 2: [['1/3 + 2/3', [1, 2]], ['2/3 + 1/3', [2, 1]], ['1/4 + 3/4', [1, 3]], ['3/4 + 1/4', [3, 1]]], 3: [['1/2 + 1/4 + 1/4', [2, 1, 1]], ['1/4 + 1/2 + 1/4', [1, 2, 1]], ['1/4 + 1/4 + 1/2', [1, 1, 2]], ['1/6 + 1/3 + 1/2', [1, 2, 3]]], 4: [['2/5 + 1/5 × 3', [2, 1, 1, 1]], ['1/5 × 3 + 2/5', [1, 1, 1, 2]]] };
+const AX = { c: ['cols', 'colW'], r: ['rows', 'rowH'] };
+// the grid's column (c) or row (r) sizes as percentages that add up to 100
+function pcts(ax){ const g = state.cfg.grid, n = +g[AX[ax][0]], w = LO.weightsOf(g[AX[ax][1]], n) || Array(n).fill(1), t = w.reduce((a, b) => a + b, 0); return w.map(v => v / t * 100); }
+function setW(ax, arr){ const g = state.cfg.grid; const r = arr.map(v => Math.round(v * 100) / 100); g[AX[ax][1]] = LO.isEven(r) ? null : r; }
+// one column (or row) to `pct` %, the others sharing the rest in their current proportions
+function setShare(ax, i, pct){
+  const p = pcts(ax), n = p.length; if (n < 2) return;
+  const v = Math.max(3, Math.min(100 - 3 * (n - 1), pct)), rest = 100 - p[i];
+  setW(ax, p.map((x, j) => j === i ? v : rest > 0 ? x / rest * (100 - v) : (100 - v) / (n - 1)));
+}
+const fmtPct = v => String(Math.round(v * 10) / 10);
+function renderSizes(){
+  ['c', 'r'].forEach(ax => {
+    const box = $(ax === 'c' ? 'colW' : 'rowH'), p = pcts(ax), n = p.length, name = ax === 'c' ? 'Column' : 'Row';
+    const a = document.activeElement;
+    if (a && box.contains(a) && a.matches('input')) { box.querySelectorAll('input[data-i]').forEach(el => { if (el !== a) el.value = fmtPct(p[+el.dataset.i]); }); return; }
+    if (n < 2) { box.innerHTML = '<span class="small muted">One ' + name.toLowerCase() + ': it fills the grid.</span>'; return; }
+    const g = state.cfg.grid, cur = LO.weightsOf(g[AX[ax][1]], n);
+    const same = w => { if (!cur) return false; const t = w.reduce((x, y) => x + y, 0), tc = cur.reduce((x, y) => x + y, 0); return w.every((v, j) => Math.abs(v / t - cur[j] / tc) < 0.002); };
+    box.innerHTML = p.map((v, i) => '<label class="wt"><span class="small muted">' + (i + 1) + '</span><input type="number" data-ax="' + ax + '" data-i="' + i + '" min="3" max="' + (100 - 3 * (n - 1)) + '" step="any" value="' + fmtPct(v) + '" aria-label="' + name + ' ' + (i + 1) + ' (% of the grid)"></label>').join('')
+      + '<span class="chips sm"><button type="button" class="chip' + (!cur ? ' on' : '') + '" data-ax="' + ax + '" data-pre="even">Even</button>' + (PRESETS[n] || []).map(([lbl, w]) => '<button type="button" class="chip" aria-pressed="' + same(w) + '" data-ax="' + ax + '" data-pre="' + w.join(',') + '">' + esc(lbl) + '</button>').join('') + '</span>';
+  });
+}
+// drag a handle between two columns (or rows) to share their room differently
+function moveGutter(ax, i, toPx, free){
+  const G = state.L.grid, gap = +state.cfg.gap || 0, p = pcts(ax);
+  const availPx = (ax === 'c' ? G.w : G.h).reduce((a, b) => a + b, 0); if (availPx <= 0) return;
+  const start = p.slice(0, i).reduce((a, b) => a + b, 0), end = start + p[i] + p[i + 1];
+  // where the pointer is, as % of the grid's room (gaps left out)
+  let b = (toPx - gap / 2 - (ax === 'c' ? G.x[0] : G.y[0]) - gap * i) / availPx * 100;
+  if (!free) b = Math.round(b / (100 / 12)) * (100 / 12);
+  const min = Math.max(free ? 1 : 100 / 12, 40 / availPx * 100);
+  if (end - start < 2 * min) return;
+  b = Math.max(start + min, Math.min(end - min, b));
+  const q = p.slice(); q[i] = b - start; q[i + 1] = end - b; setW(ax, q);
 }
 function typeSelect(id, cur, only){
   const list = only ? LO.TYPES.filter(t => only.includes(t[0])) : LO.TYPES;
@@ -125,24 +163,45 @@ function renderEditor(){
   $('editor').innerHTML = h + quick;
 }
 
-/* ---------- 3-30-3 suggestions ---------- */
+/* ---------- 3-30-300 suggestions ---------- */
 function renderSuggestInputs(){
   const g = state.sg, set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
-  set('sgK', g.kpis); $('sgT').value = g.targets; $('sgTrend').checked = !!g.trend; set('sgB', g.breakdowns); $('sgGeo').checked = !!g.geo; $('sgHeat').checked = !!g.heatmap;
-  $('sgD').value = g.detail; set('sgF', g.filters); $('sgP').value = g.filterPlace;
-  $('sgGeo').disabled = !(+g.breakdowns > 0);
+  set('sgK', g.kpis); $('sgT').value = g.targets;
+  $('sgD').value = g.detail; set('sgRows', g.detailRows); $('sgRowsWrap').hidden = g.detail !== 'page';
+  set('sgF', g.filters); $('sgP').value = g.filterPlace;
+  renderSgList();
+}
+function sgHint(v){
+  const t = LS.vt(v.type), nd = LS.need(v), k = LS.shownOf(v);
+  return 'Needs about ' + nd.w + ' × ' + nd.h + ' px' + (t.scrolls && k < +v.n ? ', showing ' + k + ' of ' + v.n + ' ' + t.unit + ' (the rest scroll)' : '') + '.' + (nd.tips.length && !(t.scrolls && k < +v.n && nd.tips.length === 1) ? ' ' + nd.tips[nd.tips.length - 1].replace(/^“[^”]*”:? ?/, '').replace(/^./, c => c.toUpperCase()) : '');
+}
+function renderSgList(){
+  const list = state.sg.visuals, box = $('sgList');
+  const a = document.activeElement;
+  if (a && box.contains(a) && a.matches('input')) { box.querySelectorAll('[data-hint]').forEach(el => { const v = list[+el.dataset.hint]; if (v) el.textContent = sgHint(v); }); return; }
+  box.innerHTML = list.length ? list.map((v, i) => { const t = LS.vt(v.type);
+    return '<div class="sgv" data-i="' + i + '">'
+      + '<div class="field"><label for="sgvType' + i + '">Visual</label><select id="sgvType' + i + '" data-k="type">' + LS.VTYPES.map(x => '<option value="' + x[0] + '"' + (x[0] === v.type ? ' selected' : '') + '>' + esc(x[1]) + '</option>').join('') + '</select></div>'
+      + '<div class="field grow"><label for="sgvTitle' + i + '">Title</label><input type="text" id="sgvTitle' + i + '" data-k="title" value="' + esc(v.title) + '" autocomplete="off"></div>'
+      + '<div class="field sm"><label for="sgvN' + i + '">Categories <span class="muted">(' + t.unit + ')</span></label><input type="number" id="sgvN' + i + '" data-k="n" min="1" max="500" value="' + esc(v.n) + '"></div>'
+      + '<div class="field sm"><label for="sgvShow' + i + '">Before scrolling</label><input type="number" id="sgvShow' + i + '" data-k="show" min="1" max="500" value="' + (t.scrolls ? esc(v.show) : '') + '" placeholder="' + (t.scrolls ? 'All' : 'n/a') + '"' + (t.scrolls ? '' : ' disabled') + '></div>'
+      + '<button type="button" class="btn small danger-t" data-rm="' + i + '" aria-label="Remove ' + esc(v.title || t.label) + '">Remove</button>'
+      + '<p class="small muted hint" data-hint="' + i + '">' + esc(sgHint(v)) + '</p></div>'; }).join('') : '<p class="small muted">No visuals yet. Add the charts this page needs.</p>';
+  $('sgAdd').disabled = list.length >= 8;
 }
 function renderSuggestions(){
   const list = state.sgOut; if (!list) { $('sgOut').innerHTML = ''; return; }
-  const esc2 = esc, col = state.col, st = state.look.style;
-  let h = list.map((v, i) => {
+  const col = state.col, st = state.look.style, zc = { '3 s': 'z3', '30 s': 'z30', '300 s': 'z300', 'Page': 'zpg' };
+  const tips = (list[0] && list[0].tips) || [];
+  let h = tips.length ? '<div class="sg-tips"><h4>Design tips for your visuals</h4><ul>' + tips.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul></div>' : '';
+  h += list.map((v, i) => {
     const L = LO.layout(v.cfg), svg = LR.wireframe(L, v.cfg, col, st, { zones: true, font: state.look.font, ids: false });
-    return '<div class="sg' + (v.recommended ? ' rec' : '') + '"><h4>' + esc2(v.name) + (v.recommended ? '<span class="rec-tag">Best fit</span>' : '') + '</h4><p class="blurb">' + esc2(v.blurb) + '</p>' + svg
-      + '<ul>' + v.why.map(([z, t]) => '<li><b class="z' + z.replace(' s', '') + '">' + z + '</b>' + esc2(t) + '</li>').join('') + '</ul>'
-      + (v.probs || []).map(p => '<div class="msg ' + p.level + '">' + esc2(p.text) + '</div>').join('')
+    return '<div class="sg' + (v.recommended ? ' rec' : '') + '"><h4>' + esc(v.name) + (v.recommended ? '<span class="rec-tag">Best fit</span>' : '') + '</h4><p class="blurb">' + esc(v.blurb) + '</p>' + svg
+      + '<ul>' + v.why.map(([z, t]) => '<li><b class="' + (zc[z] || 'zpg') + '">' + z + '</b>' + esc(t) + '</li>').join('') + '</ul>'
+      + (v.probs || []).map(p => '<div class="msg ' + p.level + '">' + esc(p.text) + '</div>').join('')
       + '<div class="btns"><button type="button" class="btn' + (v.recommended ? ' primary' : '') + '" data-usesg="' + i + '">Use this layout</button></div></div>';
   }).join('');
-  if (state.sg.detail === 'drill') h += '<div class="msg info sg-note">For the 300-second level, build a drill-through page next: <button type="button" class="btn small" id="sgDetail">Start the detail page</button> lays out a details matrix with a filter panel. In Power BI Desktop, add the fields people drill on to the page&rsquo;s <b>Drill through</b> well.</div>';
+  if (state.sg.detail === 'drill' || (state.sg.detail === 'page' && list.some(v => v.drill))) h += '<div class="msg info sg-note">For the 300-second level, build a drill-through page next: <button type="button" class="btn small" id="sgDetail">Start the detail page</button> lays out a details matrix with a filter panel. In Power BI Desktop, add the fields people drill on to the page&rsquo;s <b>Drill through</b> well.</div>';
   $('sgOut').innerHTML = h;
 }
 
@@ -191,8 +250,8 @@ function renderOut(){
 const _mctx = document.createElement('canvas').getContext('2d');
 LO.setMeasure((text, size) => { _mctx.font = '700 ' + size + 'px "' + (state.look.font || 'Segoe UI') + '", "Segoe UI", Arial, sans-serif'; return _mctx.measureText(String(text)).width + 4; });
 function compute(){ state.col = colors(); state.L = LO.layout(state.cfg); }
-function renderAll(){ compute(); renderPage(); renderCanvas(); renderEditor(); renderLook(); renderOut(); }
-function refresh(opts){ compute(); renderPage(); renderCanvas(); if (opts && opts.editor) renderEditor(); if (opts && opts.look) renderLook(); else renderColors(); renderOut(); persist(); }
+function renderAll(){ compute(); renderPage(); renderCanvas(); renderSizes(); renderEditor(); renderLook(); renderOut(); }
+function refresh(opts){ compute(); renderPage(); renderCanvas(); renderSizes(); if (opts && opts.editor) renderEditor(); if (opts && opts.look) renderLook(); else renderColors(); renderOut(); persist(); }
 
 /* ---------- init ---------- */
 function resetAll(){ state.customSize = false; state.cfg = blankCfg(); state.look = blankLook(); state.sel = null; setExample(false); renderAll(); }
@@ -205,7 +264,7 @@ function init(){
   if (!cfg && look) state.look = Object.assign(blankLook(), look);
   // older saved looks: shadow was 'soft' / 'strong'
   if (typeof state.look.style.shadow === 'string') { state.look.style.shadow = !!state.look.style.shadow; state.look.style.sh = state.look.style.sh || Object.assign({}, LR.SH_DEFAULT); }
-  try { const g = JSON.parse(store.get('sg') || 'null'); if (g) state.sg = Object.assign(LS.blankInput(), g); } catch (e) {}
+  try { const g = JSON.parse(store.get('sg') || 'null'); if (g) state.sg = LS.normInput(g); } catch (e) {}
   if (!cfg) $('suggestBox').open = true;
   renderAll(); renderSuggestInputs();
   // logos saved before they were stored as PNG or JPEG: convert once, so Figma and PowerPoint get them
@@ -264,8 +323,29 @@ function init(){
   $('stripH').addEventListener('input', () => { state.cfg.strip.h = Math.max(20, num($('stripH').value, 100)); edited(); });
   // step 2
   $('templates').addEventListener('click', e => { const b = e.target.closest('[data-tpl]'); if (!b) return; state.cfg = LO.fromTemplate(b.dataset.tpl, state.cfg); state.sel = null; edited({ editor: true }); });
-  $('cols').addEventListener('input', () => { state.cfg.grid.cols = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); edited({ editor: true }); });
-  $('rows').addEventListener('input', () => { state.cfg.grid.rows = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); edited({ editor: true }); });
+  $('cols').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); if (n !== g.cols) g.colW = null; g.cols = n; edited({ editor: true }); });
+  $('rows').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); if (n !== g.rows) g.rowH = null; g.rows = n; edited({ editor: true }); });
+  // column widths and row heights: typed, presets, or dragged on the canvas
+  ['colW', 'rowH'].forEach(id => {
+    $(id).addEventListener('input', e => { const t = e.target; if (!t.dataset.ax) return; const v = parseFloat(t.value); if (isNaN(v)) return; setShare(t.dataset.ax, +t.dataset.i, v); edited(); });
+    $(id).addEventListener('change', e => { if (e.target.dataset.ax) { const a = e.target; a.blur(); renderSizes(); const n = $(id).querySelector('[data-i="' + a.dataset.i + '"]'); if (n) n.focus(); } });
+    $(id).addEventListener('click', e => { const b = e.target.closest('[data-pre]'); if (!b) return; const ax = b.dataset.ax; if (b.dataset.pre === 'even') state.cfg.grid[AX[ax][1]] = null; else setW(ax, b.dataset.pre.split(',').map(Number)); edited(); });
+  });
+  let drag = null, raf = 0;
+  const svgPt = e => { const sv = $('canvas').querySelector('svg'), r = sv.getBoundingClientRect(); return { x: (e.clientX - r.left) * state.cfg.w / r.width, y: (e.clientY - r.top) * state.cfg.h / r.height }; };
+  $('canvas').addEventListener('pointerdown', e => { const h = e.target.closest('[data-gut]'); if (!h) return; e.preventDefault(); drag = { ax: h.dataset.gut[0], i: +h.dataset.gut.slice(1) }; document.body.classList.add('dragging', drag.ax === 'c' ? 'drag-c' : 'drag-r'); });
+  window.addEventListener('pointermove', e => { if (!drag) return; const pt = svgPt(e), free = e.shiftKey; cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { if (!drag) return; moveGutter(drag.ax, drag.i, drag.ax === 'c' ? pt.x : pt.y, free); compute(); renderCanvas(); renderSizes(); }); });
+  const endDrag = () => { if (!drag) return; drag = null; document.body.classList.remove('dragging', 'drag-c', 'drag-r'); edited(); };
+  window.addEventListener('pointerup', endDrag); window.addEventListener('pointercancel', endDrag);
+  $('canvas').addEventListener('keydown', e => {
+    const h = e.target.closest('[data-gut]'); if (!h) return; const ax = h.dataset.gut[0], i = +h.dataset.gut.slice(1);
+    const dir = (ax === 'c' ? { ArrowLeft: -1, ArrowRight: 1 } : { ArrowUp: -1, ArrowDown: 1 })[e.key]; if (!dir) return; e.preventDefault();
+    const p = pcts(ax), b = p.slice(0, i + 1).reduce((x, y) => x + y, 0), step = 100 / 12;
+    const nb = e.shiftKey ? b + dir : (dir > 0 ? Math.floor(b / step + 1e-6) + 1 : Math.ceil(b / step - 1e-6) - 1) * step;
+    const G = state.L.grid, gap = +state.cfg.gap || 0;
+    moveGutter(ax, i, (ax === 'c' ? G.x[0] : G.y[0]) + gap * i + gap / 2 + nb / 100 * (ax === 'c' ? G.w : G.h).reduce((x, y) => x + y, 0), e.shiftKey);
+    edited(); const n = $('canvas').querySelector('[data-gut="' + ax + i + '"]'); if (n) n.focus();
+  });
   $('showDims').addEventListener('change', () => { state.dims = $('showDims').checked; renderCanvas(); });
   const pick = el => {
     const v = el.closest('[data-id]'), cell = el.closest('[data-cell]');
@@ -291,13 +371,29 @@ function init(){
     edited({ editor: true });
     if (/^add/.test(a) && $('edTitle')) { $('edTitle').focus(); $('edTitle').select(); }
   });
-  // 3-30-3 suggestions
+  // 3-30-300 suggestions
+  const sgSaved = () => { store.set('sg', JSON.stringify(state.sg)); if (state.sgOut) { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); } };
   const sgChange = () => { const g = state.sg;
-    g.kpis = Math.max(0, Math.min(8, num($('sgK').value, 4))); g.targets = $('sgT').value; g.trend = $('sgTrend').checked; g.breakdowns = Math.max(0, Math.min(4, num($('sgB').value, 2)));
-    g.geo = $('sgGeo').checked && g.breakdowns > 0; g.heatmap = $('sgHeat').checked; g.detail = $('sgD').value; g.filters = Math.max(0, Math.min(8, num($('sgF').value, 3))); g.filterPlace = $('sgP').value;
-    store.set('sg', JSON.stringify(g)); renderSuggestInputs(); if (state.sgOut) { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); } };
-  ['sgK', 'sgB', 'sgF'].forEach(id => $(id).addEventListener('input', sgChange));
-  ['sgT', 'sgTrend', 'sgGeo', 'sgHeat', 'sgD', 'sgP'].forEach(id => $(id).addEventListener('change', sgChange));
+    g.kpis = Math.max(0, Math.min(8, num($('sgK').value, 4))); g.targets = $('sgT').value;
+    g.detail = $('sgD').value; g.detailRows = Math.max(3, Math.min(50, num($('sgRows').value, 10))); g.filters = Math.max(0, Math.min(8, num($('sgF').value, 3))); g.filterPlace = $('sgP').value;
+    renderSuggestInputs(); sgSaved(); };
+  ['sgK', 'sgF', 'sgRows'].forEach(id => $(id).addEventListener('input', sgChange));
+  ['sgT', 'sgD', 'sgP'].forEach(id => $(id).addEventListener('change', sgChange));
+  $('sgList').addEventListener('input', e => {
+    const t = e.target, row = t.closest('[data-i]'); if (!row || !t.dataset.k) return; const v = state.sg.visuals[+row.dataset.i]; if (!v) return;
+    const k = t.dataset.k;
+    if (k === 'title') v.title = t.value;
+    else if (k === 'n') v.n = Math.max(1, Math.min(500, Math.round(num(t.value, 1))));
+    else if (k === 'show') v.show = t.value === '' ? '' : Math.max(1, Math.min(500, Math.round(num(t.value, 1))));
+    else return;
+    renderSgList(); sgSaved();
+  });
+  $('sgList').addEventListener('change', e => {
+    const t = e.target, row = t.closest('[data-i]'); if (!row) return; const i = +row.dataset.i, v = state.sg.visuals[i]; if (!v) return;
+    if (t.dataset.k === 'type') { v.type = t.value; if (!LS.vt(v.type).scrolls) v.show = ''; t.blur(); renderSgList(); sgSaved(); const n = $('sgvType' + i); if (n) n.focus(); }
+  });
+  $('sgList').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (!b) return; state.sg.visuals.splice(+b.dataset.rm, 1); renderSgList(); sgSaved(); const n = $('sgList').querySelector('[data-rm]') || $('sgAdd'); n.focus(); });
+  $('sgAdd').addEventListener('click', () => { const l = state.sg.visuals; if (l.length >= 8) return; l.push({ type: 'clusteredBarChart', title: 'New visual', n: 8, show: '' }); renderSgList(); sgSaved(); const n = $('sgvType' + (l.length - 1)); if (n) n.focus(); });
   $('sgGo').addEventListener('click', () => { state.sgOut = LS.suggest(state.sg, state.cfg); renderSuggestions(); const f = $('sgOut').querySelector('[data-usesg]'); if (f) f.focus(); });
   $('sgOut').addEventListener('click', e => {
     const u = e.target.closest('[data-usesg]');

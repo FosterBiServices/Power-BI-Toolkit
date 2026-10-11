@@ -135,25 +135,25 @@
     <div class="step-body">
       <div class="step-head">
         <h2 id="s2">Layout and visuals</h2>
-        <p>Answer a few questions to get suggested layouts, or start from one of the layouts below. Then click any visual to change it, or an empty cell to add one. Visuals can span several columns and rows.</p>
+        <p>Answer a few questions to get suggested layouts, or start from one of the layouts below. Then click any visual to change it, or an empty cell to add one. Visuals can span several columns and rows, and columns and rows can be any size.</p>
       </div>
       <details class="suggest" id="suggestBox">
-        <summary><b>Suggest a layout</b> <span class="muted">(3-30-3: answer a few questions, get three layouts)</span></summary>
+        <summary><b>Suggest a layout</b> <span class="muted">(3-30-300: list your visuals, get layouts sized for them)</span></summary>
         <div class="suggest-body">
-          <p class="note small">A good report page answers three questions in order. <b>3 seconds</b>: how are we doing? (headline KPIs top left, big numbers, status against target). <b>30 seconds</b>: where and why? (trend, simple bar charts, heatmaps, filters). <b>300 seconds</b>: which records? (details on demand: a formatted table or a drill-through page).</p>
+          <p class="note small">A good report page answers three questions in order. <b>3 seconds</b>: how are we doing? (headline KPIs top left, big numbers, status against target). <b>30 seconds</b>: where and why? (trend, bar charts, maps, heatmaps, filters). <b>300 seconds</b>: which records? (details on demand: a formatted table, or a drill-through page so this page stays clean).</p>
           <div class="sgrid">
             <fieldset class="sq"><legend>3 s: headline numbers</legend>
               <div class="field sm"><label for="sgK">KPIs</label><input type="number" id="sgK" min="0" max="8"></div>
               <div class="field"><label for="sgT">With a target</label><select id="sgT"><option value="none">None</option><option value="some">Some (the top 2)</option><option value="all">All of them</option></select></div>
             </fieldset>
-            <fieldset class="sq"><legend>30 s: patterns</legend>
-              <label class="chk"><input type="checkbox" id="sgTrend"> A trend over time</label>
-              <div class="field sm"><label for="sgB">Categories to compare</label><input type="number" id="sgB" min="0" max="4"></div>
-              <label class="chk"><input type="checkbox" id="sgGeo"> One of them is a location</label>
-              <label class="chk"><input type="checkbox" id="sgHeat"> Two categories at once (heatmap)</label>
+            <fieldset class="sq sq-vis"><legend>30 s: your visuals</legend>
+              <p class="note small">For each one: how many categories it has (bars, lines, slices, rows), and how many to show before a scroll bar. Sizes follow from these.</p>
+              <div id="sgList" class="sg-list"></div>
+              <div class="btns"><button type="button" class="btn small" id="sgAdd">+ Add a visual</button></div>
             </fieldset>
             <fieldset class="sq"><legend>300 s: details</legend>
               <div class="field"><label for="sgD">Individual records</label><select id="sgD"><option value="page">On this page</option><option value="drill">On a drill-through page</option><option value="none">Not needed</option></select></div>
+              <div class="field sm" id="sgRowsWrap"><label for="sgRows">Rows before scrolling</label><input type="number" id="sgRows" min="3" max="50"></div>
               <div class="field sm"><label for="sgF">Filters (slicers)</label><input type="number" id="sgF" min="0" max="8"></div>
               <div class="field"><label for="sgP">Filters go</label><select id="sgP"><option value="auto">Where they fit best</option><option value="header">In the header</option><option value="side">In a side panel</option></select></div>
             </fieldset>
@@ -167,7 +167,12 @@
         <div class="field sm"><label for="cols">Columns</label><input type="number" id="cols" min="1" max="12"></div>
         <div class="field sm"><label for="rows">Rows</label><input type="number" id="rows" min="1" max="12"></div>
         <label class="chk inline"><input type="checkbox" id="showDims" checked> Show sizes</label>
-        <label class="chk inline"><input type="checkbox" id="showZones"> Show 3-30-3 zones</label>
+        <label class="chk inline"><input type="checkbox" id="showZones"> Show 3-30-300 zones</label>
+      </div>
+      <div class="sizes">
+        <div class="field"><label id="colWLbl">Column widths <span class="muted">(% of the grid)</span></label><div class="wts" id="colW" role="group" aria-labelledby="colWLbl"></div></div>
+        <div class="field"><label id="rowHLbl">Row heights <span class="muted">(% of the grid)</span></label><div class="wts" id="rowH" role="group" aria-labelledby="rowHLbl"></div></div>
+        <p class="note small">Or drag the handles between columns and rows on the page. Margin and gap stay the same; sizes snap to twelfths (hold Shift for any size).</p>
       </div>
       <div class="designer">
         <div class="canvas-wrap"><div id="canvas" class="canvas"></div></div>
