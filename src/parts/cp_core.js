@@ -23,14 +23,14 @@ const CP_GROUPS = [
 /* Each pattern: what it shows, when to use it, the fields it needs, the new measures and tables, and the steps to build the chart */
 const CP_PATTERNS = [
   { id: 'labels', group: 'share', name: 'Labels above the bars', kind: 'Clustered bar chart',
-    what: 'Each bar has its item’s name and % of total on a line above it, and its value on a pill at the end. The axis can go, because every bar is labeled.',
+    what: 'Each bar has its item’s name and % of total on a line above it, and its value just past the end. The axis can go, because every bar is labeled.',
     when: 'Up to about 12 items, when readers want the value and the share without a legend or axis.',
     avoid: 'Many items or long names: the labels crowd. Use Top N per page instead.',
     needs: ['measure', 'category'] },
-  { id: 'stacked', group: 'share', name: '% of total in the bar’s headroom', kind: 'Stacked bar or column chart',
-    what: 'Each bar is one solid color with its value inside, and its % of the total sits in a little extra length at the end, so it reads as part of the bar.',
+  { id: 'stacked', group: 'share', name: '% of total next to each bar', kind: 'Stacked bar or column chart',
+    what: 'Each bar has its value inside, and its % of total sits in a neat column between the names and the bars. The % sits on a hidden piece of the bar, so it lines up on every row.',
     when: 'A few categories where the share matters as much as the amount.',
-    avoid: 'Bars that are already very short: the headroom is a fixed slice of the longest bar.',
+    avoid: 'Very long lists, or when readers only need the amounts.',
     needs: ['measure', 'category'], orient: true },
   { id: 'bubbles', group: 'share', name: 'Bubbles over the columns', kind: 'Line and clustered column chart',
     what: 'Columns with their value, and a bubble floating above each one holding its % of total, joined to the column by a thin stem.',
@@ -51,7 +51,7 @@ const CP_PATTERNS = [
 const cpPattern = id => CP_PATTERNS.find(p => p.id === id) || CP_PATTERNS[0];
 
 const CP_DEF = { measure: 'Sales', fmt: '', category: "'Product'[Category]", item: "'Customer'[Customer Name]", key: '', date: "'Date'[Date]", axis: "'Date'[Month]",
-  table: '_Measures', folder: 'Chart Patterns', orient: 'bar', pct: '0.0%', headroom: 10, perPage: 5, maxItems: 20, maxPages: 50, bubble: 30,
+  table: '_Measures', folder: 'Chart Patterns', orient: 'bar', pct: '0.0%', headroom: 20, perPage: 5, maxItems: 20, maxPages: 50, bubble: 30,
   bar: '#1F6FB2', accent: '#5B4B9A', label: '#404040' };
 
 /* ---------- the names of everything new ---------- */
@@ -59,7 +59,7 @@ function cpNames(p, f){
   const v = cpMeasure(f.measure) || 'Value', cat = (cpCol(f.category) || {}).column || 'Item', it = (cpCol(f.item) || {}).column || 'Item';
   const N = { pct: v + ' % of Total', subtitle: v + ' Subtitle' };
   if (p.id === 'labels') Object.assign(N, { spacer: v + ' Label Spacer', selected: 'Selected ' + cat });
-  if (p.id === 'stacked') Object.assign(N, { spacer: v + ' Headroom' });
+  if (p.id === 'stacked') Object.assign(N, { spacer: v + ' % Spacer' });
   if (p.id === 'bubbles') Object.assign(N, { label: v + ' Bubble Label', marker: v + ' Bubble Position', axisMax: v + ' Bubble Axis Max' });
   if (p.id === 'paging') Object.assign(N, { alpha: it + ' Alphabetical Rank', rank: it + ' Rank', rankLabel: it + ' Rank Label', spacer: v + ' Rank Badge',
     axisMax: v + ' Page Axis Max', axisMin: v + ' Page Axis Min', subtitle: v + ' Page Subtitle',
@@ -112,7 +112,8 @@ function cpOut(p, f){
     subtitle(vName + ': ', V);
   }
   if (p.id === 'stacked') {
-    m(N.spacer, 'VAR _longest =\n    CALCULATE (\n        MAXX ( VALUES ( ' + cpRef(cat) + ' ), ' + V + ' ),\n        ALLSELECTED ( ' + cpRef(cat) + ' )\n    )\nRETURN\n    IF ( ISBLANK ( ' + V + ' ), BLANK (), _longest * ' + (Math.max(1, +f.headroom || 10) / 100) + ' )');
+    subtitle(vName + ': ', V);
+    m(N.spacer, 'VAR _longest =\n    CALCULATE (\n        MAXX ( VALUES ( ' + cpRef(cat) + ' ), ' + V + ' ),\n        ALLSELECTED ( ' + cpRef(cat) + ' )\n    )\nRETURN\n    IF ( ISBLANK ( ' + V + ' ), BLANK (), _longest * ' + (Math.max(1, +f.headroom || 20) / 100) + ' )');
     pct('ALLSELECTED ( ' + cpRef(cat) + ' )');
   }
   if (p.id === 'bubbles') {
@@ -197,22 +198,23 @@ function cpSteps(p, f, out, esc){
       'Sort it by ' + b(cpMeasure(f.measure)) + ', descending (the ' + b('...') + ' menu on the visual > Sort axis).']]);
     G.push(['Format it', [
       b(catAxis) + ': off. ' + b(valueAxis) + ': off. ' + b('Legend') + ': off.',
-      b('Columns') + ' > ' + b('Layout') + ': set ' + b('Space between series') + ' to 25 and ' + b('Space between categories') + ' to 25.',
+      b('Bars') + ' > ' + b('Layout') + ': set ' + b('Space between series') + ' to 25 and ' + b('Space between categories') + ' to 25.',
       b('Data labels') + ': on.',
-      'In ' + b('Data labels') + ', set ' + b('Apply settings to') + ' to ' + b(cpMeasure(f.measure)) + ': Position ' + b('Outside end') + ', Value color ' + sw(cpOn(acc)) + ', Background on with color ' + sw(acc) + ' and transparency 0. That makes the value pill.',
+      'In ' + b('Data labels') + ', set ' + b('Apply settings to') + ' to ' + b(cpMeasure(f.measure)) + ': Position ' + b('Outside end') + ', Value color ' + sw(lab) + ', ' + b('Italic') + ' on, Background off. The value sits just past the end of the bar.',
       'Set ' + b('Apply settings to') + ' to ' + b(N.spacer) + '. In ' + b('Value') + ', set ' + b('Field') + ' to ' + q('[' + N.selected + ']') + '. Turn ' + b('Detail') + ' on and set its ' + b('Field') + ' to ' + q('[' + N.pct + ']') + '. The spacer is an empty bar in the slot above each real bar, so its label sits on its own line above the bar.',
       b('Title') + ': your title. ' + b('Subtitle') + ': on, then select ' + b('fx') + ', Format style ' + b('Field value') + ', and pick ' + q('[' + N.subtitle + ']') + '.',
-      b('Columns') + ' > ' + b('Color') + ': ' + sw(bar) + ' for ' + b(cpMeasure(f.measure)) + '.']]);
+      b('Bars') + ' > ' + b('Color') + ': ' + sw(bar) + ' for ' + b(cpMeasure(f.measure)) + '.']]);
   }
   if (p.id === 'stacked') {
     G.push(['Add the chart', [
-      'Add a ' + b(horiz ? 'Stacked bar chart' : 'Stacked column chart') + '. Put ' + q(cpRef(cat)) + ' on the ' + b(catAxis) + ' and, in this order, ' + q('[' + cpMeasure(f.measure) + ']') + ' then ' + q('[' + N.spacer + ']') + ' on the ' + b(valueAxis) + '.',
+      'Add a ' + b(horiz ? 'Stacked bar chart' : 'Stacked column chart') + '. Put ' + q(cpRef(cat)) + ' on the ' + b(catAxis) + ' and, in this order, ' + q('[' + N.spacer + ']') + ' then ' + q('[' + cpMeasure(f.measure) + ']') + ' on the ' + b(valueAxis) + '. The spacer comes first, so it sits at the start of every bar.',
       'Sort it by ' + b(cpMeasure(f.measure)) + ', descending.']]);
     G.push(['Format it', [
-      b(valueAxis) + ': off. ' + b('Legend') + ': off. ' + b('Total labels') + ': off.',
-      b('Bars') + ' > ' + b('Color') + ': set both ' + b(cpMeasure(f.measure)) + ' and ' + b(N.spacer) + ' to ' + sw(bar) + ', so the two parts read as one bar.',
-      b('Data labels') + ': on. For ' + b(cpMeasure(f.measure)) + ', Value color ' + sw(cpOn(bar)) + '.',
-      'Set ' + b('Apply settings to') + ' to ' + b(N.spacer) + '. In ' + b('Value') + ', set ' + b('Field') + ' to ' + q('[' + N.pct + ']') + ', color ' + sw(cpOn(bar)) + ', size 10. Position ' + b('Auto') + '. This puts the % in the extra length.']]);
+      b(catAxis) + ': on, title off. ' + b(valueAxis) + ': off. ' + b('Legend') + ': off. ' + b('Total labels') + ': off.',
+      b(horiz ? 'Bars' : 'Columns') + ' > ' + b('Color') + ': ' + b(N.spacer) + ' ' + sw('#FFFFFF') + ' (the same as your visual background, so it disappears) and ' + b(cpMeasure(f.measure)) + ' ' + sw(bar) + '.',
+      b('Data labels') + ': on. For ' + b(cpMeasure(f.measure)) + ': position ' + b('Center') + ', color ' + sw(cpOn(bar)) + ', bold.',
+      'Set ' + b('Apply settings to') + ' to ' + b(N.spacer) + '. In ' + b('Value') + ', set ' + b('Field') + ' to ' + q('[' + N.pct + ']') + ', color ' + sw(lab) + ', size 10. That puts the % in a column between the names and the bars.',
+      b('Title') + ': your title. ' + b('Subtitle') + ': on, then select ' + b('fx') + ', Format style ' + b('Field value') + ', and pick ' + q('[' + N.subtitle + ']') + '.']]);
   }
   if (p.id === 'bubbles') {
     G.push(['Add the chart', [
@@ -273,8 +275,8 @@ function cpSteps(p, f, out, esc){
 
 function cpChecks(p, f, out){
   const N = out.names, v = cpMeasure(f.measure);
-  if (p.id === 'labels') return ['Each bar has a value pill at its end, and the name and % sit on a line above the bar.', 'No second bar is visible next to each bar.', 'The % values add up to 100% across the bars.'];
-  if (p.id === 'stacked') return ['Each bar looks like one solid bar with no seam.', 'The value is inside the bar and the % sits in the extra length at its end.', 'No total label shows past the bar.'];
+  if (p.id === 'labels') return ['Each bar has its value in italics past its end, and the name and % sit on a line above the bar.', 'No second bar is visible next to each bar.', 'The % values add up to 100% across the bars.'];
+  if (p.id === 'stacked') return ['The % values line up in a column between the names and the bars.', 'No colored piece shows under the %: the spacer matches the background.', 'The value is inside each bar, and no total label shows past it.'];
   if (p.id === 'bubbles') return ['The bubbles are round and big enough to hold the %. If they’re small dots, the theme step below isn’t done.', 'A thin stem joins each column to its bubble, and no line runs between the bubbles.', 'No bubble or label is cut off at the top.'];
   if (p.id === 'paging') return ['The chart shows ' + (f.perPage || 5) + ' bars, ranked, each with a #rank badge and a value badge.', 'Changing items per page changes the bars and the number of pages.', 'On the last page, the bars are shorter than on page 1. If every page fills the chart edge to edge, the X-axis range isn’t using ' + N.axisMin + ' and ' + N.axisMax + '.', 'The page slicer offers no empty pages.'];
   return ['Moving the slicer handles moves the shaded band.', 'Only points inside the band have labels and markers.', 'The line still shows the full history: the slicer doesn’t filter the chart. If it does, ' + N.dates + ' has been related to another table; remove that relationship.'];
@@ -301,18 +303,20 @@ function cpSvgLabels(rows, f){
   const W = 420, rh = 40, H = rows.length * rh + 6;
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Preview">' + rows.map((r, i) => { const w = r[1] / mx * 330, y = 4 + i * rh;
     return '<text x="4" y="' + (y + 11) + '" font-size="10.5" fill="' + lab + '"><tspan font-weight="600">' + r[0] + '</tspan> ' + (r[1] / tot * 100).toFixed(1) + '%</text>'
-      + '<rect x="4" y="' + (y + 16) + '" width="' + w + '" height="16" fill="' + bar + '" rx="2"/><rect x="' + (w + 8) + '" y="' + (y + 16) + '" width="42" height="16" rx="8" fill="' + acc + '"/><text x="' + (w + 29) + '" y="' + (y + 28) + '" font-size="10" text-anchor="middle" fill="' + cpOn(acc) + '">' + cpNum(r[1]) + '</text>'; }).join('') + '</svg>';
+      + '<rect x="4" y="' + (y + 16) + '" width="' + w + '" height="16" fill="' + bar + '" rx="2"/><text x="' + (w + 9) + '" y="' + (y + 28) + '" font-size="10" font-style="italic" fill="' + lab + '">' + cpNum(r[1]) + '</text>'; }).join('') + '</svg>';
 }
 function cpSvgStacked(rows, f){
-  const bar = cpHex(f.bar) || CP_DEF.bar, on = cpOn(bar), tot = rows.reduce((s, r) => s + r[1], 0), mx = rows[0][1], hr = Math.max(1, +f.headroom || 10) / 100;
+  // the spacer comes first and matches the background, so the % sits in a column before each bar
+  const bar = cpHex(f.bar) || CP_DEF.bar, lab = cpHex(f.label) || CP_DEF.label, on = cpOn(bar), tot = rows.reduce((s, r) => s + r[1], 0), mx = rows[0][1], hr = Math.max(1, +f.headroom || 20) / 100;
   if (f.orient === 'column') {
-    const W = 420, H = 230, step = (W - 20) / rows.length, bw = Math.min(50, step - 14), k = 170 / (mx * (1 + hr));
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Preview">' + rows.map((r, i) => { const h = r[1] * k, s = mx * hr * k, x = 10 + i * step + (step - bw) / 2, y = H - 24 - h;
-      return '<rect x="' + x + '" y="' + (y - s) + '" width="' + bw + '" height="' + (h + s) + '" fill="' + bar + '" rx="2"/><text x="' + (x + bw / 2) + '" y="' + (y + 13) + '" font-size="10" text-anchor="middle" fill="' + on + '">' + cpNum(r[1]) + '</text><text x="' + (x + bw / 2) + '" y="' + (y - s / 2 + 4) + '" font-size="9.5" text-anchor="middle" fill="' + on + '" font-weight="600">' + Math.round(r[1] / tot * 100) + '%</text><text x="' + (x + bw / 2) + '" y="' + (H - 8) + '" font-size="10" text-anchor="middle" fill="#605E5C">' + r[0] + '</text>'; }).join('') + '</svg>';
+    const W = 420, H = 230, step = (W - 20) / rows.length, bw = Math.min(50, step - 14), base = H - 22, k = (base - 10) / (mx * (1 + hr)), s0 = mx * hr * k;
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Preview">' + rows.map((r, i) => { const h = r[1] * k, x = 10 + i * step + (step - bw) / 2, y = base - s0 - h;
+      return '<text x="' + (x + bw / 2) + '" y="' + (base - s0 / 2 + 4) + '" font-size="10" text-anchor="middle" fill="' + lab + '">' + Math.round(r[1] / tot * 100) + '%</text><rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + h + '" fill="' + bar + '"/><text x="' + (x + bw / 2) + '" y="' + (y + h / 2 + 4) + '" font-size="9.5" text-anchor="middle" fill="' + on + '" font-weight="600">' + cpNum(r[1]) + '</text><text x="' + (x + bw / 2) + '" y="' + (H - 6) + '" font-size="10" text-anchor="middle" fill="#605E5C">' + r[0] + '</text>'; }).join('') + '</svg>';
   }
-  const W = 420, rh = 30, H = rows.length * rh + 8, k = 290 / (mx * (1 + hr));
-  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Preview">' + rows.map((r, i) => { const w = r[1] * k, s = mx * hr * k, y = 6 + i * rh;
-    return '<text x="62" y="' + (y + 15) + '" font-size="10" text-anchor="end" fill="#605E5C">' + r[0] + '</text><rect x="68" y="' + (y + 3) + '" width="' + (w + s) + '" height="18" fill="' + bar + '" rx="2"/><text x="' + (68 + w - 4) + '" y="' + (y + 16) + '" font-size="10" text-anchor="end" fill="' + on + '">' + cpNum(r[1]) + '</text><text x="' + (68 + w + s / 2) + '" y="' + (y + 16) + '" font-size="9.5" text-anchor="middle" fill="' + on + '" font-weight="600">' + Math.round(r[1] / tot * 100) + '%</text>'; }).join('') + '</svg>';
+  const W = 420, rh = 30, H = rows.length * rh + 8, x0 = 70, k = (W - x0 - 10) / (mx * (1 + hr)), s0 = mx * hr * k;
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Preview">' + rows.map((r, i) => { const w = r[1] * k, y = 6 + i * rh;
+    return '<text x="' + (x0 - 6) + '" y="' + (y + 15) + '" font-size="10" text-anchor="end" fill="#605E5C">' + r[0] + '</text><text x="' + (x0 + s0 / 2) + '" y="' + (y + 15) + '" font-size="10" text-anchor="middle" fill="' + lab + '">' + Math.round(r[1] / tot * 100) + '%</text>'
+      + '<rect x="' + (x0 + s0) + '" y="' + (y + 3) + '" width="' + w + '" height="18" fill="' + bar + '"/><text x="' + (x0 + s0 + w / 2) + '" y="' + (y + 16) + '" font-size="9.5" text-anchor="middle" fill="' + on + '" font-weight="600">' + cpNum(r[1]) + '</text>'; }).join('') + '</svg>';
 }
 function cpSvgBubbles(rows, f){
   const bar = cpHex(f.bar) || CP_DEF.bar, lab = cpHex(f.label) || CP_DEF.label, tot = rows.reduce((s, r) => s + r[1], 0), mx = rows[0][1];

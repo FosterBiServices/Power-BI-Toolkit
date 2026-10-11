@@ -87,7 +87,7 @@ const FIELD_DEFS = {
 function fieldKeys(p){
   const k = p.needs.slice();
   if (p.id === 'paging') k.splice(2, 0, 'key');
-  if (['labels', 'bubbles', 'paging'].includes(p.id)) k.push('fmt');
+  if (['labels', 'stacked', 'bubbles', 'paging'].includes(p.id)) k.push('fmt');
   if (p.group === 'share') k.push('pct');
   return k.concat(['table', 'folder']);
 }
@@ -100,8 +100,8 @@ function renderFields(){
 
 /* ---------- Step 4: look ---------- */
 const COLOR_DEFS = {
-  labels: [['bar', 'Bars'], ['accent', 'Value pill'], ['label', 'Name and % label']],
-  stacked: [['bar', 'Bars']],
+  labels: [['bar', 'Bars'], ['label', 'Labels']],
+  stacked: [['bar', 'Bars'], ['label', '% labels']],
   bubbles: [['bar', 'Columns (bubbles and stems are lighter shades)'], ['label', 'Labels']],
   paging: [['bar', 'Bars'], ['accent', 'Value badge'], ['label', 'Rank badge text']],
   window: [['bar', 'Line'], ['accent', 'Window shade, markers and labels']]
@@ -113,7 +113,7 @@ function renderLook(){
   $('colors').innerHTML = COLOR_DEFS[p.id].map(([k, n]) => '<div class="cp-crow"><input type="color" id="c_' + k + '" data-c="' + k + '" value="' + esc((cpHex(c[k]) || CP_DEF[k]).toLowerCase()) + '" aria-label="' + esc(n) + '"><input type="text" class="hex" data-h="' + k + '" value="' + esc(cpHex(c[k]) || CP_DEF[k]) + '" aria-label="' + esc(n) + ' hex code" spellcheck="false"><span>' + esc(n) + '</span></div>').join('');
   const sel = (k, label, opts) => '<div class="field"><label for="x_' + k + '">' + label + '</label><select id="x_' + k + '" data-x="' + k + '">' + opts.map(o => '<option value="' + o[0] + '"' + (String(c[k]) === String(o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select></div>';
   const num = (k, label, min, max) => '<div class="field"><label for="x_' + k + '">' + label + '</label><input type="number" id="x_' + k + '" data-x="' + k + '" value="' + esc(c[k]) + '" min="' + min + '" max="' + max + '"></div>';
-  $('extra').innerHTML = p.id === 'stacked' ? sel('headroom', 'Extra length for the %', [[6, '6% of the longest bar'], [8, '8%'], [10, '10% (fits most labels)'], [15, '15%'], [20, '20%']])
+  $('extra').innerHTML = p.id === 'stacked' ? sel('headroom', 'Room for the % column', [[10, '10% of the longest bar'], [15, '15%'], [20, '20% (fits most labels)'], [25, '25%'], [30, '30%']])
     : p.id === 'bubbles' ? sel('bubble', 'Bubble size (set in the theme, Step 5)', [[20, '20'], [25, '25'], [30, '30 (fits most labels)'], [35, '35'], [40, '40']])
     : p.id === 'paging' ? num('perPage', 'Items per page to start with', 1, 50) + num('maxItems', 'Most items per page readers can pick', 1, 100) + num('maxPages', 'Most pages', 2, 500)
     : '';
