@@ -58,6 +58,18 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
 .out-head{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
 .out-head .btns{display:flex;gap:8px;flex-wrap:wrap}
 .fname{font-family:var(--mono);font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.swatches{grid-auto-flow:dense}
+.sw .alt-btn{margin-top:6px;font-size:12.5px}
+.alt-panel{grid-column:1/-1;border:1px solid var(--accent);border-radius:12px;background:var(--surface-2);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.alt-panel .note{margin:0}
+.alt-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.alt-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.alt{display:flex;gap:10px;align-items:flex-start;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px 10px;cursor:pointer;color:var(--ink);font:inherit;font-size:13px}
+.alt:hover,.alt:focus-visible{border-color:var(--accent)}
+.alt-dot{flex:none;width:34px;height:34px;border-radius:8px;border:1px solid rgba(0,0,0,.15)}
+.alt-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.alt-txt .mono{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.alt-why{font-size:12px;color:var(--muted)}
 '''
 logo=p[318]
 src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+logo+'\n'+body+'\n<script>\n'+tpl+'\n'+tb+'\n'+ui+'</script>\n'
