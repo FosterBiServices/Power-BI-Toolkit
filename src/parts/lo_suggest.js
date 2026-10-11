@@ -189,7 +189,7 @@ const LS = (() => {
     const p = parts(inp);
     const make = (id, name, fn, blurb, opt) => {
       opt = opt || {}; const q = opt.noDetail ? Object.assign({}, p, { detail: null }) : p;
-      const g = fn(q), c = frame(base, q); c.grid = { cols: g.cols, rows: g.rows }; c.items = g.items;
+      const g = fn(q), c = frame(base, q); c.grid = { cols: g.cols, rows: g.rows }; c.items = g.items; LO.tidy(c);
       // start from a 16:9 page at the page's width, so the layout fits a screen; taller pages only when the visuals need them
       if (+c.h > Math.round(+c.w * 9 / 16) && +c.h <= +c.w) c.h = Math.round(+c.w * 9 / 16);
       if (opt.large) { c.w = 1920; c.h = 1080; }

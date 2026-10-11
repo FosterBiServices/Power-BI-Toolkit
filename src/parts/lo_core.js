@@ -52,7 +52,7 @@ const LO = (() => {
     c.strip = { on: s.strip.on, h: s.strip.h, items: (s.strip.items || []).map(([type, title]) => ({ type, title })) };
     c.grid = Object.assign({}, s.grid);
     c.items = s.items.map(x => Object.assign({}, x));
-    return upgrade(c);
+    return tidy(upgrade(c));
   }
 
   /* n sizes filling `total` with `gap` between them, in proportion to `weights` (even when left out).
@@ -69,6 +69,26 @@ const LO = (() => {
     const order = raw.map((v, i) => [v - out[i], i]).sort((a, b) => (Math.abs(b[0] - a[0]) < 1e-9 ? 0 : b[0] - a[0]) || a[1] - b[1]);
     for (let k = 0; rem > 0 && k < order.length; k++, rem--) out[order[k][1]]++;
     return out;
+  }
+  /* Merge columns (and rows) that no visual starts or ends on: a map spanning two of three even columns
+     becomes a two-column grid about 2/3 + 1/3, so the column count matches what's on the page. Only for a full grid (no empty cells). */
+  function tidy(c){
+    const g = c.grid, its = c.items;
+    const full = () => { const n = {}; its.forEach(x => { for (let a = x.c; a < x.c + x.cs; a++) for (let b = x.r; b < x.r + x.rs; b++) n[a + ',' + b] = 1; }); return Object.keys(n).length === g.cols * g.rows; };
+    if (!its.length || its.some(x => x.c + x.cs > g.cols || x.r + x.rs > g.rows) || !full()) return c;
+    // sizes in pixels, so a merged column keeps the gap it covered and still lines up with the card strip
+    const G = layout(c).grid, gap = +c.gap || 0;
+    [['c', 'cs', 'cols', 'colW', G.w], ['r', 'rs', 'rows', 'rowH', G.h]].forEach(([p, sp, n, wk, px]) => {
+      const w = px.slice();
+      for (let i = g[n] - 2; i >= 0; i--) {
+        if (its.some(x => x[p] + x[sp] - 1 === i || x[p] === i + 1)) continue;
+        its.forEach(x => { if (x[p] > i) x[p]--; else if (x[p] + x[sp] - 1 > i) x[sp]--; });
+        w.splice(i, 2, w[i] + gap + w[i + 1]); g[n]--;
+      }
+      const t = w.reduce((a, b) => a + b, 0), pc = w.map(v => Math.round(v / t * 10000) / 100);
+      if (w.length < px.length) g[wk] = isEven(pc) ? null : pc;
+    });
+    return c;
   }
   // grid.colW / grid.rowH: relative sizes of the columns and rows; null (or the wrong length) means even
   const weightsOf = (arr, n) => Array.isArray(arr) && arr.length === n && arr.every(v => +v > 0) ? arr.map(Number) : null;
@@ -194,5 +214,5 @@ const LO = (() => {
     return c;
   }
 
-  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, weightsOf, isEven, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
+  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, weightsOf, isEven, tidy, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
 })();
