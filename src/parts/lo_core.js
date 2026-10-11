@@ -31,7 +31,7 @@ const LO = (() => {
       items: [it('pivotTable', 'Sales detail', 0, 0)] } },
     { id: 'quad', name: 'Four quadrants', cfg: { side: { pos: 'none' }, strip: { on: false, h: 100, items: [] }, grid: { cols: 2, rows: 2 },
       items: [it('clusteredColumnChart', 'Sales by month', 0, 0), it('lineChart', 'Orders trend', 1, 0), it('clusteredBarChart', 'Sales by category', 0, 1), it('scatterChart', 'Margin vs sales', 1, 1)] } },
-    { id: 'blank', name: 'Blank grid (3 × 2)', cfg: { side: { pos: 'none' }, strip: { on: false, h: 100, items: [] }, grid: { cols: 3, rows: 2 }, items: [] } }
+    { id: 'blank', name: 'Empty grid (3 × 2)', cfg: { side: { pos: 'none' }, strip: { on: false, h: 100, items: [] }, grid: { cols: 3, rows: 2 }, items: [] } }
   ];
 
   function base(){
@@ -50,22 +50,49 @@ const LO = (() => {
     c.side = Object.assign({ pos: 'none', w: 220, itemH: 64, items: [] }, JSON.parse(JSON.stringify(s.side)));
     c.side.items = (s.side.items || []).map(([type, title]) => ({ type, title }));
     c.strip = { on: s.strip.on, h: s.strip.h, items: (s.strip.items || []).map(([type, title]) => ({ type, title })) };
-    c.grid = Object.assign({}, s.grid);
+    c.grid = Object.assign({}, s.grid, keep && keep.grid && keep.grid.grow ? { grow: keep.grid.grow } : {});
     c.items = s.items.map(x => Object.assign({}, x));
-    return upgrade(c);
+    return tidy(upgrade(c));
   }
 
-  /* n sizes filling `total` with `gap` between them.
-     fit: whole pixels that add up exactly (spare pixels go to the first ones);
+  /* n sizes filling `total` with `gap` between them, in proportion to `weights` (even when left out).
+     fit: whole pixels that add up exactly (spare pixels go to the sizes that lost the most to rounding, the first ones on ties);
      roundup: every size rounded up, as on the Alignment page (can run a pixel or two past the edge) */
-  function split(total, n, gap, rounding){
+  function split(total, n, gap, rounding, weights){
     if (n <= 0) return [];
     const avail = total - gap * (n - 1);
-    if (rounding === 'roundup') return Array(n).fill(Math.ceil(avail / n));
-    if (rounding === 'exact') return Array(n).fill(Math.round(avail / n * 100) / 100);
-    const b = Math.floor(avail / n), rem = avail - b * n;
-    return Array.from({ length: n }, (_, i) => b + (i < rem ? 1 : 0));
+    const wt = Array.isArray(weights) && weights.length === n && weights.every(v => +v > 0) ? weights.map(Number) : Array(n).fill(1);
+    const sum = wt.reduce((a, b) => a + b, 0), raw = wt.map(v => avail * v / sum);
+    if (rounding === 'roundup') return raw.map(v => Math.ceil(v - 1e-9));
+    if (rounding === 'exact') return raw.map(v => Math.round(v * 100) / 100);
+    const out = raw.map(v => Math.floor(v + 1e-9)); let rem = Math.round(avail - out.reduce((a, b) => a + b, 0));
+    const order = raw.map((v, i) => [v - out[i], i]).sort((a, b) => (Math.abs(b[0] - a[0]) < 1e-9 ? 0 : b[0] - a[0]) || a[1] - b[1]);
+    for (let k = 0; rem > 0 && k < order.length; k++, rem--) out[order[k][1]]++;
+    return out;
   }
+  /* Merge columns (and rows) that no visual starts or ends on: a map spanning two of three even columns
+     becomes a two-column grid about 2/3 + 1/3, so the column count matches what's on the page. Only for a full grid (no empty cells). */
+  function tidy(c){
+    const g = c.grid, its = c.items;
+    const full = () => { const n = {}; its.forEach(x => { for (let a = x.c; a < x.c + x.cs; a++) for (let b = x.r; b < x.r + x.rs; b++) n[a + ',' + b] = 1; }); return Object.keys(n).length === g.cols * g.rows; };
+    if (!its.length || its.some(x => x.c + x.cs > g.cols || x.r + x.rs > g.rows) || !full()) return c;
+    // sizes in pixels, so a merged column keeps the gap it covered and still lines up with the card strip
+    const G = layout(c).grid, gap = +c.gap || 0;
+    [['c', 'cs', 'cols', 'colW', G.w], ['r', 'rs', 'rows', 'rowH', G.h]].forEach(([p, sp, n, wk, px]) => {
+      const w = px.slice();
+      for (let i = g[n] - 2; i >= 0; i--) {
+        if (its.some(x => x[p] + x[sp] - 1 === i || x[p] === i + 1)) continue;
+        its.forEach(x => { if (x[p] > i) x[p]--; else if (x[p] + x[sp] - 1 > i) x[sp]--; });
+        w.splice(i, 2, w[i] + gap + w[i + 1]); g[n]--;
+      }
+      const t = w.reduce((a, b) => a + b, 0), pc = w.map(v => Math.round(v / t * 10000) / 100);
+      if (w.length < px.length) g[wk] = isEven(pc) ? null : pc;
+    });
+    return c;
+  }
+  // grid.colW / grid.rowH: relative sizes of the columns and rows; null (or the wrong length) means even
+  const weightsOf = (arr, n) => Array.isArray(arr) && arr.length === n && arr.every(v => +v > 0) ? arr.map(Number) : null;
+  const isEven = arr => !arr || arr.every(v => Math.abs(v - arr[0]) < 1e-9);
   const starts = (origin, sizes, gap) => { const out = []; let x = origin; sizes.forEach(s => { out.push(x); x += s + gap; }); return out; };
 
   // Everything on the page, positioned: [{ id, region, type, title, x, y, w, h }] + problems
@@ -131,7 +158,7 @@ const LO = (() => {
       top += sh + g;
     }
     const cols = Math.max(1, +c.grid.cols || 1), rows = Math.max(1, +c.grid.rows || 1);
-    const gw = split(cw, cols, g, R), gh = split(H - m - top, rows, g, R);
+    const gw = split(cw, cols, g, R, weightsOf(c.grid.colW, cols)), gh = split(H - m - top, rows, g, R, weightsOf(c.grid.rowH, rows));
     const gx = starts(left, gw, g), gy = starts(top, gh, g);
     const grid = { cols, rows, x: gx, y: gy, w: gw, h: gh, left, top, right, bottom: H - m };
     const taken = {};
@@ -163,6 +190,11 @@ const LO = (() => {
       const p = onCard(o) ? inset(o, st.radius) : null;
       return [o.id === 'header' ? 'Header band' : o.title || typeOf(o.type).label, o.id === 'header' ? 'Shape / background' : o.id === 'title' ? 'Title (drawn on the background)' : o.logo ? 'Image (logo)' : typeOf(o.type).label, r2(o.x), r2(o.y), r2(o.w), r2(o.h)]
         .concat(p == null ? ['', '', '', ''] : [r2(o.x + p), r2(o.y + p), r2(o.w - 2 * p), r2(o.h - 2 * p)]).join('\t');
+    }), (L.empty || []).map(([a, b]) => {
+      // grid cells with no visual yet: their background box, so a visual can be placed on it later
+      const G = L.grid, o = { x: G.x[a], y: G.y[b], w: G.w[a], h: G.h[b] }, p = cards ? inset(o, st.radius) : null;
+      return ['Empty box (column ' + (a + 1) + ', row ' + (b + 1) + ')', cards ? 'Background box' : 'Grid cell', r2(o.x), r2(o.y), r2(o.w), r2(o.h)]
+        .concat(p == null ? ['', '', '', ''] : [r2(o.x + p), r2(o.y + p), r2(o.w - 2 * p), r2(o.h - 2 * p)]).join('\t');
     })).join('\n');
   }
 
@@ -182,5 +214,5 @@ const LO = (() => {
     return c;
   }
 
-  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
+  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, weightsOf, isEven, tidy, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
 })();
