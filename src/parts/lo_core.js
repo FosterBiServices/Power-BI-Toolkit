@@ -31,7 +31,7 @@ const LO = (() => {
       items: [it('pivotTable', 'Sales detail', 0, 0)] } },
     { id: 'quad', name: 'Four quadrants', cfg: { side: { pos: 'none' }, strip: { on: false, h: 100, items: [] }, grid: { cols: 2, rows: 2 },
       items: [it('clusteredColumnChart', 'Sales by month', 0, 0), it('lineChart', 'Orders trend', 1, 0), it('clusteredBarChart', 'Sales by category', 0, 1), it('scatterChart', 'Margin vs sales', 1, 1)] } },
-    { id: 'blank', name: 'Blank grid (3 × 2)', cfg: { side: { pos: 'none' }, strip: { on: false, h: 100, items: [] }, grid: { cols: 3, rows: 2 }, items: [] } }
+    { id: 'blank', name: 'Empty grid (3 × 2)', cfg: { side: { pos: 'none' }, strip: { on: false, h: 100, items: [] }, grid: { cols: 3, rows: 2 }, items: [] } }
   ];
 
   function base(){
@@ -50,7 +50,7 @@ const LO = (() => {
     c.side = Object.assign({ pos: 'none', w: 220, itemH: 64, items: [] }, JSON.parse(JSON.stringify(s.side)));
     c.side.items = (s.side.items || []).map(([type, title]) => ({ type, title }));
     c.strip = { on: s.strip.on, h: s.strip.h, items: (s.strip.items || []).map(([type, title]) => ({ type, title })) };
-    c.grid = Object.assign({}, s.grid);
+    c.grid = Object.assign({}, s.grid, keep && keep.grid && keep.grid.grow ? { grow: keep.grid.grow } : {});
     c.items = s.items.map(x => Object.assign({}, x));
     return tidy(upgrade(c));
   }

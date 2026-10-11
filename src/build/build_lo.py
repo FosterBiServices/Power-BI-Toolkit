@@ -100,6 +100,10 @@ input:focus-visible + .filebtn,.filebtn:focus-within{outline:2px solid var(--acc
 .canvas .gut:hover .grip,.canvas .gut:focus-visible .grip,body.dragging .canvas .gut .grip{opacity:1}
 .canvas .gut:focus-visible .grip{stroke:var(--gold);stroke-width:2}
 body.dragging{user-select:none}body.drag-c,body.drag-c *{cursor:col-resize!important}body.drag-r,body.drag-r *{cursor:row-resize!important}
+.sizes-box{border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.sizes-box>summary{cursor:pointer;padding:10px 14px;font-size:14px}
+.sizes-box>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sizes-box .sizes{padding:0 14px 12px}
 .sizes{display:flex;flex-wrap:wrap;gap:10px 28px;align-items:flex-start}
 .sizes .note{flex-basis:100%;margin:0}
 .wts{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}

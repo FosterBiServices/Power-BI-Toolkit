@@ -5,6 +5,8 @@ const { chromium } = require('playwright');
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   const U = 'http://localhost:8765/';
   await p.goto(U + 'layout-designer.html'); await p.evaluate(() => localStorage.clear()); await p.reload();
+  console.log('sizes folded', !(await p.evaluate(() => document.getElementById('sizesBox').open)), '|', await p.locator('#sizesBox summary').innerText());
+  await p.click('#sizesBox summary');
   // split() with weights: whole pixels that add up, padding untouched
   console.log('split 1:2', JSON.stringify(await p.evaluate(() => LO.split(1260, 2, 10, 'fit', [1, 2]))), '(expect [417,833])');
   console.log('split even', JSON.stringify(await p.evaluate(() => LO.split(1260, 3, 10, 'fit'))), '(expect [414,413,413])');
@@ -28,17 +30,25 @@ const { chromium } = require('playwright');
   // positions table follows
   console.log('positions rows', await p.locator('#posTable tbody tr').count());
   // changing the column count resets widths to even
-  await p.fill('#cols', '4'); console.log('4 cols resets', JSON.stringify(await p.evaluate(() => state.cfg.grid.colW)), '(expect null)');
+  await p.fill('#cols', '4'); console.log('4 cols keeps widths', JSON.stringify(await p.evaluate(() => state.cfg.grid.colW)), '(expect the 3 set widths scaled, the new one at their average)');
   // saved and restored
   await p.locator('#rowH [data-pre="2,1"]').click(); await p.reload(); console.log('restored rowH', JSON.stringify(await p.evaluate(() => state.cfg.grid.rowH)));
-  await p.screenshot({ path: 'losize_1.png', fullPage: false, clip: { x: 0, y: (await p.locator('#s2').boundingBox()).y - 20, width: 1300, height: 900 } });
+  await p.locator('.designer').screenshot({ path: 'losize_1.png' });
 
-  // column count: the example's full-width trend keeps filling the width; typing 12 doesn't stretch on the way
+  // column count: a new column reaches every row (spans stay); typing 12 doesn't change spans on the way; sizes already set are kept
   await p.evaluate(() => localStorage.clear()); await p.reload();
   const span = () => p.evaluate(() => state.cfg.items.map(i => i.title + ':' + i.c + '+' + i.cs).join(' | '));
   console.log('example spans', await span());
-  await p.locator('#cols').focus(); await p.fill('#cols', '3'); console.log('3 cols', await span(), '(expect Sales trend:0+3)');
-  await p.fill('#cols', '1'); await p.fill('#cols', '12'); await p.fill('#cols', '4'); console.log('1 then 12 then 4', await span(), '(expect Sales trend:0+4, the others 1 wide)');
+  await p.locator('#cols').focus(); await p.fill('#cols', '3'); console.log('3 cols', await span(), '| empty cells', await p.locator('#canvas .cell').count(), '(expect Sales trend:0+2, 2 empty cells)');
+  await p.fill('#cols', '1'); await p.fill('#cols', '12'); await p.fill('#cols', '3'); console.log('1 then 12 then 3', await span(), '(expect same as 3 cols)');
+  await p.click('[data-tpl=map]'); await p.locator('#cols').focus(); await p.fill('#cols', '3'); console.log('map + a column: colW', JSON.stringify(await p.evaluate(() => state.cfg.grid.colW)), '| empty cells', await p.locator('#canvas .cell').count(), '(expect 2)');
+  await p.click('[data-tpl=kpi]'); await p.selectOption('#grow', 'stretch'); await p.locator('#cols').focus(); await p.fill('#cols', '3');
+  console.log('stretch: kpi + a column', await span(), '| empty cells', await p.locator('#canvas .cell').count(), '(expect Top customers 0+3, 1 empty cell)');
+  await p.click('[data-tpl=map]'); console.log('choice kept', await p.locator('#grow').inputValue()); await p.selectOption('#grow', 'cells');
+  // empty the grid, then bring it back
+  await p.click('#gridClear'); console.log('emptied: visuals', await p.locator('#canvas .vis[data-id^=g]').count(), '| cells', await p.locator('#canvas .cell').count(), '| button', await p.locator('#gridClear').innerText());
+  await p.click('#gridClear'); console.log('back: visuals', await p.locator('#canvas .vis[data-id^=g]').count(), '| button', await p.locator('#gridClear').innerText());
+  await p.click('#gridClear');
   // empty boxes are in the positions table
   console.log('empty rows', await p.$$eval('#posTable tbody tr', a => a.filter(r => r.innerText.startsWith('Empty box')).length), '(expect', await p.locator('#canvas .cell').count(), ')', '|', (await p.locator('#posTable tbody tr').last().innerText()).replace(/\t/g, ' '));
   // ---- suggestions ----

@@ -326,6 +326,10 @@ input:focus-visible + .filebtn,.filebtn:focus-within{outline:2px solid var(--acc
 .canvas .gut:hover .grip,.canvas .gut:focus-visible .grip,body.dragging .canvas .gut .grip{opacity:1}
 .canvas .gut:focus-visible .grip{stroke:var(--gold);stroke-width:2}
 body.dragging{user-select:none}body.drag-c,body.drag-c *{cursor:col-resize!important}body.drag-r,body.drag-r *{cursor:row-resize!important}
+.sizes-box{border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.sizes-box>summary{cursor:pointer;padding:10px 14px;font-size:14px}
+.sizes-box>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sizes-box .sizes{padding:0 14px 12px}
 .sizes{display:flex;flex-wrap:wrap;gap:10px 28px;align-items:flex-start}
 .sizes .note{flex-basis:100%;margin:0}
 .wts{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
@@ -556,14 +560,19 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
       <div class="cfg">
         <div class="field sm"><label for="cols">Columns</label><input type="number" id="cols" min="1" max="12"></div>
         <div class="field sm"><label for="rows">Rows</label><input type="number" id="rows" min="1" max="12"></div>
+        <div class="field"><label for="grow">A new column or row</label><select id="grow"><option value="cells">Adds empty cells beside every visual</option><option value="stretch">Widens visuals that fill the width or height</option></select></div>
+        <button type="button" class="btn small" id="gridClear">Empty the grid</button>
         <label class="chk inline"><input type="checkbox" id="showDims" checked> Show sizes</label>
         <label class="chk inline"><input type="checkbox" id="showZones"> Show 3-30-300 zones</label>
       </div>
+      <details class="sizes-box" id="sizesBox">
+        <summary><b>Column widths and row heights</b> <span class="muted" id="sizesSum"></span></summary>
       <div class="sizes">
         <div class="field"><label id="colWLbl">Column widths <span class="muted">(% of the grid)</span></label><div class="wts" id="colW" role="group" aria-labelledby="colWLbl"></div></div>
         <div class="field"><label id="rowHLbl">Row heights <span class="muted">(% of the grid)</span></label><div class="wts" id="rowH" role="group" aria-labelledby="rowHLbl"></div></div>
         <p class="note small">Or drag the handles between columns and rows on the page. Margin and gap stay the same; sizes snap to twelfths (hold Shift for any size).</p>
       </div>
+      </details>
       <div class="designer">
         <div class="canvas-wrap"><div id="canvas" class="canvas"></div></div>
         <aside class="editor" id="editor" aria-live="polite"></aside>
@@ -881,7 +890,7 @@ const LO = (() => {
       items: [it('pivotTable', 'Sales detail', 0, 0)] } },
     { id: 'quad', name: 'Four quadrants', cfg: { side: { pos: 'none' }, strip: { on: false, h: 100, items: [] }, grid: { cols: 2, rows: 2 },
       items: [it('clusteredColumnChart', 'Sales by month', 0, 0), it('lineChart', 'Orders trend', 1, 0), it('clusteredBarChart', 'Sales by category', 0, 1), it('scatterChart', 'Margin vs sales', 1, 1)] } },
-    { id: 'blank', name: 'Blank grid (3 × 2)', cfg: { side: { pos: 'none' }, strip: { on: false, h: 100, items: [] }, grid: { cols: 3, rows: 2 }, items: [] } }
+    { id: 'blank', name: 'Empty grid (3 × 2)', cfg: { side: { pos: 'none' }, strip: { on: false, h: 100, items: [] }, grid: { cols: 3, rows: 2 }, items: [] } }
   ];
 
   function base(){
@@ -900,7 +909,7 @@ const LO = (() => {
     c.side = Object.assign({ pos: 'none', w: 220, itemH: 64, items: [] }, JSON.parse(JSON.stringify(s.side)));
     c.side.items = (s.side.items || []).map(([type, title]) => ({ type, title }));
     c.strip = { on: s.strip.on, h: s.strip.h, items: (s.strip.items || []).map(([type, title]) => ({ type, title })) };
-    c.grid = Object.assign({}, s.grid);
+    c.grid = Object.assign({}, s.grid, keep && keep.grid && keep.grid.grow ? { grow: keep.grid.grow } : {});
     c.items = s.items.map(x => Object.assign({}, x));
     return tidy(upgrade(c));
   }
@@ -1848,7 +1857,8 @@ function renderPage(){
   ['hCardH', 'hSlicerH', 'logoH'].forEach(id => { if (lim.itemMaxH) $(id).max = lim.itemMaxH; });
   $('sidePos').value = c.side.pos; set('sideW', c.side.w); set('sideItemH', c.side.itemH); $('sideCfg').hidden = c.side.pos === 'none';
   $('stripOn').checked = c.strip.on; set('stripH', c.strip.h);
-  set('cols', c.grid.cols); set('rows', c.grid.rows);
+  set('cols', c.grid.cols); set('rows', c.grid.rows); $('grow').value = c.grid.grow === 'stretch' ? 'stretch' : 'cells';
+  const undo = state.gridUndo && !c.items.length; $('gridClear').textContent = undo ? 'Bring the visuals back' : 'Empty the grid'; $('gridClear').disabled = !undo && !c.items.length;
   $('stripH').disabled = !c.strip.on;
 }
 
@@ -1860,15 +1870,19 @@ function renderCanvas(){
   $('layoutMsg').innerHTML = L.probs.map(p => '<div class="msg ' + p.level + '">' + esc(p.text) + '</div>').join('');
 }
 /* ---------- column widths and row heights ---------- */
-// when the column (or row) count changes, visuals that filled the whole width (or height) still do, and none hangs off the grid;
+// when the column (or row) count changes: visuals that would hang off the grid are trimmed, and (if chosen) visuals that filled the
+// whole width or height grow with it, otherwise a new column gets an empty cell in every row;
 // spans are worked out from where they were when the field took focus, so typing "12" (1, then 12) doesn't stretch everything on the way.
 let spanBase = null;
 function fitSpans(ax, to){
   const sp = ax === 'c' ? 'cs' : 'rs', g = state.cfg.grid, k = ax + (state.cfg.items.length);
-  if (!spanBase || spanBase.k !== k) spanBase = { k, from: +g[ax === 'c' ? 'cols' : 'rows'], spans: state.cfg.items.map(it => Math.max(1, it[sp] || 1)) };
-  const from = spanBase.from;
+  if (!spanBase || spanBase.k !== k) spanBase = { k, w: g[ax === 'c' ? 'colW' : 'rowH'], n: +g[ax === 'c' ? 'cols' : 'rows'], spans: state.cfg.items.map(it => Math.max(1, it[sp] || 1)) };
   state.cfg.items.forEach((it, i) => { const at = it[ax], n = spanBase.spans[i];
-    it[sp] = at === 0 && n === from ? to : at < to && at + n > to ? to - at : n; });
+    it[sp] = state.cfg.grid.grow === 'stretch' && at === 0 && n === spanBase.n ? to : at < to && at + n > to ? to - at : n; });
+  // keep the sizes already set; a new column (or row) gets the average share
+  const wk = ax === 'c' ? 'colW' : 'rowH', w0 = LO.weightsOf(spanBase.w, spanBase.n);
+  if (!w0) g[wk] = null;
+  else { const avg = w0.reduce((a, b) => a + b, 0) / w0.length, w = w0.slice(0, to); while (w.length < to) w.push(avg); setW(ax, w.map(v => v / w.reduce((a, b) => a + b, 0) * 100)); }
 }
 const PRESETS = { 2: [['1/3 + 2/3', [1, 2]], ['2/3 + 1/3', [2, 1]], ['1/4 + 3/4', [1, 3]], ['3/4 + 1/4', [3, 1]]], 3: [['1/2 + 1/4 + 1/4', [2, 1, 1]], ['1/4 + 1/2 + 1/4', [1, 2, 1]], ['1/4 + 1/4 + 1/2', [1, 1, 2]], ['1/6 + 1/3 + 1/2', [1, 2, 3]]], 4: [['2/5 + 1/5 × 3', [2, 1, 1, 1]], ['1/5 × 3 + 2/5', [1, 1, 1, 2]]] };
 const AX = { c: ['cols', 'colW'], r: ['rows', 'rowH'] };
@@ -1883,6 +1897,8 @@ function setShare(ax, i, pct){
 }
 const fmtPct = v => String(Math.round(v * 10) / 10);
 function renderSizes(){
+  const sum = ax => { const p = pcts(ax); return p.length < 2 ? '1' : LO.isEven(p) ? p.length + ' even' : p.map(v => Math.round(v)).join(' / '); };
+  $('sizesSum').textContent = '(columns ' + sum('c') + ', rows ' + sum('r') + ')';
   ['c', 'r'].forEach(ax => {
     const box = $(ax === 'c' ? 'colW' : 'rowH'), p = pcts(ax), n = p.length, name = ax === 'c' ? 'Column' : 'Row';
     const a = document.activeElement;
@@ -2096,10 +2112,18 @@ function init(){
   $('stripOn').addEventListener('change', () => { state.cfg.strip.on = $('stripOn').checked; if (state.cfg.strip.on && !state.cfg.strip.items.length) state.cfg.strip.items = [{ type: 'card', title: 'Sales' }, { type: 'card', title: 'Orders' }, { type: 'card', title: 'Customers' }]; edited({ editor: true }); });
   $('stripH').addEventListener('input', () => { state.cfg.strip.h = Math.max(20, num($('stripH').value, 100)); edited(); });
   // step 2
-  $('templates').addEventListener('click', e => { const b = e.target.closest('[data-tpl]'); if (!b) return; state.cfg = LO.fromTemplate(b.dataset.tpl, state.cfg); state.sel = null; edited({ editor: true }); });
+  $('templates').addEventListener('click', e => { const b = e.target.closest('[data-tpl]'); if (!b) return; state.gridUndo = null; state.cfg = LO.fromTemplate(b.dataset.tpl, state.cfg); state.sel = null; edited({ editor: true }); });
   ['cols', 'rows'].forEach(id => $(id).addEventListener('focus', () => { spanBase = null; }));
-  $('cols').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); if (n !== g.cols) { g.colW = null; fitSpans('c', n); } g.cols = n; edited({ editor: true }); });
-  $('rows').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); if (n !== g.rows) { g.rowH = null; fitSpans('r', n); } g.rows = n; edited({ editor: true }); });
+  $('sizesBox').open = store.get('sizesOpen') === '1';
+  $('sizesBox').addEventListener('toggle', () => store.set('sizesOpen', $('sizesBox').open ? '1' : ''));
+  $('grow').addEventListener('change', () => { state.cfg.grid.grow = $('grow').value; spanBase = null; edited(); });
+  // empty the grid (visuals and sizes) but keep the columns, rows, header, strip and side panel; once, it can be undone
+  $('gridClear').addEventListener('click', () => { const g = state.cfg.grid;
+    if (state.gridUndo && !state.cfg.items.length) { const u = state.gridUndo; Object.assign(g, u.grid); state.cfg.items = u.items; state.gridUndo = null; }
+    else { state.gridUndo = { grid: JSON.parse(JSON.stringify(g)), items: state.cfg.items }; state.cfg.items = []; g.colW = g.rowH = null; }
+    state.sel = null; edited({ editor: true }); });
+  $('cols').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); if (n !== g.cols) fitSpans('c', n); g.cols = n; edited({ editor: true }); });
+  $('rows').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); if (n !== g.rows) fitSpans('r', n); g.rows = n; edited({ editor: true }); });
   // column widths and row heights: typed, presets, or dragged on the canvas
   ['colW', 'rowH'].forEach(id => {
     $(id).addEventListener('input', e => { const t = e.target; if (!t.dataset.ax) return; const v = parseFloat(t.value); if (isNaN(v)) return; setShare(t.dataset.ax, +t.dataset.i, v); edited(); });

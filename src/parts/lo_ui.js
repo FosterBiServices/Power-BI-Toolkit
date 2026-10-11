@@ -84,7 +84,8 @@ function renderPage(){
   ['hCardH', 'hSlicerH', 'logoH'].forEach(id => { if (lim.itemMaxH) $(id).max = lim.itemMaxH; });
   $('sidePos').value = c.side.pos; set('sideW', c.side.w); set('sideItemH', c.side.itemH); $('sideCfg').hidden = c.side.pos === 'none';
   $('stripOn').checked = c.strip.on; set('stripH', c.strip.h);
-  set('cols', c.grid.cols); set('rows', c.grid.rows);
+  set('cols', c.grid.cols); set('rows', c.grid.rows); $('grow').value = c.grid.grow === 'stretch' ? 'stretch' : 'cells';
+  const undo = state.gridUndo && !c.items.length; $('gridClear').textContent = undo ? 'Bring the visuals back' : 'Empty the grid'; $('gridClear').disabled = !undo && !c.items.length;
   $('stripH').disabled = !c.strip.on;
 }
 
@@ -96,15 +97,19 @@ function renderCanvas(){
   $('layoutMsg').innerHTML = L.probs.map(p => '<div class="msg ' + p.level + '">' + esc(p.text) + '</div>').join('');
 }
 /* ---------- column widths and row heights ---------- */
-// when the column (or row) count changes, visuals that filled the whole width (or height) still do, and none hangs off the grid;
+// when the column (or row) count changes: visuals that would hang off the grid are trimmed, and (if chosen) visuals that filled the
+// whole width or height grow with it, otherwise a new column gets an empty cell in every row;
 // spans are worked out from where they were when the field took focus, so typing "12" (1, then 12) doesn't stretch everything on the way.
 let spanBase = null;
 function fitSpans(ax, to){
   const sp = ax === 'c' ? 'cs' : 'rs', g = state.cfg.grid, k = ax + (state.cfg.items.length);
-  if (!spanBase || spanBase.k !== k) spanBase = { k, from: +g[ax === 'c' ? 'cols' : 'rows'], spans: state.cfg.items.map(it => Math.max(1, it[sp] || 1)) };
-  const from = spanBase.from;
+  if (!spanBase || spanBase.k !== k) spanBase = { k, w: g[ax === 'c' ? 'colW' : 'rowH'], n: +g[ax === 'c' ? 'cols' : 'rows'], spans: state.cfg.items.map(it => Math.max(1, it[sp] || 1)) };
   state.cfg.items.forEach((it, i) => { const at = it[ax], n = spanBase.spans[i];
-    it[sp] = at === 0 && n === from ? to : at < to && at + n > to ? to - at : n; });
+    it[sp] = state.cfg.grid.grow === 'stretch' && at === 0 && n === spanBase.n ? to : at < to && at + n > to ? to - at : n; });
+  // keep the sizes already set; a new column (or row) gets the average share
+  const wk = ax === 'c' ? 'colW' : 'rowH', w0 = LO.weightsOf(spanBase.w, spanBase.n);
+  if (!w0) g[wk] = null;
+  else { const avg = w0.reduce((a, b) => a + b, 0) / w0.length, w = w0.slice(0, to); while (w.length < to) w.push(avg); setW(ax, w.map(v => v / w.reduce((a, b) => a + b, 0) * 100)); }
 }
 const PRESETS = { 2: [['1/3 + 2/3', [1, 2]], ['2/3 + 1/3', [2, 1]], ['1/4 + 3/4', [1, 3]], ['3/4 + 1/4', [3, 1]]], 3: [['1/2 + 1/4 + 1/4', [2, 1, 1]], ['1/4 + 1/2 + 1/4', [1, 2, 1]], ['1/4 + 1/4 + 1/2', [1, 1, 2]], ['1/6 + 1/3 + 1/2', [1, 2, 3]]], 4: [['2/5 + 1/5 × 3', [2, 1, 1, 1]], ['1/5 × 3 + 2/5', [1, 1, 1, 2]]] };
 const AX = { c: ['cols', 'colW'], r: ['rows', 'rowH'] };
@@ -119,6 +124,8 @@ function setShare(ax, i, pct){
 }
 const fmtPct = v => String(Math.round(v * 10) / 10);
 function renderSizes(){
+  const sum = ax => { const p = pcts(ax); return p.length < 2 ? '1' : LO.isEven(p) ? p.length + ' even' : p.map(v => Math.round(v)).join(' / '); };
+  $('sizesSum').textContent = '(columns ' + sum('c') + ', rows ' + sum('r') + ')';
   ['c', 'r'].forEach(ax => {
     const box = $(ax === 'c' ? 'colW' : 'rowH'), p = pcts(ax), n = p.length, name = ax === 'c' ? 'Column' : 'Row';
     const a = document.activeElement;
@@ -332,10 +339,18 @@ function init(){
   $('stripOn').addEventListener('change', () => { state.cfg.strip.on = $('stripOn').checked; if (state.cfg.strip.on && !state.cfg.strip.items.length) state.cfg.strip.items = [{ type: 'card', title: 'Sales' }, { type: 'card', title: 'Orders' }, { type: 'card', title: 'Customers' }]; edited({ editor: true }); });
   $('stripH').addEventListener('input', () => { state.cfg.strip.h = Math.max(20, num($('stripH').value, 100)); edited(); });
   // step 2
-  $('templates').addEventListener('click', e => { const b = e.target.closest('[data-tpl]'); if (!b) return; state.cfg = LO.fromTemplate(b.dataset.tpl, state.cfg); state.sel = null; edited({ editor: true }); });
+  $('templates').addEventListener('click', e => { const b = e.target.closest('[data-tpl]'); if (!b) return; state.gridUndo = null; state.cfg = LO.fromTemplate(b.dataset.tpl, state.cfg); state.sel = null; edited({ editor: true }); });
   ['cols', 'rows'].forEach(id => $(id).addEventListener('focus', () => { spanBase = null; }));
-  $('cols').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); if (n !== g.cols) { g.colW = null; fitSpans('c', n); } g.cols = n; edited({ editor: true }); });
-  $('rows').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); if (n !== g.rows) { g.rowH = null; fitSpans('r', n); } g.rows = n; edited({ editor: true }); });
+  $('sizesBox').open = store.get('sizesOpen') === '1';
+  $('sizesBox').addEventListener('toggle', () => store.set('sizesOpen', $('sizesBox').open ? '1' : ''));
+  $('grow').addEventListener('change', () => { state.cfg.grid.grow = $('grow').value; spanBase = null; edited(); });
+  // empty the grid (visuals and sizes) but keep the columns, rows, header, strip and side panel; once, it can be undone
+  $('gridClear').addEventListener('click', () => { const g = state.cfg.grid;
+    if (state.gridUndo && !state.cfg.items.length) { const u = state.gridUndo; Object.assign(g, u.grid); state.cfg.items = u.items; state.gridUndo = null; }
+    else { state.gridUndo = { grid: JSON.parse(JSON.stringify(g)), items: state.cfg.items }; state.cfg.items = []; g.colW = g.rowH = null; }
+    state.sel = null; edited({ editor: true }); });
+  $('cols').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); if (n !== g.cols) fitSpans('c', n); g.cols = n; edited({ editor: true }); });
+  $('rows').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); if (n !== g.rows) fitSpans('r', n); g.rows = n; edited({ editor: true }); });
   // column widths and row heights: typed, presets, or dragged on the canvas
   ['colW', 'rowH'].forEach(id => {
     $(id).addEventListener('input', e => { const t = e.target; if (!t.dataset.ax) return; const v = parseFloat(t.value); if (isNaN(v)) return; setShare(t.dataset.ax, +t.dataset.i, v); edited(); });
