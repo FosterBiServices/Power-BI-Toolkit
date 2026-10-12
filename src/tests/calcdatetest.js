@@ -52,6 +52,19 @@ const EXPRS = {
   await p.goto('http://localhost:8765/kpi-measure-builder.html');
   console.log('pbip:', await p.evaluate(f => { const x = SF_SUITE.pbipExport(f); return x.error || dateTablesOf(parseModel(x.text)).map(t => t.name).join(','); },
     [{ path: 'R/M.SemanticModel/definition/tables/Calendar.tmdl', text: tmdl }, { path: 'R/M.SemanticModel/definition/tables/Sales.tmdl', text: sales }]), '(expect Calendar)');
+  // Desktop leaves dataType out for calculated tables' columns: types come from the format string and annotations
+  const noTypes = ['table Date', '\tdataCategory: Time', '', '\tcolumn Date', '\t\tisKey', '\t\tformatString: Short Date', '\t\tsummarizeBy: none', '\t\tsourceColumn: [Date]', '',
+    '\t\tannotation UnderlyingDateTimeDataType = Date', '', '\tcolumn Year', '\t\tformatString: 0', '\t\tsummarizeBy: none', '\t\tsourceColumn: [Year]', '',
+    '\tcolumn \'Month Name\'', '\t\tsummarizeBy: none', '\t\tsourceColumn: [Month Name]', '', '\tcolumn \'Is Weekend\'', '\t\tformatString: """TRUE"";""TRUE"";""FALSE"""', '\t\tsourceColumn: [Is Weekend]', '',
+    '\tcolumn Price', '\t\tsummarizeBy: sum', '\t\tsourceColumn: [Price]', '', '\t\tannotation PBI_FormatHint = {"isGeneralNumber":true}', '',
+    '\tcolumn \'Month Start\' = EOMONTH ( [Date], -1 ) + 1', '\t\tformatString: mmm yyyy', '',
+    '\tpartition Date = calculated', '\t\tmode: import', '\t\tsource = CALENDARAUTO ()', ''].join('\n');
+  console.log('pbip types:', await p.evaluate(f => { const x = SF_SUITE.pbipExport(f); return x.error || parseModel(x.text).columns.map(c => c.name + ' ' + c.dataType).join(', '); },
+    [{ path: 'R/M.SemanticModel/definition/tables/Date.tmdl', text: noTypes }]), '(expect Date DateTime, Year Int64, Month Name String, Is Weekend Boolean, Price Double, Month Start DateTime)');
+  await p.goto('http://localhost:8765/time-intelligence-builder.html'); await p.evaluate(() => localStorage.clear()); await p.reload();
+  await p.evaluate(v => { const t = document.getElementById('modelInput'); t.value = v; t.dispatchEvent(new Event('input', { bubbles: true })); },
+    await p.evaluate(f => SF_SUITE.pbipExport(f).text, [{ path: 'R/M.SemanticModel/definition/tables/Date.tmdl', text: noTypes }]));
+  console.log('ti date column without dataType:', await p.locator('#dTable').inputValue(), await p.locator('#dCol').inputValue(), '(expect Date Date)');
   await p.evaluate(() => localStorage.clear());
   console.log('errors', errs); await b.close();
 })();

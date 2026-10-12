@@ -104,7 +104,8 @@ Things to know:
   model** choice (PBIP folder, Model export, optionally No model) to the step whose h2 has id
   `step`, and hides the `exportOnly` elements unless Model export is chosen. `S.pbipExport()`
   turns a PBIP folder's TMDL (or model.bim) into export rows, so the tool reads it like an
-  export. The choice is saved as `<prefix>connect`. Settings per page are in build_site.py HOOKS.
+  export. Desktop leaves `dataType` out of TMDL for calculated tables' columns and calculated
+  columns, so `guessType` works it out from the format string and annotations (dates must read as dates). The choice is saved as `<prefix>connect`. Settings per page are in build_site.py HOOKS.
   `connect.report: true` (Model Linter, About This Report) also reads the folder's report files and
   sends them to the page as a `sf-pbip-folder` event, so report pages come from the same pick.
   A folder read in any tool is saved as the shared export with `source: 'pbip'`, so every other tool
