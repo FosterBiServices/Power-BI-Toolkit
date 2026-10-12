@@ -8,7 +8,7 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 /* ---------- Time Intelligence Builder ---------- */
 .msg.info{background:var(--info-soft);color:var(--info)}
 .tabbar button[aria-checked="true"]{border:2px solid var(--accent);padding:11px 15px;background:var(--accent-soft);box-shadow:inset 0 -4px 0 var(--gold)}
-.only-measures[hidden],#monthCols[hidden],#depAsk[hidden],.field[hidden],.only-group[hidden],#outBox[hidden],#destBox[hidden]{display:none!important}
+.only-measures[hidden],.only-trend[hidden],.no-trend[hidden],#monthCols[hidden],#depAsk[hidden],.field[hidden],.only-group[hidden],#outBox[hidden],#destBox[hidden]{display:none!important}
 .dep-ask{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
 .dep-ask .btns{display:flex;flex-wrap:wrap;gap:8px}
 .dest-hint{width:100%;font-size:12.5px}
@@ -47,6 +47,8 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 #outBox>*,.part>*{min-width:0;max-width:100%}
 .part{display:flex;flex-direction:column;gap:12px}
 #outBox h3{margin:6px 0 0}
+.tabbar{grid-template-columns:repeat(3,1fr)}
+@media (max-width:820px){.tabbar{grid-template-columns:1fr}}
 #checks,#dateMsg{display:flex;flex-direction:column;gap:8px}
 '''
 logo=p[318]

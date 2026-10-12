@@ -243,7 +243,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 /* ---------- Time Intelligence Builder ---------- */
 .msg.info{background:var(--info-soft);color:var(--info)}
 .tabbar button[aria-checked="true"]{border:2px solid var(--accent);padding:11px 15px;background:var(--accent-soft);box-shadow:inset 0 -4px 0 var(--gold)}
-.only-measures[hidden],#monthCols[hidden],#depAsk[hidden],.field[hidden],.only-group[hidden],#outBox[hidden],#destBox[hidden]{display:none!important}
+.only-measures[hidden],.only-trend[hidden],.no-trend[hidden],#monthCols[hidden],#depAsk[hidden],.field[hidden],.only-group[hidden],#outBox[hidden],#destBox[hidden]{display:none!important}
 .dep-ask{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
 .dep-ask .btns{display:flex;flex-wrap:wrap;gap:8px}
 .dest-hint{width:100%;font-size:12.5px}
@@ -282,6 +282,8 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 #outBox>*,.part>*{min-width:0;max-width:100%}
 .part{display:flex;flex-direction:column;gap:12px}
 #outBox h3{margin:6px 0 0}
+.tabbar{grid-template-columns:repeat(3,1fr)}
+@media (max-width:820px){.tabbar{grid-template-columns:1fr}}
 #checks,#dateMsg{display:flex;flex-direction:column;gap:8px}
 
 </style>
@@ -295,7 +297,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>Time Intelligence Builder</h1>
-        <p class="lede">Pick your date table and the calculations you need (year to date, last year, growth, rolling 12 months and more) and get them as TMDL: measures for the measures you choose, or one calculation group that works with every measure. No AI needed.</p>
+        <p class="lede">Pick your date table and the calculations you need (year to date, last year, growth, rolling 12 months and more) and get them as TMDL: measures for the measures you choose, one calculation group that works with every measure, or a trend of the last few months for a chart. No AI needed.</p>
       </div>
       <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
@@ -346,14 +348,19 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
         <p>Time intelligence needs a date table with one row per day for whole years, related to your facts. The Date Table Generator can build one.</p>
       </div>
       <div class="cfg">
-        <div class="field"><label for="grain">Calendar</label><select id="grain"><option value="day">One row per day</option><option value="month">One row per month (month columns)</option></select></div>
+        <div class="field no-trend"><label for="grain">Calendar</label><select id="grain"><option value="day">One row per day</option><option value="month">One row per month (month columns)</option></select></div>
         <div class="field"><label for="dTable">Date table</label><select id="dTable"></select></div>
         <div class="field" id="dColField"><label for="dCol">Date column</label><select id="dCol"></select></div>
-        <div class="field"><label for="fyEnd">Year ends in</label><select id="fyEnd"></select></div>
+        <div class="field no-trend"><label for="fyEnd">Year ends in</label><select id="fyEnd"></select></div>
         <div class="field" id="dataDateField"><label for="dataDate" id="dataDateLbl">Last date with data from</label><select id="dataDate"></select></div>
-        <div class="field"><label for="basis">Work out periods from</label><select id="basis"><option value="latest">The last date with data in the filter</option><option value="context">Every date in the filter</option></select></div>
+        <div class="field no-trend"><label for="basis">Work out periods from</label><select id="basis"><option value="latest">The last date with data in the filter</option><option value="context">Every date in the filter</option></select></div>
       </div>
       <div class="cfg" id="monthCols" hidden></div>
+      <div class="cfg only-trend" id="trendCols" hidden>
+        <div class="field"><label for="trLabel">Month label <span class="muted">(what the chart shows)</span></label><select id="trLabel"></select></div>
+        <div class="field"><label for="trSort">Month sort <span class="muted">(a month number that runs on across years)</span></label><select id="trSort"></select></div>
+      </div>
+      <p class="small muted only-trend" id="trendNote" hidden>The trend needs two columns of your date table: a month label such as <i>Jan 2026</i> and a month number that runs on across years (Year &times; 12 + Month), to count back N months. Columns you don&rsquo;t have are added as calculated columns.</p>
       <p class="small muted" id="basisHint"></p>
       <p class="small muted" id="dayNote">The measures follow SQLBI&rsquo;s <a href="https://www.daxpatterns.com/standard-time-related-calculations/" target="_blank" rel="noopener">standard time-related calculations</a> pattern. The script adds hidden helpers to your date table: a <span class="mono">DateWithSales</span> column (TRUE up to the last date with data) and, for measures, a <span class="mono">ShowValueForDates</span> measure, so nothing shows after your data ends and last year stops at the same day.</p>
       <p class="small muted" id="monthNote" hidden>The measures follow SQLBI&rsquo;s <a href="https://www.daxpatterns.com/month-related-calculations/" target="_blank" rel="noopener">month-related calculations</a> pattern: they filter month columns instead of dates, so they work on a date table with one row per month (or per day, at month level). Columns you don&rsquo;t have are added as hidden calculated columns.</p>
@@ -367,15 +374,34 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">Choose the calculations</h2>
-        <p>Tick the calculations you want and rename them if you like. Percent calculations get the percent format; the others keep each measure&rsquo;s own format.</p>
+        <p id="s3Lede">Tick the calculations you want and rename them if you like. Percent calculations get the percent format; the others keep each measure&rsquo;s own format.</p>
       </div>
       <div class="tabbar" role="radiogroup" aria-label="Output">
         <button type="button" role="radio" id="outMeasures" aria-checked="true"><span class="tn">Measures</span><span class="td">One measure per measure and calculation, e.g. <i>Total Sales YTD</i>. Simple, and each can be used anywhere.</span></button>
         <button type="button" role="radio" id="outGroup" aria-checked="false"><span class="tn">Calculation group</span><span class="td">One small table that applies each calculation to whatever measure is in the visual. Nothing to add when you add measures.</span></button>
+        <button type="button" role="radio" id="outTrend" aria-checked="false"><span class="tn">Trend</span><span class="td">A chart of the last 3, 6, 9 or 12 months up to the month picked in a date slicer, with a slicer for how many months.</span></button>
       </div>
-      <div class="calcs" id="calcs"></div>
+      <div class="calcs no-trend" id="calcs"></div>
       <div class="msg info dep-ask" id="depAsk" hidden></div>
-      <div class="cfg"><div class="field"><label for="pctFormat">Percent format</label><input type="text" id="pctFormat" autocomplete="off" placeholder="0.0%"></div></div>
+      <div class="cfg no-trend"><div class="field"><label for="pctFormat">Percent format</label><input type="text" id="pctFormat" autocomplete="off" placeholder="0.0%"></div></div>
+
+      <div class="only-trend sub" hidden>
+        <div class="cfg">
+          <div class="field"><label for="trOptions">Months to choose from</label><input type="text" id="trOptions" autocomplete="off" placeholder="3, 6, 9, 12"></div>
+          <div class="field"><label for="trDefault">Months with none picked</label><input type="number" id="trDefault" min="1" step="1"></div>
+          <div class="field"><label for="trName">Measure name</label><input type="text" id="trName" autocomplete="off" placeholder="Trend"></div>
+        </div>
+        <div class="cfg">
+          <div class="field"><label for="trSelTable">Months selector table</label><input type="text" id="trSelTable" autocomplete="off" placeholder="xMonthsSelector"></div>
+          <div class="field"><label for="trSelCol">Its column</label><input type="text" id="trSelCol" autocomplete="off" placeholder="Months"></div>
+        </div>
+        <div class="cfg">
+          <div class="field"><label for="trAxisTable">Month axis table</label><input type="text" id="trAxisTable" autocomplete="off" placeholder="Dynamic Slicer"></div>
+          <div class="field"><label for="trAxisLabel">Its month column</label><input type="text" id="trAxisLabel" autocomplete="off" placeholder="Month"></div>
+          <div class="field"><label for="trAxisSort">Its sort column</label><input type="text" id="trAxisSort" autocomplete="off" placeholder="Month Sort"></div>
+        </div>
+        <p class="note">Both tables are disconnected: no relationships. The month axis goes on the chart instead of the date table, so a date slicer can pick the last month without cutting the chart down to that month.</p>
+      </div>
 
       <div class="only-measures sub">
         <h3>Measures to build on</h3>
@@ -423,7 +449,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       <div id="checks"></div>
       <div id="outBox">
         <div class="cfg">
-          <div class="field"><label for="testBy">Test query rows by</label><select id="testBy"></select></div>
+          <div class="field no-trend"><label for="testBy">Test query rows by</label><select id="testBy"></select></div>
           <div class="field only-group"><label for="testMeasure">Test with measure</label><select id="testMeasure"></select></div>
         </div>
         <div id="testPart" class="part">
@@ -1752,6 +1778,10 @@ function tiMissingDeps(cfg){
 }
 function tiPlan(model, cfg){
   const bases = (cfg.measures || []).map(n => model.measures.find(m => lc(m.name) === lc(n))).filter(Boolean);
+  if (cfg.output === 'trend') {
+    const c = { key: 'trend', name: tiTr(cfg, 'trName') || 'Trend' };
+    return bases.map(b => ({ base: b, calc: c, name: tiMeasureName(cfg, b, c), expression: tiTrendExpr(cfg, bracket(b.name)), formatString: b.formatString || '', folder: tiFolder(cfg, b) }));
+  }
   const calcs = tiSelectedCalcs(cfg), list = tiCalcList(cfg), out = [];
   const ref = (b, k) => bracket(k === 'cur' ? b.name : tiMeasureName(cfg, b, list.find(x => x.key === k)));
   // the measures they build on come first, growth measures last
@@ -1769,7 +1799,9 @@ function tiCheck(model, cfg){
   const out = [], add = (level, text) => out.push({ level, text });
   const t = model.tables.find(x => lc(x.name) === lc(cfg.dateTable || ''));
   const col = t && model.columns.find(c => lc(c.table) === lc(t.name) && lc(c.name) === lc(cfg.dateColumn || ''));
+  const trend = cfg.output === 'trend';
   if (!cfg.dateTable || !t) add('err', 'Choose your date table in Step 2.');
+  else if (trend) tiTrendCheck(model, cfg, t, add);
   else if (cfg.grain === 'month') tiMonthCheck(model, cfg, t, add);
   else if (!col) add('err', 'Choose the date column of ' + qName(t.name) + ' in Step 2.');
   else {
@@ -1786,8 +1818,8 @@ function tiCheck(model, cfg){
       if (model.measures.some(x => lc(x.table) === lc(t.name) && lc(x.name) === lc(TI_DWS)) || model.columns.some(x => lc(x.table) === lc(t.name) && lc(x.name) === lc(TI_SVD))) add('err', qName(t.name) + ' already has an object named ' + TI_DWS + ' or ' + TI_SVD + ' of the wrong kind; rename it first.');
     }
   }
-  const calcs = tiSelectedCalcs(cfg);
-  if (!calcs.length) add('err', 'Pick at least one calculation in Step 3.');
+  const calcs = trend ? [] : tiSelectedCalcs(cfg);
+  if (!calcs.length && !trend) add('err', 'Pick at least one calculation in Step 3.');
   const m = +cfg.fyEnd || 12;
   if (m % 3 !== 0 && calcs.some(c => /^(qtd|pqtd|qoqp)$/.test(c.key)) && cfg.grain !== 'month') add('warn', 'QTD uses calendar quarters (Jan–Mar, Apr–Jun…), which don’t line up with a fiscal year ending in ' + TI_MONTHS[m - 1] + '.');
   const names = calcs.map(c => lc(tiCalcName(cfg, c)));
@@ -1858,6 +1890,7 @@ function tiPushHelpers(L, model, cfg){
 }
 function tiTmdl(model, cfg){
   const T = TAB, L = ['createOrReplace', ''];
+  if (cfg.output === 'trend') return tiTrendTmdl(model, cfg);
   if (cfg.output === 'group') {
     const tn = cfg.groupTable.trim(), cn = cfg.groupColumn.trim();
     L.push(T + 'table ' + tmdlName(tn), '', T + T + 'calculationGroup', T + T + T + 'precedence: ' + (+cfg.precedence || 0), '');
@@ -1896,6 +1929,7 @@ function tiTestQuery(model, cfg){
   const by = cfg.testBy ? cfg.testBy.split('|') : null;
   const byRef = by ? qName(by[0]) + bracket(by[1]) : null;
   const I = '    ';
+  if (cfg.output === 'trend') return tiTrendTest(model, cfg);
   if (cfg.output === 'group') {
     const base = (cfg.testMeasure || '').trim() || (model.measures[0] ? model.measures[0].name : '');
     if (!base || !byRef) return '';
@@ -1926,6 +1960,145 @@ function tiTestQuery(model, cfg){
   const cols = bases.map(b => I + daxString(b) + ', ' + bracket(b)).concat(plan.map(p => I + daxString(p.name) + ', ' + bracket(p.name)));
   cols.forEach((c, i) => L.push(c + (i < cols.length - 1 ? ',' : '')));
   L.push(')', 'ORDER BY ' + byRef);
+  return L.join('\n');
+}
+/* ---------- Trend: the last N months up to the month picked in a date slicer ----------
+   Two disconnected tables: a months selector (a DATATABLE of month counts) and a month axis (one row per month,
+   from the date table's month label and month sort columns). On the axis, each measure shows the base measure for
+   the months in the N months to the last month in the date filter; anywhere else it shows the base measure.
+   Month sort has to count months in order across years (Year * 12 + Month), since N months back is a subtraction. */
+const TI_TR_ADD = { label: 'Year Month', sort: 'Month Sort' };
+const TI_TR_DEF = { trOptions: '3, 6, 9, 12', trDefault: 6, trName: 'Trend', trSelTable: 'xMonthsSelector', trSelCol: 'Months', trAxisTable: 'Dynamic Slicer', trAxisLabel: 'Month', trAxisSort: 'Month Sort' };
+const tiTr = (cfg, k) => String(cfg[k] == null ? TI_TR_DEF[k] : cfg[k]).trim();
+function tiTrendOptions(cfg){ return [...new Set(tiTr(cfg, 'trOptions').split(/[^0-9]+/).filter(Boolean).map(Number).filter(n => n > 0))].sort((a, b) => a - b); }
+// the date table columns to use: picked, or the one the script adds ('' = add it)
+function tiTrendCols(cfg){ return { label: (cfg.trLabel || '').trim() || TI_TR_ADD.label, sort: (cfg.trSort || '').trim() || TI_TR_ADD.sort }; }
+function tiTrendAdds(model, cfg){
+  const dc = tiMonthDateCol(model, cfg), c = tiTrendCols(cfg), out = [];
+  if (!dc) return out;
+  const d = qName(cfg.dateTable) + bracket(dc);
+  if (!(cfg.trSort || '').trim()) out.push({ name: c.sort, expression: 'YEAR ( ' + d + ' ) * 12 + MONTH ( ' + d + ' )', type: 'int64', hidden: true });
+  if (!(cfg.trLabel || '').trim()) out.push({ name: c.label, expression: 'FORMAT ( ' + d + ', "mmm yyyy" )', type: 'string', sortBy: c.sort });
+  return out;
+}
+function tiTmdlType(t){
+  t = lc(t || '');
+  return /int/.test(t) ? 'int64' : /date/.test(t) ? 'dateTime' : /bool/.test(t) ? 'boolean' : /double/.test(t) ? 'double' : /decimal|currency/.test(t) ? 'decimal' : 'string';
+}
+function tiTrendColType(model, cfg, which){
+  const n = (cfg[which === 'sort' ? 'trSort' : 'trLabel'] || '').trim();
+  const c = n && model.columns.find(x => lc(x.table) === lc(cfg.dateTable) && lc(x.name) === lc(n));
+  return c ? tiTmdlType(c.dataType) : which === 'sort' ? 'int64' : 'string';
+}
+function tiTrendSelSource(cfg){ return 'DATATABLE ( ' + daxString(tiTr(cfg, 'trSelCol')) + ', INTEGER, { ' + tiTrendOptions(cfg).map(n => '{ ' + n + ' }').join(', ') + ' } )'; }
+function tiTrendAxisSource(cfg){
+  const D = qName(cfg.dateTable), c = tiTrendCols(cfg);
+  return tiFn('DISTINCT', [tiFn('SELECTCOLUMNS', [D, daxString(tiTr(cfg, 'trAxisLabel')) + ', ' + D + bracket(c.label), daxString(tiTr(cfg, 'trAxisSort')) + ', ' + D + bracket(c.sort)])]);
+}
+function tiTrendExpr(cfg, m){
+  const D = qName(cfg.dateTable), A = qName(tiTr(cfg, 'trAxisTable')), c = tiTrendCols(cfg), def = Math.max(1, Math.round(+tiTr(cfg, 'trDefault') || 6));
+  const inWindow = 'NOT ISBLANK ( _lastMonthSort )\n    && _currentMonthSort <= _lastMonthSort\n    && _currentMonthSort > _lastMonthSort - _monthsToView';
+  return [
+    '-- How many months to show: the pick in ' + qName(tiTr(cfg, 'trSelTable')) + ', or ' + def + ' with none picked.',
+    tiVar('_monthsToView', tiFn('SELECTEDVALUE', [qName(tiTr(cfg, 'trSelTable')) + bracket(tiTr(cfg, 'trSelCol')), String(def)])),
+    '-- The last month picked in the date slicer.',
+    tiVar('_lastMonthSort', 'MAX ( ' + D + bracket(c.sort) + ' )'),
+    '-- The month on the current row of the chart.',
+    tiVar('_currentMonthSort', 'SELECTEDVALUE ( ' + A + bracket(tiTr(cfg, 'trAxisSort')) + ' )'),
+    tiVar('_result', tiFn('CALCULATE', [m, 'REMOVEFILTERS ( ' + D + ' )', D + bracket(c.sort) + ' = _currentMonthSort'])),
+    'RETURN',
+    I4(tiFn('IF', ['NOT ISINSCOPE ( ' + A + bracket(tiTr(cfg, 'trAxisLabel')) + ' )', m, tiFn('IF', [inWindow, 'COALESCE ( _result, 0 )'])]))
+  ].join('\n');
+}
+function tiTrendCheck(model, cfg, t, add){
+  const cols = model.columns.filter(c => lc(c.table) === lc(t.name)), dc = tiMonthDateCol(model, cfg);
+  [['trLabel', 'month label', 'label'], ['trSort', 'month sort', 'sort']].forEach(([k, label, w]) => {
+    const n = (cfg[k] || '').trim();
+    if (!n) {
+      if (!dc) add('err', 'Choose the ' + label + ' column of ' + qName(t.name) + ' in Step 2 (it has no date column to work it out from).');
+      else if (cols.some(x => lc(x.name) === lc(TI_TR_ADD[w]))) add('err', qName(t.name) + ' already has a column ' + bracket(TI_TR_ADD[w]) + '. Pick it in Step 2 instead of adding one.');
+      return;
+    }
+    const c = cols.find(x => lc(x.name) === lc(n));
+    if (!c) add('err', qName(t.name) + ' has no column ' + bracket(n) + '.');
+    else if (w === 'sort' && !tiNumeric(c)) add('err', qName(t.name) + bracket(n) + ' is a ' + (c.dataType || 'text') + ' column; the month sort needs to be a number.');
+  });
+  const c = tiTrendCols(cfg);
+  if ((cfg.trLabel || '').trim() && (cfg.trSort || '').trim() && lc(c.label) === lc(c.sort)) add('err', 'The month label and month sort need to be two different columns.');
+  const adds = tiTrendAdds(model, cfg);
+  if (adds.length) add('info', 'The script adds ' + adds.map(a => bracket(a.name) + (a.hidden ? ' (hidden, Year × 12 + Month)' : ' (Jan 2026, sorted by ' + bracket(c.sort) + ')')).join(' and ') + ' to ' + qName(t.name) + ', worked out from ' + bracket(dc) + '.');
+  if ((cfg.trSort || '').trim()) add('info', bracket(c.sort) + ' must count months in order across years (for example Year × 12 + Month), not YYYYMM: the measure goes back N months by subtracting N.');
+  if ((cfg.trLabel || '').trim()) add('info', bracket(c.label) + ' must name the year too (Jan 2026, not just Jan): the chart has one point per value.');
+  const opts = tiTrendOptions(cfg), def = +tiTr(cfg, 'trDefault');
+  if (!opts.length) add('err', 'Give at least one number of months to choose from in Step 3.');
+  if (!(def >= 1) || def !== Math.round(def)) add('err', 'The default number of months must be a whole number, 1 or more.');
+  else if (opts.length && !opts.includes(def)) add('warn', 'The default (' + def + ' months) isn’t one of the choices, so readers can’t pick it again once they pick another.');
+  const st = tiTr(cfg, 'trSelTable'), sc = tiTr(cfg, 'trSelCol'), at = tiTr(cfg, 'trAxisTable'), al = tiTr(cfg, 'trAxisLabel'), as = tiTr(cfg, 'trAxisSort');
+  if (!st || !sc || !at || !al || !as) add('err', 'Give every new table and column a name in Step 3.');
+  if (st && at && lc(st) === lc(at)) add('err', 'The months selector and the month axis need different table names.');
+  if (al && as && lc(al) === lc(as)) add('err', 'The month axis columns need different names.');
+  [st, at].filter(Boolean).forEach(n => {
+    if (lc(n) === lc(t.name) || lc(n) === lc(cfg.target || '')) add('err', qName(n) + ' is your ' + (lc(n) === lc(t.name) ? 'date table' : 'home table for the measures') + '; give the new table another name.');
+    else if (model.tables.some(x => lc(x.name) === lc(n))) add('warn', 'The model already has a table named ' + qName(n) + '. Applying replaces it with this version.');
+  });
+}
+function tiTrendTmdl(model, cfg){
+  const T = TAB, L = ['createOrReplace', ''], c = tiTrendCols(cfg), target = cfg.target.trim(), same = lc(target) === lc(cfg.dateTable);
+  const col = (name, props) => { L.push(T + T + 'column ' + tmdlName(name)); props.forEach(x => L.push(T + T + T + x)); L.push(''); };
+  const measures = () => tiPlan(model, cfg).forEach(p => {
+    tiPushObject(L, 'measure', p.name, p.expression);
+    if (p.formatString) L.push(T + T + T + 'formatString: ' + tmdlValue(p.formatString));
+    if (p.folder) L.push(T + T + T + 'displayFolder: ' + tmdlValue(p.folder));
+    L.push('');
+  });
+  const adds = tiTrendAdds(model, cfg);
+  if (adds.length || same) {
+    L.push(T + 'ref table ' + tmdlName(cfg.dateTable), '');
+    adds.forEach(a => {
+      tiPushObject(L, 'column', a.name, a.expression);
+      L.push(T + T + T + 'dataType: ' + a.type);
+      if (a.hidden) L.push(T + T + T + 'isHidden');
+      L.push(T + T + T + 'summarizeBy: none');
+      if (a.sortBy) L.push(T + T + T + 'sortByColumn: ' + tmdlName(a.sortBy));
+      L.push('');
+    });
+    if (same) measures();
+  }
+  // the months selector
+  const st = tiTr(cfg, 'trSelTable'), sc = tiTr(cfg, 'trSelCol');
+  L.push(T + 'table ' + tmdlName(st), '');
+  col(sc, ['dataType: int64', 'formatString: 0', 'summarizeBy: none', 'isNameInferred', 'sourceColumn: [' + sc + ']']);
+  L.push(T + T + 'partition ' + tmdlName(st) + ' = calculated', T + T + T + 'mode: import', T + T + T + 'source = ' + tiTrendSelSource(cfg), '');
+  // the month axis
+  const at = tiTr(cfg, 'trAxisTable'), al = tiTr(cfg, 'trAxisLabel'), as = tiTr(cfg, 'trAxisSort');
+  L.push(T + 'table ' + tmdlName(at), '');
+  col(al, ['dataType: ' + tiTrendColType(model, cfg, 'label'), 'summarizeBy: none', 'isNameInferred', 'sourceColumn: [' + al + ']', 'sortByColumn: ' + tmdlName(as)]);
+  col(as, ['dataType: ' + tiTrendColType(model, cfg, 'sort'), 'isHidden', 'formatString: 0', 'summarizeBy: none', 'isNameInferred', 'sourceColumn: [' + as + ']']);
+  L.push(T + T + 'partition ' + tmdlName(at) + ' = calculated', T + T + T + 'mode: import', T + T + T + 'source =');
+  exprLines(tiTrendAxisSource(cfg)).forEach(l => L.push(l ? T.repeat(5) + l : ''));
+  L.push('');
+  if (!same) { L.push(T + 'ref table ' + tmdlName(target), ''); measures(); }
+  while (L[L.length - 1] === '') L.pop();
+  return L.join('\n') + '\n';
+}
+// after applying: the axis as the chart shows it, with the date filter on the last month with data
+function tiTrendTest(model, cfg){
+  const plan = tiPlan(model, cfg), I = '    ';
+  if (!plan.length) return '';
+  const D = qName(cfg.dateTable), c = tiTrendCols(cfg), sort = D + bracket(c.sort), A = qName(tiTr(cfg, 'trAxisTable'));
+  const opts = tiTrendOptions(cfg), def = +tiTr(cfg, 'trDefault'), n = opts.includes(def) ? def : opts[opts.length - 1] || def;
+  const L = ['// Run in DAX query view AFTER applying the script: the ' + n + ' months to the last month with ' + plan[0].base.name + ',',
+    '// as a chart shows them with that month picked in the date slicer and ' + n + ' in ' + qName(tiTr(cfg, 'trSelTable')) + '.',
+    'DEFINE',
+    I + 'VAR __lastMonth =',
+    I + I + tiFn('MAXX', [tiFn('FILTER', ['VALUES ( ' + sort + ' )', 'NOT ISBLANK ( ' + bracket(plan[0].base.name) + ' )']), sort]).split('\n').join('\n' + I + I),
+    'EVALUATE', 'SUMMARIZECOLUMNS (',
+    I + A + bracket(tiTr(cfg, 'trAxisSort')) + ',',
+    I + A + bracket(tiTr(cfg, 'trAxisLabel')) + ',',
+    I + 'FILTER ( ALL ( ' + sort + ' ), ' + sort + ' = __lastMonth ),',
+    I + 'TREATAS ( { ' + n + ' }, ' + qName(tiTr(cfg, 'trSelTable')) + bracket(tiTr(cfg, 'trSelCol')) + ' ),'];
+  plan.forEach((p, i) => L.push(I + daxString(p.name) + ', ' + bracket(p.name) + (i < plan.length - 1 ? ',' : '')));
+  L.push(')', 'ORDER BY ' + A + bracket(tiTr(cfg, 'trAxisSort')));
   return L.join('\n');
 }
 /*TI-CORE-END*/
@@ -1991,14 +2164,14 @@ function copyText(text, btn){
 }
 function hl(code){
   return esc(code).split('\n').map(l => {
-    if (/^\s*\/\//.test(l)) return '<span class="tok-com">' + l + '</span>';
+    if (/^\s*(\/\/|--)/.test(l)) return '<span class="tok-com">' + l + '</span>';
     return l.replace(/(&quot;(?:[^&]|&(?!quot;))*?&quot;)/g, '<span class="tok-str">$1</span>')
-      .replace(/\b(createOrReplace|ref table|table|column|measure|calculationGroup|calculationItem|formatStringDefinition|DEFINE|MEASURE|EVALUATE|SUMMARIZECOLUMNS|ORDER BY|CALCULATE|DATESYTD|DATESQTD|DATESMTD|SAMEPERIODLASTYEAR|DATEADD|DATESINPERIOD|DIVIDE|VAR|RETURN|IF|NOT|ISBLANK|SELECTEDMEASURE|BLANK|MIN|MAX|MINX|AVERAGEX|CALCULATETABLE|PREVIOUSYEAR|PARALLELPERIOD|REMOVEFILTERS|COLUMN|TRUE|YEAR|MONTH|SELECTEDVALUE|VALUES|FILTER|ALL|COUNTROWS|INT|MOD)\b/g, '<span class="tok-kw">$1</span>');
+      .replace(/\b(createOrReplace|ref table|table|column|measure|calculationGroup|calculationItem|formatStringDefinition|DEFINE|MEASURE|EVALUATE|SUMMARIZECOLUMNS|ORDER BY|CALCULATE|DATESYTD|DATESQTD|DATESMTD|SAMEPERIODLASTYEAR|DATEADD|DATESINPERIOD|DIVIDE|DATATABLE|INTEGER|SELECTCOLUMNS|DISTINCT|ISINSCOPE|COALESCE|MAXX|TREATAS|FORMAT|partition|calculated|VAR|RETURN|IF|NOT|ISBLANK|SELECTEDMEASURE|BLANK|MIN|MAX|MINX|AVERAGEX|CALCULATETABLE|PREVIOUSYEAR|PARALLELPERIOD|REMOVEFILTERS|COLUMN|TRUE|YEAR|MONTH|SELECTEDVALUE|VALUES|FILTER|ALL|COUNTROWS|INT|MOD)\b/g, '<span class="tok-kw">$1</span>');
   }).join('\n');
 }
 
 const blankCfg = () => ({ output: 'measures', dateTable: '', dateColumn: '', fyEnd: 12, grain: 'day', mcols: {}, basis: 'latest', dataDate: '', calcs: ['ytd', 'pytd', 'yoyp'], names: {}, pctFormat: '0.0%',
-  measures: [], target: '', namePattern: 'suffix', folderMode: 'fixed', folder: 'Time Intelligence', groupTable: 'Time Intelligence', groupColumn: 'Show as', precedence: 10, testBy: '', testMeasure: '' });
+  measures: [], target: '', namePattern: 'suffix', folderMode: 'fixed', folder: 'Time Intelligence', groupTable: 'Time Intelligence', groupColumn: 'Show as', precedence: 10, testBy: '', testMeasure: '', trLabel: null, trSort: null, ...TI_TR_DEF });
 const state = { example: false, model: null, cfg: blankCfg(), out: {} };
 
 function persist(){
@@ -2035,6 +2208,14 @@ function autoPick(){
     const k = cols.find(x => x.key) || cols.find(x => lc(x.name) === 'date') || cols[0];
     c.dateColumn = k ? k.name : '';
   }
+  // trend columns: null = not chosen yet, '' = add it
+  const tCols = m.columns.filter(x => lc(x.table) === lc(c.dateTable));
+  [['trSort', /^(year ?)?month ?(sort|index|seq(uence)?|order)$|^year ?month ?(number|index)$/i, true], ['trLabel', /^(year ?month|month ?year|month ?(and|&) ?year)( ?(name|label))?$/i]].forEach(([k, re, num]) => {
+    const v = c[k];
+    if (v === '' || (v && tCols.some(x => lc(x.name) === lc(v)))) return;
+    const hit = tCols.find(x => re.test(x.name.trim()) && (!num || tiNumeric(x)));
+    c[k] = hit ? hit.name : null;
+  });
   if (!(c.target || '').trim()) {
     const first = m.measures.find(x => (c.measures || []).some(n => lc(n) === lc(x.name))) || m.measures[0];
     c.target = first ? first.table : '';
@@ -2076,11 +2257,18 @@ function renderDates(){
     }).join('') : '';
     $('dCol').innerHTML = m.columns.filter(x => lc(x.table) === lc(c.dateTable) && /date/i.test(x.dataType || '')).map(x => opt(x.name, x.name + (x.key ? '  (key)' : ''), lc(x.name) === lc(c.dateColumn))).join('');
   }
+  if (m) {
+    const tCols = m.columns.filter(x => lc(x.table) === lc(c.dateTable)), dc = tiMonthDateCol(m, c);
+    const addOpt = (k, what) => opt('', dc ? 'Add it (' + what + ', from ' + dc + ')' : 'Choose a column', !c[k]);
+    $('trLabel').innerHTML = addOpt('trLabel', TI_TR_ADD.label) + tCols.map(x => opt(x.name, x.name, lc(x.name) === lc(c.trLabel || ''))).join('');
+    $('trSort').innerHTML = addOpt('trSort', TI_TR_ADD.sort) + tCols.filter(tiNumeric).map(x => opt(x.name, x.name, lc(x.name) === lc(c.trSort || ''))).join('');
+  } else ['trLabel', 'trSort'].forEach(id => { $(id).innerHTML = '<option value="">After Step 1</option>'; });
   $('fyEnd').innerHTML = TI_MONTHS.map((n, i) => opt(i + 1, n + (i === 11 ? ' (calendar year)' : ''), (+c.fyEnd || 12) === i + 1)).join('');
   const month = c.grain === 'month';
   $('grain').value = month ? 'month' : 'day';
-  $('dColField').hidden = month; $('monthCols').hidden = !month; $('dayNote').hidden = month; $('monthNote').hidden = !month;
-  $('dataDateField').hidden = month && c.basis === 'context';
+  const trend = c.output === 'trend';
+  $('dColField').hidden = month || trend; $('monthCols').hidden = !month || trend; $('dayNote').hidden = month || trend; $('monthNote').hidden = !month || trend; $('basisHint').hidden = trend;
+  $('dataDateField').hidden = (month && c.basis === 'context') || trend;
   $('dataDateLbl').textContent = month ? 'Last month with data from' : 'Last date with data from';
   $('basis').value = c.basis === 'context' ? 'context' : 'latest';
   if (month) $('basisHint').textContent = c.basis === 'context'
@@ -2124,11 +2312,14 @@ function renderDestHint(){
     : 'Pick a folder from your model or type a new one.' + (sample ? ' For example, the ' + esc(ex.name) + ' measures go in <span class="mono">' + esc(sample) + '</span>.' : '');
 }
 function renderOutputKind(){
-  const g = state.cfg.output === 'group';
+  const o = state.cfg.output, g = o === 'group', t = o === 'trend';
   $('destBox').hidden = g;
-  $('outMeasures').setAttribute('aria-checked', !g); $('outGroup').setAttribute('aria-checked', g);
+  $('outMeasures').setAttribute('aria-checked', o !== 'group' && !t); $('outGroup').setAttribute('aria-checked', g); $('outTrend').setAttribute('aria-checked', t);
   document.querySelectorAll('.only-measures').forEach(el => { el.hidden = g; });
   document.querySelectorAll('.only-group').forEach(el => { el.hidden = !g; });
+  document.querySelectorAll('.only-trend').forEach(el => { el.hidden = !t; });
+  document.querySelectorAll('.no-trend').forEach(el => { el.hidden = t; });
+  $('s3Lede').innerHTML = t ? 'Pick the measures to trend and the months readers can choose. Each new measure keeps its measure&rsquo;s format.' : 'Tick the calculations you want and rename them if you like. Percent calculations get the percent format; the others keep each measure&rsquo;s own format.';
 }
 function renderMeasures(){
   const m = state.model, c = state.cfg;
@@ -2140,6 +2331,7 @@ function renderMeasures(){
   $('destFolders').innerHTML = tiFolderOptions(m).map(f => '<option value="' + esc(f) + '"></option>').join('');
   if (document.activeElement !== $('target')) $('target').value = c.target;
   const n = c.measures.length * tiSelectedCalcs(c).length;
+  if (c.output === 'trend') { $('planInfo').innerHTML = c.measures.length ? '<b>' + c.measures.length + '</b> trend measure' + (c.measures.length === 1 ? '' : 's') + ', one for each measure you tick.' : 'Tick the measures to build on.'; return; }
   $('planInfo').innerHTML = c.measures.length ? '<b>' + c.measures.length + '</b> measure' + (c.measures.length === 1 ? '' : 's') + ' × <b>' + tiSelectedCalcs(c).length + '</b> calculation' + (tiSelectedCalcs(c).length === 1 ? '' : 's') + ' = <b>' + n + '</b> new measures.' : 'Tick the measures to build on.';
 }
 function renderOut(){
@@ -2149,19 +2341,25 @@ function renderOut(){
   $('checks').innerHTML = checks.map(x => '<div class="msg ' + x.level + '">' + esc(x.text) + '</div>').join('') || '<div class="msg ok">&#10003; Every name checks out against the export.</div>';
   $('outBox').hidden = !!errs.length;
   if (errs.length) { state.out = {}; return; }
-  const g = c.output === 'group';
+  const g = c.output === 'group', t = c.output === 'trend', after = g || t;
   $('testBy').innerHTML = testByOptions().map(o => opt(o.v, o.t, o.v === c.testBy)).join('');
   $('testMeasure').innerHTML = m.measures.map(x => opt(x.name, x.name, lc(x.name) === lc(c.testMeasure))).join('');
   state.out.tmdl = tiTmdl(m, c); state.out.test = tiTestQuery(m, c);
   $('tmdlView').innerHTML = hl(state.out.tmdl); $('testView').innerHTML = hl(state.out.test || '// Choose a column for the rows above.');
-  $('testTitle').innerHTML = g ? '2. Test it <span class="muted">(DAX query view, after applying)</span>' : '1. Test the measures <span class="muted">(DAX query view, before applying)</span>';
-  $('tmdlH').innerHTML = (g ? '1' : '2') + '. Add to the model <span class="muted">(TMDL view)</span>';
+  $('testTitle').innerHTML = after ? '2. Test it <span class="muted">(DAX query view, after applying)</span>' : '1. Test the measures <span class="muted">(DAX query view, before applying)</span>';
+  $('tmdlH').innerHTML = (after ? '1' : '2') + '. Add to the model <span class="muted">(TMDL view)</span>';
   const box = $('outBox'), tp = $('testPart'), mp = $('tmdlPart'), ap = box.querySelector('.apply');
-  if (g) { box.insertBefore(mp, ap); box.insertBefore(tp, ap); } else { box.insertBefore(tp, ap); box.insertBefore(mp, ap); }
+  if (after) { box.insertBefore(mp, ap); box.insertBefore(tp, ap); } else { box.insertBefore(tp, ap); box.insertBefore(mp, ap); }
   const count = g ? tiSelectedCalcs(c).length + 1 : tiPlan(m, c).length;
-  $('tmdlTitle').textContent = g ? 'TMDL script: calculation group' : 'TMDL script: measures';
+  $('tmdlTitle').textContent = g ? 'TMDL script: calculation group' : t ? 'TMDL script: trend tables and measures' : 'TMDL script: measures';
   $('tmdlCount').textContent = count + (g ? ' calculation items' : ' measures');
-  $('applySteps').innerHTML = (g ? [
+  const st = esc(qName(tiTr(c, 'trSelTable'))), at = esc(qName(tiTr(c, 'trAxisTable'))), tc = tiTrendCols(c);
+  $('applySteps').innerHTML = (t ? [
+    'In Power BI Desktop, open <b>TMDL view</b>, paste the script into a new tab and select <b>Preview</b>: two new tables, ' + st + ' and ' + at + ', and the new measures' + (tiTrendAdds(m, c).length ? ', plus the new columns in ' + esc(qName(c.dateTable)) : '') + '.',
+    'Select <b>Apply</b>, then run the test query above. In <b>Model view</b>, check that neither new table is related to anything (delete any relationship Power BI added).',
+    'Build the chart: ' + esc(qName(tiTr(c, 'trAxisTable')) + bracket(tiTr(c, 'trAxisLabel'))) + ' on the X-axis and the trend measure as the values. Don&rsquo;t use the date table on the axis.',
+    'Add a slicer on ' + esc(qName(c.dateTable) + bracket(tc.label)) + ' (single select) for the last month to show, and a slicer on ' + esc(qName(tiTr(c, 'trSelTable')) + bracket(tiTr(c, 'trSelCol'))) + ' (single select) for how many months. With no month picked, the chart ends at the last month in the date table.'
+  ] : g ? [
     'In Power BI Desktop, open <b>TMDL view</b>, paste the script into a new tab and select <b>Preview</b>: one new table, ' + esc(qName(c.groupTable.trim())) + ', and nothing else changing.',
     'Select <b>Apply</b>. If Power BI says calculation groups need implicit measures turned off, open <b>Model view</b>, select the model in the Data pane and set <b>Discourage implicit measures</b> to On, then apply again.',
     'Add <b>' + esc(c.groupColumn.trim()) + '</b> to a slicer, or to a matrix&rsquo;s columns, next to any measure. Then run the test query above.',
@@ -2172,9 +2370,10 @@ function renderOut(){
     'Select <b>Apply</b>. The measures appear in ' + (c.folderMode === 'fixed' && !c.folder.trim() ? 'the table' : 'their display folder') + ' straight away.'
   ]).map(s => '<li>' + s + '</li>').join('');
 }
+const TR_INPUTS = ['trOptions', 'trDefault', 'trName', 'trSelTable', 'trSelCol', 'trAxisTable', 'trAxisLabel', 'trAxisSort'].map(k => [k, k]);
 function syncInputs(){
   const c = state.cfg;
-  [['pctFormat', 'pctFormat'], ['folder', 'folder'], ['gTable', 'groupTable'], ['gCol', 'groupColumn'], ['prec', 'precedence']].forEach(([id, k]) => { if (document.activeElement !== $(id)) $(id).value = c[k]; });
+  TR_INPUTS.concat([['pctFormat', 'pctFormat'], ['folder', 'folder'], ['gTable', 'groupTable'], ['gCol', 'groupColumn'], ['prec', 'precedence']]).forEach(([id, k]) => { if (document.activeElement !== $(id)) $(id).value = c[k]; });
   $('namePattern').value = c.namePattern; $('folderMode').value = c.folderMode;
 }
 function renderAll(){ renderModel(); renderDates(); renderCalcs(); renderOutputKind(); renderDepAsk(); renderMeasures(); syncInputs(); renderDestHint(); renderOut(); }
@@ -2201,7 +2400,7 @@ function init(){
     try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
     renderAll(); persist();
   });
-  $('dTable').addEventListener('change', () => { c().dateTable = $('dTable').value; c().dateColumn = ''; c().dataDate = ''; c().testBy = ''; change(); });
+  $('dTable').addEventListener('change', () => { c().dateTable = $('dTable').value; c().dateColumn = ''; c().trLabel = null; c().trSort = null; c().dataDate = ''; c().testBy = ''; change(); });
   $('grain').addEventListener('change', () => { c().grain = $('grain').value; change(); });
   $('monthCols').addEventListener('change', e => { const k = e.target.dataset.mcol; if (!k) return; (c().mcols = c().mcols || {})[k] = e.target.value; change(); });
   $('dCol').addEventListener('change', () => { c().dateColumn = $('dCol').value; change(); });
@@ -2210,6 +2409,8 @@ function init(){
   $('dataDate').addEventListener('change', () => { c().dataDate = $('dataDate').value; change(); });
   $('outMeasures').addEventListener('click', () => { c().output = 'measures'; change(); });
   $('outGroup').addEventListener('click', () => { c().output = 'group'; change(); });
+  $('outTrend').addEventListener('click', () => { c().output = 'trend'; change(); });
+  [['trLabel', 'trLabel'], ['trSort', 'trSort']].forEach(([id, k]) => $(id).addEventListener('change', () => { c()[k] = $(id).value; change(); }));
   $('calcs').addEventListener('change', e => {
     const k = e.target.dataset.calc; if (!k) return;
     c().calcs = e.target.checked ? tiCalcList(c()).map(x => x.key).filter(x => x === k || c().calcs.includes(x)) : c().calcs.filter(x => x !== k);
@@ -2222,7 +2423,7 @@ function init(){
     change();
   });
   $('calcs').addEventListener('input', e => { const k = e.target.dataset.name; if (!k) return; c().names[k] = e.target.value; leaveExample(); renderMeasures(); renderOut(); persist(); });
-  [['pctFormat', 'pctFormat'], ['folder', 'folder'], ['gTable', 'groupTable'], ['gCol', 'groupColumn'], ['prec', 'precedence']].forEach(([id, k]) => $(id).addEventListener('input', () => { c()[k] = $(id).value; leaveExample(); renderDestHint(); renderOut(); persist(); }));
+  TR_INPUTS.concat([['pctFormat', 'pctFormat'], ['folder', 'folder'], ['gTable', 'groupTable'], ['gCol', 'groupColumn'], ['prec', 'precedence']]).forEach(([id, k]) => $(id).addEventListener('input', () => { c()[k] = $(id).value; leaveExample(); renderDestHint(); renderMeasures(); renderOut(); persist(); }));
   $('target').addEventListener('input', () => { c().target = $('target').value; leaveExample(); renderDestHint(); renderOut(); persist(); });
   [['namePattern', 'namePattern'], ['folderMode', 'folderMode'], ['testBy', 'testBy'], ['testMeasure', 'testMeasure']].forEach(([id, k]) => $(id).addEventListener('change', () => { c()[k] = $(id).value; change(); }));
   $('search').addEventListener('input', renderMeasures);
