@@ -1,0 +1,24 @@
+const { chromium } = require('playwright');
+(async () => {
+  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1250, height: 950 } }); const errs = [];
+  p.on('pageerror', e => errs.push(e.message));
+  await p.goto('http://localhost:8765/time-intelligence-builder.html'); await p.evaluate(() => localStorage.clear()); await p.reload();
+  await p.click('#outTrend');
+  console.log('banner gone', !(await p.locator('#exampleBanner').isVisible()), '| calcs hidden', !(await p.locator('#calcs').isVisible()), '| label', JSON.stringify(await p.locator('#trLabel').inputValue()), 'sort', JSON.stringify(await p.locator('#trSort').inputValue()), '(expect true true "" "")');
+  console.log('checks:', await p.locator('#checks').innerText());
+  const tm = await p.locator('#tmdlView').innerText();
+  console.log('selector:', tm.includes('source = DATATABLE ( "Months", INTEGER, { { 3 }, { 6 }, { 9 }, { 12 } } )'), '| axis sort by:', tm.includes("sortByColumn: 'Month Sort'"), '| adds Month Sort:', tm.includes("column 'Month Sort' = YEAR ( 'Date'[Date] ) * 12 + MONTH ( 'Date'[Date] )"), '| default 6:', tm.includes("SELECTEDVALUE ( 'xMonthsSelector'[Months], 6 )"), '| in scope:', tm.includes("NOT ISINSCOPE ( 'Dynamic Slicer'[Month] )"), '(expect all true)');
+  console.log('count', await p.locator('#tmdlCount').innerText(), '(expect 2 measures)');
+  console.log('test query:', (await p.locator('#testView').innerText()).includes("TREATAS ( { 6 }, 'xMonthsSelector'[Months] )"), '(expect true)');
+  await p.fill('#trOptions', '3, 12'); await p.fill('#trDefault', '6');
+  console.log('warn default:', (await p.locator('#checks').innerText()).includes('isn’t one of the choices'), '(expect true)');
+  await p.fill('#trOptions', ''); 
+  console.log('out hidden with no options:', !(await p.locator('#outBox').isVisible()), '(expect true)');
+  await p.fill('#trOptions', '3, 6, 9, 12');
+  await p.setViewportSize({ width: 390, height: 900 });
+  console.log('no h-scroll at 390:', await p.evaluate(() => document.documentElement.scrollWidth <= 390));
+  await p.screenshot({ path: 'ti_trend.png', fullPage: true });
+  await p.reload();
+  console.log('kept after reload:', await p.locator('#outTrend').getAttribute('aria-checked'));
+  console.log('errors', errs); await b.close();
+})();

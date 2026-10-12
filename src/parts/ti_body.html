@@ -1,7 +1,7 @@
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>Time Intelligence Builder</h1>
-        <p class="lede">Pick your date table and the calculations you need (year to date, last year, growth, rolling 12 months and more) and get them as TMDL: measures for the measures you choose, or one calculation group that works with every measure. No AI needed.</p>
+        <p class="lede">Pick your date table and the calculations you need (year to date, last year, growth, rolling 12 months and more) and get them as TMDL: measures for the measures you choose, one calculation group that works with every measure, or a trend of the last few months for a chart. No AI needed.</p>
       </div>
       <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
@@ -52,14 +52,19 @@
         <p>Time intelligence needs a date table with one row per day for whole years, related to your facts. The Date Table Generator can build one.</p>
       </div>
       <div class="cfg">
-        <div class="field"><label for="grain">Calendar</label><select id="grain"><option value="day">One row per day</option><option value="month">One row per month (month columns)</option></select></div>
+        <div class="field no-trend"><label for="grain">Calendar</label><select id="grain"><option value="day">One row per day</option><option value="month">One row per month (month columns)</option></select></div>
         <div class="field"><label for="dTable">Date table</label><select id="dTable"></select></div>
         <div class="field" id="dColField"><label for="dCol">Date column</label><select id="dCol"></select></div>
-        <div class="field"><label for="fyEnd">Year ends in</label><select id="fyEnd"></select></div>
+        <div class="field no-trend"><label for="fyEnd">Year ends in</label><select id="fyEnd"></select></div>
         <div class="field" id="dataDateField"><label for="dataDate" id="dataDateLbl">Last date with data from</label><select id="dataDate"></select></div>
-        <div class="field"><label for="basis">Work out periods from</label><select id="basis"><option value="latest">The last date with data in the filter</option><option value="context">Every date in the filter</option></select></div>
+        <div class="field no-trend"><label for="basis">Work out periods from</label><select id="basis"><option value="latest">The last date with data in the filter</option><option value="context">Every date in the filter</option></select></div>
       </div>
       <div class="cfg" id="monthCols" hidden></div>
+      <div class="cfg only-trend" id="trendCols" hidden>
+        <div class="field"><label for="trLabel">Month label <span class="muted">(what the chart shows)</span></label><select id="trLabel"></select></div>
+        <div class="field"><label for="trSort">Month sort <span class="muted">(a month number that runs on across years)</span></label><select id="trSort"></select></div>
+      </div>
+      <p class="small muted only-trend" id="trendNote" hidden>The trend needs two columns of your date table: a month label such as <i>Jan 2026</i> and a month number that runs on across years (Year &times; 12 + Month), to count back N months. Columns you don&rsquo;t have are added as calculated columns.</p>
       <p class="small muted" id="basisHint"></p>
       <p class="small muted" id="dayNote">The measures follow SQLBI&rsquo;s <a href="https://www.daxpatterns.com/standard-time-related-calculations/" target="_blank" rel="noopener">standard time-related calculations</a> pattern. The script adds hidden helpers to your date table: a <span class="mono">DateWithSales</span> column (TRUE up to the last date with data) and, for measures, a <span class="mono">ShowValueForDates</span> measure, so nothing shows after your data ends and last year stops at the same day.</p>
       <p class="small muted" id="monthNote" hidden>The measures follow SQLBI&rsquo;s <a href="https://www.daxpatterns.com/month-related-calculations/" target="_blank" rel="noopener">month-related calculations</a> pattern: they filter month columns instead of dates, so they work on a date table with one row per month (or per day, at month level). Columns you don&rsquo;t have are added as hidden calculated columns.</p>
@@ -73,15 +78,34 @@
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">Choose the calculations</h2>
-        <p>Tick the calculations you want and rename them if you like. Percent calculations get the percent format; the others keep each measure&rsquo;s own format.</p>
+        <p id="s3Lede">Tick the calculations you want and rename them if you like. Percent calculations get the percent format; the others keep each measure&rsquo;s own format.</p>
       </div>
       <div class="tabbar" role="radiogroup" aria-label="Output">
         <button type="button" role="radio" id="outMeasures" aria-checked="true"><span class="tn">Measures</span><span class="td">One measure per measure and calculation, e.g. <i>Total Sales YTD</i>. Simple, and each can be used anywhere.</span></button>
         <button type="button" role="radio" id="outGroup" aria-checked="false"><span class="tn">Calculation group</span><span class="td">One small table that applies each calculation to whatever measure is in the visual. Nothing to add when you add measures.</span></button>
+        <button type="button" role="radio" id="outTrend" aria-checked="false"><span class="tn">Trend</span><span class="td">A chart of the last 3, 6, 9 or 12 months up to the month picked in a date slicer, with a slicer for how many months.</span></button>
       </div>
-      <div class="calcs" id="calcs"></div>
+      <div class="calcs no-trend" id="calcs"></div>
       <div class="msg info dep-ask" id="depAsk" hidden></div>
-      <div class="cfg"><div class="field"><label for="pctFormat">Percent format</label><input type="text" id="pctFormat" autocomplete="off" placeholder="0.0%"></div></div>
+      <div class="cfg no-trend"><div class="field"><label for="pctFormat">Percent format</label><input type="text" id="pctFormat" autocomplete="off" placeholder="0.0%"></div></div>
+
+      <div class="only-trend sub" hidden>
+        <div class="cfg">
+          <div class="field"><label for="trOptions">Months to choose from</label><input type="text" id="trOptions" autocomplete="off" placeholder="3, 6, 9, 12"></div>
+          <div class="field"><label for="trDefault">Months with none picked</label><input type="number" id="trDefault" min="1" step="1"></div>
+          <div class="field"><label for="trName">Measure name</label><input type="text" id="trName" autocomplete="off" placeholder="Trend"></div>
+        </div>
+        <div class="cfg">
+          <div class="field"><label for="trSelTable">Months selector table</label><input type="text" id="trSelTable" autocomplete="off" placeholder="xMonthsSelector"></div>
+          <div class="field"><label for="trSelCol">Its column</label><input type="text" id="trSelCol" autocomplete="off" placeholder="Months"></div>
+        </div>
+        <div class="cfg">
+          <div class="field"><label for="trAxisTable">Month axis table</label><input type="text" id="trAxisTable" autocomplete="off" placeholder="Dynamic Slicer"></div>
+          <div class="field"><label for="trAxisLabel">Its month column</label><input type="text" id="trAxisLabel" autocomplete="off" placeholder="Month"></div>
+          <div class="field"><label for="trAxisSort">Its sort column</label><input type="text" id="trAxisSort" autocomplete="off" placeholder="Month Sort"></div>
+        </div>
+        <p class="note">Both tables are disconnected: no relationships. The month axis goes on the chart instead of the date table, so a date slicer can pick the last month without cutting the chart down to that month.</p>
+      </div>
 
       <div class="only-measures sub">
         <h3>Measures to build on</h3>
@@ -129,7 +153,7 @@
       <div id="checks"></div>
       <div id="outBox">
         <div class="cfg">
-          <div class="field"><label for="testBy">Test query rows by</label><select id="testBy"></select></div>
+          <div class="field no-trend"><label for="testBy">Test query rows by</label><select id="testBy"></select></div>
           <div class="field only-group"><label for="testMeasure">Test with measure</label><select id="testMeasure"></select></div>
         </div>
         <div id="testPart" class="part">

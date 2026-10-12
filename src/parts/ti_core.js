@@ -275,6 +275,10 @@ function tiMissingDeps(cfg){
 }
 function tiPlan(model, cfg){
   const bases = (cfg.measures || []).map(n => model.measures.find(m => lc(m.name) === lc(n))).filter(Boolean);
+  if (cfg.output === 'trend') {
+    const c = { key: 'trend', name: tiTr(cfg, 'trName') || 'Trend' };
+    return bases.map(b => ({ base: b, calc: c, name: tiMeasureName(cfg, b, c), expression: tiTrendExpr(cfg, bracket(b.name)), formatString: b.formatString || '', folder: tiFolder(cfg, b) }));
+  }
   const calcs = tiSelectedCalcs(cfg), list = tiCalcList(cfg), out = [];
   const ref = (b, k) => bracket(k === 'cur' ? b.name : tiMeasureName(cfg, b, list.find(x => x.key === k)));
   // the measures they build on come first, growth measures last
@@ -292,7 +296,9 @@ function tiCheck(model, cfg){
   const out = [], add = (level, text) => out.push({ level, text });
   const t = model.tables.find(x => lc(x.name) === lc(cfg.dateTable || ''));
   const col = t && model.columns.find(c => lc(c.table) === lc(t.name) && lc(c.name) === lc(cfg.dateColumn || ''));
+  const trend = cfg.output === 'trend';
   if (!cfg.dateTable || !t) add('err', 'Choose your date table in Step 2.');
+  else if (trend) tiTrendCheck(model, cfg, t, add);
   else if (cfg.grain === 'month') tiMonthCheck(model, cfg, t, add);
   else if (!col) add('err', 'Choose the date column of ' + qName(t.name) + ' in Step 2.');
   else {
@@ -309,8 +315,8 @@ function tiCheck(model, cfg){
       if (model.measures.some(x => lc(x.table) === lc(t.name) && lc(x.name) === lc(TI_DWS)) || model.columns.some(x => lc(x.table) === lc(t.name) && lc(x.name) === lc(TI_SVD))) add('err', qName(t.name) + ' already has an object named ' + TI_DWS + ' or ' + TI_SVD + ' of the wrong kind; rename it first.');
     }
   }
-  const calcs = tiSelectedCalcs(cfg);
-  if (!calcs.length) add('err', 'Pick at least one calculation in Step 3.');
+  const calcs = trend ? [] : tiSelectedCalcs(cfg);
+  if (!calcs.length && !trend) add('err', 'Pick at least one calculation in Step 3.');
   const m = +cfg.fyEnd || 12;
   if (m % 3 !== 0 && calcs.some(c => /^(qtd|pqtd|qoqp)$/.test(c.key)) && cfg.grain !== 'month') add('warn', 'QTD uses calendar quarters (Jan–Mar, Apr–Jun…), which don’t line up with a fiscal year ending in ' + TI_MONTHS[m - 1] + '.');
   const names = calcs.map(c => lc(tiCalcName(cfg, c)));
@@ -381,6 +387,7 @@ function tiPushHelpers(L, model, cfg){
 }
 function tiTmdl(model, cfg){
   const T = TAB, L = ['createOrReplace', ''];
+  if (cfg.output === 'trend') return tiTrendTmdl(model, cfg);
   if (cfg.output === 'group') {
     const tn = cfg.groupTable.trim(), cn = cfg.groupColumn.trim();
     L.push(T + 'table ' + tmdlName(tn), '', T + T + 'calculationGroup', T + T + T + 'precedence: ' + (+cfg.precedence || 0), '');
@@ -419,6 +426,7 @@ function tiTestQuery(model, cfg){
   const by = cfg.testBy ? cfg.testBy.split('|') : null;
   const byRef = by ? qName(by[0]) + bracket(by[1]) : null;
   const I = '    ';
+  if (cfg.output === 'trend') return tiTrendTest(model, cfg);
   if (cfg.output === 'group') {
     const base = (cfg.testMeasure || '').trim() || (model.measures[0] ? model.measures[0].name : '');
     if (!base || !byRef) return '';
@@ -449,6 +457,145 @@ function tiTestQuery(model, cfg){
   const cols = bases.map(b => I + daxString(b) + ', ' + bracket(b)).concat(plan.map(p => I + daxString(p.name) + ', ' + bracket(p.name)));
   cols.forEach((c, i) => L.push(c + (i < cols.length - 1 ? ',' : '')));
   L.push(')', 'ORDER BY ' + byRef);
+  return L.join('\n');
+}
+/* ---------- Trend: the last N months up to the month picked in a date slicer ----------
+   Two disconnected tables: a months selector (a DATATABLE of month counts) and a month axis (one row per month,
+   from the date table's month label and month sort columns). On the axis, each measure shows the base measure for
+   the months in the N months to the last month in the date filter; anywhere else it shows the base measure.
+   Month sort has to count months in order across years (Year * 12 + Month), since N months back is a subtraction. */
+const TI_TR_ADD = { label: 'Year Month', sort: 'Month Sort' };
+const TI_TR_DEF = { trOptions: '3, 6, 9, 12', trDefault: 6, trName: 'Trend', trSelTable: 'xMonthsSelector', trSelCol: 'Months', trAxisTable: 'Dynamic Slicer', trAxisLabel: 'Month', trAxisSort: 'Month Sort' };
+const tiTr = (cfg, k) => String(cfg[k] == null ? TI_TR_DEF[k] : cfg[k]).trim();
+function tiTrendOptions(cfg){ return [...new Set(tiTr(cfg, 'trOptions').split(/[^0-9]+/).filter(Boolean).map(Number).filter(n => n > 0))].sort((a, b) => a - b); }
+// the date table columns to use: picked, or the one the script adds ('' = add it)
+function tiTrendCols(cfg){ return { label: (cfg.trLabel || '').trim() || TI_TR_ADD.label, sort: (cfg.trSort || '').trim() || TI_TR_ADD.sort }; }
+function tiTrendAdds(model, cfg){
+  const dc = tiMonthDateCol(model, cfg), c = tiTrendCols(cfg), out = [];
+  if (!dc) return out;
+  const d = qName(cfg.dateTable) + bracket(dc);
+  if (!(cfg.trSort || '').trim()) out.push({ name: c.sort, expression: 'YEAR ( ' + d + ' ) * 12 + MONTH ( ' + d + ' )', type: 'int64', hidden: true });
+  if (!(cfg.trLabel || '').trim()) out.push({ name: c.label, expression: 'FORMAT ( ' + d + ', "mmm yyyy" )', type: 'string', sortBy: c.sort });
+  return out;
+}
+function tiTmdlType(t){
+  t = lc(t || '');
+  return /int/.test(t) ? 'int64' : /date/.test(t) ? 'dateTime' : /bool/.test(t) ? 'boolean' : /double/.test(t) ? 'double' : /decimal|currency/.test(t) ? 'decimal' : 'string';
+}
+function tiTrendColType(model, cfg, which){
+  const n = (cfg[which === 'sort' ? 'trSort' : 'trLabel'] || '').trim();
+  const c = n && model.columns.find(x => lc(x.table) === lc(cfg.dateTable) && lc(x.name) === lc(n));
+  return c ? tiTmdlType(c.dataType) : which === 'sort' ? 'int64' : 'string';
+}
+function tiTrendSelSource(cfg){ return 'DATATABLE ( ' + daxString(tiTr(cfg, 'trSelCol')) + ', INTEGER, { ' + tiTrendOptions(cfg).map(n => '{ ' + n + ' }').join(', ') + ' } )'; }
+function tiTrendAxisSource(cfg){
+  const D = qName(cfg.dateTable), c = tiTrendCols(cfg);
+  return tiFn('DISTINCT', [tiFn('SELECTCOLUMNS', [D, daxString(tiTr(cfg, 'trAxisLabel')) + ', ' + D + bracket(c.label), daxString(tiTr(cfg, 'trAxisSort')) + ', ' + D + bracket(c.sort)])]);
+}
+function tiTrendExpr(cfg, m){
+  const D = qName(cfg.dateTable), A = qName(tiTr(cfg, 'trAxisTable')), c = tiTrendCols(cfg), def = Math.max(1, Math.round(+tiTr(cfg, 'trDefault') || 6));
+  const inWindow = 'NOT ISBLANK ( _lastMonthSort )\n    && _currentMonthSort <= _lastMonthSort\n    && _currentMonthSort > _lastMonthSort - _monthsToView';
+  return [
+    '-- How many months to show: the pick in ' + qName(tiTr(cfg, 'trSelTable')) + ', or ' + def + ' with none picked.',
+    tiVar('_monthsToView', tiFn('SELECTEDVALUE', [qName(tiTr(cfg, 'trSelTable')) + bracket(tiTr(cfg, 'trSelCol')), String(def)])),
+    '-- The last month picked in the date slicer.',
+    tiVar('_lastMonthSort', 'MAX ( ' + D + bracket(c.sort) + ' )'),
+    '-- The month on the current row of the chart.',
+    tiVar('_currentMonthSort', 'SELECTEDVALUE ( ' + A + bracket(tiTr(cfg, 'trAxisSort')) + ' )'),
+    tiVar('_result', tiFn('CALCULATE', [m, 'REMOVEFILTERS ( ' + D + ' )', D + bracket(c.sort) + ' = _currentMonthSort'])),
+    'RETURN',
+    I4(tiFn('IF', ['NOT ISINSCOPE ( ' + A + bracket(tiTr(cfg, 'trAxisLabel')) + ' )', m, tiFn('IF', [inWindow, 'COALESCE ( _result, 0 )'])]))
+  ].join('\n');
+}
+function tiTrendCheck(model, cfg, t, add){
+  const cols = model.columns.filter(c => lc(c.table) === lc(t.name)), dc = tiMonthDateCol(model, cfg);
+  [['trLabel', 'month label', 'label'], ['trSort', 'month sort', 'sort']].forEach(([k, label, w]) => {
+    const n = (cfg[k] || '').trim();
+    if (!n) {
+      if (!dc) add('err', 'Choose the ' + label + ' column of ' + qName(t.name) + ' in Step 2 (it has no date column to work it out from).');
+      else if (cols.some(x => lc(x.name) === lc(TI_TR_ADD[w]))) add('err', qName(t.name) + ' already has a column ' + bracket(TI_TR_ADD[w]) + '. Pick it in Step 2 instead of adding one.');
+      return;
+    }
+    const c = cols.find(x => lc(x.name) === lc(n));
+    if (!c) add('err', qName(t.name) + ' has no column ' + bracket(n) + '.');
+    else if (w === 'sort' && !tiNumeric(c)) add('err', qName(t.name) + bracket(n) + ' is a ' + (c.dataType || 'text') + ' column; the month sort needs to be a number.');
+  });
+  const c = tiTrendCols(cfg);
+  if ((cfg.trLabel || '').trim() && (cfg.trSort || '').trim() && lc(c.label) === lc(c.sort)) add('err', 'The month label and month sort need to be two different columns.');
+  const adds = tiTrendAdds(model, cfg);
+  if (adds.length) add('info', 'The script adds ' + adds.map(a => bracket(a.name) + (a.hidden ? ' (hidden, Year × 12 + Month)' : ' (Jan 2026, sorted by ' + bracket(c.sort) + ')')).join(' and ') + ' to ' + qName(t.name) + ', worked out from ' + bracket(dc) + '.');
+  if ((cfg.trSort || '').trim()) add('info', bracket(c.sort) + ' must count months in order across years (for example Year × 12 + Month), not YYYYMM: the measure goes back N months by subtracting N.');
+  if ((cfg.trLabel || '').trim()) add('info', bracket(c.label) + ' must name the year too (Jan 2026, not just Jan): the chart has one point per value.');
+  const opts = tiTrendOptions(cfg), def = +tiTr(cfg, 'trDefault');
+  if (!opts.length) add('err', 'Give at least one number of months to choose from in Step 3.');
+  if (!(def >= 1) || def !== Math.round(def)) add('err', 'The default number of months must be a whole number, 1 or more.');
+  else if (opts.length && !opts.includes(def)) add('warn', 'The default (' + def + ' months) isn’t one of the choices, so readers can’t pick it again once they pick another.');
+  const st = tiTr(cfg, 'trSelTable'), sc = tiTr(cfg, 'trSelCol'), at = tiTr(cfg, 'trAxisTable'), al = tiTr(cfg, 'trAxisLabel'), as = tiTr(cfg, 'trAxisSort');
+  if (!st || !sc || !at || !al || !as) add('err', 'Give every new table and column a name in Step 3.');
+  if (st && at && lc(st) === lc(at)) add('err', 'The months selector and the month axis need different table names.');
+  if (al && as && lc(al) === lc(as)) add('err', 'The month axis columns need different names.');
+  [st, at].filter(Boolean).forEach(n => {
+    if (lc(n) === lc(t.name) || lc(n) === lc(cfg.target || '')) add('err', qName(n) + ' is your ' + (lc(n) === lc(t.name) ? 'date table' : 'home table for the measures') + '; give the new table another name.');
+    else if (model.tables.some(x => lc(x.name) === lc(n))) add('warn', 'The model already has a table named ' + qName(n) + '. Applying replaces it with this version.');
+  });
+}
+function tiTrendTmdl(model, cfg){
+  const T = TAB, L = ['createOrReplace', ''], c = tiTrendCols(cfg), target = cfg.target.trim(), same = lc(target) === lc(cfg.dateTable);
+  const col = (name, props) => { L.push(T + T + 'column ' + tmdlName(name)); props.forEach(x => L.push(T + T + T + x)); L.push(''); };
+  const measures = () => tiPlan(model, cfg).forEach(p => {
+    tiPushObject(L, 'measure', p.name, p.expression);
+    if (p.formatString) L.push(T + T + T + 'formatString: ' + tmdlValue(p.formatString));
+    if (p.folder) L.push(T + T + T + 'displayFolder: ' + tmdlValue(p.folder));
+    L.push('');
+  });
+  const adds = tiTrendAdds(model, cfg);
+  if (adds.length || same) {
+    L.push(T + 'ref table ' + tmdlName(cfg.dateTable), '');
+    adds.forEach(a => {
+      tiPushObject(L, 'column', a.name, a.expression);
+      L.push(T + T + T + 'dataType: ' + a.type);
+      if (a.hidden) L.push(T + T + T + 'isHidden');
+      L.push(T + T + T + 'summarizeBy: none');
+      if (a.sortBy) L.push(T + T + T + 'sortByColumn: ' + tmdlName(a.sortBy));
+      L.push('');
+    });
+    if (same) measures();
+  }
+  // the months selector
+  const st = tiTr(cfg, 'trSelTable'), sc = tiTr(cfg, 'trSelCol');
+  L.push(T + 'table ' + tmdlName(st), '');
+  col(sc, ['dataType: int64', 'formatString: 0', 'summarizeBy: none', 'isNameInferred', 'sourceColumn: [' + sc + ']']);
+  L.push(T + T + 'partition ' + tmdlName(st) + ' = calculated', T + T + T + 'mode: import', T + T + T + 'source = ' + tiTrendSelSource(cfg), '');
+  // the month axis
+  const at = tiTr(cfg, 'trAxisTable'), al = tiTr(cfg, 'trAxisLabel'), as = tiTr(cfg, 'trAxisSort');
+  L.push(T + 'table ' + tmdlName(at), '');
+  col(al, ['dataType: ' + tiTrendColType(model, cfg, 'label'), 'summarizeBy: none', 'isNameInferred', 'sourceColumn: [' + al + ']', 'sortByColumn: ' + tmdlName(as)]);
+  col(as, ['dataType: ' + tiTrendColType(model, cfg, 'sort'), 'isHidden', 'formatString: 0', 'summarizeBy: none', 'isNameInferred', 'sourceColumn: [' + as + ']']);
+  L.push(T + T + 'partition ' + tmdlName(at) + ' = calculated', T + T + T + 'mode: import', T + T + T + 'source =');
+  exprLines(tiTrendAxisSource(cfg)).forEach(l => L.push(l ? T.repeat(5) + l : ''));
+  L.push('');
+  if (!same) { L.push(T + 'ref table ' + tmdlName(target), ''); measures(); }
+  while (L[L.length - 1] === '') L.pop();
+  return L.join('\n') + '\n';
+}
+// after applying: the axis as the chart shows it, with the date filter on the last month with data
+function tiTrendTest(model, cfg){
+  const plan = tiPlan(model, cfg), I = '    ';
+  if (!plan.length) return '';
+  const D = qName(cfg.dateTable), c = tiTrendCols(cfg), sort = D + bracket(c.sort), A = qName(tiTr(cfg, 'trAxisTable'));
+  const opts = tiTrendOptions(cfg), def = +tiTr(cfg, 'trDefault'), n = opts.includes(def) ? def : opts[opts.length - 1] || def;
+  const L = ['// Run in DAX query view AFTER applying the script: the ' + n + ' months to the last month with ' + plan[0].base.name + ',',
+    '// as a chart shows them with that month picked in the date slicer and ' + n + ' in ' + qName(tiTr(cfg, 'trSelTable')) + '.',
+    'DEFINE',
+    I + 'VAR __lastMonth =',
+    I + I + tiFn('MAXX', [tiFn('FILTER', ['VALUES ( ' + sort + ' )', 'NOT ISBLANK ( ' + bracket(plan[0].base.name) + ' )']), sort]).split('\n').join('\n' + I + I),
+    'EVALUATE', 'SUMMARIZECOLUMNS (',
+    I + A + bracket(tiTr(cfg, 'trAxisSort')) + ',',
+    I + A + bracket(tiTr(cfg, 'trAxisLabel')) + ',',
+    I + 'FILTER ( ALL ( ' + sort + ' ), ' + sort + ' = __lastMonth ),',
+    I + 'TREATAS ( { ' + n + ' }, ' + qName(tiTr(cfg, 'trSelTable')) + bracket(tiTr(cfg, 'trSelCol')) + ' ),'];
+  plan.forEach((p, i) => L.push(I + daxString(p.name) + ', ' + bracket(p.name) + (i < plan.length - 1 ? ',' : '')));
+  L.push(')', 'ORDER BY ' + A + bracket(tiTr(cfg, 'trAxisSort')));
   return L.join('\n');
 }
 /*TI-CORE-END*/
