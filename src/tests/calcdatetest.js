@@ -44,6 +44,14 @@ const EXPRS = {
   await p.goto('http://localhost:8765/time-intelligence-builder.html'); await p.evaluate(() => localStorage.clear()); await p.reload();
   await p.evaluate(v => { const t = document.getElementById('modelInput'); t.value = v; t.dispatchEvent(new Event('input', { bubbles: true })); }, model(EXPRS.series));
   console.log('ti:', await p.locator('#dTable').inputValue(), '|', await p.locator('#dTable option:checked').innerText(), '|', (await p.locator('#checks').innerText()).slice(0, 90), '(expect Calendar, calculated date table, GENERATESERIES)');
+  // a PBIP folder: the calculated table's multi-line TMDL source is read and the table found
+  const tmdl = ['table Calendar', '\tcolumn Date', '\t\tdataType: dateTime', '\t\tsourceColumn: [Date]', '',
+    '\tpartition Calendar = calculated', '\t\tmode: import', '\t\tsource =', '\t\t\t\t', '\t\t\t\tVAR _start = DATE ( 2020, 1, 1 )', '\t\t\t\tRETURN',
+    '\t\t\t\tADDCOLUMNS (', '\t\t\t\t    CALENDAR ( _start, TODAY () ),', '\t\t\t\t    "Year", YEAR ( [Date] )', '\t\t\t\t)', ''].join('\n');
+  const sales = ['table Sales', '\tcolumn \'Order Date\'', '\t\tdataType: dateTime', '\tpartition Sales = m', '\t\tmode: import', '\t\tsource = Sql.Database("s", "d")', ''].join('\n');
+  await p.goto('http://localhost:8765/kpi-measure-builder.html');
+  console.log('pbip:', await p.evaluate(f => { const x = SF_SUITE.pbipExport(f); return x.error || dateTablesOf(parseModel(x.text)).map(t => t.name).join(','); },
+    [{ path: 'R/M.SemanticModel/definition/tables/Calendar.tmdl', text: tmdl }, { path: 'R/M.SemanticModel/definition/tables/Sales.tmdl', text: sales }]), '(expect Calendar)');
   await p.evaluate(() => localStorage.clear());
   console.log('errors', errs); await b.close();
 })();
