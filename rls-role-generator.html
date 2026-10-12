@@ -1847,6 +1847,14 @@ init();
       return true;
     } catch (e) { return false; }
   };
+  // A page that gets its model from a different PBIP folder than before (or from a folder after a pasted export)
+  // starts from empty entries, so picks and pasted results made for the earlier model don't linger. Reading the
+  // same folder again keeps them. The example is always cleared. from: 'pbip:<name>' or 'export'
+  S.freshStart = (prefix, from) => {
+    let prev = null; try { prev = localStorage.getItem(prefix + 'modelFrom'); localStorage.setItem(prefix + 'modelFrom', from); } catch (e) {}
+    const ex = document.getElementById('exampleBanner');
+    if ((ex && !ex.hidden) || (from.startsWith('pbip:') && prev !== from)) { const c = document.getElementById('clearAll'); if (c) c.click(); }
+  };
   // what was typed or pasted into a field that held example text, without the example text around it
   S.ownText = (val, ex) => {
     if (!ex) return val;
@@ -2117,7 +2125,7 @@ init();
     };
     const use = () => {
       const v = S.get(); if (!v) return;
-      if (exampleShowing()) { const c = document.getElementById('clearAll'); if (c) c.click(); }
+      S.freshStart(cfg.prefix, v.source === 'pbip' ? 'pbip:' + v.name : 'export');
       ta.value = valueFor(v);
       if (conn) conn.set(v.source === 'pbip' ? 'pbip' : 'export', v);
       if (cfg.open) { const d = document.getElementById(cfg.open); if (d) d.open = true; }
@@ -2130,6 +2138,7 @@ init();
     ta.addEventListener('input', e => {
       if (e.isTrusted && mode === 'export' && S.looksLikeExport(ta.value)) {
         const prev = S.get();
+        try { localStorage.setItem(cfg.prefix + 'modelFrom', 'export'); } catch (err) {}
         if (!prev || prev.text !== ta.value) { const ok = S.set(ta.value, ''); note = ok ? 'saved for the other tools too' : 'too large to share with the other tools (browser storage limit)'; if (ok) remember(); }
       }
       render();
@@ -2394,7 +2403,7 @@ init();
       msg.innerHTML = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>';
       const r = S.pbipExport(await S.pbipFiles(list));
       if (r.error) { msg.innerHTML = '<div class="msg err">' + esc(r.error) + '</div>'; return; }
-      if (exampleShowing()) { const x = document.getElementById('clearAll'); if (x) x.click(); }
+      S.freshStart(cfg.prefix, 'pbip:' + r.name);
       choice = 'pbip'; set('connect', 'pbip'); set('pbipName', r.name);
       try { localStorage.removeItem(cfg.prefix + 'blank'); } catch (e) {}
       const shared = S.set(r.text, r.name, 'pbip');

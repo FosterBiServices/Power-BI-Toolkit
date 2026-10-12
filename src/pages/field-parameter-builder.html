@@ -1708,7 +1708,10 @@ function init(){
   $('modelInput').addEventListener('input', () => {
     if (state.example) { state.cfg.items = []; state.cfg.groupOn = false; setExample(false); }
     try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
-    renderAll(); persist();
+    renderAll();
+    // a new model: drop fields it doesn't have, so nothing picked for an earlier model lingers
+    if (state.model && state.cfg.items.length) { const keep = fpItemsInModel(state.model, state.cfg).map(i => i.found); state.cfg.items = state.cfg.items.filter((_, i) => keep[i]); renderAll(); }
+    persist();
   });
   $('typeField').addEventListener('click', () => { state.cfg.type = 'field'; change(); });
   $('typeSwitch').addEventListener('click', () => { state.cfg.type = 'switch'; change(); });

@@ -1955,6 +1955,8 @@ function leaveExample(){ if (state.example) setExample(false); }
 /* sensible defaults from the model */
 function autoPick(){
   const m = state.model, c = state.cfg; if (!m) return;
+  // picks the model doesn't have (made for an earlier model) are dropped: they'd be invisible in the list yet still checked
+  c.measures = (c.measures || []).filter(n => m.measures.some(x => lc(x.name) === lc(n)));
   const dateTables = m.tables.filter(t => lc(t.category) === 'time');
   const dateCols = t => m.columns.filter(x => lc(x.table) === lc(t) && /date/i.test(x.dataType || ''));
   if (c.grain === 'month') {
