@@ -102,11 +102,11 @@ function renderModel(){
   $('measureNames').innerHTML = ms.map(x => '<option value="' + esc(x.name) + '">').join('');
   $('columnNames').innerHTML = state.model ? state.model.columns.map(c => '<option value="' + esc(qName(c.table) + bracket(c.name)) + '">').join('') : '';
   $('tableNames').innerHTML = state.model ? state.model.tables.map(t => '<option value="' + esc(t.name) + '">').join('') : '';
-  const dateCols = state.model ? state.model.columns.filter(c => /date|time|int/i.test(c.dataType || '') && (/date|calendar|period|month/i.test(c.table) || /month|date|period/i.test(c.name))) : [];
+  const dateCols = state.model ? state.model.columns.filter(c => /date|time|int/i.test(c.dataType || '') && (/date|calendar|period|month/i.test(c.table) || /month|date|period/i.test(c.name) || isDateTable(state.model.tables.find(t => lc(t.name) === lc(c.table))))) : [];
   $('trendCols').innerHTML = dateCols.map(c => '<option value="' + esc(qName(c.table) + bracket(c.name)) + '">').join('');
   // the default trend column isn't in this model: take a month date column from it (or any date column in a date table)
   if (state.model && state.cfg.trendCol === blankCfg().trendCol && !state.model.columns.some(c => qName(c.table) + bracket(c.name) === state.cfg.trendCol)) {
-    const dt = dateCols.filter(c => /date|time/i.test(c.dataType || '')), best = dt.find(c => /month/i.test(c.name)) || dateCols.find(c => /year.?month/i.test(c.name)) || dt.find(c => /date|calendar/i.test(c.table));
+    const dt = dateCols.filter(c => /date|time/i.test(c.dataType || '')), best = dt.find(c => /month/i.test(c.name)) || dateCols.find(c => /year.?month/i.test(c.name)) || dt.find(c => /date|calendar/i.test(c.table)) || dt.find(c => isDateTable(state.model.tables.find(t => lc(t.name) === lc(c.table))));
     if (best) state.cfg.trendCol = qName(best.table) + bracket(best.name);
   }
   renderAvail();

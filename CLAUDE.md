@@ -67,6 +67,12 @@ Things to know:
   CSS to a tool's own build script instead.
 - Edited by hand, no build script: `prep-for-ai-writer.html`, `kpi-measure-builder.html` and
   `measure-describer.html` in `src/pages/`.
+  Each holds its own copy of `builder_core.js` between `/*CORE-START*/` and `/*CORE-END*/` (only
+  the "Copy the prompt again from Step N" line differs), so a change to builder_core goes into those
+  three pages too.
+- Date tables: use `isDateTable` / `dateTablesOf` from builder_core. A table counts when it is marked
+  (data category Time) or is a calculated table built with CALENDAR, CALENDARAUTO or a GENERATESERIES
+  of dates, since many models never mark theirs.
 - `src/pages/sheet-recon.html` is a finished page (built in another chat) with a `@@SUITE@@`
   line where build_site.py puts suite.js. Edit it directly.
 - `build_site.py`: `HOOKS` lists every tool page and the line that connects it to the shared

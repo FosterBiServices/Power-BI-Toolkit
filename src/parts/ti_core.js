@@ -221,8 +221,9 @@ function tiCalcList(cfg){ return tiSorted(tiCalcListRaw(cfg)); }
 function tiCalcListRaw(cfg){ cfg = cfg || {}; return cfg.grain === 'month' ? (cfg.basis === 'context' ? TI_M_CALCS : TI_M_CALCS_LATEST) : cfg.basis === 'context' ? TI_CALCS : TI_CALCS_LATEST; }
 const TI_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const TI_LAST_DAY = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-// A DAX date table: CALENDAR ( … ) or CALENDARAUTO ( … ) in a calculated table
-function tiCalcDateTable(t){ return !!t && /\bCALENDAR(AUTO)?\s*\(/i.test(t.calc || ''); }
+// A DAX date table (CALENDAR, CALENDARAUTO or a GENERATESERIES of dates in a calculated table): isCalcDateTable in builder_core
+const tiCalcDateTable = isCalcDateTable;
+const tiCalcFn = t => /CALENDARAUTO/i.test(t.calc) ? 'CALENDARAUTO' : /\bCALENDAR\b/i.test(t.calc) ? 'CALENDAR' : 'GENERATESERIES';
 // fact date columns related to the date table (where "the last date with data" comes from)
 function tiDataDateOptions(model, cfg){
   if (!model || !cfg.dateTable) return [];
@@ -291,7 +292,7 @@ function tiCheck(model, cfg){
   else if (!col) add('err', 'Choose the date column of ' + qName(t.name) + ' in Step 2.');
   else {
     if (!/date/i.test(col.dataType || '')) add('err', qName(t.name) + bracket(col.name) + ' is a ' + (col.dataType || 'non-date') + ' column; time intelligence needs a date column.');
-    if (lc(t.category) !== 'time' && tiCalcDateTable(t)) add('warn', qName(t.name) + ' is a calculated date table (built with ' + (/CALENDARAUTO/i.test(t.calc) ? 'CALENDARAUTO' : 'CALENDAR') + ') and isn\u2019t marked as a date table. You can carry on: the measures work without it. Marking it (Table tools > Mark as date table, using ' + bracket(col.name) + ') is optional.');
+    if (lc(t.category) !== 'time' && tiCalcDateTable(t)) add('warn', qName(t.name) + ' is a calculated date table (built with ' + tiCalcFn(t) + ') and isn\u2019t marked as a date table. You can carry on: the measures work without it. Marking it (Table tools > Mark as date table, using ' + bracket(col.name) + ') is optional.');
     else if (lc(t.category) !== 'time') add('warn', qName(t.name) + ' isn\u2019t marked as a date table. You can carry on: marking it is optional. Just make sure it has one row for every day and no gaps; a fact table\u2019s date column won\u2019t do (the Date Table Generator builds a proper one).');
     if (!model.rels.some(r => (lc(r.toTable) === lc(t.name) || lc(r.fromTable) === lc(t.name)))) add('warn', qName(t.name) + ' has no relationships in the export, so these calculations won’t filter your facts. Relate it to your fact tables first.');
     const dp = (cfg.dataDate || '').split('|');

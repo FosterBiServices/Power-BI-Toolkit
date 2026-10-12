@@ -674,6 +674,14 @@ function unquoteCell(s){
 }
 function restore(s){ return (s || '').split(NL_MARK).join('\n'); }
 function lc(s){ return (s || '').toLowerCase(); }
+// Date tables: marked as one (data category Time), or a DAX calculated table built on CALENDAR, CALENDARAUTO
+// or a GENERATESERIES of dates. Many models never mark theirs, so both count. (↵ is a line break in the export.)
+const CALC_DATE_RE = /\bCALENDAR(AUTO)?[\s\u21B5]*\(|\bGENERATESERIES[\s\u21B5]*\([\s\u21B5]*DATE[\s\u21B5]*\(/i;
+function isMarkedDateTable(t){ return !!t && lc(t.category) === 'time'; }
+function isCalcDateTable(t){ return !!t && CALC_DATE_RE.test(t.calc || ''); }
+function isDateTable(t){ return isMarkedDateTable(t) || isCalcDateTable(t); }
+// marked ones first
+function dateTablesOf(model){ return model.tables.filter(isMarkedDateTable).concat(model.tables.filter(t => !isMarkedDateTable(t) && isCalcDateTable(t))); }
 
 function parseModel(text){
   const res = { tables: [], columns: [], measures: [], rels: [], error: null, skipped: 0 };
@@ -864,7 +872,7 @@ function suggestTables(model, requestsText, targetTable){
     if (matched.has(from.name) && manyToOne && !picked.has(to.name)) picked.set(to.name, 'related to ' + qName(from.name));
     if (matched.has(to.name) && lc(r.fromCard) === 'one' && lc(r.toCard) === 'many' && !picked.has(from.name)) picked.set(from.name, 'related to ' + qName(to.name));
   }
-  if (wantsTime) model.tables.filter(t => lc(t.category) === 'time').forEach(t => { if (!picked.has(t.name)) picked.set(t.name, 'date table (time words in requests)'); });
+  if (wantsTime) dateTablesOf(model).forEach(t => { if (!picked.has(t.name)) picked.set(t.name, 'date table (time words in requests)'); });
   const home = model.tables.find(t => lc(t.name) === lc(targetTable || ''));
   if (home && picked.size && !picked.has(home.name)) picked.set(home.name, 'home table for new measures');
   return { picked, matchedCount: matched.size, tokens };
@@ -1057,8 +1065,9 @@ function hasDetails(details){ return (details || []).some(d => (d.goal || '').tr
 function buildPrompt(model, requestsText, opts){
   const o = Object.assign({ tables: null, hidden: true, formulas: true, descriptions: true, targetTable: '_Measures' }, opts || {});
   const reqs = (requestsText || '').split('\n').map(s => s.replace(/^\s*(\d+[.)]|[-*•])\s*/, '').trim()).filter(Boolean);
-  const dateTables = model.tables.filter(t => lc(t.category) === 'time').map(t => t.name);
-  const dateTbl = dateTables[0];
+  const dateTables = model.tables.filter(isMarkedDateTable).map(t => t.name);
+  const calcDateTables = dateTablesOf(model).filter(t => !isMarkedDateTable(t)).map(t => t.name);
+  const dateTbl = dateTables[0] || calcDateTables[0];
   const details = (o.details || []).filter(d => (d.goal || '').trim() || (d.name || '').trim());
   const forced = new Set();
   details.forEach(d => {
@@ -1090,6 +1099,7 @@ function buildPrompt(model, requestsText, opts){
   L.push('- Reuse an existing measure when it already calculates what you need.');
   L.push('- Use DIVIDE() for division. Use VAR ... RETURN when a measure has more than one step.');
   if (dateTables.length) L.push("- The marked date table is " + dateTables.map(qName).join(', ') + '. Use it for all time intelligence.');
+  else if (calcDateTables.length) L.push('- ' + calcDateTables.map(qName).join(', ') + (calcDateTables.length > 1 ? ' are calculated date tables' : ' is a calculated date table') + ' (built in DAX, not marked as a date table). Use ' + qName(calcDateTables[0]) + ' for all time intelligence.');
   else L.push('- No table is marked as a date table. For time intelligence, use the date table you can identify from the relationships and state which one in the description.');
   L.push('- Filter through relationships. Do not use FILTER over a whole fact table when a simple column filter works.');
   L.push('- Give each measure a clear Title Case name that is not already used by an existing measure or column.');
@@ -1154,7 +1164,8 @@ function buildPrompt(model, requestsText, opts){
     if (!inc(t.name)) continue;
     const cols = model.columns.filter(c => lc(c.table) === lc(t.name) && (o.hidden || !c.hidden));
     const tags = [];
-    if (lc(t.category) === 'time') tags.push('date table');
+    if (isMarkedDateTable(t)) tags.push('date table');
+    else if (isCalcDateTable(t)) tags.push('calculated date table');
     if (!cols.length && model.measures.some(m => lc(m.table) === lc(t.name))) tags.push('measure table');
     if (model.composite) tags.push(storageTag(t));
     L.push(qName(t.name) + (tags.length ? ' (' + tags.join(', ') + ')' : '') + (t.description ? ': ' + oneLine(t.description) : ''));
@@ -2531,11 +2542,11 @@ function renderModel(){
   $('measureNames').innerHTML = ms.map(x => '<option value="' + esc(x.name) + '">').join('');
   $('columnNames').innerHTML = state.model ? state.model.columns.map(c => '<option value="' + esc(qName(c.table) + bracket(c.name)) + '">').join('') : '';
   $('tableNames').innerHTML = state.model ? state.model.tables.map(t => '<option value="' + esc(t.name) + '">').join('') : '';
-  const dateCols = state.model ? state.model.columns.filter(c => /date|time|int/i.test(c.dataType || '') && (/date|calendar|period|month/i.test(c.table) || /month|date|period/i.test(c.name))) : [];
+  const dateCols = state.model ? state.model.columns.filter(c => /date|time|int/i.test(c.dataType || '') && (/date|calendar|period|month/i.test(c.table) || /month|date|period/i.test(c.name) || isDateTable(state.model.tables.find(t => lc(t.name) === lc(c.table))))) : [];
   $('trendCols').innerHTML = dateCols.map(c => '<option value="' + esc(qName(c.table) + bracket(c.name)) + '">').join('');
   // the default trend column isn't in this model: take a month date column from it (or any date column in a date table)
   if (state.model && state.cfg.trendCol === blankCfg().trendCol && !state.model.columns.some(c => qName(c.table) + bracket(c.name) === state.cfg.trendCol)) {
-    const dt = dateCols.filter(c => /date|time/i.test(c.dataType || '')), best = dt.find(c => /month/i.test(c.name)) || dateCols.find(c => /year.?month/i.test(c.name)) || dt.find(c => /date|calendar/i.test(c.table));
+    const dt = dateCols.filter(c => /date|time/i.test(c.dataType || '')), best = dt.find(c => /month/i.test(c.name)) || dateCols.find(c => /year.?month/i.test(c.name)) || dt.find(c => /date|calendar/i.test(c.table)) || dt.find(c => isDateTable(state.model.tables.find(t => lc(t.name) === lc(c.table))));
     if (best) state.cfg.trendCol = qName(best.table) + bracket(best.name);
   }
   renderAvail();
