@@ -34,10 +34,12 @@ function leaveExample(){ if (state.example) setExample(false); }
 /* sensible defaults from the model */
 function autoPick(){
   const m = state.model, c = state.cfg; if (!m) return;
+  // picks the model doesn't have (made for an earlier model) are dropped: they'd be invisible in the list yet still checked
+  c.measures = (c.measures || []).filter(n => m.measures.some(x => lc(x.name) === lc(n)));
   const dateTables = m.tables.filter(t => lc(t.category) === 'time');
   const dateCols = t => m.columns.filter(x => lc(x.table) === lc(t) && /date/i.test(x.dataType || ''));
   if (c.grain === 'month') {
-    if (!m.tables.some(t => lc(t.name) === lc(c.dateTable))) { const t = m.tables.find(t => lc(t.category) === 'time') || m.tables.find(t => /date|calendar|month|period/i.test(t.name)) || m.tables[0]; c.dateTable = t ? t.name : ''; }
+    if (!m.tables.some(t => lc(t.name) === lc(c.dateTable))) { const t = dateTablesOf(m)[0] || m.tables.find(t => /date|calendar|month|period/i.test(t.name)) || m.tables[0]; c.dateTable = t ? t.name : ''; }
     const cols = m.columns.filter(x => lc(x.table) === lc(c.dateTable) && tiNumeric(x)), mc = c.mcols || (c.mcols = {});
     TI_MCOLS.forEach(k => {
       const v = mc[k.key];
@@ -77,7 +79,7 @@ function renderModel(){
   const m = text.trim() ? parseModel(text) : null;
   state.model = m && !m.error ? m : null;
   $('modelMsg').innerHTML = m && m.error ? '<div class="msg err">' + esc(m.error) + '</div>' : '';
-  $('modelStats').innerHTML = state.model ? '<span class="stat"><b>' + state.model.measures.length + '</b> measures</span><span class="stat"><b>' + state.model.tables.filter(t => lc(t.category) === 'time').length + '</b> marked date tables</span><span class="stat"><b>' + state.model.tables.length + '</b> tables</span>' : '';
+  $('modelStats').innerHTML = state.model ? '<span class="stat"><b>' + state.model.measures.length + '</b> measures</span><span class="stat"><b>' + dateTablesOf(state.model).length + '</b> date tables</span><span class="stat"><b>' + state.model.tables.length + '</b> tables</span>' : '';
   autoPick();
 }
 const opt = (v, t, sel) => '<option value="' + esc(v) + '"' + (sel ? ' selected' : '') + '>' + esc(t) + '</option>';

@@ -67,6 +67,12 @@ Things to know:
   CSS to a tool's own build script instead.
 - Edited by hand, no build script: `prep-for-ai-writer.html`, `kpi-measure-builder.html` and
   `measure-describer.html` in `src/pages/`.
+  Each holds its own copy of `builder_core.js` between `/*CORE-START*/` and `/*CORE-END*/` (only
+  the "Copy the prompt again from Step N" line differs), so a change to builder_core goes into those
+  three pages too.
+- Date tables: use `isDateTable` / `dateTablesOf` from builder_core. A table counts when it is marked
+  (data category Time) or is a calculated table built with CALENDAR, CALENDARAUTO or a GENERATESERIES
+  of dates, since many models never mark theirs.
 - `src/pages/sheet-recon.html` is a finished page (built in another chat) with a `@@SUITE@@`
   line where build_site.py puts suite.js. Edit it directly.
 - `build_site.py`: `HOOKS` lists every tool page and the line that connects it to the shared
@@ -98,7 +104,12 @@ Things to know:
   model** choice (PBIP folder, Model export, optionally No model) to the step whose h2 has id
   `step`, and hides the `exportOnly` elements unless Model export is chosen. `S.pbipExport()`
   turns a PBIP folder's TMDL (or model.bim) into export rows, so the tool reads it like an
-  export. The choice is saved as `<prefix>connect`. Settings per page are in build_site.py HOOKS.
+  export. Desktop leaves `dataType` out of TMDL for calculated tables' columns and calculated
+  columns, so `guessType` works it out from the format string and annotations (dates must read as dates). The choice is saved as `<prefix>connect`.
+  Settings per page are in build_site.py HOOKS. Reading a different PBIP folder than the page last used
+  (`<prefix>modelFrom`) clicks the page's `#clearAll` first (`S.freshStart`), so picks and pasted results for
+  the earlier model don't linger; re-reading the same folder keeps them. Tools also drop saved picks the
+  current model doesn't have.
   `connect.report: true` (Model Linter, About This Report) also reads the folder's report files and
   sends them to the page as a `sf-pbip-folder` event, so report pages come from the same pick.
   A folder read in any tool is saved as the shared export with `source: 'pbip'`, so every other tool

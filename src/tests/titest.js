@@ -26,6 +26,11 @@ const { chromium } = require('playwright'); const fs = require('fs');
   await p.locator('[data-calc=qtd]').check(); console.log('qtd warn:', (await p.locator('#checks').innerText()).slice(0, 80));
   await p.locator('[data-name=ytd]').fill('Sales YTD'); console.log('renamed:', (await p.locator('#tmdlView').innerText()).includes("'Total Sales Sales YTD'"));
   await p.locator('[data-name=ytd]').fill('');
+  // a finished month compares whole periods: on a month's last day, the to-date value at the end of the month n months back
+  for (const k of ['pmtd', 'pqtd', 'pymtd']) await p.locator('[data-calc=' + k + ']').check();
+  const tw = await p.locator('#tmdlView').innerText(), block = n => tw.slice(tw.indexOf("measure 'Total Sales " + n + "'"), tw.indexOf('formatString', tw.indexOf("measure 'Total Sales " + n + "'")));
+  console.log('whole periods:', ['PMTD|-1', 'PQTD|-3', 'PYTD|-12', 'PYMTD|-12'].map(x => { const [n, k] = x.split('|'), t = block(n); return n + ' ' + (t.includes('LastVisibleDate = EOMONTH ( LastVisibleDate, 0 )') && t.includes("'Date'[Date] = EOMONTH ( LastVisibleDate, " + k + ' )')); }).join(', '), '(expect all true)');
+  for (const k of ['pmtd', 'pqtd', 'pymtd']) await p.locator('[data-calc=' + k + ']').uncheck();
   await p.click('#outGroup'); const tg = await p.locator('#tmdlView').innerText(); console.log('group inlines ShowValueForDates:', !tg.includes('[ShowValueForDates]'), !tg.includes('measure ShowValueForDates'), tg.includes('column DateWithSales'), '(expect true true true)');
   console.log('group checks:', await p.locator('#checks').innerText(), '| first part:', await p.locator('#outBox .part').first().getAttribute('id'), '| count', await p.locator('#tmdlCount').innerText());
   await p.fill('#gTable', 'Sales'); console.log('group clash:', (await p.locator('#checks').innerText()).slice(0, 70)); await p.fill('#gTable', 'Time Intelligence');

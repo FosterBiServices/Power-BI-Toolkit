@@ -63,7 +63,7 @@ const AB = (() => {
     model.tables.forEach(t => {
       const cs = cols(t), vis = cs.filter(c => !c.hidden);
       const hasMeasures = model.measures.some(x => lcs(x.table) === lcs(t.name));
-      if (/^time$/i.test(t.category) || /^(date|dates|calendar|dim ?date|date table)$/i.test(t.name)) out.date.push(t);
+      if (isDateTable(t) || /^(date|dates|calendar|dim ?date|date table)$/i.test(t.name)) out.date.push(t);
       else if (hasMeasures && !vis.length) out.measure.push(t);
       else if (t.hidden) out.other.push(t);
       else if (oneSide.has(lcs(t.name))) out.dim.push(t);

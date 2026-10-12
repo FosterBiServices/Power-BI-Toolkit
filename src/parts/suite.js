@@ -25,6 +25,14 @@
       return true;
     } catch (e) { return false; }
   };
+  // A page that gets its model from a different PBIP folder than before (or from a folder after a pasted export)
+  // starts from empty entries, so picks and pasted results made for the earlier model don't linger. Reading the
+  // same folder again keeps them. The example is always cleared. from: 'pbip:<name>' or 'export'
+  S.freshStart = (prefix, from) => {
+    let prev = null; try { prev = localStorage.getItem(prefix + 'modelFrom'); localStorage.setItem(prefix + 'modelFrom', from); } catch (e) {}
+    const ex = document.getElementById('exampleBanner');
+    if ((ex && !ex.hidden) || (from.startsWith('pbip:') && prev !== from)) { const c = document.getElementById('clearAll'); if (c) c.click(); }
+  };
   // what was typed or pasted into a field that held example text, without the example text around it
   S.ownText = (val, ex) => {
     if (!ex) return val;
@@ -295,7 +303,7 @@
     };
     const use = () => {
       const v = S.get(); if (!v) return;
-      if (exampleShowing()) { const c = document.getElementById('clearAll'); if (c) c.click(); }
+      S.freshStart(cfg.prefix, v.source === 'pbip' ? 'pbip:' + v.name : 'export');
       ta.value = valueFor(v);
       if (conn) conn.set(v.source === 'pbip' ? 'pbip' : 'export', v);
       if (cfg.open) { const d = document.getElementById(cfg.open); if (d) d.open = true; }
@@ -308,6 +316,7 @@
     ta.addEventListener('input', e => {
       if (e.isTrusted && mode === 'export' && S.looksLikeExport(ta.value)) {
         const prev = S.get();
+        try { localStorage.setItem(cfg.prefix + 'modelFrom', 'export'); } catch (err) {}
         if (!prev || prev.text !== ta.value) { const ok = S.set(ta.value, ''); note = ok ? 'saved for the other tools too' : 'too large to share with the other tools (browser storage limit)'; if (ok) remember(); }
       }
       render();
@@ -432,6 +441,16 @@
     if (m.model) r({ Kind: 'Model', Name: m.model.name, Flags: m.model.discourage ? 'discourage-implicit' : '' });
     return rows.join('\n');
   }
+  // Desktop leaves dataType out for the columns of calculated tables and for calculated columns, so work it
+  // out from the format string and annotations (a date column must still read as a date)
+  function guessType(c){
+    const f = c.props.formatstring || '', ann = n => c.children.some(x => x.kind === 'annotation' && x.name.toLowerCase() === n);
+    if (ann('underlyingdatetimedatatype') || /date|time|yy|mmm|dd|hh|nn/i.test(f)) return 'dateTime';
+    if (/TRUE.*FALSE/i.test(f)) return 'boolean';
+    if (/[0#]/.test(f) && !/[a-z]/i.test(f.replace(/"[^"]*"|\\./g, ''))) return /[.%]/.test(f) ? 'double' : 'int64';
+    if (ann('pbi_formathint') || /^(sum|average|min|max)$/i.test(c.props.summarizeby || '')) return 'double';
+    return f ? '' : 'string';
+  }
   function fromTmdl(files){
     const m = { tables: [], columns: [], measures: [], rels: [], model: null };
     const roots = files.map(f => parseTmdl(f.text));
@@ -455,8 +474,8 @@
       o.children.forEach(c => {
         if (c.kind === 'column') {
           if (/^RowNumber-/i.test(c.name)) return;
-          const num = /int64|double|decimal/i.test(c.props.datatype || '');
-          m.columns.push({ table: o.name, name: c.name, type: TYPES[(c.props.datatype || '').toLowerCase()] || c.props.datatype || '', folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), key: yes(c.props.iskey),
+          const dt = c.props.datatype || guessType(c), num = /int64|double|decimal/i.test(dt);
+          m.columns.push({ table: o.name, name: c.name, type: TYPES[dt.toLowerCase()] || dt, folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), key: yes(c.props.iskey),
             description: c.doc || c.props.description || '', expression: c.value || '', summarize: c.props.summarizeby ? cap(c.props.summarizeby) : num ? 'Default' : 'None', sortBy: unq(c.props.sortbycolumn || ''), hierarchies: (levels[c.name] || []).join(', ') });
         } else if (c.kind === 'measure') {
           m.measures.push({ table: o.name, name: c.name, format: c.props.formatstring || '', folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), dynamic: 'formatstringdefinition' in c.props || c.children.some(x => x.kind === 'formatstringdefinition'),
@@ -562,7 +581,7 @@
       msg.innerHTML = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>';
       const r = S.pbipExport(await S.pbipFiles(list));
       if (r.error) { msg.innerHTML = '<div class="msg err">' + esc(r.error) + '</div>'; return; }
-      if (exampleShowing()) { const x = document.getElementById('clearAll'); if (x) x.click(); }
+      S.freshStart(cfg.prefix, 'pbip:' + r.name);
       choice = 'pbip'; set('connect', 'pbip'); set('pbipName', r.name);
       try { localStorage.removeItem(cfg.prefix + 'blank'); } catch (e) {}
       const shared = S.set(r.text, r.name, 'pbip');

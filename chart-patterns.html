@@ -591,6 +591,14 @@ function unquoteCell(s){
 }
 function restore(s){ return (s || '').split(NL_MARK).join('\n'); }
 function lc(s){ return (s || '').toLowerCase(); }
+// Date tables: marked as one (data category Time), or a DAX calculated table built on CALENDAR, CALENDARAUTO
+// or a GENERATESERIES of dates. Many models never mark theirs, so both count. (↵ is a line break in the export.)
+const CALC_DATE_RE = /\bCALENDAR(AUTO)?[\s\u21B5]*\(|\bGENERATESERIES[\s\u21B5]*\([\s\u21B5]*DATE[\s\u21B5]*\(/i;
+function isMarkedDateTable(t){ return !!t && lc(t.category) === 'time'; }
+function isCalcDateTable(t){ return !!t && CALC_DATE_RE.test(t.calc || ''); }
+function isDateTable(t){ return isMarkedDateTable(t) || isCalcDateTable(t); }
+// marked ones first
+function dateTablesOf(model){ return model.tables.filter(isMarkedDateTable).concat(model.tables.filter(t => !isMarkedDateTable(t) && isCalcDateTable(t))); }
 
 function parseModel(text){
   const res = { tables: [], columns: [], measures: [], rels: [], error: null, skipped: 0 };
@@ -781,7 +789,7 @@ function suggestTables(model, requestsText, targetTable){
     if (matched.has(from.name) && manyToOne && !picked.has(to.name)) picked.set(to.name, 'related to ' + qName(from.name));
     if (matched.has(to.name) && lc(r.fromCard) === 'one' && lc(r.toCard) === 'many' && !picked.has(from.name)) picked.set(from.name, 'related to ' + qName(to.name));
   }
-  if (wantsTime) model.tables.filter(t => lc(t.category) === 'time').forEach(t => { if (!picked.has(t.name)) picked.set(t.name, 'date table (time words in requests)'); });
+  if (wantsTime) dateTablesOf(model).forEach(t => { if (!picked.has(t.name)) picked.set(t.name, 'date table (time words in requests)'); });
   const home = model.tables.find(t => lc(t.name) === lc(targetTable || ''));
   if (home && picked.size && !picked.has(home.name)) picked.set(home.name, 'home table for new measures');
   return { picked, matchedCount: matched.size, tokens };
@@ -974,8 +982,9 @@ function hasDetails(details){ return (details || []).some(d => (d.goal || '').tr
 function buildPrompt(model, requestsText, opts){
   const o = Object.assign({ tables: null, hidden: true, formulas: true, descriptions: true, targetTable: '_Measures' }, opts || {});
   const reqs = (requestsText || '').split('\n').map(s => s.replace(/^\s*(\d+[.)]|[-*•])\s*/, '').trim()).filter(Boolean);
-  const dateTables = model.tables.filter(t => lc(t.category) === 'time').map(t => t.name);
-  const dateTbl = dateTables[0];
+  const dateTables = model.tables.filter(isMarkedDateTable).map(t => t.name);
+  const calcDateTables = dateTablesOf(model).filter(t => !isMarkedDateTable(t)).map(t => t.name);
+  const dateTbl = dateTables[0] || calcDateTables[0];
   const details = (o.details || []).filter(d => (d.goal || '').trim() || (d.name || '').trim());
   const forced = new Set();
   details.forEach(d => {
@@ -1007,6 +1016,7 @@ function buildPrompt(model, requestsText, opts){
   L.push('- Reuse an existing measure when it already calculates what you need.');
   L.push('- Use DIVIDE() for division. Use VAR ... RETURN when a measure has more than one step.');
   if (dateTables.length) L.push("- The marked date table is " + dateTables.map(qName).join(', ') + '. Use it for all time intelligence.');
+  else if (calcDateTables.length) L.push('- ' + calcDateTables.map(qName).join(', ') + (calcDateTables.length > 1 ? ' are calculated date tables' : ' is a calculated date table') + ' (built in DAX, not marked as a date table). Use ' + qName(calcDateTables[0]) + ' for all time intelligence.');
   else L.push('- No table is marked as a date table. For time intelligence, use the date table you can identify from the relationships and state which one in the description.');
   L.push('- Filter through relationships. Do not use FILTER over a whole fact table when a simple column filter works.');
   L.push('- Give each measure a clear Title Case name that is not already used by an existing measure or column.');
@@ -1071,7 +1081,8 @@ function buildPrompt(model, requestsText, opts){
     if (!inc(t.name)) continue;
     const cols = model.columns.filter(c => lc(c.table) === lc(t.name) && (o.hidden || !c.hidden));
     const tags = [];
-    if (lc(t.category) === 'time') tags.push('date table');
+    if (isMarkedDateTable(t)) tags.push('date table');
+    else if (isCalcDateTable(t)) tags.push('calculated date table');
     if (!cols.length && model.measures.some(m => lc(m.table) === lc(t.name))) tags.push('measure table');
     if (model.composite) tags.push(storageTag(t));
     L.push(qName(t.name) + (tags.length ? ' (' + tags.join(', ') + ')' : '') + (t.description ? ': ' + oneLine(t.description) : ''));
@@ -2094,6 +2105,14 @@ init();
       return true;
     } catch (e) { return false; }
   };
+  // A page that gets its model from a different PBIP folder than before (or from a folder after a pasted export)
+  // starts from empty entries, so picks and pasted results made for the earlier model don't linger. Reading the
+  // same folder again keeps them. The example is always cleared. from: 'pbip:<name>' or 'export'
+  S.freshStart = (prefix, from) => {
+    let prev = null; try { prev = localStorage.getItem(prefix + 'modelFrom'); localStorage.setItem(prefix + 'modelFrom', from); } catch (e) {}
+    const ex = document.getElementById('exampleBanner');
+    if ((ex && !ex.hidden) || (from.startsWith('pbip:') && prev !== from)) { const c = document.getElementById('clearAll'); if (c) c.click(); }
+  };
   // what was typed or pasted into a field that held example text, without the example text around it
   S.ownText = (val, ex) => {
     if (!ex) return val;
@@ -2364,7 +2383,7 @@ init();
     };
     const use = () => {
       const v = S.get(); if (!v) return;
-      if (exampleShowing()) { const c = document.getElementById('clearAll'); if (c) c.click(); }
+      S.freshStart(cfg.prefix, v.source === 'pbip' ? 'pbip:' + v.name : 'export');
       ta.value = valueFor(v);
       if (conn) conn.set(v.source === 'pbip' ? 'pbip' : 'export', v);
       if (cfg.open) { const d = document.getElementById(cfg.open); if (d) d.open = true; }
@@ -2377,6 +2396,7 @@ init();
     ta.addEventListener('input', e => {
       if (e.isTrusted && mode === 'export' && S.looksLikeExport(ta.value)) {
         const prev = S.get();
+        try { localStorage.setItem(cfg.prefix + 'modelFrom', 'export'); } catch (err) {}
         if (!prev || prev.text !== ta.value) { const ok = S.set(ta.value, ''); note = ok ? 'saved for the other tools too' : 'too large to share with the other tools (browser storage limit)'; if (ok) remember(); }
       }
       render();
@@ -2501,6 +2521,16 @@ init();
     if (m.model) r({ Kind: 'Model', Name: m.model.name, Flags: m.model.discourage ? 'discourage-implicit' : '' });
     return rows.join('\n');
   }
+  // Desktop leaves dataType out for the columns of calculated tables and for calculated columns, so work it
+  // out from the format string and annotations (a date column must still read as a date)
+  function guessType(c){
+    const f = c.props.formatstring || '', ann = n => c.children.some(x => x.kind === 'annotation' && x.name.toLowerCase() === n);
+    if (ann('underlyingdatetimedatatype') || /date|time|yy|mmm|dd|hh|nn/i.test(f)) return 'dateTime';
+    if (/TRUE.*FALSE/i.test(f)) return 'boolean';
+    if (/[0#]/.test(f) && !/[a-z]/i.test(f.replace(/"[^"]*"|\\./g, ''))) return /[.%]/.test(f) ? 'double' : 'int64';
+    if (ann('pbi_formathint') || /^(sum|average|min|max)$/i.test(c.props.summarizeby || '')) return 'double';
+    return f ? '' : 'string';
+  }
   function fromTmdl(files){
     const m = { tables: [], columns: [], measures: [], rels: [], model: null };
     const roots = files.map(f => parseTmdl(f.text));
@@ -2524,8 +2554,8 @@ init();
       o.children.forEach(c => {
         if (c.kind === 'column') {
           if (/^RowNumber-/i.test(c.name)) return;
-          const num = /int64|double|decimal/i.test(c.props.datatype || '');
-          m.columns.push({ table: o.name, name: c.name, type: TYPES[(c.props.datatype || '').toLowerCase()] || c.props.datatype || '', folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), key: yes(c.props.iskey),
+          const dt = c.props.datatype || guessType(c), num = /int64|double|decimal/i.test(dt);
+          m.columns.push({ table: o.name, name: c.name, type: TYPES[dt.toLowerCase()] || dt, folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), key: yes(c.props.iskey),
             description: c.doc || c.props.description || '', expression: c.value || '', summarize: c.props.summarizeby ? cap(c.props.summarizeby) : num ? 'Default' : 'None', sortBy: unq(c.props.sortbycolumn || ''), hierarchies: (levels[c.name] || []).join(', ') });
         } else if (c.kind === 'measure') {
           m.measures.push({ table: o.name, name: c.name, format: c.props.formatstring || '', folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), dynamic: 'formatstringdefinition' in c.props || c.children.some(x => x.kind === 'formatstringdefinition'),
@@ -2631,7 +2661,7 @@ init();
       msg.innerHTML = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>';
       const r = S.pbipExport(await S.pbipFiles(list));
       if (r.error) { msg.innerHTML = '<div class="msg err">' + esc(r.error) + '</div>'; return; }
-      if (exampleShowing()) { const x = document.getElementById('clearAll'); if (x) x.click(); }
+      S.freshStart(cfg.prefix, 'pbip:' + r.name);
       choice = 'pbip'; set('connect', 'pbip'); set('pbipName', r.name);
       try { localStorage.removeItem(cfg.prefix + 'blank'); } catch (e) {}
       const shared = S.set(r.text, r.name, 'pbip');

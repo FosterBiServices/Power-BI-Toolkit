@@ -88,25 +88,30 @@ function tiLatest(cfg){
     tiVar('LastVisibleDate', 'MIN ( MAX ( ' + d + ' ), LastDateWithData )')];
 }
 const tiAt = (cfg, e) => tiFn('CALCULATE', [e, tiDateRef(cfg) + ' = LastVisibleDate']);
-function tiLatestValue(cfg, e){ return tiLatest(cfg).concat(tiVar('Result', tiFn('IF', [tiSvLatest(cfg), tiAt(cfg, e)])), 'RETURN', '    Result').join('\n'); }
-function tiLatestGrowth(cfg, cur, prev, pct){ return tiLatest(cfg).join('\n') + '\n' + tiGrowth(tiAt(cfg, cur), tiAt(cfg, prev), pct, tiSvLatest(cfg)); }
+function tiLatestValue(cfg, e, at){ return tiLatest(cfg).concat(tiVar('Result', tiFn('IF', [tiSvLatest(cfg), at || tiAt(cfg, e)])), 'RETURN', '    Result').join('\n'); }
+function tiLatestGrowth(cfg, cur, prev, pct, prevAt){ return tiLatest(cfg).join('\n') + '\n' + tiGrowth(tiAt(cfg, cur), prevAt || tiAt(cfg, prev), pct, tiSvLatest(cfg)); }
+// A finished month compares whole periods: on the last day of a month, the to-date value at the end of the month
+// n months back (30 Sep -> all of August, 28 Feb -> all of January, 30 Jun -> all of Q1). Shifting the single last
+// date would drop the days a shorter month doesn't have. Within a month it stays the same days.
+const tiPrevAt = (cfg, toDate, prev, n) => tiFn('IF', ['LastVisibleDate = EOMONTH ( LastVisibleDate, 0 )',
+  tiFn('CALCULATE', [toDate, tiDateRef(cfg) + ' = EOMONTH ( LastVisibleDate, -' + n + ' )']), tiAt(cfg, prev)]);
 // LastDateWithData is already a variable here
 function tiSvLatest(cfg){ return cfg.output === 'group' ? 'MIN ( ' + tiDateRef(cfg) + ' ) <= LastDateWithData' : '[' + TI_SVD + ']'; }
 const TI_CALCS_LATEST = [
   { key: 'ytd', name: 'YTD', kind: 'value', label: 'Year to the last date', f: (b, cfg) => tiLatestValue(cfg, b.ytd) },
   { key: 'qtd', name: 'QTD', kind: 'value', label: 'Quarter to the last date', f: (b, cfg) => tiLatestValue(cfg, b.qtd) },
   { key: 'mtd', name: 'MTD', kind: 'value', label: 'Month to the last date', f: (b, cfg) => tiLatestValue(cfg, b.mtd) },
-  { key: 'pqtd', name: 'PQTD', kind: 'value', label: 'Previous quarter, to the same day', f: (b, cfg) => tiLatestValue(cfg, b.pqtd) },
-  { key: 'qoqp', dep: ['qtd', 'pqtd'], name: 'QOQTD %', kind: 'pct', label: 'Quarter to date vs previous quarter to date, %', f: (b, cfg) => tiLatestGrowth(cfg, b.qtd, b.pqtd, true) },
+  { key: 'pqtd', name: 'PQTD', kind: 'value', label: 'Previous quarter, to the same day (whole months once a month ends)', f: (b, cfg) => tiLatestValue(cfg, b.pqtd, tiPrevAt(cfg, b.qtd, b.pqtd, 3)) },
+  { key: 'qoqp', dep: ['qtd', 'pqtd'], name: 'QOQTD %', kind: 'pct', label: 'Quarter to date vs previous quarter to date, %', f: (b, cfg) => tiLatestGrowth(cfg, b.qtd, b.pqtd, true, tiPrevAt(cfg, b.qtd, b.pqtd, 3)) },
   { key: 'py', name: 'PYC', kind: 'value', label: 'Previous year, whole year', f: (b, cfg) => tiLatestValue(cfg, b.pyc) },
-  { key: 'pytd', name: 'PYTD', kind: 'value', label: 'Last year, to the same day', f: (b, cfg) => tiLatestValue(cfg, b.pytd) },
-  { key: 'yoy', dep: ['ytd', 'pytd'], name: 'YOYTD', kind: 'value', label: 'Year to date vs last year to date', f: (b, cfg) => tiLatestGrowth(cfg, b.ytd, b.pytd) },
-  { key: 'yoyp', dep: ['ytd', 'pytd'], name: 'YOYTD %', kind: 'pct', label: 'Year to date vs last year to date, %', f: (b, cfg) => tiLatestGrowth(cfg, b.ytd, b.pytd, true) },
+  { key: 'pytd', name: 'PYTD', kind: 'value', label: 'Last year, to the same day (whole months once a month ends)', f: (b, cfg) => tiLatestValue(cfg, b.pytd, tiPrevAt(cfg, b.ytd, b.pytd, 12)) },
+  { key: 'yoy', dep: ['ytd', 'pytd'], name: 'YOYTD', kind: 'value', label: 'Year to date vs last year to date', f: (b, cfg) => tiLatestGrowth(cfg, b.ytd, b.pytd, false, tiPrevAt(cfg, b.ytd, b.pytd, 12)) },
+  { key: 'yoyp', dep: ['ytd', 'pytd'], name: 'YOYTD %', kind: 'pct', label: 'Year to date vs last year to date, %', f: (b, cfg) => tiLatestGrowth(cfg, b.ytd, b.pytd, true, tiPrevAt(cfg, b.ytd, b.pytd, 12)) },
   { key: 'pm', name: 'PMC', kind: 'value', label: 'Previous month, whole month', f: (b, cfg) => tiLatestValue(cfg, b.pmc) },
-  { key: 'pmtd', name: 'PMTD', kind: 'value', label: 'Previous month, to the same day', f: (b, cfg) => tiLatestValue(cfg, b.pmtd) },
-  { key: 'momp', dep: ['mtd', 'pmtd'], name: 'MOMTD %', kind: 'pct', label: 'Month to date vs the same days last month, %', f: (b, cfg) => tiLatestGrowth(cfg, b.mtd, b.pmtd, true) },
-  { key: 'pymtd', name: 'PYMTD', kind: 'value', label: 'Same month last year, to the same day', f: (b, cfg) => tiLatestValue(cfg, b.pymtd) },
-  { key: 'mtdyoyp', dep: ['mtd', 'pymtd'], name: 'MTD YOY %', kind: 'pct', label: 'Month to date vs same month last year, %', f: (b, cfg) => tiLatestGrowth(cfg, b.mtd, b.pymtd, true) },
+  { key: 'pmtd', name: 'PMTD', kind: 'value', label: 'Previous month, to the same day (the whole month once a month ends)', f: (b, cfg) => tiLatestValue(cfg, b.pmtd, tiPrevAt(cfg, b.mtd, b.pmtd, 1)) },
+  { key: 'momp', dep: ['mtd', 'pmtd'], name: 'MOMTD %', kind: 'pct', label: 'Month to date vs the same days last month, %', f: (b, cfg) => tiLatestGrowth(cfg, b.mtd, b.pmtd, true, tiPrevAt(cfg, b.mtd, b.pmtd, 1)) },
+  { key: 'pymtd', name: 'PYMTD', kind: 'value', label: 'Same month last year, to the same day (the whole month once a month ends)', f: (b, cfg) => tiLatestValue(cfg, b.pymtd, tiPrevAt(cfg, b.mtd, b.pymtd, 12)) },
+  { key: 'mtdyoyp', dep: ['mtd', 'pymtd'], name: 'MTD YOY %', kind: 'pct', label: 'Month to date vs same month last year, %', f: (b, cfg) => tiLatestGrowth(cfg, b.mtd, b.pymtd, true, tiPrevAt(cfg, b.mtd, b.pymtd, 12)) },
   { key: 'r12', name: 'MAT', kind: 'value', label: 'Moving annual total: the 12 months to the last date', f: (b, cfg) => tiLatestValue(cfg, b.mat) },
   { key: 'r3avg', name: 'AVG 3M', kind: 'value', label: 'Daily average over the 3 months to the last date', f: (b, cfg) => tiAvg3m(cfg, b.cur, 'LastVisibleDate', tiLatest(cfg)) }
 ];
@@ -221,8 +226,9 @@ function tiCalcList(cfg){ return tiSorted(tiCalcListRaw(cfg)); }
 function tiCalcListRaw(cfg){ cfg = cfg || {}; return cfg.grain === 'month' ? (cfg.basis === 'context' ? TI_M_CALCS : TI_M_CALCS_LATEST) : cfg.basis === 'context' ? TI_CALCS : TI_CALCS_LATEST; }
 const TI_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const TI_LAST_DAY = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-// A DAX date table: CALENDAR ( … ) or CALENDARAUTO ( … ) in a calculated table
-function tiCalcDateTable(t){ return !!t && /\bCALENDAR(AUTO)?\s*\(/i.test(t.calc || ''); }
+// A DAX date table (CALENDAR, CALENDARAUTO or a GENERATESERIES of dates in a calculated table): isCalcDateTable in builder_core
+const tiCalcDateTable = isCalcDateTable;
+const tiCalcFn = t => /CALENDARAUTO/i.test(t.calc) ? 'CALENDARAUTO' : /\bCALENDAR\b/i.test(t.calc) ? 'CALENDAR' : 'GENERATESERIES';
 // fact date columns related to the date table (where "the last date with data" comes from)
 function tiDataDateOptions(model, cfg){
   if (!model || !cfg.dateTable) return [];
@@ -291,7 +297,7 @@ function tiCheck(model, cfg){
   else if (!col) add('err', 'Choose the date column of ' + qName(t.name) + ' in Step 2.');
   else {
     if (!/date/i.test(col.dataType || '')) add('err', qName(t.name) + bracket(col.name) + ' is a ' + (col.dataType || 'non-date') + ' column; time intelligence needs a date column.');
-    if (lc(t.category) !== 'time' && tiCalcDateTable(t)) add('warn', qName(t.name) + ' is a calculated date table (built with ' + (/CALENDARAUTO/i.test(t.calc) ? 'CALENDARAUTO' : 'CALENDAR') + ') and isn\u2019t marked as a date table. You can carry on: the measures work without it. Marking it (Table tools > Mark as date table, using ' + bracket(col.name) + ') is optional.');
+    if (lc(t.category) !== 'time' && tiCalcDateTable(t)) add('warn', qName(t.name) + ' is a calculated date table (built with ' + tiCalcFn(t) + ') and isn\u2019t marked as a date table. You can carry on: the measures work without it. Marking it (Table tools > Mark as date table, using ' + bracket(col.name) + ') is optional.');
     else if (lc(t.category) !== 'time') add('warn', qName(t.name) + ' isn\u2019t marked as a date table. You can carry on: marking it is optional. Just make sure it has one row for every day and no gaps; a fact table\u2019s date column won\u2019t do (the Date Table Generator builds a proper one).');
     if (!model.rels.some(r => (lc(r.toTable) === lc(t.name) || lc(r.fromTable) === lc(t.name)))) add('warn', qName(t.name) + ' has no relationships in the export, so these calculations won’t filter your facts. Relate it to your fact tables first.');
     const dp = (cfg.dataDate || '').split('|');
