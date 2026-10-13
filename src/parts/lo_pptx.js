@@ -75,7 +75,7 @@ const LP = (() => {
     const side = L.items.find(o => o.id === 'side');
     if (side && st.side !== 'none') out.push(shape('Side panel', side.x, side.y, side.w, side.h, Object.assign({ fill: col.sidePanel, radius: r, shadow: sh, pad: 0 }, border)));
     // blank containers for empty cells
-    if (st.cards !== 'none') (L.empty || []).forEach(([a, b]) => { const G = L.grid; out.push(shape('Empty cell ' + (a + 1) + ',' + (b + 1), G.x[a], G.y[b], G.w[a], G.h[b], Object.assign({ fill: col.card, radius: r, shadow: sh }, border))); });
+    if (st.cards !== 'none') (L.empty || []).forEach(e => { const [a, b] = e, o = LO.cellBox(L.grid, e); out.push(shape('Empty cell ' + (a + 1) + ',' + (b + 1), o.x, o.y, o.w, o.h, Object.assign({ fill: col.card, radius: r, shadow: sh }, border))); });
     L.items.filter(o => !o.band && !o.logo).forEach(o => {
       const label = LO.typeOf(o.type).label, title = o.title || label;
       const cardBg = st.cards !== 'none' && !(o.region === 'side' && st.side !== 'none');

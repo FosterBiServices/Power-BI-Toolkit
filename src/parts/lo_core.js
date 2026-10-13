@@ -205,9 +205,10 @@ const LO = (() => {
     if (lab) for (let r = 0; r < rows; ) { const s = labelSpan(c, r, rows);
       out.push({ id: 'l' + r, region: 'labels', idx: r, type: 'textbox', title: labelOf(c, r), x: labX, y: gy[r], w: lab, h: gy[r + s - 1] + gh[r + s - 1] - gy[r], rs: s }); r += s; }
     const grid = { cols, rows, x: gx, y: gy, w: gw, h: gh, left, top, right, bottom: H - m };
-    const taken = {};
+    const taken = {}, boxes = [];
     c.items.forEach((x, i) => {
       const c0 = x.c, r0 = x.r, cs = Math.max(1, x.cs || 1), rs = Math.max(1, x.rs || 1);
+      if (x.empty) { boxes.push(i); return; }   // empty boxes go after the visuals, below
       if (c0 >= cols || r0 >= rows) { probs.push({ level: 'warn', text: '“' + (x.title || typeOf(x.type).label) + '” is outside the ' + cols + ' × ' + rows + ' grid, so it’s left out.' }); return; }
       const c1 = Math.min(cols, c0 + cs) - 1, r1 = Math.min(rows, r0 + rs) - 1;
       for (let a = c0; a <= c1; a++) for (let b = r0; b <= r1; b++) { const k = a + ',' + b; if (taken[k] !== undefined) probs.push({ level: 'warn', text: '“' + (x.title || typeOf(x.type).label) + '” overlaps “' + (c.items[taken[k]].title || typeOf(c.items[taken[k]].type).label) + '”.' }); taken[k] = i; }
@@ -225,7 +226,16 @@ const LO = (() => {
     if (gcw <= 0 || H - m - top <= 0) probs.push({ level: 'err', text: 'The header, strip and side panel leave no room for the grid.' });
     const over = R !== 'roundup' || (SC.all && SC.left < 0) || (SR.all && SR.left < 0) ? [] : out.filter(o => !o.band && (o.x + o.w > W + 0.01 || o.y + o.h > H + 0.01));
     if (over.length) probs.push({ level: 'info', text: 'Rounding up puts ' + over.length + ' visual' + (over.length === 1 ? '' : 's') + ' up to ' + Math.ceil(Math.max(...over.map(o => Math.max(o.x + o.w - W, o.y + o.h - H)))) + ' px past the page edge. Choose “Fill exactly” to keep everything inside.' });
-    const empty = []; for (let a = 0; a < cols; a++) for (let b = 0; b < rows; b++) if (taken[a + ',' + b] === undefined) empty.push([a, b]);
+    /* an empty box: where a visual was removed. It keeps that visual's size as one empty cell, so a visual over several
+       of the grid's columns doesn't leave an empty cell for each. A visual moved onto any of it breaks it back into cells. */
+    const empty = [];
+    boxes.forEach(i => { const x = c.items[i], c0 = x.c, r0 = x.r; if (c0 >= cols || r0 >= rows) return;
+      const c1 = Math.min(cols, c0 + Math.max(1, x.cs || 1)) - 1, r1 = Math.min(rows, r0 + Math.max(1, x.rs || 1)) - 1, cells = [];
+      for (let a = c0; a <= c1; a++) for (let b = r0; b <= r1; b++) cells.push(a + ',' + b);
+      if (cells.length < 2 || cells.some(k => taken[k] !== undefined)) return;
+      cells.forEach(k => { taken[k] = i; }); empty.push([c0, r0, c1 - c0 + 1, r1 - r0 + 1, i]); });
+    // empty cells: [column, row, columns wide, rows tall, the empty box's item (none for a plain cell)]
+    for (let a = 0; a < cols; a++) for (let b = 0; b < rows; b++) if (taken[a + ',' + b] === undefined) empty.push([a, b, 1, 1]);
     return { items: out, grid, probs, empty, limits, roomFor };
   }
 
@@ -235,7 +245,7 @@ const LO = (() => {
     const L = layout(c), G = L.grid, room = G.right - G.left, out = [];
     for (let r = 0; r < G.rows; r++) {
       const ps = L.items.filter(o => o.region === 'grid' && !o.sub && o.r <= r && r < o.r + o.rs).map(o => ({ c: o.c, cs: o.cs, idx: o.idx }))
-        .concat(L.empty.filter(e => e[1] === r).map(e => ({ c: e[0], cs: 1, idx: null }))).sort((a, b) => a.c - b.c);
+        .concat(L.empty.filter(e => e[1] <= r && r < e[1] + (e[3] || 1)).map(e => ({ c: e[0], cs: e[2] || 1, idx: e[4] == null ? null : e[4] }))).sort((a, b) => a.c - b.c);
       const pieces = []; let next = 0;
       ps.forEach(p => { if (p.c >= next) { pieces.push(p); next = p.c + p.cs; } });
       const ends = pieces.map((p, k) => k === pieces.length - 1 ? room : G.x[p.c + p.cs - 1] + G.w[p.c + p.cs - 1] - G.left);
@@ -282,6 +292,8 @@ const LO = (() => {
     return c;
   }
 
+  // where an empty cell (from layout().empty) is on the page
+  const cellBox = (G, e) => { const [a, b] = e, a1 = a + (e[2] || 1) - 1, b1 = b + (e[3] || 1) - 1; return { x: G.x[a], y: G.y[b], w: G.x[a1] + G.w[a1] - G.x[a], h: G.y[b1] + G.h[b1] - G.y[b] }; };
   let measure = (text, size) => String(text).length * size * 0.56;
   const setMeasure = fn => { measure = fn; };
   const r2 = v => Math.round(v * 100) / 100;
@@ -294,9 +306,9 @@ const LO = (() => {
       const p = onCard(o) ? inset(o, st.radius) : null;
       return [o.id === 'header' ? 'Header band' : o.title || typeOf(o.type).label, o.id === 'header' ? 'Shape / background' : o.id === 'title' ? 'Title (drawn on the background)' : o.logo ? 'Image (logo)' : typeOf(o.type).label, r2(o.x), r2(o.y), r2(o.w), r2(o.h)]
         .concat(p == null ? ['', '', '', ''] : [r2(o.x + p), r2(o.y + p), r2(o.w - 2 * p), r2(o.h - 2 * p)]).join('\t');
-    }), (L.empty || []).map(([a, b]) => {
+    }), (L.empty || []).map(e => {
       // grid cells with no visual yet: their background box, so a visual can be placed on it later
-      const G = L.grid, o = { x: G.x[a], y: G.y[b], w: G.w[a], h: G.h[b] }, p = cards ? inset(o, st.radius) : null;
+      const [a, b] = e, o = cellBox(L.grid, e), p = cards ? inset(o, st.radius) : null;
       return ['Empty box (column ' + (a + 1) + ', row ' + (b + 1) + ')', cards ? 'Background box' : 'Grid cell', r2(o.x), r2(o.y), r2(o.w), r2(o.h)]
         .concat(p == null ? ['', '', '', ''] : [r2(o.x + p), r2(o.y + p), r2(o.w - 2 * p), r2(o.h - 2 * p)]).join('\t');
     })).join('\n');
@@ -323,5 +335,5 @@ const LO = (() => {
     return c;
   }
 
-  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, sized, weightsOf, fixedOf, isEven, tidy, layout, rowsOf, byRows, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure, labelOf, labelSpan, labelAt };
+  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, sized, weightsOf, fixedOf, isEven, tidy, layout, rowsOf, byRows, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure, labelOf, labelSpan, labelAt, cellBox };
 })();

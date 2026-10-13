@@ -521,7 +521,9 @@ function init(){
     const v = el.closest('[data-id]'), cell = el.closest('[data-cell]');
     if (v && v.dataset.id === 'logo') { $('logoW').focus(); return true; }
     if (v) { const id = v.dataset.id.split('.')[0]; state.sel = id === state.sel ? null : id; renderCanvas(); renderEditor(); const t = $('edType') || $('edTitle'); if (t && state.sel) t.focus(); return true; }
-    if (cell) { const [a, b] = cell.dataset.cell.split(',').map(Number); state.cfg.items.push({ type: 'clusteredColumnChart', title: 'New visual', c: a, r: b, cs: 1, rs: 1 }); state.sel = 'g' + (state.cfg.items.length - 1); edited({ editor: true }); const t = $('edType'); if (t) t.focus(); return true; }
+    // a new visual in an empty cell; in an empty box (where one was removed) it takes the box's place and size
+    if (cell) { const [a, b, cs, rs, k] = cell.dataset.cell.split(',').map(Number), its = state.cfg.items, nv = { type: 'clusteredColumnChart', title: 'New visual', c: a, r: b, cs: cs || 1, rs: rs || 1 };
+      if (k >= 0 && its[k] && its[k].empty) { its[k] = nv; state.sel = 'g' + k; } else { its.push(nv); state.sel = 'g' + (its.length - 1); } edited({ editor: true }); const t = $('edType'); if (t) t.focus(); return true; }
     return false;
   };
   $('canvas').addEventListener('click', e => pick(e.target));
@@ -540,6 +542,8 @@ function init(){
     const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act, c = state.cfg, s = selItem();
     if (a === 'addStrip') { c.strip.items.push({ type: 'card', title: 'New card' }); state.sel = 't' + (c.strip.items.length - 1); }
     else if (a === 'addSide') { c.side.items.push({ type: 'slicer', title: 'New slicer' }); state.sel = 's' + (c.side.items.length - 1); }
+    // a grid visual leaves an empty box its own size (one background, however many of the grid's columns it covered)
+    else if (s && a === 'del' && s.region === 'g') { const x = s.item; if ((x.cs || 1) * (x.rs || 1) > 1) s.arr[s.i] = { empty: true, c: x.c, r: x.r, cs: x.cs || 1, rs: x.rs || 1 }; else s.arr.splice(s.i, 1); state.sel = null; }
     else if (s && a === 'del') { s.arr.splice(s.i, 1); state.sel = null; }
     else if (s && (a === 'left' || a === 'right')) { const j = s.i + (a === 'left' ? -1 : 1); if (j >= 0 && j < s.arr.length) { [s.arr[j], s.arr[s.i]] = [s.arr[s.i], s.arr[j]]; state.sel = state.sel[0] + j; } }
     edited({ editor: true });
