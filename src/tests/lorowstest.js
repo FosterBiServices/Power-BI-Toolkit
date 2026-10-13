@@ -65,6 +65,14 @@ const { chromium } = require('playwright');
   await p.fill('#rowsB [data-r="0"][data-rn]', '3'); console.log('row 1 = 3 keeps the split', await subs());
   console.log('positions rows', await p.$$eval('#posTable tbody tr', a => a.map(r => r.cells[0].innerText).filter(t => /Orders|Sales|Customers/.test(t)).join(', ')));
   await p.locator('.designer').screenshot({ path: 'lorows_3.png' });
+  // removing a visual over several of the grid's columns leaves one empty box its size, and the row keeps its count
+  await p.click('[data-tpl=blank]'); await p.uncheck('#rbLabOn'); await p.fill('#rowsB [data-r="0"][data-rn]', '3'); await p.fill('#rowsB [data-r="1"][data-rn]', '4');
+  const before = await p.evaluate(() => { const o = state.L.items.find(o => o.id === 'g1'); return { cs: o.cs, box: [o.x, o.y, o.w, o.h].map(Math.round).join(',') }; });
+  await p.locator('#canvas [data-id="g1"]').click(); await p.click('#editor [data-act=del]');
+  const cells = () => p.evaluate(() => state.L.empty.map(e => { const o = LO.cellBox(state.L.grid, e); return [o.x, o.y, o.w, o.h].map(Math.round).join(','); }).join(' | '));
+  console.log('removed g1 (over', before.cs, 'cols, at', before.box, ') -> empty', await cells(), '| row 1 visuals', await p.inputValue('#rowsB [data-r="0"][data-rn]'), '(expect 3) | positions', await p.$$eval('#posTable tbody tr', a => a.filter(r => r.innerText.startsWith('Empty box')).length), '(expect 1)');
+  await p.fill('#rowsB [data-r="1"][data-rn]', '2'); console.log('row 2 changed, empty box kept', await cells());
+  await p.locator('#canvas .cell').first().click(); console.log('filled it', await p.evaluate(() => { const o = state.L.items.find(o => o.id === state.sel); return o.title + ' ' + [o.x, o.y, o.w, o.h].map(Math.round).join(','); }), '| empty left', await p.locator('#canvas .cell').count());
   // saved
   await p.reload(); console.log('after reload', await rows(), '| labels', await labs(), '| open', await p.evaluate(() => document.getElementById('rowsBox').open));
   await p.locator('.designer').screenshot({ path: 'lorows_1.png' });

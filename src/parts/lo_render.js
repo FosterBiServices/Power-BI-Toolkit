@@ -67,7 +67,7 @@ const LR = (() => {
       const g = ['<g id="Visual-cards">'];
       L.items.filter(o => !o.band && (o.region !== 'header' || o.type === 'card') && (o.region !== 'side' || st.side === 'none')).forEach(o => g.push(rect('Card-' + idName(o.title || LO.typeOf(o.type).label), o.x, o.y, o.w, o.h, col.card, sh + border)));
       // cells with no visual still get a (blank) container, so the page keeps its rhythm
-      (L.empty || []).forEach(([a, b]) => { const G = L.grid; g.push(rect('Card-empty-' + (a + 1) + '-' + (b + 1), G.x[a], G.y[b], G.w[a], G.h[b], col.card, sh + border)); });
+      (L.empty || []).forEach(e => { const [a, b] = e, o = LO.cellBox(L.grid, e); g.push(rect('Card-empty-' + (a + 1) + '-' + (b + 1), o.x, o.y, o.w, o.h, col.card, sh + border)); });
       g.push('</g>'); out.push(g.join(''));
     }
     if (opts.inner) return defs + out.join('');
@@ -200,7 +200,7 @@ const LR = (() => {
     }
     // grid guides sit on the page, under the visual cards, so they never tint a visual
     out.push(background(L, c, col, st, { inner: true, afterPage: guides, font: opts.font }));
-    if (opts.empty) L.empty.forEach(([a, b]) => { const g = L.grid; out.push('<g class="cell" data-cell="' + a + ',' + b + '" tabindex="0" role="button" aria-label="Add a visual in column ' + (a + 1) + ', row ' + (b + 1) + '"><rect x="' + f(g.x[a] + 2) + '" y="' + f(g.y[b] + 2) + '" width="' + f(g.w[a] - 4) + '" height="' + f(g.h[b] - 4) + '" rx="6" fill="' + col.accent + '" fill-opacity=".04" stroke="' + col.accent + '" stroke-opacity=".45" stroke-dasharray="6 5"/><text x="' + f(g.x[a] + g.w[a] / 2) + '" y="' + f(g.y[b] + g.h[b] / 2 + 5) + '" text-anchor="middle" font-size="14" fill="' + col.accent + '" font-family="' + font + '">+ Add a visual</text></g>'); });
+    if (opts.empty) L.empty.forEach(e => { const [a, b] = e, o = LO.cellBox(L.grid, e); out.push('<g class="cell" data-cell="' + e.join(',') + '" tabindex="0" role="button" aria-label="Add a visual in column ' + (a + 1) + ', row ' + (b + 1) + '"><rect x="' + f(o.x + 2) + '" y="' + f(o.y + 2) + '" width="' + f(o.w - 4) + '" height="' + f(o.h - 4) + '" rx="6" fill="' + col.accent + '" fill-opacity=".04" stroke="' + col.accent + '" stroke-opacity=".45" stroke-dasharray="6 5"/><text x="' + f(o.x + o.w / 2) + '" y="' + f(o.y + o.h / 2 + 5) + '" text-anchor="middle" font-size="14" fill="' + col.accent + '" font-family="' + font + '">+ Add a visual</text></g>'); });
     L.items.filter(o => !o.band).forEach(o => {
       const sel = opts.selected === o.id || (o.parent && opts.selected === o.parent);
       out.push('<g class="vis" data-id="' + o.id + '"' + (opts.hit ? ' tabindex="0" role="button" aria-label="' + esc((o.title || LO.typeOf(o.type).label) + ', ' + LO.typeOf(o.type).label) + '"' : '') + ' id="' + (opts.ids === false ? '' : 'Visual-' + idName(o.title || LO.typeOf(o.type).label)) + '">' + (o.tile ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="' + Math.min(+st.radius || 0, 8, o.h / 3) + '" fill="' + col.card + '"' + (st.shadow ? ' filter="url(#lo-shadow)"' : '') + '/>' : '') + sketch(o, o.logo && !(st.header === 'band' || st.header === 'bleed') ? Object.assign({}, col, { headerText: col.text }) : col, font, st.radius)
@@ -212,7 +212,7 @@ const LR = (() => {
     });
     // handles between columns and rows, for resizing on the canvas
     if (opts.handles) {
-      const g = L.grid, gap = +c.gap || 0, hw = Math.max(14, gap), gh = [], gi = L.items.filter(o => o.region === 'grid');
+      const g = L.grid, gap = +c.gap || 0, hw = Math.max(14, gap), gh = [], gi = L.items.filter(o => o.region === 'grid').concat((L.empty || []).map(e => ({ c: e[0], r: e[1], cs: e[2] || 1, rs: e[3] || 1 })));
       // runs of cells along a boundary that no visual spans across, so the handle never covers a visual
       const runs = (n, across) => { const out = []; let s0 = -1; for (let k = 0; k <= n; k++) { const free = k < n && !gi.some(o => across(o, k)); if (free && s0 < 0) s0 = k; if (!free && s0 >= 0) { out.push([s0, k - 1]); s0 = -1; } } return out; };
       const longest = (rs, pos, size) => rs.reduce((a, r) => { const len = pos[r[1]] + size[r[1]] - pos[r[0]]; return !a || len > a.len ? { a: pos[r[0]], len } : a; }, null);
