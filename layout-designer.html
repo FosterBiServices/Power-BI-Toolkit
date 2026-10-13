@@ -336,8 +336,28 @@ body.dragging{user-select:none}body.drag-c,body.drag-c *{cursor:col-resize!impor
 .sizes .note{flex-basis:100%;margin:0}
 .wts{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
 .wt{display:flex;align-items:center;gap:4px}
-.wt input{width:72px}
+.wt input{width:64px}
+.wt input.px{width:68px}
+.wt input.px.fixed{border-color:var(--accent);font-weight:600}
+.wt .unfix{border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:2px 4px;cursor:pointer}
+.wt .unfix:hover,.wt .unfix:focus-visible{color:var(--ink)}
 .chips.sm .chip{font-size:12.5px;padding:3px 9px}
+.rows-b{padding:0 14px 12px;display:flex;flex-direction:column;gap:8px}
+.rows-b .note{margin:0}
+.rb-list{display:flex;flex-direction:column;gap:6px}
+.rb{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.rb>b{min-width:48px}
+.rb .grp{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+.rb input{width:60px}
+.rb input.px{width:68px}
+.rb input.px.fixed{border-color:var(--accent);font-weight:600}
+.rb .del{margin-left:auto}
+.rb input.lbl{width:150px;font-family:var(--sans)}
+.rb-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+.rb-top .grp{display:flex;align-items:center;gap:6px}
+.rb-top input[type=number]{width:72px}
+.sub-t{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sub-t input{width:100%;font-family:var(--sans);min-width:0}
 .canvas .vis:hover rect:last-child{stroke:var(--gold);stroke-width:2}
 .canvas .vis:focus-visible rect:last-child,.canvas .cell:focus-visible rect{stroke:var(--gold);stroke-width:3;stroke-dasharray:none}
 .editor{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -560,6 +580,15 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
         </div>
       </details>
       <div class="field"><label>Start from a layout</label><div class="chips" id="templates" role="group" aria-label="Layouts"></div></div>
+      <details class="sizes-box" id="rowsBox">
+        <summary><b>Build it row by row</b> <span class="muted">(each row with its own visuals and widths)</span></summary>
+        <div class="rows-b">
+          <div class="rb-top"><label class="chk inline"><input type="checkbox" id="rbLabOn"> Label column on the left</label> <label class="grp"><span class="small muted">Width</span> <input type="number" id="rbLabW" min="40" max="600" step="1"> <span class="small muted">px</span></label></div>
+          <div id="rowsB" class="rb-list"></div>
+          <div class="btns"><button type="button" class="btn small" id="rbAdd">+ Add a row</button></div>
+          <p class="note small">Each row splits the full width its own way. Type a height in px to fix a row (the others share what&rsquo;s left). Click a visual on the page to change its type or title, or to split it into smaller boxes (a cluster of cards); empty cells become visuals here.</p>
+        </div>
+      </details>
       <div class="cfg">
         <div class="field sm"><label for="cols">Columns</label><input type="number" id="cols" min="1" max="12"></div>
         <div class="field sm"><label for="rows">Rows</label><input type="number" id="rows" min="1" max="12"></div>
@@ -568,12 +597,13 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
         <label class="chk inline"><input type="checkbox" id="showDims" checked> Show sizes</label>
         <label class="chk inline"><input type="checkbox" id="showZones"> Show 3-30-300 zones</label>
       </div>
+      <p class="note small" id="colsNote" hidden></p>
       <details class="sizes-box" id="sizesBox">
         <summary><b>Column widths and row heights</b> <span class="muted" id="sizesSum"></span></summary>
       <div class="sizes">
-        <div class="field"><label id="colWLbl">Column widths <span class="muted">(% of the grid)</span></label><div class="wts" id="colW" role="group" aria-labelledby="colWLbl"></div></div>
-        <div class="field"><label id="rowHLbl">Row heights <span class="muted">(% of the grid)</span></label><div class="wts" id="rowH" role="group" aria-labelledby="rowHLbl"></div></div>
-        <p class="note small">Or drag the handles between columns and rows on the page. Margin and gap stay the same; sizes snap to twelfths (hold Shift for any size).</p>
+        <div class="field"><label id="colWLbl">Column widths <span class="muted">(% of the grid, or px)</span></label><div class="wts" id="colW" role="group" aria-labelledby="colWLbl"></div></div>
+        <div class="field"><label id="rowHLbl">Row heights <span class="muted">(% of the grid, or px)</span></label><div class="wts" id="rowH" role="group" aria-labelledby="rowHLbl"></div></div>
+        <p class="note small">Type a size in px to fix a column or row: it keeps that size and the others share what&rsquo;s left. Empty the box (or &times;) to let it resize. Or drag the handles between columns and rows on the page. Margin and gap stay the same; sizes snap to twelfths (hold Shift for any size).</p>
       </div>
       </details>
       <div class="designer">
@@ -900,6 +930,7 @@ const LO = (() => {
     return { name: 'Sales overview', w: 1280, h: 720, margin: 10, gap: 10, rounding: 'fit',
       header: { on: true, h: 50, title: 'Sales overview', slicerW: 180, slicerH: 32, cardW: 150, cardH: 40, items: [], logo: { on: false, w: 120, h: 32, src: '', inBg: false } },
       side: { pos: 'none', w: 220, itemH: 64, items: [] },
+      labels: { on: false, w: 140, items: [] },
       strip: { on: true, h: 100, items: [] },
       grid: { cols: 3, rows: 2 }, items: [] };
   }
@@ -912,6 +943,7 @@ const LO = (() => {
     c.side = Object.assign({ pos: 'none', w: 220, itemH: 64, items: [] }, JSON.parse(JSON.stringify(s.side)));
     c.side.items = (s.side.items || []).map(([type, title]) => ({ type, title }));
     c.strip = { on: s.strip.on, h: s.strip.h, items: (s.strip.items || []).map(([type, title]) => ({ type, title })) };
+    c.labels = keep && keep.labels ? JSON.parse(JSON.stringify(keep.labels)) : { on: false, w: 140, items: [] };
     c.grid = Object.assign({}, s.grid, keep && keep.grid && keep.grid.grow ? { grow: keep.grid.grow } : {});
     c.items = s.items.map(x => Object.assign({}, x));
     return tidy(upgrade(c));
@@ -948,13 +980,29 @@ const LO = (() => {
         w.splice(i, 2, w[i] + gap + w[i + 1]); g[n]--;
       }
       const t = w.reduce((a, b) => a + b, 0), pc = w.map(v => Math.round(v / t * 10000) / 100);
-      if (w.length < px.length) g[wk] = isEven(pc) ? null : pc;
+      if (w.length < px.length) { g[wk] = isEven(pc) ? null : pc; g[wk === 'colW' ? 'colPx' : 'rowPx'] = null; }
     });
     return c;
   }
   // grid.colW / grid.rowH: relative sizes of the columns and rows; null (or the wrong length) means even
   const weightsOf = (arr, n) => Array.isArray(arr) && arr.length === n && arr.every(v => +v > 0) ? arr.map(Number) : null;
   const isEven = arr => !arr || arr.every(v => Math.abs(v - arr[0]) < 1e-9);
+  // grid.colPx / grid.rowPx: sizes in px the user fixed (null where a column or row is sized for them); null when none is fixed
+  const fixedOf = (arr, n) => Array.isArray(arr) && arr.length === n && arr.some(v => +v > 0) ? arr.map(v => +v > 0 ? +v : null) : null;
+  /* Sizes along one axis: fixed ones keep their px, the others share what's left (by their weights), so margin and gap stay put.
+     When every one is fixed, `left` is the room they leave empty (or, below 0, how far they run past the margin). */
+  function sized(total, n, gap, rounding, weights, fx){
+    if (!fx) return { s: split(total, n, gap, rounding, weights) };
+    const avail = total - gap * (n - 1), used = fx.reduce((a, v) => a + (v || 0), 0), free = [];
+    fx.forEach((v, i) => { if (v == null) free.push(i); });
+    if (!free.length) return { s: fx.slice(), all: true, left: avail - used, used, avail };
+    const fw = weights ? free.map(i => weights[i]) : free.map(() => 1), ft = fw.reduce((a, b) => a + b, 0);
+    const rest = avail - used, ws = split(rest + gap * (free.length - 1), free.length, gap, rounding, fw), s = fx.slice();
+    free.forEach((i, k) => { s[i] = Math.max(1, ws[k]); });
+    // the smallest share the others get of what's left, to work out how much bigger the page needs to be
+    return { s, rest, free: free.length, freeAt: free, used, avail, minShare: Math.min(...fw) / ft };
+  }
+  const MIN_SHARE = 0.1;   // a column or row sized for the user under 10% of the grid gets a warning
   const starts = (origin, sizes, gap) => { const out = []; let x = origin; sizes.forEach(s => { out.push(x); x += s + gap; }); return out; };
 
   // Everything on the page, positioned: [{ id, region, type, title, x, y, w, h }] + problems
@@ -964,7 +1012,7 @@ const LO = (() => {
     const hdr = c.header.on ? +c.header.h : 0;
     let top = m + (hdr ? hdr + g : 0);
     const side = c.side.pos === 'left' || c.side.pos === 'right' ? +c.side.w : 0;
-    const left = m + (c.side.pos === 'left' ? side + g : 0);
+    let left = m + (c.side.pos === 'left' ? side + g : 0);
     const right = W - m - (c.side.pos === 'right' ? side + g : 0);
     const cw = right - left;
     let limits = null;
@@ -1020,8 +1068,34 @@ const LO = (() => {
       top += sh + g;
     }
     const cols = Math.max(1, +c.grid.cols || 1), rows = Math.max(1, +c.grid.rows || 1);
-    const gw = split(cw, cols, g, R, weightsOf(c.grid.colW, cols)), gh = split(H - m - top, rows, g, R, weightsOf(c.grid.rowH, rows));
+    // row labels: a column down the left of the grid, one box beside each row
+    const lab = c.labels && c.labels.on ? Math.max(40, +c.labels.w || 140) : 0, labX = left;
+    { const d = lab ? lab + g : 0; left += d; }
+    const gcw = right - left;
+    const SC = sized(gcw, cols, g, R, weightsOf(c.grid.colW, cols), fixedOf(c.grid.colPx, cols)), SR = sized(H - m - top, rows, g, R, weightsOf(c.grid.rowH, rows), fixedOf(c.grid.rowPx, rows));
+    const gw = SC.s, gh = SR.s, roomFor = {};
+    [[SC, 'column', 'width', 'Columns', 'on the right'], [SR, 'row', 'height', 'Rows', 'at the bottom']].forEach(([S, one, dim, Many, edge]) => {
+      const px = v => Math.round(v * 100) / 100 + ' px';
+      if (S.all && Math.abs(S.left) > 0.5) probs.push({ level: 'warn', text: 'Every ' + one + ' has a ' + dim + ' set, and together they come to ' + px(S.used) + ', but the grid has ' + px(S.avail) + ' (after the margin and gaps). '
+        + (S.left > 0 ? 'That leaves ' + px(S.left) + ' empty ' + edge : 'The last ' + one + ' runs ' + px(-S.left) + ' past the margin ' + edge) + ', so the spacing isn’t even. Change a ' + dim + ', clear one so it fills the rest, or choose “Fit to the page”.' });
+      else if (S.free) {
+        /* a column (or row) sized for the user under 10% of the grid: say which, and how big the page needs to be
+           for it to get 10% while the set sizes stay as they are */
+        const small = S.freeAt.filter(i => S.s[i] < S.avail * MIN_SHARE);
+        if (small.length) {
+          const need = S.minShare > MIN_SHARE ? S.used * S.minShare / (S.minShare - MIN_SHARE) : null, ax = one === 'column' ? 'w' : 'h';
+          const to = need ? Math.ceil((+c[ax] + need - S.avail) / 10) * 10 : null;
+          if (to) roomFor[ax] = to;
+          const lo = Math.min(...small.map(i => S.s[i]));
+          probs.push({ level: S.rest <= 0 ? 'err' : 'warn', text: (small.length === 1 ? Many.slice(0, -1) : Many) + ' ' + small.map(i => i + 1).join(', ') + (small.length === 1 ? ' is' : ' are') + ' only ' + px(lo) + ' (' + Math.round(lo / S.avail * 1000) / 10 + '% of the grid), because the ' + dim + 's you set take ' + px(S.used) + ' of ' + px(S.avail) + '. '
+            + (to ? 'Make the page at least ' + to + ' px ' + (ax === 'w' ? 'wide' : 'tall') + ' (“Make room” under ' + one + ' ' + dim + 's), or make a set ' + dim + ' smaller.' : 'Make a set ' + dim + ' smaller.') });
+        }
+      }
+    });
     const gx = starts(left, gw, g), gy = starts(top, gh, g);
+    // a label can cover several rows (a group of rows under one name); the rows it covers have no label of their own
+    if (lab) for (let r = 0; r < rows; ) { const s = labelSpan(c, r, rows);
+      out.push({ id: 'l' + r, region: 'labels', idx: r, type: 'textbox', title: labelOf(c, r), x: labX, y: gy[r], w: lab, h: gy[r + s - 1] + gh[r + s - 1] - gy[r], rs: s }); r += s; }
     const grid = { cols, rows, x: gx, y: gy, w: gw, h: gh, left, top, right, bottom: H - m };
     const taken = {};
     c.items.forEach((x, i) => {
@@ -1029,15 +1103,75 @@ const LO = (() => {
       if (c0 >= cols || r0 >= rows) { probs.push({ level: 'warn', text: '“' + (x.title || typeOf(x.type).label) + '” is outside the ' + cols + ' × ' + rows + ' grid, so it’s left out.' }); return; }
       const c1 = Math.min(cols, c0 + cs) - 1, r1 = Math.min(rows, r0 + rs) - 1;
       for (let a = c0; a <= c1; a++) for (let b = r0; b <= r1; b++) { const k = a + ',' + b; if (taken[k] !== undefined) probs.push({ level: 'warn', text: '“' + (x.title || typeOf(x.type).label) + '” overlaps “' + (c.items[taken[k]].title || typeOf(c.items[taken[k]].type).label) + '”.' }); taken[k] = i; }
-      out.push({ id: 'g' + i, region: 'grid', idx: i, type: x.type, title: x.title, zone: x.zone, x: gx[c0], y: gy[r0], w: gx[c1] + gw[c1] - gx[c0], h: gy[r1] + gh[r1] - gy[r0], c: c0, r: r0, cs: c1 - c0 + 1, rs: r1 - r0 + 1 });
+      const box = { id: 'g' + i, region: 'grid', idx: i, type: x.type, title: x.title, zone: x.zone, x: gx[c0], y: gy[r0], w: gx[c1] + gw[c1] - gx[c0], h: gy[r1] + gh[r1] - gy[r0], c: c0, r: r0, cs: c1 - c0 + 1, rs: r1 - r0 + 1 };
+      // a cell split into smaller boxes (a cluster of cards): same gap between them, each its own visual
+      const sc = x.sub ? Math.max(1, Math.min(6, x.sub.cols | 0 || 1)) : 1, sr = x.sub ? Math.max(1, Math.min(6, x.sub.rows | 0 || 1)) : 1;
+      if (sc * sr < 2) { out.push(box); return; }
+      const sw = split(box.w, sc, g, R), sh = split(box.h, sr, g, R), sx = starts(box.x, sw, g), sy = starts(box.y, sh, g);
+      for (let b = 0; b < sr; b++) for (let a = 0; a < sc; a++) { const k = b * sc + a, s = (x.sub.items || [])[k] || {};
+        out.push(Object.assign({}, box, { id: 'g' + i + '.' + k, parent: 'g' + i, sub: k, type: s.type || x.type, title: s.title != null ? s.title : (x.title || typeOf(x.type).label) + ' ' + (k + 1), x: sx[a], y: sy[b], w: sw[a], h: sh[b] })); }
+      if (Math.min(...sw, ...sh) < 30) probs.push({ level: 'warn', text: '“' + (x.title || typeOf(x.type).label) + '” is split into boxes under 30 px. Split it into fewer, or make it bigger.' });
     });
     // sanity
     if (gw.some(v => v < 60) || gh.some(v => v < 60)) probs.push({ level: 'warn', text: 'Some grid cells are under 60 px (' + Math.min(...gw) + ' × ' + Math.min(...gh) + '). Use fewer columns or rows, or a smaller gap.' });
-    if (cw <= 0 || H - m - top <= 0) probs.push({ level: 'err', text: 'The header, strip and side panel leave no room for the grid.' });
-    const over = out.filter(o => !o.band && (o.x + o.w > W + 0.01 || o.y + o.h > H + 0.01));
+    if (gcw <= 0 || H - m - top <= 0) probs.push({ level: 'err', text: 'The header, strip and side panel leave no room for the grid.' });
+    const over = R !== 'roundup' || (SC.all && SC.left < 0) || (SR.all && SR.left < 0) ? [] : out.filter(o => !o.band && (o.x + o.w > W + 0.01 || o.y + o.h > H + 0.01));
     if (over.length) probs.push({ level: 'info', text: 'Rounding up puts ' + over.length + ' visual' + (over.length === 1 ? '' : 's') + ' up to ' + Math.ceil(Math.max(...over.map(o => Math.max(o.x + o.w - W, o.y + o.h - H)))) + ' px past the page edge. Choose “Fill exactly” to keep everything inside.' });
     const empty = []; for (let a = 0; a < cols; a++) for (let b = 0; b < rows; b++) if (taken[a + ',' + b] === undefined) empty.push([a, b]);
-    return { items: out, grid, probs, empty, limits };
+    return { items: out, grid, probs, empty, limits, roomFor };
+  }
+
+  /* ---------- row by row: each row with its own visuals and widths ---------- */
+  // the page as rows: per grid row, its pieces left to right (visuals, or empty cells: idx null) and where each ends (px from the grid's left)
+  function rowsOf(c){
+    const L = layout(c), G = L.grid, room = G.right - G.left, out = [];
+    for (let r = 0; r < G.rows; r++) {
+      const ps = L.items.filter(o => o.region === 'grid' && !o.sub && o.r <= r && r < o.r + o.rs).map(o => ({ c: o.c, cs: o.cs, idx: o.idx }))
+        .concat(L.empty.filter(e => e[1] === r).map(e => ({ c: e[0], cs: 1, idx: null }))).sort((a, b) => a.c - b.c);
+      const pieces = []; let next = 0;
+      ps.forEach(p => { if (p.c >= next) { pieces.push(p); next = p.c + p.cs; } });
+      const ends = pieces.map((p, k) => k === pieces.length - 1 ? room : G.x[p.c + p.cs - 1] + G.w[p.c + p.cs - 1] - G.left);
+      out.push({ pieces, ends, widths: pieces.map((p, k) => ends[k] - (k ? ends[k - 1] + (+c.gap || 0) : 0)) });
+    }
+    return out;
+  }
+  /* Build the grid from rows: each row is { ends } (px, as rowsOf gives) or { n, w } (how many, relative widths; even when left out),
+     plus items: what goes in each piece ({ type, title, zone }, or null for an empty cell).
+     Columns are cut wherever any row has a gap, so every row keeps its own widths; a visual over the same columns in rows
+     next to each other (the same object) stays one visual that spans them. Row heights are left as they are. */
+  function byRows(c, rows){
+    const G = layout(c).grid, room = G.right - G.left, gap = +c.gap || 0;
+    const endsOf = r => {
+      if (r.ends) return r.ends.slice(0, -1).concat([room]);
+      const n = Math.max(1, Math.min(12, r.n | 0 || 1)), ws = split(room, n, gap, 'fit', weightsOf(r.w, n)); let x = 0;
+      return ws.map((v, k) => { x += v; const e = k === n - 1 ? room : x; x += gap; return e; });
+    };
+    const E0 = rows.map(endsOf);
+    // every row's cuts on one line; cuts closer than the gap (plus a little) share one, so no column is a sliver
+    const E = [];
+    E0.flat().filter(e => e < room).sort((a, b) => a - b).forEach(e => { if (!E.length ? e > gap + 12 : e - E[E.length - 1] > gap + 12) E.push(e); });
+    E.push(room);
+    const at = e => E.reduce((best, v, j) => Math.abs(v - e) < Math.abs(E[best] - e) ? j : best, 0);
+    const colw = E.map((e, j) => e - (j ? E[j - 1] + gap : 0));
+    const items = [], last = new Map();
+    E0.forEach((ends, r) => {
+      let c0 = 0;
+      ends.forEach((e, k) => {
+        const c1 = Math.max(c0, at(e)), src = (rows[r].items || [])[k];
+        if (c1 < c0 || (k && at(ends[k - 1]) === c1)) return;   // squeezed out by a neighbouring cut
+        if (src) {
+          const prev = last.get(src);
+          if (prev && prev.r + prev.rs === r && prev.c === c0 && prev.c + prev.cs - 1 === c1) prev.rs++;
+          // a visual that spanned rows now cut differently stays in its first row; the rest of it becomes a new visual
+          else { const it = Object.assign({}, prev ? { type: 'clusteredColumnChart', title: 'New visual' } : src, { c: c0, r, cs: c1 - c0 + 1, rs: 1 }); items.push(it); if (!prev) last.set(src, it); }
+        }
+        c0 = c1 + 1;
+      });
+    });
+    const g = c.grid;
+    g.cols = E.length; g.rows = rows.length; g.colW = isEven(colw) ? null : colw; g.colPx = null;
+    c.items = items;
+    return c;
   }
 
   let measure = (text, size) => String(text).length * size * 0.56;
@@ -1067,7 +1201,12 @@ const LO = (() => {
     const fill = (t, n) => { const cur = now(t).slice(0, n); for (let i = cur.length; i < n; i++) cur.push({ type: t, title: HDR_NAMES[t][i % 8] }); return cur; };
     h.items = fill('card', Math.max(0, Math.min(8, cards | 0))).concat(fill('slicer', Math.max(0, Math.min(8, slicers | 0))));
   }
+  const labelSpan = (c, r, rows) => { const it = ((c.labels || {}).items || [])[r]; return Math.max(1, Math.min(rows - r, it && +it.span || 1)); };
+  // the row whose label covers row r
+  const labelAt = (c, r) => { const rows = Math.max(1, +c.grid.rows || 1); for (let k = 0; k < rows; k += labelSpan(c, k, rows)) if (r < k + labelSpan(c, k, rows)) return k; return r; };
+  const labelOf = (c, r) => { const it = ((c.labels || {}).items || [])[r]; return it && it.title != null ? it.title : 'Section ' + (r + 1); };
   function upgrade(c){
+    c.labels = Object.assign({ on: false, w: 140, items: [] }, c.labels || {});
     const h = c.header = Object.assign({ slicerW: 180, slicerH: 32, cardW: 150, cardH: 40, items: [], logo: { on: false, w: 120, h: 32, src: '', inBg: false } }, c.header || {});
     if (h.itemW && !c.header._m) { h.slicerW = h.itemW; h.slicerH = h.itemH || 32; }
     delete h.itemW; delete h.itemH;
@@ -1076,7 +1215,7 @@ const LO = (() => {
     return c;
   }
 
-  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, weightsOf, isEven, tidy, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
+  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, sized, weightsOf, fixedOf, isEven, tidy, layout, rowsOf, byRows, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure, labelOf, labelSpan, labelAt };
 })();
 
 
@@ -1245,6 +1384,11 @@ const LR = (() => {
       const bh = Math.min(28, o.h - pad * 2 - 18);
       if (bh > 8) { s.push('<rect x="' + f(o.x + pad) + '" y="' + f(o.y + pad + 18) + '" width="' + f(o.w - 2 * pad) + '" height="' + f(bh) + '" rx="4" fill="' + col.card + '" stroke="' + col.muted + '" stroke-opacity=".5"/>');
         s.push(t(o.x + pad + 8, o.y + pad + 18 + bh / 2 + 4, 'All', 11, col.text), '<path d="M' + f(o.x + o.w - pad - 16) + ' ' + f(o.y + pad + 18 + bh / 2 - 2) + ' l5 5 l5 -5" fill="none" stroke="' + col.muted + '" stroke-width="1.5"/>'); }
+    } else if (o.region === 'labels') {
+      // row label: a small icon square over the section name
+      const ic = Math.max(0, Math.min(28, o.w * 0.25, o.h - 30)), fs = Math.max(10, Math.min(13, o.w / 10)), cy = o.y + o.h / 2 - (ic ? (ic + 6 + fs) / 2 : -fs / 3);
+      if (ic >= 12) s.push('<rect x="' + f(o.x + o.w / 2 - ic / 2) + '" y="' + f(cy) + '" width="' + f(ic) + '" height="' + f(ic) + '" rx="4" fill="' + d[0] + '"/>');
+      s.push(t(o.x + o.w / 2, ic >= 12 ? cy + ic + 6 + fs : o.y + o.h / 2 + fs / 3, o.title || 'Section', fs, col.text, 'middle', 600));
     } else if (kind === 'text') {
       s.push(t(o.x + pad, o.y + o.h / 2 + 6, o.title || 'Text', Math.max(12, Math.min(22, o.h * 0.4)), col.headerText || col.text, '', 700));
     } else if (kind === 'button') {
@@ -1278,7 +1422,7 @@ const LR = (() => {
     out.push(background(L, c, col, st, { inner: true, afterPage: guides, font: opts.font }));
     if (opts.empty) L.empty.forEach(([a, b]) => { const g = L.grid; out.push('<g class="cell" data-cell="' + a + ',' + b + '" tabindex="0" role="button" aria-label="Add a visual in column ' + (a + 1) + ', row ' + (b + 1) + '"><rect x="' + f(g.x[a] + 2) + '" y="' + f(g.y[b] + 2) + '" width="' + f(g.w[a] - 4) + '" height="' + f(g.h[b] - 4) + '" rx="6" fill="' + col.accent + '" fill-opacity=".04" stroke="' + col.accent + '" stroke-opacity=".45" stroke-dasharray="6 5"/><text x="' + f(g.x[a] + g.w[a] / 2) + '" y="' + f(g.y[b] + g.h[b] / 2 + 5) + '" text-anchor="middle" font-size="14" fill="' + col.accent + '" font-family="' + font + '">+ Add a visual</text></g>'); });
     L.items.filter(o => !o.band).forEach(o => {
-      const sel = opts.selected === o.id;
+      const sel = opts.selected === o.id || (o.parent && opts.selected === o.parent);
       out.push('<g class="vis" data-id="' + o.id + '"' + (opts.hit ? ' tabindex="0" role="button" aria-label="' + esc((o.title || LO.typeOf(o.type).label) + ', ' + LO.typeOf(o.type).label) + '"' : '') + ' id="' + (opts.ids === false ? '' : 'Visual-' + idName(o.title || LO.typeOf(o.type).label)) + '">' + (o.tile ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="' + Math.min(+st.radius || 0, 8, o.h / 3) + '" fill="' + col.card + '"' + (st.shadow ? ' filter="url(#lo-shadow)"' : '') + '/>' : '') + sketch(o, o.logo && !(st.header === 'band' || st.header === 'bleed') ? Object.assign({}, col, { headerText: col.text }) : col, font, st.radius)
         + (opts.hit ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" fill="transparent"' + (sel ? ' stroke="' + col.select + '" stroke-width="3"' : '') + (st.radius ? ' rx="' + st.radius + '"' : '') + '/>' : '') + '</g>');
       const zone = o.zone || (o.type === 'slicer' ? '30' : '');
@@ -1880,38 +2024,77 @@ function renderCanvas(){
 let spanBase = null;
 function fitSpans(ax, to){
   const sp = ax === 'c' ? 'cs' : 'rs', g = state.cfg.grid, k = ax + (state.cfg.items.length);
-  if (!spanBase || spanBase.k !== k) spanBase = { k, w: g[ax === 'c' ? 'colW' : 'rowH'], n: +g[ax === 'c' ? 'cols' : 'rows'], spans: state.cfg.items.map(it => Math.max(1, it[sp] || 1)) };
+  if (!spanBase || spanBase.k !== k) spanBase = { k, w: g[ax === 'c' ? 'colW' : 'rowH'], px: g[AX[ax][2]], n: +g[ax === 'c' ? 'cols' : 'rows'], spans: state.cfg.items.map(it => Math.max(1, it[sp] || 1)) };
   state.cfg.items.forEach((it, i) => { const at = it[ax], n = spanBase.spans[i];
     it[sp] = state.cfg.grid.grow === 'stretch' && at === 0 && n === spanBase.n ? to : at < to && at + n > to ? to - at : n; });
   // keep the sizes already set; a new column (or row) gets the average share
   const wk = ax === 'c' ? 'colW' : 'rowH', w0 = LO.weightsOf(spanBase.w, spanBase.n);
   if (!w0) g[wk] = null;
   else { const avg = w0.reduce((a, b) => a + b, 0) / w0.length, w = w0.slice(0, to); while (w.length < to) w.push(avg); setW(ax, w.map(v => v / w.reduce((a, b) => a + b, 0) * 100)); }
+  // fixed sizes stay with their column (or row); a new one is sized for the user
+  const f0 = LO.fixedOf(spanBase.px, spanBase.n), f = f0 ? f0.slice(0, to) : null;
+  if (f) while (f.length < to) f.push(null);
+  g[AX[ax][2]] = f && f.some(v => v != null) ? f : null;
 }
 const PRESETS = { 2: [['1/3 + 2/3', [1, 2]], ['2/3 + 1/3', [2, 1]], ['1/4 + 3/4', [1, 3]], ['3/4 + 1/4', [3, 1]]], 3: [['1/2 + 1/4 + 1/4', [2, 1, 1]], ['1/4 + 1/2 + 1/4', [1, 2, 1]], ['1/4 + 1/4 + 1/2', [1, 1, 2]], ['1/6 + 1/3 + 1/2', [1, 2, 3]]], 4: [['2/5 + 1/5 × 3', [2, 1, 1, 1]], ['1/5 × 3 + 2/5', [1, 1, 1, 2]]] };
-const AX = { c: ['cols', 'colW'], r: ['rows', 'rowH'] };
-// the grid's column (c) or row (r) sizes as percentages that add up to 100
-function pcts(ax){ const g = state.cfg.grid, n = +g[AX[ax][0]], w = LO.weightsOf(g[AX[ax][1]], n) || Array(n).fill(1), t = w.reduce((a, b) => a + b, 0); return w.map(v => v / t * 100); }
+const AX = { c: ['cols', 'colW', 'colPx'], r: ['rows', 'rowH', 'rowPx'] };
+// the sizes the user fixed in px (null where sized for them), or null when none is
+const fixed = ax => { const g = state.cfg.grid; return LO.fixedOf(g[AX[ax][2]], +g[AX[ax][0]]); };
+// the grid's column (c) or row (r) sizes in px, as laid out now
+const pxNow = ax => { const G = state.L && state.L.grid; return G ? (ax === 'c' ? G.w : G.h) : []; };
+// the grid's column (c) or row (r) sizes as percentages that add up to 100 (from the page when some are fixed)
+function pcts(ax){
+  const g = state.cfg.grid, n = +g[AX[ax][0]], px = pxNow(ax);
+  const w = fixed(ax) && px.length === n ? px : LO.weightsOf(g[AX[ax][1]], n) || Array(n).fill(1), t = w.reduce((a, b) => a + b, 0);
+  return w.map(v => t > 0 ? v / t * 100 : 100 / n);
+}
 function setW(ax, arr){ const g = state.cfg.grid; const r = arr.map(v => Math.round(v * 100) / 100); g[AX[ax][1]] = LO.isEven(r) ? null : r; }
-// one column (or row) to `pct` %, the others sharing the rest in their current proportions
+// one column (or row) to `pct` %, the others not fixed sharing the rest in their current proportions
 function setShare(ax, i, pct){
-  const p = pcts(ax), n = p.length; if (n < 2) return;
-  const v = Math.max(3, Math.min(100 - 3 * (n - 1), pct)), rest = 100 - p[i];
-  setW(ax, p.map((x, j) => j === i ? v : rest > 0 ? x / rest * (100 - v) : (100 - v) / (n - 1)));
+  const p = pcts(ax), fx = fixed(ax), F = p.map((x, j) => j).filter(j => !fx || fx[j] == null);
+  if (F.length < 2 || !F.includes(i)) return;
+  const tot = F.reduce((a, j) => a + p[j], 0), v = Math.max(3, Math.min(tot - 3 * (F.length - 1), pct)), rest = tot - p[i];
+  setW(ax, p.map((x, j) => !F.includes(j) ? x : j === i ? v : rest > 0 ? x / rest * (tot - v) : (tot - v) / (F.length - 1)));
+}
+// fix one column (or row) at `v` px, or (null) let it be sized again; the rest don't move until the next change
+function setPx(ax, i, v){
+  const g = state.cfg.grid, n = +g[AX[ax][0]], p = pcts(ax), f = fixed(ax) || Array(n).fill(null);
+  f[i] = v == null ? null : Math.max(20, Math.round(v * 100) / 100);
+  setW(ax, p); g[AX[ax][2]] = f.some(x => x != null) ? f : null;
+}
+// every size fixed but not filling the grid: scale them to fit, whole pixels
+function fitFixed(ax){
+  const f = fixed(ax), G = state.L.grid, n = f.length, gap = +state.cfg.gap || 0;
+  const room = (ax === 'c' ? G.right - G.left : G.bottom - G.top);
+  state.cfg.grid[AX[ax][2]] = LO.split(room, n, gap, 'fit', f);
 }
 const fmtPct = v => String(Math.round(v * 10) / 10);
 function renderSizes(){
-  const sum = ax => { const p = pcts(ax); return p.length < 2 ? '1' : LO.isEven(p) ? p.length + ' even' : p.map(v => Math.round(v)).join(' / '); };
-  $('sizesSum').textContent = '(columns ' + sum('c') + ', rows ' + sum('r') + ')';
+  const sum = ax => { const p = pcts(ax), f = fixed(ax), k = f ? f.filter(v => v != null).length : 0; return (p.length < 2 ? '1' : LO.isEven(p) ? p.length + ' even' : p.map(v => Math.round(v)).join(' / ')) + (k ? ', ' + k + ' fixed' : ''); };
+  // rows split their own way put more columns in the grid underneath than any row shows: say so instead of listing them
+  const cols = +state.cfg.grid.cols, most = Math.max(1, ...LO.rowsOf(state.cfg).map(r => r.pieces.length)), built = cols > most;
+  $('colsNote').hidden = !built;
+  if (built) $('colsNote').textContent = 'Your rows are split different ways, so the grid underneath has ' + cols + ' narrow columns where their edges line up. Change a row\u2019s visuals and widths in Build it row by row.';
+  $('sizesSum').textContent = '(' + (built ? cols + ' columns from your rows' : 'columns ' + sum('c')) + ', rows ' + sum('r') + ')';
   ['c', 'r'].forEach(ax => {
-    const box = $(ax === 'c' ? 'colW' : 'rowH'), p = pcts(ax), n = p.length, name = ax === 'c' ? 'Column' : 'Row';
+    const box = $(ax === 'c' ? 'colW' : 'rowH'), p = pcts(ax), n = p.length, name = ax === 'c' ? 'Column' : 'Row', dim = ax === 'c' ? 'width' : 'height';
+    const fx = fixed(ax), px = pxNow(ax), nFree = fx ? fx.filter(v => v == null).length : n, lockPct = i => (fx && fx[i] != null) || nFree < 2;
     const a = document.activeElement;
-    if (a && box.contains(a) && a.matches('input')) { box.querySelectorAll('input[data-i]').forEach(el => { if (el !== a) el.value = fmtPct(p[+el.dataset.i]); }); return; }
+    if (a && box.contains(a) && a.matches('input')) { box.querySelectorAll('input[data-i]').forEach(el => { const i = +el.dataset.i;
+      if (el.dataset.px != null) { el.placeholder = px[i] != null ? Math.round(px[i]) : ''; el.classList.toggle('fixed', !!(fx && fx[i] != null)); }
+      else { if (el !== a) el.value = fmtPct(p[i]); el.disabled = lockPct(i); } }); return; }
     if (n < 2) { box.innerHTML = '<span class="small muted">One ' + name.toLowerCase() + ': it fills the grid.</span>'; return; }
     const g = state.cfg.grid, cur = LO.weightsOf(g[AX[ax][1]], n);
-    const same = w => { if (!cur) return false; const t = w.reduce((x, y) => x + y, 0), tc = cur.reduce((x, y) => x + y, 0); return w.every((v, j) => Math.abs(v / t - cur[j] / tc) < 0.002); };
-    box.innerHTML = p.map((v, i) => '<label class="wt"><span class="small muted">' + (i + 1) + '</span><input type="number" data-ax="' + ax + '" data-i="' + i + '" min="3" max="' + (100 - 3 * (n - 1)) + '" step="any" value="' + fmtPct(v) + '" aria-label="' + name + ' ' + (i + 1) + ' (% of the grid)"></label>').join('')
-      + '<span class="chips sm"><button type="button" class="chip' + (!cur ? ' on' : '') + '" data-ax="' + ax + '" data-pre="even">Even</button>' + (PRESETS[n] || []).map(([lbl, w]) => '<button type="button" class="chip" aria-pressed="' + same(w) + '" data-ax="' + ax + '" data-pre="' + w.join(',') + '">' + esc(lbl) + '</button>').join('') + '</span>';
+    const same = w => { if (!cur || fx) return false; const t = w.reduce((x, y) => x + y, 0), tc = cur.reduce((x, y) => x + y, 0); return w.every((v, j) => Math.abs(v / t - cur[j] / tc) < 0.002); };
+    const room = state.L && state.L.roomFor && state.L.roomFor[ax === 'c' ? 'w' : 'h'];
+    const S = state.L && state.L.grid, misfit = fx && !nFree && S && Math.abs((ax === 'c' ? S.right - S.left : S.bottom - S.top) - (+state.cfg.gap || 0) * (n - 1) - fx.reduce((x, y) => x + y, 0)) > 0.5;
+    box.innerHTML = p.map((v, i) => { const on = fx && fx[i] != null, lbl = name + ' ' + (i + 1);
+      return '<span class="wt' + (on ? ' on' : '') + '"><span class="small muted">' + (i + 1) + '</span><input type="number" data-ax="' + ax + '" data-i="' + i + '" min="3" max="' + (100 - 3 * (n - 1)) + '" step="any" value="' + fmtPct(v) + '"' + (lockPct(i) ? ' disabled' : '') + ' aria-label="' + lbl + ' (% of the grid)"><span class="small muted">%</span>'
+        + '<input type="number" class="px' + (on ? ' fixed' : '') + '" data-px data-ax="' + ax + '" data-i="' + i + '" min="20" step="1" value="' + (on ? fx[i] : '') + '" placeholder="' + (px[i] != null ? Math.round(px[i]) : '') + '" aria-label="' + lbl + ' ' + dim + ' in px (empty: sized for you)"><span class="small muted">px</span>'
+        + (on ? '<button type="button" class="unfix" data-unfix data-ax="' + ax + '" data-i="' + i + '" aria-label="Let ' + name.toLowerCase() + ' ' + (i + 1) + ' resize" title="Let it resize">&times;</button>' : '') + '</span>'; }).join('')
+      + '<span class="chips sm"><button type="button" class="chip' + (!cur && !fx ? ' on' : '') + '" data-ax="' + ax + '" data-pre="even">Even</button>' + (PRESETS[n] || []).map(([lbl, w]) => '<button type="button" class="chip" aria-pressed="' + same(w) + '" data-ax="' + ax + '" data-pre="' + w.join(',') + '">' + esc(lbl) + '</button>').join('')
+      + (misfit ? '<button type="button" class="chip" data-ax="' + ax + '" data-pre="fit">Fit to the page</button>' : '')
+      + (room ? '<button type="button" class="chip" data-ax="' + ax + '" data-pre="room">Make room: page ' + room + ' px ' + (ax === 'c' ? 'wide' : 'tall') + '</button>' : '') + '</span>';
   });
 }
 // drag a handle between two columns (or rows) to share their room differently
@@ -1926,6 +2109,52 @@ function moveGutter(ax, i, toPx, free){
   if (end - start < 2 * min) return;
   b = Math.max(start + min, Math.min(end - min, b));
   const q = p.slice(); q[i] = b - start; q[i + 1] = end - b; setW(ax, q);
+  // a fixed column (or row) beside the handle keeps being fixed, at its new size
+  const f = fixed(ax); if (f) { [i, i + 1].forEach(j => { if (f[j] != null) f[j] = Math.max(20, Math.round(q[j] / 100 * availPx)); }); state.cfg.grid[AX[ax][2]] = f; }
+}
+/* ---------- row by row ---------- */
+// change the page's rows: fn gets every row as { ends, items } (as on the page now) and edits them; the grid is rebuilt from that
+function rowsEdit(fn){
+  // empty cells become visuals: an empty cell has no width of its own, so it would split up when another row adds columns
+  const rows = LO.rowsOf(state.cfg).map(r => ({ ends: r.ends, items: r.pieces.map(p => p.idx == null ? newVisual() : state.cfg.items[p.idx]) }));
+  fn(rows); LO.byRows(state.cfg, rows); state.sel = null; spanBase = null; leaveExample(); refresh({ editor: true });
+}
+const newVisual = () => ({ type: 'clusteredColumnChart', title: 'New visual' });
+function renderRows(){
+  const box = $('rowsB'), a = document.activeElement, R = LO.rowsOf(state.cfg), ph = pcts('r'), fr = fixed('r'), px = pxNow('r'), n = R.length;
+  const lockH = i => (fr && fr[i] != null) || n < 2 || (fr && fr.filter(v => v == null).length < 2);
+  if (a && box.contains(a) && a.matches('input')) {
+    box.querySelectorAll('input').forEach(el => { if (el === a) return; const r = +el.dataset.r;
+      if (el.dataset.rw != null) { const w = R[r] && R[r].widths, t = w ? w.reduce((x, y) => x + y, 0) : 0; if (w && w[+el.dataset.rw] != null) el.value = fmtPct(w[+el.dataset.rw] / t * 100); }
+      else if (el.dataset.rh != null) { el.value = fmtPct(ph[r]); el.disabled = lockH(r); }
+      else if (el.dataset.rpx != null) el.placeholder = px[r] != null ? Math.round(px[r]) : ''; });
+    return;
+  }
+  const lb = state.cfg.labels;
+  $('rbLabOn').checked = !!lb.on; if (document.activeElement !== $('rbLabW')) $('rbLabW').value = lb.w; $('rbLabW').disabled = !lb.on;
+  box.innerHTML = R.map((row, r) => { const t = row.widths.reduce((x, y) => x + y, 0), on = fr && fr[r] != null, nm = 'Row ' + (r + 1);
+    return '<div class="rb" data-row="' + r + '"><b>' + nm + '</b>'
+      + (!lb.on ? '' : LO.labelAt(state.cfg, r) !== r ? '<span class="small muted grp">Label: with row ' + (LO.labelAt(state.cfg, r) + 1) + '</span>'
+        : '<label class="grp"><span class="small muted">Label</span><input type="text" class="lbl" data-r="' + r + '" data-rlab value="' + esc(LO.labelOf(state.cfg, r)) + '" aria-label="' + nm + ' label" autocomplete="off"></label>'
+          + (n - r > 1 ? '<label class="grp"><span class="small muted">over</span><input type="number" min="1" max="' + (n - r) + '" data-r="' + r + '" data-rspan value="' + LO.labelSpan(state.cfg, r, n) + '" aria-label="' + nm + ' label: how many rows it covers"><span class="small muted">rows</span></label>' : ''))
+      + '<label class="grp"><span class="small muted">Visuals</span><input type="number" min="1" max="12" data-r="' + r + '" data-rn value="' + row.pieces.length + '" aria-label="' + nm + ': how many visuals"></label>'
+      + (row.pieces.length > 1 ? '<span class="grp" role="group" aria-label="' + nm + ' widths"><span class="small muted">Widths %</span>' + row.widths.map((w, k) => '<input type="number" min="3" max="97" step="any" data-r="' + r + '" data-rw="' + k + '" value="' + fmtPct(w / t * 100) + '" aria-label="' + nm + ', visual ' + (k + 1) + ' width (% of the row)">').join('')
+        + '<button type="button" class="chip" data-r="' + r + '" data-reven>Even</button></span>' : '')
+      + '<span class="grp"><span class="small muted">Height</span><input type="number" min="3" step="any" data-r="' + r + '" data-rh value="' + fmtPct(ph[r]) + '"' + (lockH(r) ? ' disabled' : '') + ' aria-label="' + nm + ' height (% of the grid)"><span class="small muted">%</span>'
+      + '<input type="number" class="px' + (on ? ' fixed' : '') + '" min="20" step="1" data-r="' + r + '" data-rpx value="' + (on ? fr[r] : '') + '" placeholder="' + (px[r] != null ? Math.round(px[r]) : '') + '" aria-label="' + nm + ' height in px (empty: sized for you)"><span class="small muted">px</span></span>'
+      + (n > 1 ? '<button type="button" class="btn small del" data-r="' + r + '" data-rdel>Remove</button>' : '') + '</div>'; }).join('');
+}
+// row heights follow a row being added or removed (sizes and fixed px)
+// one label over `v` rows from row r (the rows it takes in lose their own label)
+function setLabelSpan(r, v){
+  const c = state.cfg, L = c.labels, n = +c.grid.rows;
+  while (L.items.length <= r) L.items.push({ title: LO.labelOf(c, L.items.length) });
+  L.items[r].span = Math.max(1, Math.min(n - r, Math.round(v)));
+  leaveExample(); refresh({ editor: true });
+}
+function rowSizes(fn){
+  const g = state.cfg.grid, n = +g.rows, w = (LO.weightsOf(g.rowH, n) || Array(n).fill(1)).slice(), f = LO.fixedOf(g.rowPx, n), px = f ? f.slice() : Array(n).fill(null);
+  fn(w, px); g.rowH = LO.isEven(w) ? null : w; g.rowPx = px.some(v => v != null) ? px : null;
 }
 function typeSelect(id, cur, only){
   const list = only ? LO.TYPES.filter(t => only.includes(t[0])) : LO.TYPES;
@@ -1934,6 +2163,7 @@ function typeSelect(id, cur, only){
 function selItem(){
   const s = state.sel, c = state.cfg; if (!s) return null;
   if (s === 'header') return c.header.on ? { region: 'header', item: c.header } : null;
+  if (s[0] === 'l') { const i = +s.slice(1), L = c.labels; if (!L.on || i >= +c.grid.rows || LO.labelAt(c, i) !== i) return null; while (L.items.length <= i) L.items.push({ title: LO.labelOf(c, L.items.length) }); return { region: 'l', i, item: L.items[i], arr: L.items }; }
   const i = +s.slice(1), arr = s[0] === 'g' ? c.items : s[0] === 't' ? c.strip.items : s[0] === 's' ? c.side.items : s[0] === 'h' ? (c.header.items = c.header.items || []) : null;
   return arr && arr[i] ? { region: s[0], i, item: arr[i], arr } : null;
 }
@@ -1942,6 +2172,9 @@ function renderEditor(){
   const quick = '<div class="quick">' + (c.strip.on ? '<button type="button" class="btn small" data-act="addStrip">+ Card in the strip</button>' : '') + (c.side.pos !== 'none' ? '<button type="button" class="btn small" data-act="addSide">+ Item in the side panel</button>' : '') + '</div>';
   if (!s) { state.sel = null; $('editor').innerHTML = '<h3>Edit</h3><p class="note small">Click a visual on the page to change its type, title or span, or click an empty cell to add a visual there.</p>' + quick; return; }
   if (s.region === 'header') { $('editor').innerHTML = '<h3>Header</h3><div class="field"><label for="edTitle">Title</label><input type="text" id="edTitle" value="' + esc(c.header.title || '') + '" autocomplete="off"></div><p class="note small">Its height is in Step 1.</p>' + quick; return; }
+  if (s.region === 'l') { const rows = +c.grid.rows, sp = LO.labelSpan(c, s.i, rows);
+    $('editor').innerHTML = '<h3>' + (sp > 1 ? 'Rows ' + (s.i + 1) + '\u2013' + (s.i + sp) : 'Row ' + (s.i + 1)) + ' label</h3><div class="field"><label for="edTitle">Label</label><input type="text" id="edTitle" value="' + esc(s.item.title || '') + '" autocomplete="off"></div>'
+      + (rows - s.i > 1 ? '<div class="field sm"><label for="edLs">Rows it covers</label><input type="number" id="edLs" min="1" max="' + (rows - s.i) + '" value="' + sp + '"></div>' : '') + '<p class="note small">The label column\u2019s width, and turning it off, are in Build it row by row.</p>' + quick; return; }
   const it = s.item, where = s.region === 'g' ? 'Grid' : s.region === 't' ? 'Card strip' : s.region === 'h' ? 'Header' : 'Side panel';
   let h = '<h3>' + (s.region === 'h' ? 'Header ' + (it.type === 'card' ? 'card' : 'slicer') : where + ' visual') + '</h3>'
     + (s.region === 'h' ? '<p class="note small">Header items are cards or slicers. Change how many of each in Step 1.</p>' : '<div class="field"><label for="edType">Visual</label>' + typeSelect('edType', it.type) + '</div>')
@@ -1950,6 +2183,10 @@ function renderEditor(){
     const g = c.grid;
     h += '<div class="grid2e"><div class="field"><label for="edC">Column</label><input type="number" id="edC" min="1" max="' + g.cols + '" value="' + (it.c + 1) + '"></div><div class="field"><label for="edR">Row</label><input type="number" id="edR" min="1" max="' + g.rows + '" value="' + (it.r + 1) + '"></div>'
       + '<div class="field"><label for="edCs">Columns wide</label><input type="number" id="edCs" min="1" max="' + g.cols + '" value="' + it.cs + '"></div><div class="field"><label for="edRs">Rows tall</label><input type="number" id="edRs" min="1" max="' + g.rows + '" value="' + it.rs + '"></div></div>';
+    // split the cell into smaller boxes, each with its own title
+    const sc = it.sub ? it.sub.cols || 1 : 1, sr = it.sub ? it.sub.rows || 1 : 1, boxes = state.L.items.filter(o => o.parent === state.sel);
+    h += '<div class="grid2e"><div class="field"><label for="edSc">Split: boxes across</label><input type="number" id="edSc" min="1" max="6" value="' + sc + '"></div><div class="field"><label for="edSr">Boxes down</label><input type="number" id="edSr" min="1" max="6" value="' + sr + '"></div></div>'
+      + (boxes.length ? '<div class="field"><label>Box titles</label><div class="sub-t">' + boxes.map(o => '<input type="text" data-sub="' + o.sub + '" value="' + esc(o.title || '') + '" aria-label="Box ' + (o.sub + 1) + ' title" autocomplete="off">').join('') + '</div></div>' : '');
   }
   h += '<div class="btns">' + (s.region !== 'g' ? '<button type="button" class="btn small" data-act="left" aria-label="Move earlier">&uarr; Earlier</button><button type="button" class="btn small" data-act="right" aria-label="Move later">&darr; Later</button>' : '') + '<button type="button" class="btn small danger-t" data-act="del">Remove</button></div>';
   const o = state.L.items.find(x => x.id === state.sel);
@@ -2054,8 +2291,8 @@ function renderOut(){
 const _mctx = document.createElement('canvas').getContext('2d');
 LO.setMeasure((text, size) => { _mctx.font = '700 ' + size + 'px "' + (state.look.font || 'Segoe UI') + '", "Segoe UI", Arial, sans-serif'; return _mctx.measureText(String(text)).width + 4; });
 function compute(){ state.col = colors(); state.L = LO.layout(state.cfg); }
-function renderAll(){ compute(); renderPage(); renderCanvas(); renderSizes(); renderEditor(); renderLook(); renderOut(); }
-function refresh(opts){ compute(); renderPage(); renderCanvas(); renderSizes(); if (opts && opts.editor) renderEditor(); if (opts && opts.look) renderLook(); else renderColors(); renderOut(); persist(); }
+function renderAll(){ compute(); renderPage(); renderCanvas(); renderSizes(); renderRows(); renderEditor(); renderLook(); renderOut(); }
+function refresh(opts){ compute(); renderPage(); renderCanvas(); renderSizes(); renderRows(); if (opts && opts.editor) renderEditor(); if (opts && opts.look) renderLook(); else renderColors(); renderOut(); persist(); }
 
 /* ---------- init ---------- */
 function resetAll(){ state.customSize = false; state.cfg = blankCfg(); state.look = blankLook(); state.sel = null; setExample(false); renderAll(); }
@@ -2134,16 +2371,57 @@ function init(){
   // empty the grid (visuals and sizes) but keep the columns, rows, header, strip and side panel; once, it can be undone
   $('gridClear').addEventListener('click', () => { const g = state.cfg.grid;
     if (state.gridUndo && !state.cfg.items.length) { const u = state.gridUndo; Object.assign(g, u.grid); state.cfg.items = u.items; state.gridUndo = null; }
-    else { state.gridUndo = { grid: JSON.parse(JSON.stringify(g)), items: state.cfg.items }; state.cfg.items = []; g.colW = g.rowH = null; }
+    else { state.gridUndo = { grid: JSON.parse(JSON.stringify(g)), items: state.cfg.items }; state.cfg.items = []; g.colW = g.rowH = g.colPx = g.rowPx = null; }
     state.sel = null; edited({ editor: true }); });
   $('cols').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); if (n !== g.cols) fitSpans('c', n); g.cols = n; edited({ editor: true }); });
   $('rows').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); if (n !== g.rows) fitSpans('r', n); g.rows = n; edited({ editor: true }); });
   // column widths and row heights: typed, presets, or dragged on the canvas
   ['colW', 'rowH'].forEach(id => {
-    $(id).addEventListener('input', e => { const t = e.target; if (!t.dataset.ax) return; const v = parseFloat(t.value); if (isNaN(v)) return; setShare(t.dataset.ax, +t.dataset.i, v); edited(); });
-    $(id).addEventListener('change', e => { if (e.target.dataset.ax) { const a = e.target; a.blur(); renderSizes(); const n = $(id).querySelector('[data-i="' + a.dataset.i + '"]'); if (n) n.focus(); } });
-    $(id).addEventListener('click', e => { const b = e.target.closest('[data-pre]'); if (!b) return; const ax = b.dataset.ax; if (b.dataset.pre === 'even') state.cfg.grid[AX[ax][1]] = null; else setW(ax, b.dataset.pre.split(',').map(Number)); edited(); });
+    // a size in px fixes that column (or row): it keeps it and the others share what's left; emptying the box lets it resize
+    $(id).addEventListener('input', e => { const t = e.target; if (!t.dataset.ax) return; const v = parseFloat(t.value);
+      if (t.dataset.px != null) { if (isNaN(v) && t.value !== '') return; setPx(t.dataset.ax, +t.dataset.i, isNaN(v) || v <= 0 ? null : v); edited(); return; }
+      if (isNaN(v)) return; setShare(t.dataset.ax, +t.dataset.i, v); edited(); });
+    // redraw once the change is in, keeping the focus where it went (the same box after Enter, or the next one after Tab or a click)
+    $(id).addEventListener('change', e => { if (!e.target.dataset.ax) return; setTimeout(() => {
+      const a = document.activeElement, mine = a && $(id).contains(a) && a.matches('input[data-i]'), k = mine ? 'input[data-i="' + a.dataset.i + '"]' + (a.dataset.px != null ? '[data-px]' : ':not([data-px])') : '';
+      if (mine) a.blur(); renderSizes(); const n = k && $(id).querySelector(k); if (n) { n.focus(); n.select(); } }); });
+    $(id).addEventListener('click', e => {
+      const u = e.target.closest('[data-unfix]'); if (u) { setPx(u.dataset.ax, +u.dataset.i, null); edited(); const n = $(id).querySelector('input[data-px][data-i="' + u.dataset.i + '"]'); if (n) n.focus(); return; }
+      const b = e.target.closest('[data-pre]'); if (!b) return; const ax = b.dataset.ax, g = state.cfg.grid;
+      if (b.dataset.pre === 'fit') fitFixed(ax);
+      else if (b.dataset.pre === 'room') { const k = ax === 'c' ? 'w' : 'h', v = state.L.roomFor[k]; if (v) { state.cfg[k] = v; state.customSize = true; } }
+      else { g[AX[ax][2]] = null; if (b.dataset.pre === 'even') g[AX[ax][1]] = null; else setW(ax, b.dataset.pre.split(',').map(Number)); }
+      edited(); });
   });
+  // row by row
+  $('rowsBox').open = store.get('rowsOpen') === '1';
+  $('rowsBox').addEventListener('toggle', () => store.set('rowsOpen', $('rowsBox').open ? '1' : ''));
+  $('rowsB').addEventListener('input', e => { const t = e.target, r = +t.dataset.r; if (t.dataset.r == null) return; const v = parseFloat(t.value);
+    if (t.dataset.rn != null) { if (isNaN(v)) return; const n = Math.max(1, Math.min(12, Math.round(v)));
+      // from the visuals the row had when the box took focus, so typing 10 (1, then 10) doesn't drop any on the way
+      rowsEdit(rows => { const it = (rbBase && rbBase.r === r ? rbBase.items : rows[r].items).slice(0, n); while (it.length < n) it.push(newVisual()); rows[r] = { n, items: it }; }); return; }
+    if (t.dataset.rw != null) { if (isNaN(v)) return; const k = +t.dataset.rw;
+      rowsEdit(rows => { const w = LO.rowsOf(state.cfg)[r].widths, tot = w.reduce((x, y) => x + y, 0), p = w.map(x => x / tot * 100), m = p.length;
+        const nv = Math.max(3, Math.min(100 - 3 * (m - 1), v)), rest = 100 - p[k];
+        rows[r] = { n: m, w: p.map((x, j) => j === k ? nv : rest > 0 ? x / rest * (100 - nv) : (100 - nv) / (m - 1)), items: rows[r].items }; }); return; }
+    if (t.dataset.rh != null) { if (isNaN(v)) return; setShare('r', r, v); edited(); return; }
+    if (t.dataset.rspan != null) { if (isNaN(v)) return; setLabelSpan(r, v); return; }
+    if (t.dataset.rlab != null) { const L = state.cfg.labels; while (L.items.length <= r) L.items.push({ title: LO.labelOf(state.cfg, L.items.length) }); L.items[r].title = t.value; edited(); return; }
+    if (t.dataset.rpx != null) { if (isNaN(v) && t.value !== '') return; setPx('r', r, isNaN(v) || v <= 0 ? null : v); edited(); } });
+  let rbBase = null;
+  $('rowsB').addEventListener('focusin', e => { const t = e.target; rbBase = t.dataset && t.dataset.rn != null ? { r: +t.dataset.r, items: LO.rowsOf(state.cfg)[+t.dataset.r].pieces.map(p => p.idx == null ? newVisual() : state.cfg.items[p.idx]) } : null; });
+  $('rowsB').addEventListener('change', e => { if (e.target.dataset.r == null) return; setTimeout(() => {
+    const a = document.activeElement, mine = a && $('rowsB').contains(a) && a.matches('input'), k = mine ? [...$('rowsB').querySelectorAll('input')].indexOf(a) : -1;
+    if (mine) a.blur(); renderRows(); const n = k >= 0 && $('rowsB').querySelectorAll('input')[k]; if (n) { n.focus(); n.select(); } }); });
+  $('rowsB').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const r = +b.dataset.r;
+    if (b.dataset.reven != null) rowsEdit(rows => { rows[r] = { n: rows[r].items.length, items: rows[r].items }; });
+    if (b.dataset.rdel != null) { const L = state.cfg.labels, k = LO.labelAt(state.cfg, r);
+      if (k < r && L.items[k]) L.items[k].span = LO.labelSpan(state.cfg, k, +state.cfg.grid.rows) - 1;   // a label over this row covers one fewer
+      else if (L.items[r] && +L.items[r].span > 1) { const s = L.items[r]; L.items[r + 1] = Object.assign({}, L.items[r + 1], { title: s.title, span: s.span - 1 }); }   // its own label moves to the next row
+      L.items.splice(r, 1); rowSizes((w, px) => { w.splice(r, 1); px.splice(r, 1); }); rowsEdit(rows => { rows.splice(r, 1); }); } });
+  $('rbLabOn').addEventListener('change', () => { state.cfg.labels.on = $('rbLabOn').checked; state.sel = null; edited({ editor: true }); });
+  $('rbLabW').addEventListener('input', () => { state.cfg.labels.w = Math.max(40, num($('rbLabW').value, 140)); edited(); });
+  $('rbAdd').addEventListener('click', () => { rowSizes((w, px) => { w.push(w.reduce((a, b) => a + b, 0) / w.length); px.push(null); }); rowsEdit(rows => { rows.push({ n: 1, items: [newVisual()] }); }); });
   let drag = null, raf = 0;
   const svgPt = e => { const sv = $('canvas').querySelector('svg'), r = sv.getBoundingClientRect(); return { x: (e.clientX - r.left) * state.cfg.w / r.width, y: (e.clientY - r.top) * state.cfg.h / r.height }; };
   $('canvas').addEventListener('pointerdown', e => { const h = e.target.closest('[data-gut]'); if (!h) return; e.preventDefault(); drag = { ax: h.dataset.gut[0], i: +h.dataset.gut.slice(1) }; document.body.classList.add('dragging', drag.ax === 'c' ? 'drag-c' : 'drag-r'); });
@@ -2163,7 +2441,7 @@ function init(){
   const pick = el => {
     const v = el.closest('[data-id]'), cell = el.closest('[data-cell]');
     if (v && v.dataset.id === 'logo') { $('logoW').focus(); return true; }
-    if (v) { state.sel = v.dataset.id === state.sel ? null : v.dataset.id; renderCanvas(); renderEditor(); const t = $('edType') || $('edTitle'); if (t && state.sel) t.focus(); return true; }
+    if (v) { const id = v.dataset.id.split('.')[0]; state.sel = id === state.sel ? null : id; renderCanvas(); renderEditor(); const t = $('edType') || $('edTitle'); if (t && state.sel) t.focus(); return true; }
     if (cell) { const [a, b] = cell.dataset.cell.split(',').map(Number); state.cfg.items.push({ type: 'clusteredColumnChart', title: 'New visual', c: a, r: b, cs: 1, rs: 1 }); state.sel = 'g' + (state.cfg.items.length - 1); edited({ editor: true }); const t = $('edType'); if (t) t.focus(); return true; }
     return false;
   };
@@ -2172,6 +2450,10 @@ function init(){
   $('editor').addEventListener('input', e => {
     const s = selItem(); if (!s) return; const t = e.target;
     if (t.id === 'edTitle') { if (s.region === 'header') state.cfg.header.title = t.value; else s.item.title = t.value; edited(); }
+    else if (t.id === 'edLs') { if (t.value === '') return; setLabelSpan(s.i, num(t.value, 1)); const n = $('edLs'); if (n) { n.focus(); n.select(); } }
+    else if (t.id === 'edSc' || t.id === 'edSr') { if (t.value === '') return; const v = Math.max(1, Math.min(6, Math.round(num(t.value, 1)))), sub = s.item.sub = s.item.sub || { cols: 1, rows: 1, items: [] }; sub[t.id === 'edSc' ? 'cols' : 'rows'] = v; if (sub.cols * sub.rows < 2) delete s.item.sub;
+      edited({ editor: true }); const n = $(t.id); if (n) { n.focus(); n.select(); } }
+    else if (t.dataset.sub != null) { const sub = s.item.sub, k = +t.dataset.sub; if (!sub) return; sub.items = sub.items || []; while (sub.items.length <= k) sub.items.push({}); sub.items[k].title = t.value; edited(); }
     else if (['edC', 'edR', 'edCs', 'edRs'].includes(t.id)) { const v = Math.max(1, Math.round(num(t.value, 1))); if (t.id === 'edC') s.item.c = v - 1; if (t.id === 'edR') s.item.r = v - 1; if (t.id === 'edCs') s.item.cs = v; if (t.id === 'edRs') s.item.rs = v; edited(); }
   });
   $('editor').addEventListener('change', e => { const s = selItem(); if (s && e.target.id === 'edType') { s.item.type = e.target.value; edited(); } });

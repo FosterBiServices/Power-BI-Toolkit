@@ -103,38 +103,77 @@ function renderCanvas(){
 let spanBase = null;
 function fitSpans(ax, to){
   const sp = ax === 'c' ? 'cs' : 'rs', g = state.cfg.grid, k = ax + (state.cfg.items.length);
-  if (!spanBase || spanBase.k !== k) spanBase = { k, w: g[ax === 'c' ? 'colW' : 'rowH'], n: +g[ax === 'c' ? 'cols' : 'rows'], spans: state.cfg.items.map(it => Math.max(1, it[sp] || 1)) };
+  if (!spanBase || spanBase.k !== k) spanBase = { k, w: g[ax === 'c' ? 'colW' : 'rowH'], px: g[AX[ax][2]], n: +g[ax === 'c' ? 'cols' : 'rows'], spans: state.cfg.items.map(it => Math.max(1, it[sp] || 1)) };
   state.cfg.items.forEach((it, i) => { const at = it[ax], n = spanBase.spans[i];
     it[sp] = state.cfg.grid.grow === 'stretch' && at === 0 && n === spanBase.n ? to : at < to && at + n > to ? to - at : n; });
   // keep the sizes already set; a new column (or row) gets the average share
   const wk = ax === 'c' ? 'colW' : 'rowH', w0 = LO.weightsOf(spanBase.w, spanBase.n);
   if (!w0) g[wk] = null;
   else { const avg = w0.reduce((a, b) => a + b, 0) / w0.length, w = w0.slice(0, to); while (w.length < to) w.push(avg); setW(ax, w.map(v => v / w.reduce((a, b) => a + b, 0) * 100)); }
+  // fixed sizes stay with their column (or row); a new one is sized for the user
+  const f0 = LO.fixedOf(spanBase.px, spanBase.n), f = f0 ? f0.slice(0, to) : null;
+  if (f) while (f.length < to) f.push(null);
+  g[AX[ax][2]] = f && f.some(v => v != null) ? f : null;
 }
 const PRESETS = { 2: [['1/3 + 2/3', [1, 2]], ['2/3 + 1/3', [2, 1]], ['1/4 + 3/4', [1, 3]], ['3/4 + 1/4', [3, 1]]], 3: [['1/2 + 1/4 + 1/4', [2, 1, 1]], ['1/4 + 1/2 + 1/4', [1, 2, 1]], ['1/4 + 1/4 + 1/2', [1, 1, 2]], ['1/6 + 1/3 + 1/2', [1, 2, 3]]], 4: [['2/5 + 1/5 × 3', [2, 1, 1, 1]], ['1/5 × 3 + 2/5', [1, 1, 1, 2]]] };
-const AX = { c: ['cols', 'colW'], r: ['rows', 'rowH'] };
-// the grid's column (c) or row (r) sizes as percentages that add up to 100
-function pcts(ax){ const g = state.cfg.grid, n = +g[AX[ax][0]], w = LO.weightsOf(g[AX[ax][1]], n) || Array(n).fill(1), t = w.reduce((a, b) => a + b, 0); return w.map(v => v / t * 100); }
+const AX = { c: ['cols', 'colW', 'colPx'], r: ['rows', 'rowH', 'rowPx'] };
+// the sizes the user fixed in px (null where sized for them), or null when none is
+const fixed = ax => { const g = state.cfg.grid; return LO.fixedOf(g[AX[ax][2]], +g[AX[ax][0]]); };
+// the grid's column (c) or row (r) sizes in px, as laid out now
+const pxNow = ax => { const G = state.L && state.L.grid; return G ? (ax === 'c' ? G.w : G.h) : []; };
+// the grid's column (c) or row (r) sizes as percentages that add up to 100 (from the page when some are fixed)
+function pcts(ax){
+  const g = state.cfg.grid, n = +g[AX[ax][0]], px = pxNow(ax);
+  const w = fixed(ax) && px.length === n ? px : LO.weightsOf(g[AX[ax][1]], n) || Array(n).fill(1), t = w.reduce((a, b) => a + b, 0);
+  return w.map(v => t > 0 ? v / t * 100 : 100 / n);
+}
 function setW(ax, arr){ const g = state.cfg.grid; const r = arr.map(v => Math.round(v * 100) / 100); g[AX[ax][1]] = LO.isEven(r) ? null : r; }
-// one column (or row) to `pct` %, the others sharing the rest in their current proportions
+// one column (or row) to `pct` %, the others not fixed sharing the rest in their current proportions
 function setShare(ax, i, pct){
-  const p = pcts(ax), n = p.length; if (n < 2) return;
-  const v = Math.max(3, Math.min(100 - 3 * (n - 1), pct)), rest = 100 - p[i];
-  setW(ax, p.map((x, j) => j === i ? v : rest > 0 ? x / rest * (100 - v) : (100 - v) / (n - 1)));
+  const p = pcts(ax), fx = fixed(ax), F = p.map((x, j) => j).filter(j => !fx || fx[j] == null);
+  if (F.length < 2 || !F.includes(i)) return;
+  const tot = F.reduce((a, j) => a + p[j], 0), v = Math.max(3, Math.min(tot - 3 * (F.length - 1), pct)), rest = tot - p[i];
+  setW(ax, p.map((x, j) => !F.includes(j) ? x : j === i ? v : rest > 0 ? x / rest * (tot - v) : (tot - v) / (F.length - 1)));
+}
+// fix one column (or row) at `v` px, or (null) let it be sized again; the rest don't move until the next change
+function setPx(ax, i, v){
+  const g = state.cfg.grid, n = +g[AX[ax][0]], p = pcts(ax), f = fixed(ax) || Array(n).fill(null);
+  f[i] = v == null ? null : Math.max(20, Math.round(v * 100) / 100);
+  setW(ax, p); g[AX[ax][2]] = f.some(x => x != null) ? f : null;
+}
+// every size fixed but not filling the grid: scale them to fit, whole pixels
+function fitFixed(ax){
+  const f = fixed(ax), G = state.L.grid, n = f.length, gap = +state.cfg.gap || 0;
+  const room = (ax === 'c' ? G.right - G.left : G.bottom - G.top);
+  state.cfg.grid[AX[ax][2]] = LO.split(room, n, gap, 'fit', f);
 }
 const fmtPct = v => String(Math.round(v * 10) / 10);
 function renderSizes(){
-  const sum = ax => { const p = pcts(ax); return p.length < 2 ? '1' : LO.isEven(p) ? p.length + ' even' : p.map(v => Math.round(v)).join(' / '); };
-  $('sizesSum').textContent = '(columns ' + sum('c') + ', rows ' + sum('r') + ')';
+  const sum = ax => { const p = pcts(ax), f = fixed(ax), k = f ? f.filter(v => v != null).length : 0; return (p.length < 2 ? '1' : LO.isEven(p) ? p.length + ' even' : p.map(v => Math.round(v)).join(' / ')) + (k ? ', ' + k + ' fixed' : ''); };
+  // rows split their own way put more columns in the grid underneath than any row shows: say so instead of listing them
+  const cols = +state.cfg.grid.cols, most = Math.max(1, ...LO.rowsOf(state.cfg).map(r => r.pieces.length)), built = cols > most;
+  $('colsNote').hidden = !built;
+  if (built) $('colsNote').textContent = 'Your rows are split different ways, so the grid underneath has ' + cols + ' narrow columns where their edges line up. Change a row\u2019s visuals and widths in Build it row by row.';
+  $('sizesSum').textContent = '(' + (built ? cols + ' columns from your rows' : 'columns ' + sum('c')) + ', rows ' + sum('r') + ')';
   ['c', 'r'].forEach(ax => {
-    const box = $(ax === 'c' ? 'colW' : 'rowH'), p = pcts(ax), n = p.length, name = ax === 'c' ? 'Column' : 'Row';
+    const box = $(ax === 'c' ? 'colW' : 'rowH'), p = pcts(ax), n = p.length, name = ax === 'c' ? 'Column' : 'Row', dim = ax === 'c' ? 'width' : 'height';
+    const fx = fixed(ax), px = pxNow(ax), nFree = fx ? fx.filter(v => v == null).length : n, lockPct = i => (fx && fx[i] != null) || nFree < 2;
     const a = document.activeElement;
-    if (a && box.contains(a) && a.matches('input')) { box.querySelectorAll('input[data-i]').forEach(el => { if (el !== a) el.value = fmtPct(p[+el.dataset.i]); }); return; }
+    if (a && box.contains(a) && a.matches('input')) { box.querySelectorAll('input[data-i]').forEach(el => { const i = +el.dataset.i;
+      if (el.dataset.px != null) { el.placeholder = px[i] != null ? Math.round(px[i]) : ''; el.classList.toggle('fixed', !!(fx && fx[i] != null)); }
+      else { if (el !== a) el.value = fmtPct(p[i]); el.disabled = lockPct(i); } }); return; }
     if (n < 2) { box.innerHTML = '<span class="small muted">One ' + name.toLowerCase() + ': it fills the grid.</span>'; return; }
     const g = state.cfg.grid, cur = LO.weightsOf(g[AX[ax][1]], n);
-    const same = w => { if (!cur) return false; const t = w.reduce((x, y) => x + y, 0), tc = cur.reduce((x, y) => x + y, 0); return w.every((v, j) => Math.abs(v / t - cur[j] / tc) < 0.002); };
-    box.innerHTML = p.map((v, i) => '<label class="wt"><span class="small muted">' + (i + 1) + '</span><input type="number" data-ax="' + ax + '" data-i="' + i + '" min="3" max="' + (100 - 3 * (n - 1)) + '" step="any" value="' + fmtPct(v) + '" aria-label="' + name + ' ' + (i + 1) + ' (% of the grid)"></label>').join('')
-      + '<span class="chips sm"><button type="button" class="chip' + (!cur ? ' on' : '') + '" data-ax="' + ax + '" data-pre="even">Even</button>' + (PRESETS[n] || []).map(([lbl, w]) => '<button type="button" class="chip" aria-pressed="' + same(w) + '" data-ax="' + ax + '" data-pre="' + w.join(',') + '">' + esc(lbl) + '</button>').join('') + '</span>';
+    const same = w => { if (!cur || fx) return false; const t = w.reduce((x, y) => x + y, 0), tc = cur.reduce((x, y) => x + y, 0); return w.every((v, j) => Math.abs(v / t - cur[j] / tc) < 0.002); };
+    const room = state.L && state.L.roomFor && state.L.roomFor[ax === 'c' ? 'w' : 'h'];
+    const S = state.L && state.L.grid, misfit = fx && !nFree && S && Math.abs((ax === 'c' ? S.right - S.left : S.bottom - S.top) - (+state.cfg.gap || 0) * (n - 1) - fx.reduce((x, y) => x + y, 0)) > 0.5;
+    box.innerHTML = p.map((v, i) => { const on = fx && fx[i] != null, lbl = name + ' ' + (i + 1);
+      return '<span class="wt' + (on ? ' on' : '') + '"><span class="small muted">' + (i + 1) + '</span><input type="number" data-ax="' + ax + '" data-i="' + i + '" min="3" max="' + (100 - 3 * (n - 1)) + '" step="any" value="' + fmtPct(v) + '"' + (lockPct(i) ? ' disabled' : '') + ' aria-label="' + lbl + ' (% of the grid)"><span class="small muted">%</span>'
+        + '<input type="number" class="px' + (on ? ' fixed' : '') + '" data-px data-ax="' + ax + '" data-i="' + i + '" min="20" step="1" value="' + (on ? fx[i] : '') + '" placeholder="' + (px[i] != null ? Math.round(px[i]) : '') + '" aria-label="' + lbl + ' ' + dim + ' in px (empty: sized for you)"><span class="small muted">px</span>'
+        + (on ? '<button type="button" class="unfix" data-unfix data-ax="' + ax + '" data-i="' + i + '" aria-label="Let ' + name.toLowerCase() + ' ' + (i + 1) + ' resize" title="Let it resize">&times;</button>' : '') + '</span>'; }).join('')
+      + '<span class="chips sm"><button type="button" class="chip' + (!cur && !fx ? ' on' : '') + '" data-ax="' + ax + '" data-pre="even">Even</button>' + (PRESETS[n] || []).map(([lbl, w]) => '<button type="button" class="chip" aria-pressed="' + same(w) + '" data-ax="' + ax + '" data-pre="' + w.join(',') + '">' + esc(lbl) + '</button>').join('')
+      + (misfit ? '<button type="button" class="chip" data-ax="' + ax + '" data-pre="fit">Fit to the page</button>' : '')
+      + (room ? '<button type="button" class="chip" data-ax="' + ax + '" data-pre="room">Make room: page ' + room + ' px ' + (ax === 'c' ? 'wide' : 'tall') + '</button>' : '') + '</span>';
   });
 }
 // drag a handle between two columns (or rows) to share their room differently
@@ -149,6 +188,52 @@ function moveGutter(ax, i, toPx, free){
   if (end - start < 2 * min) return;
   b = Math.max(start + min, Math.min(end - min, b));
   const q = p.slice(); q[i] = b - start; q[i + 1] = end - b; setW(ax, q);
+  // a fixed column (or row) beside the handle keeps being fixed, at its new size
+  const f = fixed(ax); if (f) { [i, i + 1].forEach(j => { if (f[j] != null) f[j] = Math.max(20, Math.round(q[j] / 100 * availPx)); }); state.cfg.grid[AX[ax][2]] = f; }
+}
+/* ---------- row by row ---------- */
+// change the page's rows: fn gets every row as { ends, items } (as on the page now) and edits them; the grid is rebuilt from that
+function rowsEdit(fn){
+  // empty cells become visuals: an empty cell has no width of its own, so it would split up when another row adds columns
+  const rows = LO.rowsOf(state.cfg).map(r => ({ ends: r.ends, items: r.pieces.map(p => p.idx == null ? newVisual() : state.cfg.items[p.idx]) }));
+  fn(rows); LO.byRows(state.cfg, rows); state.sel = null; spanBase = null; leaveExample(); refresh({ editor: true });
+}
+const newVisual = () => ({ type: 'clusteredColumnChart', title: 'New visual' });
+function renderRows(){
+  const box = $('rowsB'), a = document.activeElement, R = LO.rowsOf(state.cfg), ph = pcts('r'), fr = fixed('r'), px = pxNow('r'), n = R.length;
+  const lockH = i => (fr && fr[i] != null) || n < 2 || (fr && fr.filter(v => v == null).length < 2);
+  if (a && box.contains(a) && a.matches('input')) {
+    box.querySelectorAll('input').forEach(el => { if (el === a) return; const r = +el.dataset.r;
+      if (el.dataset.rw != null) { const w = R[r] && R[r].widths, t = w ? w.reduce((x, y) => x + y, 0) : 0; if (w && w[+el.dataset.rw] != null) el.value = fmtPct(w[+el.dataset.rw] / t * 100); }
+      else if (el.dataset.rh != null) { el.value = fmtPct(ph[r]); el.disabled = lockH(r); }
+      else if (el.dataset.rpx != null) el.placeholder = px[r] != null ? Math.round(px[r]) : ''; });
+    return;
+  }
+  const lb = state.cfg.labels;
+  $('rbLabOn').checked = !!lb.on; if (document.activeElement !== $('rbLabW')) $('rbLabW').value = lb.w; $('rbLabW').disabled = !lb.on;
+  box.innerHTML = R.map((row, r) => { const t = row.widths.reduce((x, y) => x + y, 0), on = fr && fr[r] != null, nm = 'Row ' + (r + 1);
+    return '<div class="rb" data-row="' + r + '"><b>' + nm + '</b>'
+      + (!lb.on ? '' : LO.labelAt(state.cfg, r) !== r ? '<span class="small muted grp">Label: with row ' + (LO.labelAt(state.cfg, r) + 1) + '</span>'
+        : '<label class="grp"><span class="small muted">Label</span><input type="text" class="lbl" data-r="' + r + '" data-rlab value="' + esc(LO.labelOf(state.cfg, r)) + '" aria-label="' + nm + ' label" autocomplete="off"></label>'
+          + (n - r > 1 ? '<label class="grp"><span class="small muted">over</span><input type="number" min="1" max="' + (n - r) + '" data-r="' + r + '" data-rspan value="' + LO.labelSpan(state.cfg, r, n) + '" aria-label="' + nm + ' label: how many rows it covers"><span class="small muted">rows</span></label>' : ''))
+      + '<label class="grp"><span class="small muted">Visuals</span><input type="number" min="1" max="12" data-r="' + r + '" data-rn value="' + row.pieces.length + '" aria-label="' + nm + ': how many visuals"></label>'
+      + (row.pieces.length > 1 ? '<span class="grp" role="group" aria-label="' + nm + ' widths"><span class="small muted">Widths %</span>' + row.widths.map((w, k) => '<input type="number" min="3" max="97" step="any" data-r="' + r + '" data-rw="' + k + '" value="' + fmtPct(w / t * 100) + '" aria-label="' + nm + ', visual ' + (k + 1) + ' width (% of the row)">').join('')
+        + '<button type="button" class="chip" data-r="' + r + '" data-reven>Even</button></span>' : '')
+      + '<span class="grp"><span class="small muted">Height</span><input type="number" min="3" step="any" data-r="' + r + '" data-rh value="' + fmtPct(ph[r]) + '"' + (lockH(r) ? ' disabled' : '') + ' aria-label="' + nm + ' height (% of the grid)"><span class="small muted">%</span>'
+      + '<input type="number" class="px' + (on ? ' fixed' : '') + '" min="20" step="1" data-r="' + r + '" data-rpx value="' + (on ? fr[r] : '') + '" placeholder="' + (px[r] != null ? Math.round(px[r]) : '') + '" aria-label="' + nm + ' height in px (empty: sized for you)"><span class="small muted">px</span></span>'
+      + (n > 1 ? '<button type="button" class="btn small del" data-r="' + r + '" data-rdel>Remove</button>' : '') + '</div>'; }).join('');
+}
+// row heights follow a row being added or removed (sizes and fixed px)
+// one label over `v` rows from row r (the rows it takes in lose their own label)
+function setLabelSpan(r, v){
+  const c = state.cfg, L = c.labels, n = +c.grid.rows;
+  while (L.items.length <= r) L.items.push({ title: LO.labelOf(c, L.items.length) });
+  L.items[r].span = Math.max(1, Math.min(n - r, Math.round(v)));
+  leaveExample(); refresh({ editor: true });
+}
+function rowSizes(fn){
+  const g = state.cfg.grid, n = +g.rows, w = (LO.weightsOf(g.rowH, n) || Array(n).fill(1)).slice(), f = LO.fixedOf(g.rowPx, n), px = f ? f.slice() : Array(n).fill(null);
+  fn(w, px); g.rowH = LO.isEven(w) ? null : w; g.rowPx = px.some(v => v != null) ? px : null;
 }
 function typeSelect(id, cur, only){
   const list = only ? LO.TYPES.filter(t => only.includes(t[0])) : LO.TYPES;
@@ -157,6 +242,7 @@ function typeSelect(id, cur, only){
 function selItem(){
   const s = state.sel, c = state.cfg; if (!s) return null;
   if (s === 'header') return c.header.on ? { region: 'header', item: c.header } : null;
+  if (s[0] === 'l') { const i = +s.slice(1), L = c.labels; if (!L.on || i >= +c.grid.rows || LO.labelAt(c, i) !== i) return null; while (L.items.length <= i) L.items.push({ title: LO.labelOf(c, L.items.length) }); return { region: 'l', i, item: L.items[i], arr: L.items }; }
   const i = +s.slice(1), arr = s[0] === 'g' ? c.items : s[0] === 't' ? c.strip.items : s[0] === 's' ? c.side.items : s[0] === 'h' ? (c.header.items = c.header.items || []) : null;
   return arr && arr[i] ? { region: s[0], i, item: arr[i], arr } : null;
 }
@@ -165,6 +251,9 @@ function renderEditor(){
   const quick = '<div class="quick">' + (c.strip.on ? '<button type="button" class="btn small" data-act="addStrip">+ Card in the strip</button>' : '') + (c.side.pos !== 'none' ? '<button type="button" class="btn small" data-act="addSide">+ Item in the side panel</button>' : '') + '</div>';
   if (!s) { state.sel = null; $('editor').innerHTML = '<h3>Edit</h3><p class="note small">Click a visual on the page to change its type, title or span, or click an empty cell to add a visual there.</p>' + quick; return; }
   if (s.region === 'header') { $('editor').innerHTML = '<h3>Header</h3><div class="field"><label for="edTitle">Title</label><input type="text" id="edTitle" value="' + esc(c.header.title || '') + '" autocomplete="off"></div><p class="note small">Its height is in Step 1.</p>' + quick; return; }
+  if (s.region === 'l') { const rows = +c.grid.rows, sp = LO.labelSpan(c, s.i, rows);
+    $('editor').innerHTML = '<h3>' + (sp > 1 ? 'Rows ' + (s.i + 1) + '\u2013' + (s.i + sp) : 'Row ' + (s.i + 1)) + ' label</h3><div class="field"><label for="edTitle">Label</label><input type="text" id="edTitle" value="' + esc(s.item.title || '') + '" autocomplete="off"></div>'
+      + (rows - s.i > 1 ? '<div class="field sm"><label for="edLs">Rows it covers</label><input type="number" id="edLs" min="1" max="' + (rows - s.i) + '" value="' + sp + '"></div>' : '') + '<p class="note small">The label column\u2019s width, and turning it off, are in Build it row by row.</p>' + quick; return; }
   const it = s.item, where = s.region === 'g' ? 'Grid' : s.region === 't' ? 'Card strip' : s.region === 'h' ? 'Header' : 'Side panel';
   let h = '<h3>' + (s.region === 'h' ? 'Header ' + (it.type === 'card' ? 'card' : 'slicer') : where + ' visual') + '</h3>'
     + (s.region === 'h' ? '<p class="note small">Header items are cards or slicers. Change how many of each in Step 1.</p>' : '<div class="field"><label for="edType">Visual</label>' + typeSelect('edType', it.type) + '</div>')
@@ -173,6 +262,10 @@ function renderEditor(){
     const g = c.grid;
     h += '<div class="grid2e"><div class="field"><label for="edC">Column</label><input type="number" id="edC" min="1" max="' + g.cols + '" value="' + (it.c + 1) + '"></div><div class="field"><label for="edR">Row</label><input type="number" id="edR" min="1" max="' + g.rows + '" value="' + (it.r + 1) + '"></div>'
       + '<div class="field"><label for="edCs">Columns wide</label><input type="number" id="edCs" min="1" max="' + g.cols + '" value="' + it.cs + '"></div><div class="field"><label for="edRs">Rows tall</label><input type="number" id="edRs" min="1" max="' + g.rows + '" value="' + it.rs + '"></div></div>';
+    // split the cell into smaller boxes, each with its own title
+    const sc = it.sub ? it.sub.cols || 1 : 1, sr = it.sub ? it.sub.rows || 1 : 1, boxes = state.L.items.filter(o => o.parent === state.sel);
+    h += '<div class="grid2e"><div class="field"><label for="edSc">Split: boxes across</label><input type="number" id="edSc" min="1" max="6" value="' + sc + '"></div><div class="field"><label for="edSr">Boxes down</label><input type="number" id="edSr" min="1" max="6" value="' + sr + '"></div></div>'
+      + (boxes.length ? '<div class="field"><label>Box titles</label><div class="sub-t">' + boxes.map(o => '<input type="text" data-sub="' + o.sub + '" value="' + esc(o.title || '') + '" aria-label="Box ' + (o.sub + 1) + ' title" autocomplete="off">').join('') + '</div></div>' : '');
   }
   h += '<div class="btns">' + (s.region !== 'g' ? '<button type="button" class="btn small" data-act="left" aria-label="Move earlier">&uarr; Earlier</button><button type="button" class="btn small" data-act="right" aria-label="Move later">&darr; Later</button>' : '') + '<button type="button" class="btn small danger-t" data-act="del">Remove</button></div>';
   const o = state.L.items.find(x => x.id === state.sel);
@@ -277,8 +370,8 @@ function renderOut(){
 const _mctx = document.createElement('canvas').getContext('2d');
 LO.setMeasure((text, size) => { _mctx.font = '700 ' + size + 'px "' + (state.look.font || 'Segoe UI') + '", "Segoe UI", Arial, sans-serif'; return _mctx.measureText(String(text)).width + 4; });
 function compute(){ state.col = colors(); state.L = LO.layout(state.cfg); }
-function renderAll(){ compute(); renderPage(); renderCanvas(); renderSizes(); renderEditor(); renderLook(); renderOut(); }
-function refresh(opts){ compute(); renderPage(); renderCanvas(); renderSizes(); if (opts && opts.editor) renderEditor(); if (opts && opts.look) renderLook(); else renderColors(); renderOut(); persist(); }
+function renderAll(){ compute(); renderPage(); renderCanvas(); renderSizes(); renderRows(); renderEditor(); renderLook(); renderOut(); }
+function refresh(opts){ compute(); renderPage(); renderCanvas(); renderSizes(); renderRows(); if (opts && opts.editor) renderEditor(); if (opts && opts.look) renderLook(); else renderColors(); renderOut(); persist(); }
 
 /* ---------- init ---------- */
 function resetAll(){ state.customSize = false; state.cfg = blankCfg(); state.look = blankLook(); state.sel = null; setExample(false); renderAll(); }
@@ -357,16 +450,57 @@ function init(){
   // empty the grid (visuals and sizes) but keep the columns, rows, header, strip and side panel; once, it can be undone
   $('gridClear').addEventListener('click', () => { const g = state.cfg.grid;
     if (state.gridUndo && !state.cfg.items.length) { const u = state.gridUndo; Object.assign(g, u.grid); state.cfg.items = u.items; state.gridUndo = null; }
-    else { state.gridUndo = { grid: JSON.parse(JSON.stringify(g)), items: state.cfg.items }; state.cfg.items = []; g.colW = g.rowH = null; }
+    else { state.gridUndo = { grid: JSON.parse(JSON.stringify(g)), items: state.cfg.items }; state.cfg.items = []; g.colW = g.rowH = g.colPx = g.rowPx = null; }
     state.sel = null; edited({ editor: true }); });
   $('cols').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); if (n !== g.cols) fitSpans('c', n); g.cols = n; edited({ editor: true }); });
   $('rows').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); if (n !== g.rows) fitSpans('r', n); g.rows = n; edited({ editor: true }); });
   // column widths and row heights: typed, presets, or dragged on the canvas
   ['colW', 'rowH'].forEach(id => {
-    $(id).addEventListener('input', e => { const t = e.target; if (!t.dataset.ax) return; const v = parseFloat(t.value); if (isNaN(v)) return; setShare(t.dataset.ax, +t.dataset.i, v); edited(); });
-    $(id).addEventListener('change', e => { if (e.target.dataset.ax) { const a = e.target; a.blur(); renderSizes(); const n = $(id).querySelector('[data-i="' + a.dataset.i + '"]'); if (n) n.focus(); } });
-    $(id).addEventListener('click', e => { const b = e.target.closest('[data-pre]'); if (!b) return; const ax = b.dataset.ax; if (b.dataset.pre === 'even') state.cfg.grid[AX[ax][1]] = null; else setW(ax, b.dataset.pre.split(',').map(Number)); edited(); });
+    // a size in px fixes that column (or row): it keeps it and the others share what's left; emptying the box lets it resize
+    $(id).addEventListener('input', e => { const t = e.target; if (!t.dataset.ax) return; const v = parseFloat(t.value);
+      if (t.dataset.px != null) { if (isNaN(v) && t.value !== '') return; setPx(t.dataset.ax, +t.dataset.i, isNaN(v) || v <= 0 ? null : v); edited(); return; }
+      if (isNaN(v)) return; setShare(t.dataset.ax, +t.dataset.i, v); edited(); });
+    // redraw once the change is in, keeping the focus where it went (the same box after Enter, or the next one after Tab or a click)
+    $(id).addEventListener('change', e => { if (!e.target.dataset.ax) return; setTimeout(() => {
+      const a = document.activeElement, mine = a && $(id).contains(a) && a.matches('input[data-i]'), k = mine ? 'input[data-i="' + a.dataset.i + '"]' + (a.dataset.px != null ? '[data-px]' : ':not([data-px])') : '';
+      if (mine) a.blur(); renderSizes(); const n = k && $(id).querySelector(k); if (n) { n.focus(); n.select(); } }); });
+    $(id).addEventListener('click', e => {
+      const u = e.target.closest('[data-unfix]'); if (u) { setPx(u.dataset.ax, +u.dataset.i, null); edited(); const n = $(id).querySelector('input[data-px][data-i="' + u.dataset.i + '"]'); if (n) n.focus(); return; }
+      const b = e.target.closest('[data-pre]'); if (!b) return; const ax = b.dataset.ax, g = state.cfg.grid;
+      if (b.dataset.pre === 'fit') fitFixed(ax);
+      else if (b.dataset.pre === 'room') { const k = ax === 'c' ? 'w' : 'h', v = state.L.roomFor[k]; if (v) { state.cfg[k] = v; state.customSize = true; } }
+      else { g[AX[ax][2]] = null; if (b.dataset.pre === 'even') g[AX[ax][1]] = null; else setW(ax, b.dataset.pre.split(',').map(Number)); }
+      edited(); });
   });
+  // row by row
+  $('rowsBox').open = store.get('rowsOpen') === '1';
+  $('rowsBox').addEventListener('toggle', () => store.set('rowsOpen', $('rowsBox').open ? '1' : ''));
+  $('rowsB').addEventListener('input', e => { const t = e.target, r = +t.dataset.r; if (t.dataset.r == null) return; const v = parseFloat(t.value);
+    if (t.dataset.rn != null) { if (isNaN(v)) return; const n = Math.max(1, Math.min(12, Math.round(v)));
+      // from the visuals the row had when the box took focus, so typing 10 (1, then 10) doesn't drop any on the way
+      rowsEdit(rows => { const it = (rbBase && rbBase.r === r ? rbBase.items : rows[r].items).slice(0, n); while (it.length < n) it.push(newVisual()); rows[r] = { n, items: it }; }); return; }
+    if (t.dataset.rw != null) { if (isNaN(v)) return; const k = +t.dataset.rw;
+      rowsEdit(rows => { const w = LO.rowsOf(state.cfg)[r].widths, tot = w.reduce((x, y) => x + y, 0), p = w.map(x => x / tot * 100), m = p.length;
+        const nv = Math.max(3, Math.min(100 - 3 * (m - 1), v)), rest = 100 - p[k];
+        rows[r] = { n: m, w: p.map((x, j) => j === k ? nv : rest > 0 ? x / rest * (100 - nv) : (100 - nv) / (m - 1)), items: rows[r].items }; }); return; }
+    if (t.dataset.rh != null) { if (isNaN(v)) return; setShare('r', r, v); edited(); return; }
+    if (t.dataset.rspan != null) { if (isNaN(v)) return; setLabelSpan(r, v); return; }
+    if (t.dataset.rlab != null) { const L = state.cfg.labels; while (L.items.length <= r) L.items.push({ title: LO.labelOf(state.cfg, L.items.length) }); L.items[r].title = t.value; edited(); return; }
+    if (t.dataset.rpx != null) { if (isNaN(v) && t.value !== '') return; setPx('r', r, isNaN(v) || v <= 0 ? null : v); edited(); } });
+  let rbBase = null;
+  $('rowsB').addEventListener('focusin', e => { const t = e.target; rbBase = t.dataset && t.dataset.rn != null ? { r: +t.dataset.r, items: LO.rowsOf(state.cfg)[+t.dataset.r].pieces.map(p => p.idx == null ? newVisual() : state.cfg.items[p.idx]) } : null; });
+  $('rowsB').addEventListener('change', e => { if (e.target.dataset.r == null) return; setTimeout(() => {
+    const a = document.activeElement, mine = a && $('rowsB').contains(a) && a.matches('input'), k = mine ? [...$('rowsB').querySelectorAll('input')].indexOf(a) : -1;
+    if (mine) a.blur(); renderRows(); const n = k >= 0 && $('rowsB').querySelectorAll('input')[k]; if (n) { n.focus(); n.select(); } }); });
+  $('rowsB').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const r = +b.dataset.r;
+    if (b.dataset.reven != null) rowsEdit(rows => { rows[r] = { n: rows[r].items.length, items: rows[r].items }; });
+    if (b.dataset.rdel != null) { const L = state.cfg.labels, k = LO.labelAt(state.cfg, r);
+      if (k < r && L.items[k]) L.items[k].span = LO.labelSpan(state.cfg, k, +state.cfg.grid.rows) - 1;   // a label over this row covers one fewer
+      else if (L.items[r] && +L.items[r].span > 1) { const s = L.items[r]; L.items[r + 1] = Object.assign({}, L.items[r + 1], { title: s.title, span: s.span - 1 }); }   // its own label moves to the next row
+      L.items.splice(r, 1); rowSizes((w, px) => { w.splice(r, 1); px.splice(r, 1); }); rowsEdit(rows => { rows.splice(r, 1); }); } });
+  $('rbLabOn').addEventListener('change', () => { state.cfg.labels.on = $('rbLabOn').checked; state.sel = null; edited({ editor: true }); });
+  $('rbLabW').addEventListener('input', () => { state.cfg.labels.w = Math.max(40, num($('rbLabW').value, 140)); edited(); });
+  $('rbAdd').addEventListener('click', () => { rowSizes((w, px) => { w.push(w.reduce((a, b) => a + b, 0) / w.length); px.push(null); }); rowsEdit(rows => { rows.push({ n: 1, items: [newVisual()] }); }); });
   let drag = null, raf = 0;
   const svgPt = e => { const sv = $('canvas').querySelector('svg'), r = sv.getBoundingClientRect(); return { x: (e.clientX - r.left) * state.cfg.w / r.width, y: (e.clientY - r.top) * state.cfg.h / r.height }; };
   $('canvas').addEventListener('pointerdown', e => { const h = e.target.closest('[data-gut]'); if (!h) return; e.preventDefault(); drag = { ax: h.dataset.gut[0], i: +h.dataset.gut.slice(1) }; document.body.classList.add('dragging', drag.ax === 'c' ? 'drag-c' : 'drag-r'); });
@@ -386,7 +520,7 @@ function init(){
   const pick = el => {
     const v = el.closest('[data-id]'), cell = el.closest('[data-cell]');
     if (v && v.dataset.id === 'logo') { $('logoW').focus(); return true; }
-    if (v) { state.sel = v.dataset.id === state.sel ? null : v.dataset.id; renderCanvas(); renderEditor(); const t = $('edType') || $('edTitle'); if (t && state.sel) t.focus(); return true; }
+    if (v) { const id = v.dataset.id.split('.')[0]; state.sel = id === state.sel ? null : id; renderCanvas(); renderEditor(); const t = $('edType') || $('edTitle'); if (t && state.sel) t.focus(); return true; }
     if (cell) { const [a, b] = cell.dataset.cell.split(',').map(Number); state.cfg.items.push({ type: 'clusteredColumnChart', title: 'New visual', c: a, r: b, cs: 1, rs: 1 }); state.sel = 'g' + (state.cfg.items.length - 1); edited({ editor: true }); const t = $('edType'); if (t) t.focus(); return true; }
     return false;
   };
@@ -395,6 +529,10 @@ function init(){
   $('editor').addEventListener('input', e => {
     const s = selItem(); if (!s) return; const t = e.target;
     if (t.id === 'edTitle') { if (s.region === 'header') state.cfg.header.title = t.value; else s.item.title = t.value; edited(); }
+    else if (t.id === 'edLs') { if (t.value === '') return; setLabelSpan(s.i, num(t.value, 1)); const n = $('edLs'); if (n) { n.focus(); n.select(); } }
+    else if (t.id === 'edSc' || t.id === 'edSr') { if (t.value === '') return; const v = Math.max(1, Math.min(6, Math.round(num(t.value, 1)))), sub = s.item.sub = s.item.sub || { cols: 1, rows: 1, items: [] }; sub[t.id === 'edSc' ? 'cols' : 'rows'] = v; if (sub.cols * sub.rows < 2) delete s.item.sub;
+      edited({ editor: true }); const n = $(t.id); if (n) { n.focus(); n.select(); } }
+    else if (t.dataset.sub != null) { const sub = s.item.sub, k = +t.dataset.sub; if (!sub) return; sub.items = sub.items || []; while (sub.items.length <= k) sub.items.push({}); sub.items[k].title = t.value; edited(); }
     else if (['edC', 'edR', 'edCs', 'edRs'].includes(t.id)) { const v = Math.max(1, Math.round(num(t.value, 1))); if (t.id === 'edC') s.item.c = v - 1; if (t.id === 'edR') s.item.r = v - 1; if (t.id === 'edCs') s.item.cs = v; if (t.id === 'edRs') s.item.rs = v; edited(); }
   });
   $('editor').addEventListener('change', e => { const s = selItem(); if (s && e.target.id === 'edType') { s.item.type = e.target.value; edited(); } });

@@ -164,6 +164,15 @@
         </div>
       </details>
       <div class="field"><label>Start from a layout</label><div class="chips" id="templates" role="group" aria-label="Layouts"></div></div>
+      <details class="sizes-box" id="rowsBox">
+        <summary><b>Build it row by row</b> <span class="muted">(each row with its own visuals and widths)</span></summary>
+        <div class="rows-b">
+          <div class="rb-top"><label class="chk inline"><input type="checkbox" id="rbLabOn"> Label column on the left</label> <label class="grp"><span class="small muted">Width</span> <input type="number" id="rbLabW" min="40" max="600" step="1"> <span class="small muted">px</span></label></div>
+          <div id="rowsB" class="rb-list"></div>
+          <div class="btns"><button type="button" class="btn small" id="rbAdd">+ Add a row</button></div>
+          <p class="note small">Each row splits the full width its own way. Type a height in px to fix a row (the others share what&rsquo;s left). Click a visual on the page to change its type or title, or to split it into smaller boxes (a cluster of cards); empty cells become visuals here.</p>
+        </div>
+      </details>
       <div class="cfg">
         <div class="field sm"><label for="cols">Columns</label><input type="number" id="cols" min="1" max="12"></div>
         <div class="field sm"><label for="rows">Rows</label><input type="number" id="rows" min="1" max="12"></div>
@@ -172,12 +181,13 @@
         <label class="chk inline"><input type="checkbox" id="showDims" checked> Show sizes</label>
         <label class="chk inline"><input type="checkbox" id="showZones"> Show 3-30-300 zones</label>
       </div>
+      <p class="note small" id="colsNote" hidden></p>
       <details class="sizes-box" id="sizesBox">
         <summary><b>Column widths and row heights</b> <span class="muted" id="sizesSum"></span></summary>
       <div class="sizes">
-        <div class="field"><label id="colWLbl">Column widths <span class="muted">(% of the grid)</span></label><div class="wts" id="colW" role="group" aria-labelledby="colWLbl"></div></div>
-        <div class="field"><label id="rowHLbl">Row heights <span class="muted">(% of the grid)</span></label><div class="wts" id="rowH" role="group" aria-labelledby="rowHLbl"></div></div>
-        <p class="note small">Or drag the handles between columns and rows on the page. Margin and gap stay the same; sizes snap to twelfths (hold Shift for any size).</p>
+        <div class="field"><label id="colWLbl">Column widths <span class="muted">(% of the grid, or px)</span></label><div class="wts" id="colW" role="group" aria-labelledby="colWLbl"></div></div>
+        <div class="field"><label id="rowHLbl">Row heights <span class="muted">(% of the grid, or px)</span></label><div class="wts" id="rowH" role="group" aria-labelledby="rowHLbl"></div></div>
+        <p class="note small">Type a size in px to fix a column or row: it keeps that size and the others share what&rsquo;s left. Empty the box (or &times;) to let it resize. Or drag the handles between columns and rows on the page. Margin and gap stay the same; sizes snap to twelfths (hold Shift for any size).</p>
       </div>
       </details>
       <div class="designer">

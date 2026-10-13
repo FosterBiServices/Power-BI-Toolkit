@@ -164,6 +164,11 @@ const LR = (() => {
       const bh = Math.min(28, o.h - pad * 2 - 18);
       if (bh > 8) { s.push('<rect x="' + f(o.x + pad) + '" y="' + f(o.y + pad + 18) + '" width="' + f(o.w - 2 * pad) + '" height="' + f(bh) + '" rx="4" fill="' + col.card + '" stroke="' + col.muted + '" stroke-opacity=".5"/>');
         s.push(t(o.x + pad + 8, o.y + pad + 18 + bh / 2 + 4, 'All', 11, col.text), '<path d="M' + f(o.x + o.w - pad - 16) + ' ' + f(o.y + pad + 18 + bh / 2 - 2) + ' l5 5 l5 -5" fill="none" stroke="' + col.muted + '" stroke-width="1.5"/>'); }
+    } else if (o.region === 'labels') {
+      // row label: a small icon square over the section name
+      const ic = Math.max(0, Math.min(28, o.w * 0.25, o.h - 30)), fs = Math.max(10, Math.min(13, o.w / 10)), cy = o.y + o.h / 2 - (ic ? (ic + 6 + fs) / 2 : -fs / 3);
+      if (ic >= 12) s.push('<rect x="' + f(o.x + o.w / 2 - ic / 2) + '" y="' + f(cy) + '" width="' + f(ic) + '" height="' + f(ic) + '" rx="4" fill="' + d[0] + '"/>');
+      s.push(t(o.x + o.w / 2, ic >= 12 ? cy + ic + 6 + fs : o.y + o.h / 2 + fs / 3, o.title || 'Section', fs, col.text, 'middle', 600));
     } else if (kind === 'text') {
       s.push(t(o.x + pad, o.y + o.h / 2 + 6, o.title || 'Text', Math.max(12, Math.min(22, o.h * 0.4)), col.headerText || col.text, '', 700));
     } else if (kind === 'button') {
@@ -197,7 +202,7 @@ const LR = (() => {
     out.push(background(L, c, col, st, { inner: true, afterPage: guides, font: opts.font }));
     if (opts.empty) L.empty.forEach(([a, b]) => { const g = L.grid; out.push('<g class="cell" data-cell="' + a + ',' + b + '" tabindex="0" role="button" aria-label="Add a visual in column ' + (a + 1) + ', row ' + (b + 1) + '"><rect x="' + f(g.x[a] + 2) + '" y="' + f(g.y[b] + 2) + '" width="' + f(g.w[a] - 4) + '" height="' + f(g.h[b] - 4) + '" rx="6" fill="' + col.accent + '" fill-opacity=".04" stroke="' + col.accent + '" stroke-opacity=".45" stroke-dasharray="6 5"/><text x="' + f(g.x[a] + g.w[a] / 2) + '" y="' + f(g.y[b] + g.h[b] / 2 + 5) + '" text-anchor="middle" font-size="14" fill="' + col.accent + '" font-family="' + font + '">+ Add a visual</text></g>'); });
     L.items.filter(o => !o.band).forEach(o => {
-      const sel = opts.selected === o.id;
+      const sel = opts.selected === o.id || (o.parent && opts.selected === o.parent);
       out.push('<g class="vis" data-id="' + o.id + '"' + (opts.hit ? ' tabindex="0" role="button" aria-label="' + esc((o.title || LO.typeOf(o.type).label) + ', ' + LO.typeOf(o.type).label) + '"' : '') + ' id="' + (opts.ids === false ? '' : 'Visual-' + idName(o.title || LO.typeOf(o.type).label)) + '">' + (o.tile ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" rx="' + Math.min(+st.radius || 0, 8, o.h / 3) + '" fill="' + col.card + '"' + (st.shadow ? ' filter="url(#lo-shadow)"' : '') + '/>' : '') + sketch(o, o.logo && !(st.header === 'band' || st.header === 'bleed') ? Object.assign({}, col, { headerText: col.text }) : col, font, st.radius)
         + (opts.hit ? '<rect x="' + f(o.x) + '" y="' + f(o.y) + '" width="' + f(o.w) + '" height="' + f(o.h) + '" fill="transparent"' + (sel ? ' stroke="' + col.select + '" stroke-width="3"' : '') + (st.radius ? ' rx="' + st.radius + '"' : '') + '/>' : '') + '</g>');
       const zone = o.zone || (o.type === 'slicer' ? '30' : '');
