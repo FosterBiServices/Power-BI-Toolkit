@@ -102,10 +102,13 @@ const LO = (() => {
     const avail = total - gap * (n - 1), used = fx.reduce((a, v) => a + (v || 0), 0), free = [];
     fx.forEach((v, i) => { if (v == null) free.push(i); });
     if (!free.length) return { s: fx.slice(), all: true, left: avail - used, used, avail };
-    const rest = avail - used, ws = split(rest + gap * (free.length - 1), free.length, gap, rounding, weights ? free.map(i => weights[i]) : null), s = fx.slice();
+    const fw = weights ? free.map(i => weights[i]) : free.map(() => 1), ft = fw.reduce((a, b) => a + b, 0);
+    const rest = avail - used, ws = split(rest + gap * (free.length - 1), free.length, gap, rounding, fw), s = fx.slice();
     free.forEach((i, k) => { s[i] = Math.max(1, ws[k]); });
-    return { s, rest, free: free.length, used, avail };
+    // the smallest share the others get of what's left, to work out how much bigger the page needs to be
+    return { s, rest, free: free.length, freeAt: free, used, avail, minShare: Math.min(...fw) / ft };
   }
+  const MIN_SHARE = 0.1;   // a column or row sized for the user under 10% of the grid gets a warning
   const starts = (origin, sizes, gap) => { const out = []; let x = origin; sizes.forEach(s => { out.push(x); x += s + gap; }); return out; };
 
   // Everything on the page, positioned: [{ id, region, type, title, x, y, w, h }] + problems
@@ -172,12 +175,24 @@ const LO = (() => {
     }
     const cols = Math.max(1, +c.grid.cols || 1), rows = Math.max(1, +c.grid.rows || 1);
     const SC = sized(cw, cols, g, R, weightsOf(c.grid.colW, cols), fixedOf(c.grid.colPx, cols)), SR = sized(H - m - top, rows, g, R, weightsOf(c.grid.rowH, rows), fixedOf(c.grid.rowPx, rows));
-    const gw = SC.s, gh = SR.s;
+    const gw = SC.s, gh = SR.s, roomFor = {};
     [[SC, 'column', 'width', 'Columns', 'on the right'], [SR, 'row', 'height', 'Rows', 'at the bottom']].forEach(([S, one, dim, Many, edge]) => {
       const px = v => Math.round(v * 100) / 100 + ' px';
       if (S.all && Math.abs(S.left) > 0.5) probs.push({ level: 'warn', text: 'Every ' + one + ' has a ' + dim + ' set, and together they come to ' + px(S.used) + ', but the grid has ' + px(S.avail) + ' (after the margin and gaps). '
         + (S.left > 0 ? 'That leaves ' + px(S.left) + ' empty ' + edge : 'The last ' + one + ' runs ' + px(-S.left) + ' past the margin ' + edge) + ', so the spacing isn’t even. Change a ' + dim + ', clear one so it fills the rest, or choose “Fit to the page”.' });
-      else if (S.free && S.rest / S.free < 40) probs.push({ level: S.rest <= 0 ? 'err' : 'warn', text: 'The ' + dim + 's you set (' + px(S.used) + ') leave ' + px(Math.max(0, S.rest)) + ' for the other ' + (S.free === 1 ? one : S.free + ' ' + one + 's') + '. Make a set ' + dim + ' smaller.' });
+      else if (S.free) {
+        /* a column (or row) sized for the user under 10% of the grid: say which, and how big the page needs to be
+           for it to get 10% while the set sizes stay as they are */
+        const small = S.freeAt.filter(i => S.s[i] < S.avail * MIN_SHARE);
+        if (small.length) {
+          const need = S.minShare > MIN_SHARE ? S.used * S.minShare / (S.minShare - MIN_SHARE) : null, ax = one === 'column' ? 'w' : 'h';
+          const to = need ? Math.ceil((+c[ax] + need - S.avail) / 10) * 10 : null;
+          if (to) roomFor[ax] = to;
+          const lo = Math.min(...small.map(i => S.s[i]));
+          probs.push({ level: S.rest <= 0 ? 'err' : 'warn', text: (small.length === 1 ? Many.slice(0, -1) : Many) + ' ' + small.map(i => i + 1).join(', ') + (small.length === 1 ? ' is' : ' are') + ' only ' + px(lo) + ' (' + Math.round(lo / S.avail * 1000) / 10 + '% of the grid), because the ' + dim + 's you set take ' + px(S.used) + ' of ' + px(S.avail) + '. '
+            + (to ? 'Make the page at least ' + to + ' px ' + (ax === 'w' ? 'wide' : 'tall') + ' (“Make room” under ' + one + ' ' + dim + 's), or make a set ' + dim + ' smaller.' : 'Make a set ' + dim + ' smaller.') });
+        }
+      }
     });
     const gx = starts(left, gw, g), gy = starts(top, gh, g);
     const grid = { cols, rows, x: gx, y: gy, w: gw, h: gh, left, top, right, bottom: H - m };
@@ -195,7 +210,7 @@ const LO = (() => {
     const over = R !== 'roundup' || (SC.all && SC.left < 0) || (SR.all && SR.left < 0) ? [] : out.filter(o => !o.band && (o.x + o.w > W + 0.01 || o.y + o.h > H + 0.01));
     if (over.length) probs.push({ level: 'info', text: 'Rounding up puts ' + over.length + ' visual' + (over.length === 1 ? '' : 's') + ' up to ' + Math.ceil(Math.max(...over.map(o => Math.max(o.x + o.w - W, o.y + o.h - H)))) + ' px past the page edge. Choose “Fill exactly” to keep everything inside.' });
     const empty = []; for (let a = 0; a < cols; a++) for (let b = 0; b < rows; b++) if (taken[a + ',' + b] === undefined) empty.push([a, b]);
-    return { items: out, grid, probs, empty, limits };
+    return { items: out, grid, probs, empty, limits, roomFor };
   }
 
   let measure = (text, size) => String(text).length * size * 0.56;

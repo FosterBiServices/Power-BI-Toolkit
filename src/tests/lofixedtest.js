@@ -41,6 +41,13 @@ const { chromium } = require('playwright');
   await p.click('#colW [data-pre=even]'); console.log('even again', (await g()).w.join(','), '| colPx', JSON.stringify(await p.evaluate(() => state.cfg.grid.colPx)));
   // rows work the same way
   await p.fill('#rowH input[data-px][data-i="0"]', '200'); s = await g(); console.log('row 1 = 200', s.h.join(','));
+  // a column sized for you under 10% of the grid: warning, and Make room widens the page so it gets 10%
+  await p.click('#rowH [data-pre=even]'); await p.selectOption('#pSize', '1'); await p.locator('#cols').focus(); await p.fill('#cols', '5');
+  for (const i of [1, 2, 3, 4]) { await p.fill('#colW input[data-px][data-i="' + i + '"]', '450'); }
+  await p.locator('#colW input[data-px][data-i="4"]').press('Tab');
+  s = await g(); console.log('1920, 4 x 450', s.w.join(','), '| msg:', await msgs());
+  await p.click('#colW [data-pre=room]'); s = await g();
+  console.log('made room: page', await p.evaluate(() => state.cfg.w), '| widths', s.w.join(','), '| col 1 share', Math.round(s.w[0] / (s.right - s.left - 40) * 1000) / 10, '% (expect >= 10) | msgs', JSON.stringify(await msgs()), '| size select', await p.locator('#pSize').inputValue());
   // phone width: no horizontal scroll
   await p.setViewportSize({ width: 390, height: 900 }); console.log('390 scroll', await p.evaluate(() => document.documentElement.scrollWidth), '(expect 390)');
   await p.locator('#sizesBox').screenshot({ path: 'lofixed_2.png' });

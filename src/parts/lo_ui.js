@@ -161,13 +161,15 @@ function renderSizes(){
     if (n < 2) { box.innerHTML = '<span class="small muted">One ' + name.toLowerCase() + ': it fills the grid.</span>'; return; }
     const g = state.cfg.grid, cur = LO.weightsOf(g[AX[ax][1]], n);
     const same = w => { if (!cur || fx) return false; const t = w.reduce((x, y) => x + y, 0), tc = cur.reduce((x, y) => x + y, 0); return w.every((v, j) => Math.abs(v / t - cur[j] / tc) < 0.002); };
+    const room = state.L && state.L.roomFor && state.L.roomFor[ax === 'c' ? 'w' : 'h'];
     const S = state.L && state.L.grid, misfit = fx && !nFree && S && Math.abs((ax === 'c' ? S.right - S.left : S.bottom - S.top) - (+state.cfg.gap || 0) * (n - 1) - fx.reduce((x, y) => x + y, 0)) > 0.5;
     box.innerHTML = p.map((v, i) => { const on = fx && fx[i] != null, lbl = name + ' ' + (i + 1);
       return '<span class="wt' + (on ? ' on' : '') + '"><span class="small muted">' + (i + 1) + '</span><input type="number" data-ax="' + ax + '" data-i="' + i + '" min="3" max="' + (100 - 3 * (n - 1)) + '" step="any" value="' + fmtPct(v) + '"' + (lockPct(i) ? ' disabled' : '') + ' aria-label="' + lbl + ' (% of the grid)"><span class="small muted">%</span>'
         + '<input type="number" class="px' + (on ? ' fixed' : '') + '" data-px data-ax="' + ax + '" data-i="' + i + '" min="20" step="1" value="' + (on ? fx[i] : '') + '" placeholder="' + (px[i] != null ? Math.round(px[i]) : '') + '" aria-label="' + lbl + ' ' + dim + ' in px (empty: sized for you)"><span class="small muted">px</span>'
         + (on ? '<button type="button" class="unfix" data-unfix data-ax="' + ax + '" data-i="' + i + '" aria-label="Let ' + name.toLowerCase() + ' ' + (i + 1) + ' resize" title="Let it resize">&times;</button>' : '') + '</span>'; }).join('')
       + '<span class="chips sm"><button type="button" class="chip' + (!cur && !fx ? ' on' : '') + '" data-ax="' + ax + '" data-pre="even">Even</button>' + (PRESETS[n] || []).map(([lbl, w]) => '<button type="button" class="chip" aria-pressed="' + same(w) + '" data-ax="' + ax + '" data-pre="' + w.join(',') + '">' + esc(lbl) + '</button>').join('')
-      + (misfit ? '<button type="button" class="chip" data-ax="' + ax + '" data-pre="fit">Fit to the page</button>' : '') + '</span>';
+      + (misfit ? '<button type="button" class="chip" data-ax="' + ax + '" data-pre="fit">Fit to the page</button>' : '')
+      + (room ? '<button type="button" class="chip" data-ax="' + ax + '" data-pre="room">Make room: page ' + room + ' px ' + (ax === 'c' ? 'wide' : 'tall') + '</button>' : '') + '</span>';
   });
 }
 // drag a handle between two columns (or rows) to share their room differently
@@ -410,6 +412,7 @@ function init(){
       const u = e.target.closest('[data-unfix]'); if (u) { setPx(u.dataset.ax, +u.dataset.i, null); edited(); const n = $(id).querySelector('input[data-px][data-i="' + u.dataset.i + '"]'); if (n) n.focus(); return; }
       const b = e.target.closest('[data-pre]'); if (!b) return; const ax = b.dataset.ax, g = state.cfg.grid;
       if (b.dataset.pre === 'fit') fitFixed(ax);
+      else if (b.dataset.pre === 'room') { const k = ax === 'c' ? 'w' : 'h', v = state.L.roomFor[k]; if (v) { state.cfg[k] = v; state.customSize = true; } }
       else { g[AX[ax][2]] = null; if (b.dataset.pre === 'even') g[AX[ax][1]] = null; else setW(ax, b.dataset.pre.split(',').map(Number)); }
       edited(); });
   });
