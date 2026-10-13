@@ -13,9 +13,11 @@ const { chromium } = require('playwright');
   // row 1: 3 visuals; row 2 keeps its 2 (the trend chart's title stays)
   await p.fill('#rowsB [data-r="0"][data-rn]', '3');
   console.log('row 1 = 3', await rows(), '| grid', await p.evaluate(() => state.cfg.grid.cols + ' cols'), '|', await vis());
+  console.log('note', await p.locator('#colsNote').isVisible(), '|', await p.locator('#sizesSum').innerText());
   // add a row of 4, then a row of 1
   await p.click('#rbAdd'); await p.fill('#rowsB [data-r="2"][data-rn]', '4'); await p.click('#rbAdd');
   console.log('4 rows', await rows(), '| cols', await p.evaluate(() => state.cfg.grid.cols), '| visuals', await p.locator('#canvas .vis[data-id^=g]').count(), '(expect 3+2+4+1 = 10)');
+  console.log('note now', await p.locator('#colsNote').innerText(), '|', await p.locator('#sizesSum').innerText());
   // gaps and right edge the same in every row
   const edges = await p.evaluate(() => { const G = state.L.grid, its = state.L.items.filter(o => o.region === 'grid'); return [...new Set(its.filter(o => o.x === G.left).map(o => o.x))].join() + ' / right ' + [...new Set(its.map(o => Math.round(o.x + o.w)).filter(v => v > G.right - 30))].join() + ' (expect ' + G.right + ')'; });
   console.log('edges', edges);

@@ -150,7 +150,11 @@ function fitFixed(ax){
 const fmtPct = v => String(Math.round(v * 10) / 10);
 function renderSizes(){
   const sum = ax => { const p = pcts(ax), f = fixed(ax), k = f ? f.filter(v => v != null).length : 0; return (p.length < 2 ? '1' : LO.isEven(p) ? p.length + ' even' : p.map(v => Math.round(v)).join(' / ')) + (k ? ', ' + k + ' fixed' : ''); };
-  $('sizesSum').textContent = '(columns ' + sum('c') + ', rows ' + sum('r') + ')';
+  // rows split their own way put more columns in the grid underneath than any row shows: say so instead of listing them
+  const cols = +state.cfg.grid.cols, most = Math.max(1, ...LO.rowsOf(state.cfg).map(r => r.pieces.length)), built = cols > most;
+  $('colsNote').hidden = !built;
+  if (built) $('colsNote').textContent = 'Your rows are split different ways, so the grid underneath has ' + cols + ' narrow columns where their edges line up. Change a row\u2019s visuals and widths in Build it row by row.';
+  $('sizesSum').textContent = '(' + (built ? cols + ' columns from your rows' : 'columns ' + sum('c')) + ', rows ' + sum('r') + ')';
   ['c', 'r'].forEach(ax => {
     const box = $(ax === 'c' ? 'colW' : 'rowH'), p = pcts(ax), n = p.length, name = ax === 'c' ? 'Column' : 'Row', dim = ax === 'c' ? 'width' : 'height';
     const fx = fixed(ax), px = pxNow(ax), nFree = fx ? fx.filter(v => v == null).length : n, lockPct = i => (fx && fx[i] != null) || nFree < 2;
