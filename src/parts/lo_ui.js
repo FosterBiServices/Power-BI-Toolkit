@@ -103,38 +103,71 @@ function renderCanvas(){
 let spanBase = null;
 function fitSpans(ax, to){
   const sp = ax === 'c' ? 'cs' : 'rs', g = state.cfg.grid, k = ax + (state.cfg.items.length);
-  if (!spanBase || spanBase.k !== k) spanBase = { k, w: g[ax === 'c' ? 'colW' : 'rowH'], n: +g[ax === 'c' ? 'cols' : 'rows'], spans: state.cfg.items.map(it => Math.max(1, it[sp] || 1)) };
+  if (!spanBase || spanBase.k !== k) spanBase = { k, w: g[ax === 'c' ? 'colW' : 'rowH'], px: g[AX[ax][2]], n: +g[ax === 'c' ? 'cols' : 'rows'], spans: state.cfg.items.map(it => Math.max(1, it[sp] || 1)) };
   state.cfg.items.forEach((it, i) => { const at = it[ax], n = spanBase.spans[i];
     it[sp] = state.cfg.grid.grow === 'stretch' && at === 0 && n === spanBase.n ? to : at < to && at + n > to ? to - at : n; });
   // keep the sizes already set; a new column (or row) gets the average share
   const wk = ax === 'c' ? 'colW' : 'rowH', w0 = LO.weightsOf(spanBase.w, spanBase.n);
   if (!w0) g[wk] = null;
   else { const avg = w0.reduce((a, b) => a + b, 0) / w0.length, w = w0.slice(0, to); while (w.length < to) w.push(avg); setW(ax, w.map(v => v / w.reduce((a, b) => a + b, 0) * 100)); }
+  // fixed sizes stay with their column (or row); a new one is sized for the user
+  const f0 = LO.fixedOf(spanBase.px, spanBase.n), f = f0 ? f0.slice(0, to) : null;
+  if (f) while (f.length < to) f.push(null);
+  g[AX[ax][2]] = f && f.some(v => v != null) ? f : null;
 }
 const PRESETS = { 2: [['1/3 + 2/3', [1, 2]], ['2/3 + 1/3', [2, 1]], ['1/4 + 3/4', [1, 3]], ['3/4 + 1/4', [3, 1]]], 3: [['1/2 + 1/4 + 1/4', [2, 1, 1]], ['1/4 + 1/2 + 1/4', [1, 2, 1]], ['1/4 + 1/4 + 1/2', [1, 1, 2]], ['1/6 + 1/3 + 1/2', [1, 2, 3]]], 4: [['2/5 + 1/5 × 3', [2, 1, 1, 1]], ['1/5 × 3 + 2/5', [1, 1, 1, 2]]] };
-const AX = { c: ['cols', 'colW'], r: ['rows', 'rowH'] };
-// the grid's column (c) or row (r) sizes as percentages that add up to 100
-function pcts(ax){ const g = state.cfg.grid, n = +g[AX[ax][0]], w = LO.weightsOf(g[AX[ax][1]], n) || Array(n).fill(1), t = w.reduce((a, b) => a + b, 0); return w.map(v => v / t * 100); }
+const AX = { c: ['cols', 'colW', 'colPx'], r: ['rows', 'rowH', 'rowPx'] };
+// the sizes the user fixed in px (null where sized for them), or null when none is
+const fixed = ax => { const g = state.cfg.grid; return LO.fixedOf(g[AX[ax][2]], +g[AX[ax][0]]); };
+// the grid's column (c) or row (r) sizes in px, as laid out now
+const pxNow = ax => { const G = state.L && state.L.grid; return G ? (ax === 'c' ? G.w : G.h) : []; };
+// the grid's column (c) or row (r) sizes as percentages that add up to 100 (from the page when some are fixed)
+function pcts(ax){
+  const g = state.cfg.grid, n = +g[AX[ax][0]], px = pxNow(ax);
+  const w = fixed(ax) && px.length === n ? px : LO.weightsOf(g[AX[ax][1]], n) || Array(n).fill(1), t = w.reduce((a, b) => a + b, 0);
+  return w.map(v => t > 0 ? v / t * 100 : 100 / n);
+}
 function setW(ax, arr){ const g = state.cfg.grid; const r = arr.map(v => Math.round(v * 100) / 100); g[AX[ax][1]] = LO.isEven(r) ? null : r; }
-// one column (or row) to `pct` %, the others sharing the rest in their current proportions
+// one column (or row) to `pct` %, the others not fixed sharing the rest in their current proportions
 function setShare(ax, i, pct){
-  const p = pcts(ax), n = p.length; if (n < 2) return;
-  const v = Math.max(3, Math.min(100 - 3 * (n - 1), pct)), rest = 100 - p[i];
-  setW(ax, p.map((x, j) => j === i ? v : rest > 0 ? x / rest * (100 - v) : (100 - v) / (n - 1)));
+  const p = pcts(ax), fx = fixed(ax), F = p.map((x, j) => j).filter(j => !fx || fx[j] == null);
+  if (F.length < 2 || !F.includes(i)) return;
+  const tot = F.reduce((a, j) => a + p[j], 0), v = Math.max(3, Math.min(tot - 3 * (F.length - 1), pct)), rest = tot - p[i];
+  setW(ax, p.map((x, j) => !F.includes(j) ? x : j === i ? v : rest > 0 ? x / rest * (tot - v) : (tot - v) / (F.length - 1)));
+}
+// fix one column (or row) at `v` px, or (null) let it be sized again; the rest don't move until the next change
+function setPx(ax, i, v){
+  const g = state.cfg.grid, n = +g[AX[ax][0]], p = pcts(ax), f = fixed(ax) || Array(n).fill(null);
+  f[i] = v == null ? null : Math.max(20, Math.round(v * 100) / 100);
+  setW(ax, p); g[AX[ax][2]] = f.some(x => x != null) ? f : null;
+}
+// every size fixed but not filling the grid: scale them to fit, whole pixels
+function fitFixed(ax){
+  const f = fixed(ax), G = state.L.grid, n = f.length, gap = +state.cfg.gap || 0;
+  const room = (ax === 'c' ? G.right - G.left : G.bottom - G.top);
+  state.cfg.grid[AX[ax][2]] = LO.split(room, n, gap, 'fit', f);
 }
 const fmtPct = v => String(Math.round(v * 10) / 10);
 function renderSizes(){
-  const sum = ax => { const p = pcts(ax); return p.length < 2 ? '1' : LO.isEven(p) ? p.length + ' even' : p.map(v => Math.round(v)).join(' / '); };
+  const sum = ax => { const p = pcts(ax), f = fixed(ax), k = f ? f.filter(v => v != null).length : 0; return (p.length < 2 ? '1' : LO.isEven(p) ? p.length + ' even' : p.map(v => Math.round(v)).join(' / ')) + (k ? ', ' + k + ' fixed' : ''); };
   $('sizesSum').textContent = '(columns ' + sum('c') + ', rows ' + sum('r') + ')';
   ['c', 'r'].forEach(ax => {
-    const box = $(ax === 'c' ? 'colW' : 'rowH'), p = pcts(ax), n = p.length, name = ax === 'c' ? 'Column' : 'Row';
+    const box = $(ax === 'c' ? 'colW' : 'rowH'), p = pcts(ax), n = p.length, name = ax === 'c' ? 'Column' : 'Row', dim = ax === 'c' ? 'width' : 'height';
+    const fx = fixed(ax), px = pxNow(ax), nFree = fx ? fx.filter(v => v == null).length : n, lockPct = i => (fx && fx[i] != null) || nFree < 2;
     const a = document.activeElement;
-    if (a && box.contains(a) && a.matches('input')) { box.querySelectorAll('input[data-i]').forEach(el => { if (el !== a) el.value = fmtPct(p[+el.dataset.i]); }); return; }
+    if (a && box.contains(a) && a.matches('input')) { box.querySelectorAll('input[data-i]').forEach(el => { const i = +el.dataset.i;
+      if (el.dataset.px != null) { el.placeholder = px[i] != null ? Math.round(px[i]) : ''; el.classList.toggle('fixed', !!(fx && fx[i] != null)); }
+      else { if (el !== a) el.value = fmtPct(p[i]); el.disabled = lockPct(i); } }); return; }
     if (n < 2) { box.innerHTML = '<span class="small muted">One ' + name.toLowerCase() + ': it fills the grid.</span>'; return; }
     const g = state.cfg.grid, cur = LO.weightsOf(g[AX[ax][1]], n);
-    const same = w => { if (!cur) return false; const t = w.reduce((x, y) => x + y, 0), tc = cur.reduce((x, y) => x + y, 0); return w.every((v, j) => Math.abs(v / t - cur[j] / tc) < 0.002); };
-    box.innerHTML = p.map((v, i) => '<label class="wt"><span class="small muted">' + (i + 1) + '</span><input type="number" data-ax="' + ax + '" data-i="' + i + '" min="3" max="' + (100 - 3 * (n - 1)) + '" step="any" value="' + fmtPct(v) + '" aria-label="' + name + ' ' + (i + 1) + ' (% of the grid)"></label>').join('')
-      + '<span class="chips sm"><button type="button" class="chip' + (!cur ? ' on' : '') + '" data-ax="' + ax + '" data-pre="even">Even</button>' + (PRESETS[n] || []).map(([lbl, w]) => '<button type="button" class="chip" aria-pressed="' + same(w) + '" data-ax="' + ax + '" data-pre="' + w.join(',') + '">' + esc(lbl) + '</button>').join('') + '</span>';
+    const same = w => { if (!cur || fx) return false; const t = w.reduce((x, y) => x + y, 0), tc = cur.reduce((x, y) => x + y, 0); return w.every((v, j) => Math.abs(v / t - cur[j] / tc) < 0.002); };
+    const S = state.L && state.L.grid, misfit = fx && !nFree && S && Math.abs((ax === 'c' ? S.right - S.left : S.bottom - S.top) - (+state.cfg.gap || 0) * (n - 1) - fx.reduce((x, y) => x + y, 0)) > 0.5;
+    box.innerHTML = p.map((v, i) => { const on = fx && fx[i] != null, lbl = name + ' ' + (i + 1);
+      return '<span class="wt' + (on ? ' on' : '') + '"><span class="small muted">' + (i + 1) + '</span><input type="number" data-ax="' + ax + '" data-i="' + i + '" min="3" max="' + (100 - 3 * (n - 1)) + '" step="any" value="' + fmtPct(v) + '"' + (lockPct(i) ? ' disabled' : '') + ' aria-label="' + lbl + ' (% of the grid)"><span class="small muted">%</span>'
+        + '<input type="number" class="px' + (on ? ' fixed' : '') + '" data-px data-ax="' + ax + '" data-i="' + i + '" min="20" step="1" value="' + (on ? fx[i] : '') + '" placeholder="' + (px[i] != null ? Math.round(px[i]) : '') + '" aria-label="' + lbl + ' ' + dim + ' in px (empty: sized for you)"><span class="small muted">px</span>'
+        + (on ? '<button type="button" class="unfix" data-unfix data-ax="' + ax + '" data-i="' + i + '" aria-label="Let ' + name.toLowerCase() + ' ' + (i + 1) + ' resize" title="Let it resize">&times;</button>' : '') + '</span>'; }).join('')
+      + '<span class="chips sm"><button type="button" class="chip' + (!cur && !fx ? ' on' : '') + '" data-ax="' + ax + '" data-pre="even">Even</button>' + (PRESETS[n] || []).map(([lbl, w]) => '<button type="button" class="chip" aria-pressed="' + same(w) + '" data-ax="' + ax + '" data-pre="' + w.join(',') + '">' + esc(lbl) + '</button>').join('')
+      + (misfit ? '<button type="button" class="chip" data-ax="' + ax + '" data-pre="fit">Fit to the page</button>' : '') + '</span>';
   });
 }
 // drag a handle between two columns (or rows) to share their room differently
@@ -149,6 +182,8 @@ function moveGutter(ax, i, toPx, free){
   if (end - start < 2 * min) return;
   b = Math.max(start + min, Math.min(end - min, b));
   const q = p.slice(); q[i] = b - start; q[i + 1] = end - b; setW(ax, q);
+  // a fixed column (or row) beside the handle keeps being fixed, at its new size
+  const f = fixed(ax); if (f) { [i, i + 1].forEach(j => { if (f[j] != null) f[j] = Math.max(20, Math.round(q[j] / 100 * availPx)); }); state.cfg.grid[AX[ax][2]] = f; }
 }
 function typeSelect(id, cur, only){
   const list = only ? LO.TYPES.filter(t => only.includes(t[0])) : LO.TYPES;
@@ -357,15 +392,26 @@ function init(){
   // empty the grid (visuals and sizes) but keep the columns, rows, header, strip and side panel; once, it can be undone
   $('gridClear').addEventListener('click', () => { const g = state.cfg.grid;
     if (state.gridUndo && !state.cfg.items.length) { const u = state.gridUndo; Object.assign(g, u.grid); state.cfg.items = u.items; state.gridUndo = null; }
-    else { state.gridUndo = { grid: JSON.parse(JSON.stringify(g)), items: state.cfg.items }; state.cfg.items = []; g.colW = g.rowH = null; }
+    else { state.gridUndo = { grid: JSON.parse(JSON.stringify(g)), items: state.cfg.items }; state.cfg.items = []; g.colW = g.rowH = g.colPx = g.rowPx = null; }
     state.sel = null; edited({ editor: true }); });
   $('cols').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('cols').value, 3)))); if (n !== g.cols) fitSpans('c', n); g.cols = n; edited({ editor: true }); });
   $('rows').addEventListener('input', () => { const g = state.cfg.grid, n = Math.min(12, Math.max(1, Math.round(num($('rows').value, 2)))); if (n !== g.rows) fitSpans('r', n); g.rows = n; edited({ editor: true }); });
   // column widths and row heights: typed, presets, or dragged on the canvas
   ['colW', 'rowH'].forEach(id => {
-    $(id).addEventListener('input', e => { const t = e.target; if (!t.dataset.ax) return; const v = parseFloat(t.value); if (isNaN(v)) return; setShare(t.dataset.ax, +t.dataset.i, v); edited(); });
-    $(id).addEventListener('change', e => { if (e.target.dataset.ax) { const a = e.target; a.blur(); renderSizes(); const n = $(id).querySelector('[data-i="' + a.dataset.i + '"]'); if (n) n.focus(); } });
-    $(id).addEventListener('click', e => { const b = e.target.closest('[data-pre]'); if (!b) return; const ax = b.dataset.ax; if (b.dataset.pre === 'even') state.cfg.grid[AX[ax][1]] = null; else setW(ax, b.dataset.pre.split(',').map(Number)); edited(); });
+    // a size in px fixes that column (or row): it keeps it and the others share what's left; emptying the box lets it resize
+    $(id).addEventListener('input', e => { const t = e.target; if (!t.dataset.ax) return; const v = parseFloat(t.value);
+      if (t.dataset.px != null) { if (isNaN(v) && t.value !== '') return; setPx(t.dataset.ax, +t.dataset.i, isNaN(v) || v <= 0 ? null : v); edited(); return; }
+      if (isNaN(v)) return; setShare(t.dataset.ax, +t.dataset.i, v); edited(); });
+    // redraw once the change is in, keeping the focus where it went (the same box after Enter, or the next one after Tab or a click)
+    $(id).addEventListener('change', e => { if (!e.target.dataset.ax) return; setTimeout(() => {
+      const a = document.activeElement, mine = a && $(id).contains(a) && a.matches('input[data-i]'), k = mine ? 'input[data-i="' + a.dataset.i + '"]' + (a.dataset.px != null ? '[data-px]' : ':not([data-px])') : '';
+      if (mine) a.blur(); renderSizes(); const n = k && $(id).querySelector(k); if (n) { n.focus(); n.select(); } }); });
+    $(id).addEventListener('click', e => {
+      const u = e.target.closest('[data-unfix]'); if (u) { setPx(u.dataset.ax, +u.dataset.i, null); edited(); const n = $(id).querySelector('input[data-px][data-i="' + u.dataset.i + '"]'); if (n) n.focus(); return; }
+      const b = e.target.closest('[data-pre]'); if (!b) return; const ax = b.dataset.ax, g = state.cfg.grid;
+      if (b.dataset.pre === 'fit') fitFixed(ax);
+      else { g[AX[ax][2]] = null; if (b.dataset.pre === 'even') g[AX[ax][1]] = null; else setW(ax, b.dataset.pre.split(',').map(Number)); }
+      edited(); });
   });
   let drag = null, raf = 0;
   const svgPt = e => { const sv = $('canvas').querySelector('svg'), r = sv.getBoundingClientRect(); return { x: (e.clientX - r.left) * state.cfg.w / r.width, y: (e.clientY - r.top) * state.cfg.h / r.height }; };

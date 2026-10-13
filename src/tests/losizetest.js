@@ -18,7 +18,7 @@ const { chromium } = require('playwright');
   console.log('rows 1/3 + 2/3', s.h.join(','), '| gap kept', s.y[1] - (s.y[0] + s.h[0]), '(expect 10)', '| pressed', await p.locator('#rowH [data-pre="1,2"]').getAttribute('aria-pressed'));
   // type 50% into column 1: the others share the rest
   await p.fill('#colW [data-i="0"]', '50'); s = await sizes();
-  console.log('col 1 at 50%', s.w.join(','), '| inputs', await p.$$eval('#colW input', a => a.map(x => x.value).join(' / ')));
+  console.log('col 1 at 50%', s.w.join(','), '| inputs', await p.$$eval('#colW input:not([data-px])', a => a.map(x => x.value).join(' / ')));
   // drag the handle between columns 1 and 2 to about a quarter of the grid
   const svg = p.locator('#canvas svg'); const box = await svg.boundingBox(); const W = await p.evaluate(() => state.cfg.w);
   const k = box.width / W, G = await p.evaluate(() => state.L.grid);

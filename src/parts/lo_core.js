@@ -86,13 +86,26 @@ const LO = (() => {
         w.splice(i, 2, w[i] + gap + w[i + 1]); g[n]--;
       }
       const t = w.reduce((a, b) => a + b, 0), pc = w.map(v => Math.round(v / t * 10000) / 100);
-      if (w.length < px.length) g[wk] = isEven(pc) ? null : pc;
+      if (w.length < px.length) { g[wk] = isEven(pc) ? null : pc; g[wk === 'colW' ? 'colPx' : 'rowPx'] = null; }
     });
     return c;
   }
   // grid.colW / grid.rowH: relative sizes of the columns and rows; null (or the wrong length) means even
   const weightsOf = (arr, n) => Array.isArray(arr) && arr.length === n && arr.every(v => +v > 0) ? arr.map(Number) : null;
   const isEven = arr => !arr || arr.every(v => Math.abs(v - arr[0]) < 1e-9);
+  // grid.colPx / grid.rowPx: sizes in px the user fixed (null where a column or row is sized for them); null when none is fixed
+  const fixedOf = (arr, n) => Array.isArray(arr) && arr.length === n && arr.some(v => +v > 0) ? arr.map(v => +v > 0 ? +v : null) : null;
+  /* Sizes along one axis: fixed ones keep their px, the others share what's left (by their weights), so margin and gap stay put.
+     When every one is fixed, `left` is the room they leave empty (or, below 0, how far they run past the margin). */
+  function sized(total, n, gap, rounding, weights, fx){
+    if (!fx) return { s: split(total, n, gap, rounding, weights) };
+    const avail = total - gap * (n - 1), used = fx.reduce((a, v) => a + (v || 0), 0), free = [];
+    fx.forEach((v, i) => { if (v == null) free.push(i); });
+    if (!free.length) return { s: fx.slice(), all: true, left: avail - used, used, avail };
+    const rest = avail - used, ws = split(rest + gap * (free.length - 1), free.length, gap, rounding, weights ? free.map(i => weights[i]) : null), s = fx.slice();
+    free.forEach((i, k) => { s[i] = Math.max(1, ws[k]); });
+    return { s, rest, free: free.length, used, avail };
+  }
   const starts = (origin, sizes, gap) => { const out = []; let x = origin; sizes.forEach(s => { out.push(x); x += s + gap; }); return out; };
 
   // Everything on the page, positioned: [{ id, region, type, title, x, y, w, h }] + problems
@@ -158,7 +171,14 @@ const LO = (() => {
       top += sh + g;
     }
     const cols = Math.max(1, +c.grid.cols || 1), rows = Math.max(1, +c.grid.rows || 1);
-    const gw = split(cw, cols, g, R, weightsOf(c.grid.colW, cols)), gh = split(H - m - top, rows, g, R, weightsOf(c.grid.rowH, rows));
+    const SC = sized(cw, cols, g, R, weightsOf(c.grid.colW, cols), fixedOf(c.grid.colPx, cols)), SR = sized(H - m - top, rows, g, R, weightsOf(c.grid.rowH, rows), fixedOf(c.grid.rowPx, rows));
+    const gw = SC.s, gh = SR.s;
+    [[SC, 'column', 'width', 'Columns', 'on the right'], [SR, 'row', 'height', 'Rows', 'at the bottom']].forEach(([S, one, dim, Many, edge]) => {
+      const px = v => Math.round(v * 100) / 100 + ' px';
+      if (S.all && Math.abs(S.left) > 0.5) probs.push({ level: 'warn', text: 'Every ' + one + ' has a ' + dim + ' set, and together they come to ' + px(S.used) + ', but the grid has ' + px(S.avail) + ' (after the margin and gaps). '
+        + (S.left > 0 ? 'That leaves ' + px(S.left) + ' empty ' + edge : 'The last ' + one + ' runs ' + px(-S.left) + ' past the margin ' + edge) + ', so the spacing isn’t even. Change a ' + dim + ', clear one so it fills the rest, or choose “Fit to the page”.' });
+      else if (S.free && S.rest / S.free < 40) probs.push({ level: S.rest <= 0 ? 'err' : 'warn', text: 'The ' + dim + 's you set (' + px(S.used) + ') leave ' + px(Math.max(0, S.rest)) + ' for the other ' + (S.free === 1 ? one : S.free + ' ' + one + 's') + '. Make a set ' + dim + ' smaller.' });
+    });
     const gx = starts(left, gw, g), gy = starts(top, gh, g);
     const grid = { cols, rows, x: gx, y: gy, w: gw, h: gh, left, top, right, bottom: H - m };
     const taken = {};
@@ -172,7 +192,7 @@ const LO = (() => {
     // sanity
     if (gw.some(v => v < 60) || gh.some(v => v < 60)) probs.push({ level: 'warn', text: 'Some grid cells are under 60 px (' + Math.min(...gw) + ' × ' + Math.min(...gh) + '). Use fewer columns or rows, or a smaller gap.' });
     if (cw <= 0 || H - m - top <= 0) probs.push({ level: 'err', text: 'The header, strip and side panel leave no room for the grid.' });
-    const over = out.filter(o => !o.band && (o.x + o.w > W + 0.01 || o.y + o.h > H + 0.01));
+    const over = R !== 'roundup' || (SC.all && SC.left < 0) || (SR.all && SR.left < 0) ? [] : out.filter(o => !o.band && (o.x + o.w > W + 0.01 || o.y + o.h > H + 0.01));
     if (over.length) probs.push({ level: 'info', text: 'Rounding up puts ' + over.length + ' visual' + (over.length === 1 ? '' : 's') + ' up to ' + Math.ceil(Math.max(...over.map(o => Math.max(o.x + o.w - W, o.y + o.h - H)))) + ' px past the page edge. Choose “Fill exactly” to keep everything inside.' });
     const empty = []; for (let a = 0; a < cols; a++) for (let b = 0; b < rows; b++) if (taken[a + ',' + b] === undefined) empty.push([a, b]);
     return { items: out, grid, probs, empty, limits };
@@ -214,5 +234,5 @@ const LO = (() => {
     return c;
   }
 
-  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, weightsOf, isEven, tidy, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
+  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, sized, weightsOf, fixedOf, isEven, tidy, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
 })();
