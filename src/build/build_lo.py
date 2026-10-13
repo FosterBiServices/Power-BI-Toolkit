@@ -116,6 +116,16 @@ body.dragging{user-select:none}body.drag-c,body.drag-c *{cursor:col-resize!impor
 .wt .unfix{border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:2px 4px;cursor:pointer}
 .wt .unfix:hover,.wt .unfix:focus-visible{color:var(--ink)}
 .chips.sm .chip{font-size:12.5px;padding:3px 9px}
+.rows-b{padding:0 14px 12px;display:flex;flex-direction:column;gap:8px}
+.rows-b .note{margin:0}
+.rb-list{display:flex;flex-direction:column;gap:6px}
+.rb{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.rb>b{min-width:48px}
+.rb .grp{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+.rb input{width:60px}
+.rb input.px{width:68px}
+.rb input.px.fixed{border-color:var(--accent);font-weight:600}
+.rb .del{margin-left:auto}
 .canvas .vis:hover rect:last-child{stroke:var(--gold);stroke-width:2}
 .canvas .vis:focus-visible rect:last-child,.canvas .cell:focus-visible rect{stroke:var(--gold);stroke-width:3;stroke-dasharray:none}
 .editor{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}

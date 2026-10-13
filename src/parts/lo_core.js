@@ -213,6 +213,59 @@ const LO = (() => {
     return { items: out, grid, probs, empty, limits, roomFor };
   }
 
+  /* ---------- row by row: each row with its own visuals and widths ---------- */
+  // the page as rows: per grid row, its pieces left to right (visuals, or empty cells: idx null) and where each ends (px from the grid's left)
+  function rowsOf(c){
+    const L = layout(c), G = L.grid, room = G.right - G.left, out = [];
+    for (let r = 0; r < G.rows; r++) {
+      const ps = L.items.filter(o => o.region === 'grid' && o.r <= r && r < o.r + o.rs).map(o => ({ c: o.c, cs: o.cs, idx: o.idx }))
+        .concat(L.empty.filter(e => e[1] === r).map(e => ({ c: e[0], cs: 1, idx: null }))).sort((a, b) => a.c - b.c);
+      const pieces = []; let next = 0;
+      ps.forEach(p => { if (p.c >= next) { pieces.push(p); next = p.c + p.cs; } });
+      const ends = pieces.map((p, k) => k === pieces.length - 1 ? room : G.x[p.c + p.cs - 1] + G.w[p.c + p.cs - 1] - G.left);
+      out.push({ pieces, ends, widths: pieces.map((p, k) => ends[k] - (k ? ends[k - 1] + (+c.gap || 0) : 0)) });
+    }
+    return out;
+  }
+  /* Build the grid from rows: each row is { ends } (px, as rowsOf gives) or { n, w } (how many, relative widths; even when left out),
+     plus items: what goes in each piece ({ type, title, zone }, or null for an empty cell).
+     Columns are cut wherever any row has a gap, so every row keeps its own widths; a visual over the same columns in rows
+     next to each other (the same object) stays one visual that spans them. Row heights are left as they are. */
+  function byRows(c, rows){
+    const G = layout(c).grid, room = G.right - G.left, gap = +c.gap || 0;
+    const endsOf = r => {
+      if (r.ends) return r.ends.slice(0, -1).concat([room]);
+      const n = Math.max(1, Math.min(12, r.n | 0 || 1)), ws = split(room, n, gap, 'fit', weightsOf(r.w, n)); let x = 0;
+      return ws.map((v, k) => { x += v; const e = k === n - 1 ? room : x; x += gap; return e; });
+    };
+    const E0 = rows.map(endsOf);
+    // every row's cuts on one line; cuts closer than the gap (plus a little) share one, so no column is a sliver
+    const E = [];
+    E0.flat().filter(e => e < room).sort((a, b) => a - b).forEach(e => { if (!E.length ? e > gap + 12 : e - E[E.length - 1] > gap + 12) E.push(e); });
+    E.push(room);
+    const at = e => E.reduce((best, v, j) => Math.abs(v - e) < Math.abs(E[best] - e) ? j : best, 0);
+    const colw = E.map((e, j) => e - (j ? E[j - 1] + gap : 0));
+    const items = [], last = new Map();
+    E0.forEach((ends, r) => {
+      let c0 = 0;
+      ends.forEach((e, k) => {
+        const c1 = Math.max(c0, at(e)), src = (rows[r].items || [])[k];
+        if (c1 < c0 || (k && at(ends[k - 1]) === c1)) return;   // squeezed out by a neighbouring cut
+        if (src) {
+          const prev = last.get(src);
+          if (prev && prev.r + prev.rs === r && prev.c === c0 && prev.c + prev.cs - 1 === c1) prev.rs++;
+          // a visual that spanned rows now cut differently stays in its first row; the rest of it becomes a new visual
+          else { const it = Object.assign({}, prev ? { type: 'clusteredColumnChart', title: 'New visual' } : src, { c: c0, r, cs: c1 - c0 + 1, rs: 1 }); items.push(it); if (!prev) last.set(src, it); }
+        }
+        c0 = c1 + 1;
+      });
+    });
+    const g = c.grid;
+    g.cols = E.length; g.rows = rows.length; g.colW = isEven(colw) ? null : colw; g.colPx = null;
+    c.items = items;
+    return c;
+  }
+
   let measure = (text, size) => String(text).length * size * 0.56;
   const setMeasure = fn => { measure = fn; };
   const r2 = v => Math.round(v * 100) / 100;
@@ -249,5 +302,5 @@ const LO = (() => {
     return c;
   }
 
-  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, sized, weightsOf, fixedOf, isEven, tidy, layout, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
+  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, sized, weightsOf, fixedOf, isEven, tidy, layout, rowsOf, byRows, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
 })();

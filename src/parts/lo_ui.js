@@ -187,6 +187,38 @@ function moveGutter(ax, i, toPx, free){
   // a fixed column (or row) beside the handle keeps being fixed, at its new size
   const f = fixed(ax); if (f) { [i, i + 1].forEach(j => { if (f[j] != null) f[j] = Math.max(20, Math.round(q[j] / 100 * availPx)); }); state.cfg.grid[AX[ax][2]] = f; }
 }
+/* ---------- row by row ---------- */
+// change the page's rows: fn gets every row as { ends, items } (as on the page now) and edits them; the grid is rebuilt from that
+function rowsEdit(fn){
+  // empty cells become visuals: an empty cell has no width of its own, so it would split up when another row adds columns
+  const rows = LO.rowsOf(state.cfg).map(r => ({ ends: r.ends, items: r.pieces.map(p => p.idx == null ? newVisual() : state.cfg.items[p.idx]) }));
+  fn(rows); LO.byRows(state.cfg, rows); state.sel = null; spanBase = null; leaveExample(); refresh({ editor: true });
+}
+const newVisual = () => ({ type: 'clusteredColumnChart', title: 'New visual' });
+function renderRows(){
+  const box = $('rowsB'), a = document.activeElement, R = LO.rowsOf(state.cfg), ph = pcts('r'), fr = fixed('r'), px = pxNow('r'), n = R.length;
+  const lockH = i => (fr && fr[i] != null) || n < 2 || (fr && fr.filter(v => v == null).length < 2);
+  if (a && box.contains(a) && a.matches('input')) {
+    box.querySelectorAll('input').forEach(el => { if (el === a) return; const r = +el.dataset.r;
+      if (el.dataset.rw != null) { const w = R[r] && R[r].widths, t = w ? w.reduce((x, y) => x + y, 0) : 0; if (w && w[+el.dataset.rw] != null) el.value = fmtPct(w[+el.dataset.rw] / t * 100); }
+      else if (el.dataset.rh != null) { el.value = fmtPct(ph[r]); el.disabled = lockH(r); }
+      else if (el.dataset.rpx != null) el.placeholder = px[r] != null ? Math.round(px[r]) : ''; });
+    return;
+  }
+  box.innerHTML = R.map((row, r) => { const t = row.widths.reduce((x, y) => x + y, 0), on = fr && fr[r] != null, nm = 'Row ' + (r + 1);
+    return '<div class="rb" data-row="' + r + '"><b>' + nm + '</b>'
+      + '<label class="grp"><span class="small muted">Visuals</span><input type="number" min="1" max="12" data-r="' + r + '" data-rn value="' + row.pieces.length + '" aria-label="' + nm + ': how many visuals"></label>'
+      + (row.pieces.length > 1 ? '<span class="grp" role="group" aria-label="' + nm + ' widths"><span class="small muted">Widths %</span>' + row.widths.map((w, k) => '<input type="number" min="3" max="97" step="any" data-r="' + r + '" data-rw="' + k + '" value="' + fmtPct(w / t * 100) + '" aria-label="' + nm + ', visual ' + (k + 1) + ' width (% of the row)">').join('')
+        + '<button type="button" class="chip" data-r="' + r + '" data-reven>Even</button></span>' : '')
+      + '<span class="grp"><span class="small muted">Height</span><input type="number" min="3" step="any" data-r="' + r + '" data-rh value="' + fmtPct(ph[r]) + '"' + (lockH(r) ? ' disabled' : '') + ' aria-label="' + nm + ' height (% of the grid)"><span class="small muted">%</span>'
+      + '<input type="number" class="px' + (on ? ' fixed' : '') + '" min="20" step="1" data-r="' + r + '" data-rpx value="' + (on ? fr[r] : '') + '" placeholder="' + (px[r] != null ? Math.round(px[r]) : '') + '" aria-label="' + nm + ' height in px (empty: sized for you)"><span class="small muted">px</span></span>'
+      + (n > 1 ? '<button type="button" class="btn small del" data-r="' + r + '" data-rdel>Remove</button>' : '') + '</div>'; }).join('');
+}
+// row heights follow a row being added or removed (sizes and fixed px)
+function rowSizes(fn){
+  const g = state.cfg.grid, n = +g.rows, w = (LO.weightsOf(g.rowH, n) || Array(n).fill(1)).slice(), f = LO.fixedOf(g.rowPx, n), px = f ? f.slice() : Array(n).fill(null);
+  fn(w, px); g.rowH = LO.isEven(w) ? null : w; g.rowPx = px.some(v => v != null) ? px : null;
+}
 function typeSelect(id, cur, only){
   const list = only ? LO.TYPES.filter(t => only.includes(t[0])) : LO.TYPES;
   return '<select id="' + id + '">' + list.map(t => '<option value="' + t[0] + '"' + (t[0] === cur ? ' selected' : '') + '>' + esc(t[1]) + '</option>').join('') + '</select>';
@@ -314,8 +346,8 @@ function renderOut(){
 const _mctx = document.createElement('canvas').getContext('2d');
 LO.setMeasure((text, size) => { _mctx.font = '700 ' + size + 'px "' + (state.look.font || 'Segoe UI') + '", "Segoe UI", Arial, sans-serif'; return _mctx.measureText(String(text)).width + 4; });
 function compute(){ state.col = colors(); state.L = LO.layout(state.cfg); }
-function renderAll(){ compute(); renderPage(); renderCanvas(); renderSizes(); renderEditor(); renderLook(); renderOut(); }
-function refresh(opts){ compute(); renderPage(); renderCanvas(); renderSizes(); if (opts && opts.editor) renderEditor(); if (opts && opts.look) renderLook(); else renderColors(); renderOut(); persist(); }
+function renderAll(){ compute(); renderPage(); renderCanvas(); renderSizes(); renderRows(); renderEditor(); renderLook(); renderOut(); }
+function refresh(opts){ compute(); renderPage(); renderCanvas(); renderSizes(); renderRows(); if (opts && opts.editor) renderEditor(); if (opts && opts.look) renderLook(); else renderColors(); renderOut(); persist(); }
 
 /* ---------- init ---------- */
 function resetAll(){ state.customSize = false; state.cfg = blankCfg(); state.look = blankLook(); state.sel = null; setExample(false); renderAll(); }
@@ -416,6 +448,28 @@ function init(){
       else { g[AX[ax][2]] = null; if (b.dataset.pre === 'even') g[AX[ax][1]] = null; else setW(ax, b.dataset.pre.split(',').map(Number)); }
       edited(); });
   });
+  // row by row
+  $('rowsBox').open = store.get('rowsOpen') === '1';
+  $('rowsBox').addEventListener('toggle', () => store.set('rowsOpen', $('rowsBox').open ? '1' : ''));
+  $('rowsB').addEventListener('input', e => { const t = e.target, r = +t.dataset.r; if (t.dataset.r == null) return; const v = parseFloat(t.value);
+    if (t.dataset.rn != null) { if (isNaN(v)) return; const n = Math.max(1, Math.min(12, Math.round(v)));
+      // from the visuals the row had when the box took focus, so typing 10 (1, then 10) doesn't drop any on the way
+      rowsEdit(rows => { const it = (rbBase && rbBase.r === r ? rbBase.items : rows[r].items).slice(0, n); while (it.length < n) it.push(newVisual()); rows[r] = { n, items: it }; }); return; }
+    if (t.dataset.rw != null) { if (isNaN(v)) return; const k = +t.dataset.rw;
+      rowsEdit(rows => { const w = LO.rowsOf(state.cfg)[r].widths, tot = w.reduce((x, y) => x + y, 0), p = w.map(x => x / tot * 100), m = p.length;
+        const nv = Math.max(3, Math.min(100 - 3 * (m - 1), v)), rest = 100 - p[k];
+        rows[r] = { n: m, w: p.map((x, j) => j === k ? nv : rest > 0 ? x / rest * (100 - nv) : (100 - nv) / (m - 1)), items: rows[r].items }; }); return; }
+    if (t.dataset.rh != null) { if (isNaN(v)) return; setShare('r', r, v); edited(); return; }
+    if (t.dataset.rpx != null) { if (isNaN(v) && t.value !== '') return; setPx('r', r, isNaN(v) || v <= 0 ? null : v); edited(); } });
+  let rbBase = null;
+  $('rowsB').addEventListener('focusin', e => { const t = e.target; rbBase = t.dataset && t.dataset.rn != null ? { r: +t.dataset.r, items: LO.rowsOf(state.cfg)[+t.dataset.r].pieces.map(p => p.idx == null ? newVisual() : state.cfg.items[p.idx]) } : null; });
+  $('rowsB').addEventListener('change', e => { if (e.target.dataset.r == null) return; setTimeout(() => {
+    const a = document.activeElement, mine = a && $('rowsB').contains(a) && a.matches('input'), k = mine ? [...$('rowsB').querySelectorAll('input')].indexOf(a) : -1;
+    if (mine) a.blur(); renderRows(); const n = k >= 0 && $('rowsB').querySelectorAll('input')[k]; if (n) { n.focus(); n.select(); } }); });
+  $('rowsB').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const r = +b.dataset.r;
+    if (b.dataset.reven != null) rowsEdit(rows => { rows[r] = { n: rows[r].items.length, items: rows[r].items }; });
+    if (b.dataset.rdel != null) { rowSizes((w, px) => { w.splice(r, 1); px.splice(r, 1); }); rowsEdit(rows => { rows.splice(r, 1); }); } });
+  $('rbAdd').addEventListener('click', () => { rowSizes((w, px) => { w.push(w.reduce((a, b) => a + b, 0) / w.length); px.push(null); }); rowsEdit(rows => { rows.push({ n: 1, items: [newVisual()] }); }); });
   let drag = null, raf = 0;
   const svgPt = e => { const sv = $('canvas').querySelector('svg'), r = sv.getBoundingClientRect(); return { x: (e.clientX - r.left) * state.cfg.w / r.width, y: (e.clientY - r.top) * state.cfg.h / r.height }; };
   $('canvas').addEventListener('pointerdown', e => { const h = e.target.closest('[data-gut]'); if (!h) return; e.preventDefault(); drag = { ax: h.dataset.gut[0], i: +h.dataset.gut.slice(1) }; document.body.classList.add('dragging', drag.ax === 'c' ? 'drag-c' : 'drag-r'); });

@@ -164,6 +164,14 @@
         </div>
       </details>
       <div class="field"><label>Start from a layout</label><div class="chips" id="templates" role="group" aria-label="Layouts"></div></div>
+      <details class="sizes-box" id="rowsBox">
+        <summary><b>Build it row by row</b> <span class="muted">(each row with its own visuals and widths)</span></summary>
+        <div class="rows-b">
+          <div id="rowsB" class="rb-list"></div>
+          <div class="btns"><button type="button" class="btn small" id="rbAdd">+ Add a row</button></div>
+          <p class="note small">Each row splits the full width its own way. Type a height in px to fix a row (the others share what&rsquo;s left). Click a visual on the page to change its type or title; empty cells become visuals here.</p>
+        </div>
+      </details>
       <div class="cfg">
         <div class="field sm"><label for="cols">Columns</label><input type="number" id="cols" min="1" max="12"></div>
         <div class="field sm"><label for="rows">Rows</label><input type="number" id="rows" min="1" max="12"></div>
