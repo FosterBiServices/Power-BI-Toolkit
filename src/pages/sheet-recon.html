@@ -139,6 +139,12 @@ thead th{position:sticky;top:0;background:var(--surface-2);font-weight:600;z-ind
 .infobox{margin-top:14px;background:var(--accent-soft);border-radius:6px;padding:8px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
 
 /* mapping */
+.modebar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px;margin:20px 0 0;padding:12px 14px;background:var(--surface-2);border-radius:8px}
+.modebar label.f{min-width:160px}
+.modebar .note{flex:1 1 240px;margin:0}
+.keyline .roll{display:inline-flex;align-items:center;gap:4px;margin-left:4px}
+.keyline .roll select{width:auto;padding:2px 6px;font-size:12.5px}
+td.d .dv{display:block;padding-left:9px;font-size:11.5px;color:var(--muted)}
 .map-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin:20px 0 8px}
 .map-bar .keyline{font-size:13px}
 .keyline b{font-family:var(--font-data);font-weight:500;background:var(--accent-soft);color:var(--ink);padding:1px 6px;border-radius:4px}
@@ -297,7 +303,7 @@ td.d.focus{outline:2px solid var(--bad);outline-offset:-2px}
       <input type="file" id="fileInput" multiple accept=".xlsx,.xlsm,.xlsb,.xls,.csv,.tsv,.txt" hidden>
     </div>
     <div id="fileList" class="chips"></div>
-    <div id="exampleNote" class="example-note" hidden><b>Example data.</b> A Power BI DAX export compared against a warehouse extract. Add your own files and it will be replaced.</div>
+    <div id="exampleNote" class="example-note" hidden><b>Example data.</b> A Power BI DAX export compared against a warehouse extract. Pick <b>Totals by key</b> in step 2 to see a monthly budget checked against a yearly one. Add your own files and it will be replaced.</div>
     <div class="sides" id="sides">
       <div class="side" data-side="source" id="side-source"></div>
       <button type="button" class="swap" id="swap" title="Swap source and target" aria-label="Swap source and target">⇄</button>
@@ -357,6 +363,24 @@ td.d.focus{outline:2px solid var(--bad);outline-offset:-2px}
       </div>
     </div>
 
+    <div class="modebar">
+      <label class="f">Compare
+        <select id="o-mode" data-opt="mode">
+          <option value="rows">Row by row</option>
+          <option value="totals">Totals by key</option>
+        </select>
+      </label>
+      <label class="f" id="aggFnWrap">Total with
+        <select id="o-aggFn" data-opt="aggFn">
+          <option value="sum">Sum</option>
+          <option value="avg">Average</option>
+          <option value="min">Min</option>
+          <option value="max">Max</option>
+          <option value="count">Count of values</option>
+        </select>
+      </label>
+      <p class="note" id="modeNote"></p>
+    </div>
     <div class="map-bar">
       <div class="keyline" id="keyline"></div>
       <div class="btns">
@@ -387,8 +411,8 @@ td.d.focus{outline:2px solid var(--bad);outline-offset:-2px}
     <div class="map-wrap">
       <table class="map">
         <thead><tr>
-          <th class="c" title="Include in the value comparison"><label class="th-all"><input type="checkbox" id="useAll" aria-label="Compare all pairs shown">Compare</label></th>
-          <th class="c" title="Columns that identify a row. Tick more than one for a composite key.">Key</th>
+          <th class="c" title="Include in the value comparison"><label class="th-all"><input type="checkbox" id="useAll" aria-label="Compare all pairs shown"><span id="useHead">Compare</span></label></th>
+          <th class="c" title="Columns that identify a row. Tick more than one for a composite key." id="keyHead">Key</th>
           <th><span class="tag-s">Source</span> column</th>
           <th><span class="tag-t">Target</span> column</th>
           <th class="c" title="Parse and reformat as a date">Date</th>
@@ -407,7 +431,7 @@ td.d.focus{outline:2px solid var(--bad);outline-offset:-2px}
       <span class="step-no">3</span>
       <div class="grow">
         <h2 id="h-cmp">Compare</h2>
-        <p>Rows are paired on the key. Every compared column is checked on the cleaned values.</p>
+        <p id="cmpLede">Rows are paired on the key. Every compared column is checked on the cleaned values.</p>
       </div>
       <div class="btns">
         <span class="status" id="status"></span>
@@ -475,8 +499,9 @@ const state={
   raw:{source:null,target:null},
   hdr:{source:[],target:[]},
   mapping:[],
-  opts:{stripDax:true,looseMatch:true,trim:true,ignoreCase:false,blanksEqual:true,naBlank:false,naList:'N/A, #N/A, NA, n.a., -',numeric:true,tolerance:0,dateIn:'mdy',dateOut:'m/d/yyyy',keepTime:false,exportFmt:'xlsx'},
+  opts:{stripDax:true,looseMatch:true,trim:true,ignoreCase:false,blanksEqual:true,naBlank:false,naList:'N/A, #N/A, NA, n.a., -',numeric:true,tolerance:0,dateIn:'mdy',dateOut:'m/d/yyyy',keepTime:false,exportFmt:'xlsx',mode:'rows',aggFn:'sum'},
   results:null, stale:false,
+  modeSnap:{}, // the key and compare ticks each mode last had, so switching back and forth keeps them
   view:{tab:'diff',page:0,col:null,search:'',onlyDiffCols:true}
 };
 let fileSeq=0;
@@ -749,7 +774,7 @@ function buildMapping(preserve){
       const s=p.srcName!=null?S.indexOf(p.srcName):-1, t=p.tgtName!=null?T.indexOf(p.tgtName):-1;
       if((p.srcName!=null)!==(s>=0)||(p.tgtName!=null)!==(t>=0)||(s<0&&t<0)) continue;
       const r=pairRow(s<0?null:s,t<0?null:t,p.use);
-      r.key=p.key; r.date=p.date;
+      r.key=p.key; r.date=p.date; r.roll=p.roll;
       rows.push(r); if(s>=0) refS.add(s); if(t>=0) refT.add(t);
     }
   }
@@ -776,12 +801,14 @@ function detectDate(m){
   for(const v of vals){ if(v&&typeof v==='object'&&v.isDate) hit++; else if(typeof v==='string'&&parseDateStr(v,false)) hit++; }
   return hit/vals.length>=0.8;
 }
+const ID_LIKE=m=>/(^|[^a-z])(id|key|code|no|num|number|sku|line)([^a-z]|$)/i.test(m.srcName)||/[a-z](Id|ID|Key|No)$/.test(m.srcName);
 function autoKey(){
+  if(state.opts.mode==='totals'){ suggestTotals(); return; }
   const mapped=state.mapping.filter(isPaired);
   if(!mapped.length) return;
   const rows=state.raw.source.rows;
   const unique=ms=>{ const set=new Set(); for(const r of rows){ const k=ms.map(m=>displayRaw(r[m.src]).trim()).join(SEP); if(set.has(k)) return false; set.add(k); } return rows.length>0; };
-  const idLike=mapped.filter(m=>/(^|[^a-z])(id|key|code|no|num|number|sku|line)([^a-z]|$)/i.test(m.srcName)||/[a-z](Id|ID|Key|No)$/.test(m.srcName));
+  const idLike=mapped.filter(ID_LIKE);
   const others=mapped.filter(m=>!idLike.includes(m)&&!m.date);
   const tryPool=pool=>{
     for(const m of pool) if(unique([m])){ m.key=true; return true; }
@@ -792,6 +819,106 @@ function autoKey(){
   // ID-like names first (alone, then in pairs), then everything else
   if(tryPool(idLike.slice(0,8))||tryPool([...idLike,...others].slice(0,8))) return;
   (idLike[0]||mapped[0]).key=true;
+}
+
+/* ---------- totals by key ---------- */
+// The period a value stands for: {y}, {y,q}, {y,m} or {y,m,day}. Reads dates, Excel serials, 2026, FY2026,
+// 2026-03, 3/2026, Mar 2026, 2026 Q1 and Q1 2026. Null when it isn't a period.
+const okY=y=>y>=1900&&y<=2100;
+function periodOf(v){
+  if(v==null) return null;
+  if(typeof v==='object'&&v.isDate) return {y:v.y,m:v.m,day:v.day};
+  if(typeof v==='number'){
+    if(Number.isInteger(v)&&okY(v)) return {y:v};
+    const p=fromNumber(v); return p?{y:p.y,m:p.m,day:p.day}:null;
+  }
+  const s=String(v).trim(); if(!s||s.length>40) return null;
+  let m;
+  if((m=s.match(/^(?:FY|CY)?\s*'?(\d{4})$/i))) return okY(+m[1])?{y:+m[1]}:null;
+  if((m=s.match(/^(\d{4})\s*[-/ ]?\s*Q([1-4])$/i))) return okY(+m[1])?{y:+m[1],q:+m[2]}:null;
+  if((m=s.match(/^Q([1-4])\s*[-/ ]?\s*(?:FY)?'?(\d{4})$/i))) return okY(+m[2])?{y:+m[2],q:+m[1]}:null;
+  if((m=s.match(/^(\d{4})[-/.](\d{1,2})$/))) return okY(+m[1])&&+m[2]>=1&&+m[2]<=12?{y:+m[1],m:+m[2]}:null;
+  if((m=s.match(/^(\d{1,2})[-/.](\d{4})$/))) return okY(+m[2])&&+m[1]>=1&&+m[1]<=12?{y:+m[2],m:+m[1]}:null;
+  if((m=s.match(/^([A-Za-z]{3,9})\.?[\s\-/,']+(\d{4})$/))){ const mo=monthNum(m[1]); return mo&&okY(+m[2])?{y:+m[2],m:mo}:null; }
+  if((m=s.match(/^(\d{4})[\s\-/]+([A-Za-z]{3,9})$/))){ const mo=monthNum(m[2]); return mo&&okY(+m[1])?{y:+m[1],m:mo}:null; }
+  const p=parseDateStr(s,true)||(/^\d+(\.\d+)?$/.test(s)?fromNumber(+s):null);
+  return p?{y:p.y,m:p.m,day:p.day}:null;
+}
+const ROLLS={year:'Year',quarter:'Quarter',month:'Month'};
+// the group a value falls in when a key is rolled up to year, quarter or month; null if it can't be
+function rollValue(v,roll){
+  const p=periodOf(v); if(!p) return null;
+  if(roll==='year') return String(p.y);
+  if(roll==='quarter'){ const q=p.q||(p.m?Math.ceil(p.m/3):0); return q?`${p.y} Q${q}`:null; }
+  if(roll==='month') return p.m?`${p.y}-${pad(p.m)}`:null;
+  return null;
+}
+const levelOf=p=>p.day?0:p.m?1:p.q?2:3; // day, month, quarter, year
+function samples(m,side,n){
+  const rows=state.raw[side==='s'?'source':'target'].rows, c=side==='s'?m.src:m.tgt, out=[];
+  for(const r of rows){ if(!isBlank(r[c])){ out.push(r[c]); if(out.length>=n) break; } }
+  return out;
+}
+// the level most values on one side are at, or -1 when the column doesn't hold periods
+function sideLevel(m,side){
+  const vals=samples(m,side,60); if(!vals.length) return -1;
+  const cnt=[0,0,0,0]; let hit=0;
+  for(const v of vals){ const p=periodOf(v); if(p){ hit++; cnt[levelOf(p)]++; } }
+  if(hit/vals.length<0.8) return -1;
+  return cnt.indexOf(Math.max(...cnt));
+}
+function looksPeriod(m){ return isPaired(m)&&(m.date||sideLevel(m,'s')>=0||sideLevel(m,'t')>=0); }
+// when one side is by month and the other by year (say), roll both up to the coarser one
+function guessRoll(m){
+  const a=sideLevel(m,'s'), b=sideLevel(m,'t');
+  if(a<0||b<0||a===b) return '';
+  return ['', 'month','quarter','year'][Math.max(a,b)];
+}
+function numShare(m){
+  const vals=[...samples(m,'s',60),...samples(m,'t',60)]; if(!vals.length) return 0;
+  return vals.filter(v=>typeof v==='number'||(typeof v==='string'&&toNum(v)!==null)).length/vals.length;
+}
+// Totals mode: group by the text and period columns, total the number columns. ID columns are left out.
+function suggestTotals(){
+  const paired=state.mapping.filter(isPaired); if(!paired.length) return;
+  for(const m of paired){
+    const per=m.date||(/(year|yr|fy|period|month|quarter|qtr)/i.test(m.srcName+' '+m.tgtName)&&sideLevel(m,'s')>=0&&sideLevel(m,'t')>=0);
+    if(numShare(m)>=0.8&&!per){ m.key=false; m.use=true; }
+    else if(ID_LIKE(m)&&!per){ m.key=false; m.use=false; }
+    else{ m.key=true; m.roll=guessRoll(m); }
+  }
+  if(!paired.some(m=>m.key)){ const id=paired.find(ID_LIKE)||paired.find(m=>!m.use)||paired[0]; id.key=true; id.use=false; }
+}
+const AGG={sum:'Sum',avg:'Average',min:'Min',max:'Max',count:'Count'};
+const keyLabel=m=>m.roll?`${m.srcName} (${ROLLS[m.roll]})`:m.srcName;
+// Group one cleaned table by the keys and total each measure. Returns a table shaped like keys + measures.
+function aggTable(side,T,keys,meas){
+  const raw=state.raw[side].rows, isS=side==='source', fn=state.opts.aggFn, groups=new Map();
+  let nonNum=0, unrolled=0;
+  T.rows.forEach((r,i)=>{
+    const kv=keys.map(m=>{
+      const c=isS?m.src:m.tgt;
+      if(m.roll){ const g=rollValue(raw[i][c],m.roll); if(g!=null) return g; if(!isBlank(raw[i][c])) unrolled++; }
+      return r[c];
+    });
+    const k=kv.map(cmpKey).join(SEP);
+    let g=groups.get(k);
+    if(!g){ g={kv,n:0,acc:meas.map(()=>({sum:0,n:0,min:Infinity,max:-Infinity,cnt:0}))}; groups.set(k,g); }
+    g.n++;
+    meas.forEach((m,j)=>{
+      const v=r[isS?m.src:m.tgt], a=g.acc[j];
+      if(cmpKey(v)==='') return;
+      a.cnt++;
+      const x=typeof v==='number'?v:toNum(String(v));
+      if(x==null||!isFinite(x)){ nonNum++; return; }
+      a.sum+=x; a.n++; if(x<a.min) a.min=x; if(x>a.max) a.max=x;
+    });
+  });
+  const tidy=x=>parseFloat(x.toPrecision(12));
+  const val=a=>fn==='count'?a.cnt:!a.n?'':tidy(fn==='avg'?a.sum/a.n:fn==='min'?a.min:fn==='max'?a.max:a.sum);
+  const rows=[], sizes=[];
+  for(const g of groups.values()){ rows.push([...g.kv,...g.acc.map(val)]); sizes.push(g.n); }
+  return {headers:[...keys.map(keyLabel),...meas.map(m=>isS?m.srcName:m.tgtName)],rows,sizes,nonNum,unrolled,from:T.rows.length};
 }
 
 /* ---------- cleaning & comparing ---------- */
@@ -809,10 +936,20 @@ function runCompare(){
   clearTimeout(cmpTimer);
   const t0=performance.now();
   if(!state.raw.source||!state.raw.target){ state.results=null; state.stale=false; renderResults(); return; }
-  const keys=state.mapping.filter(m=>m.key&&isPaired(m));
-  if(!keys.length){ state.results={error:'Pick at least one key column in step 2. The key decides which source row is compared with which target row.'}; state.stale=false; renderResults(); return; }
-  const S=cleanTable('source'), T=cleanTable('target');
-  const cmpCols=state.mapping.filter(m=>isPaired(m)&&m.use&&!m.key);
+  let keys=state.mapping.filter(m=>m.key&&isPaired(m));
+  if(!keys.length){ state.results={error:state.opts.mode==='totals'?'Tick Key on at least one column in step 2. Rows are grouped by the key columns before the totals are compared.':'Pick at least one key column in step 2. The key decides which source row is compared with which target row.'}; state.stale=false; renderResults(); return; }
+  let S=cleanTable('source'), T=cleanTable('target');
+  let cmpCols=state.mapping.filter(m=>isPaired(m)&&m.use&&!m.key);
+  let agg=null;
+  if(state.opts.mode==='totals'){
+    // compare the totals: each side becomes one row per group, with columns keys + totals
+    const aS=aggTable('source',S,keys,cmpCols), aT=aggTable('target',T,keys,cmpCols), K=keys.length;
+    agg={fn:state.opts.aggFn,fromS:aS.from,fromT:aT.from,nonNum:aS.nonNum+aT.nonNum,unrolled:aS.unrolled+aT.unrolled,sizesS:aS.sizes,sizesT:aT.sizes,
+      rolled:keys.filter(m=>m.roll).map(m=>`${m.srcName} by ${ROLLS[m.roll].toLowerCase()}`)};
+    S=aS; T=aT;
+    keys=keys.map((m,i)=>({src:i,tgt:i,srcName:keyLabel(m),tgtName:keyLabel(m),key:true}));
+    cmpCols=cmpCols.map((m,j)=>({src:K+j,tgt:K+j,srcName:m.srcName,tgtName:m.tgtName,use:true}));
+  }
   const group=(rows,side)=>{ const map=new Map(); rows.forEach((r,i)=>{ const k=keys.map(m=>cmpKey(r[side==='s'?m.src:m.tgt])).join(SEP); const a=map.get(k); if(a) a.push(i); else map.set(k,[i]); }); return map; };
   const gS=group(S.rows,'s'), gT=group(T.rows,'t');
   const pairs=[], onlyS=[], onlyT=[], colDiff=new Array(cmpCols.length).fill(0);
@@ -836,7 +973,7 @@ function runCompare(){
   }
   onlyT.sort((a,b)=>a-b);
   const rs=state.raw.source, rt=state.raw.target;
-  state.results={S,T,keys,cmpCols,pairs,diffPairs:pairs.filter(p=>p.diffs.length),samePairs:pairs.filter(p=>!p.diffs.length),onlyS,onlyT,dupS,dupT,naOnly,colDiff,
+  state.results={S,T,keys,cmpCols,agg,pairs,diffPairs:pairs.filter(p=>p.diffs.length),samePairs:pairs.filter(p=>!p.diffs.length),onlyS,onlyT,dupS,dupT,naOnly,colDiff,
     srcLabel:`${rs.file} › ${rs.sheet}`,tgtLabel:`${rt.file} › ${rt.sheet}`,dateCols:state.mapping.filter(m=>m.date&&isPaired(m)).map(m=>m.srcName),ms:Math.round(performance.now()-t0)};
   state.stale=false;
   const v=state.view; v.page=0;
@@ -884,7 +1021,17 @@ function renderSides(){ renderSide('source'); renderSide('target'); }
 function cellHtml(v){ return (v===''||v==null)?'<span class="blank">empty</span>':esc(v); }
 function trunc(s,n){ s=String(s); return s.length>n?s.slice(0,n-1)+'…':s; }
 function firstVal(rows,c){ for(const r of rows){ if(!isBlank(r[c])) return r[c]; } return null; }
+function renderMode(){
+  const tot=state.opts.mode==='totals';
+  $('#aggFnWrap').hidden=!tot;
+  $('#modeNote').textContent=tot?'Rows are grouped by the Key columns and each compared column is totalled per group. Then the totals are compared. Roll a date up to month, quarter or year to match a file kept at that level.':'Each source row is compared with the target row that has the same key.';
+  $('#useHead').textContent=tot?'Total':'Compare';
+  $('#keyHead').textContent=tot?'Group by':'Key';
+  $('#keyHead').title=tot?'Rows with the same values in these columns are added up together.':'Columns that identify a row. Tick more than one for a composite key.';
+  $('#cmpLede').textContent=tot?'Both sides are grouped on the key and totalled. Each group total is checked against the other side.':'Rows are paired on the key. Every compared column is checked on the cleaned values.';
+}
 function renderMapping(){
+  renderMode();
   const tb=$('#mapBody');
   if(!state.raw.source||!state.raw.target){
     tb.innerHTML=`<tr><td colspan="7" class="empty">Choose a source and a target in step 1 to match their columns.</td></tr>`;
@@ -914,9 +1061,11 @@ function renderMapping(){
   }).join('');
   const paired=state.mapping.filter(isPaired), keys=paired.filter(m=>m.key), cmp=paired.filter(m=>!m.key);
   applyMapFilter();
-  $('#keyline').innerHTML=keys.length?`Key: ${keys.map(m=>`<b>${esc(m.srcName)}</b>`).join(' + ')}`:'<span class="status bad">No key selected. Tick Key on at least one paired column.</span>';
+  const tot=state.opts.mode==='totals';
+  const rollSel=m=>{ const i=state.mapping.indexOf(m); return `<span class="roll"><select data-roll="${i}" aria-label="Group ${esc(m.srcName)} by">${[['','as is'],['month','by month'],['quarter','by quarter'],['year','by year']].map(([v,l])=>`<option value="${v}"${(m.roll||'')===v?' selected':''}>${l}</option>`).join('')}</select></span>`; };
+  $('#keyline').innerHTML=keys.length?`${tot?'Group by':'Key'}: ${keys.map(m=>`<b>${esc(m.srcName)}</b>${tot&&(m.roll||looksPeriod(m))?rollSel(m):''}`).join(' + ')}`:`<span class="status bad">No key selected. Tick ${tot?'Group by':'Key'} on at least one paired column.</span>`;
   const uS=state.mapping.filter(m=>m.src!=null&&m.tgt==null).length, uT=state.mapping.filter(m=>m.tgt!=null&&m.src==null).length;
-  $('#unmappedNote').textContent=`${paired.length} pair${paired.length===1?'':'s'}, ${cmp.filter(m=>m.use).length} compared.`+((uS||uT)?` Unpaired: ${uS} source and ${uT} target column${uT===1?'':'s'}. Unpaired columns are ignored; choose the matching column from the other file in the same row to pair them.`:'');
+  $('#unmappedNote').textContent=`${paired.length} pair${paired.length===1?'':'s'}, ${cmp.filter(m=>m.use).length} ${tot?'totalled':'compared'}.`+((uS||uT)?` Unpaired: ${uS} source and ${uT} target column${uT===1?'':'s'}. Unpaired columns are ignored; choose the matching column from the other file in the same row to pair them.`:'');
 }
 /* ---------- search and filter for the column list ---------- */
 const mapFilter={q:'',show:'all'};
@@ -981,14 +1130,22 @@ function renderResults(){
     const m=R.cmpCols[i], n=R.colDiff[i];
     const nm=m.tgtName!==m.srcName?`${m.srcName} / ${m.tgtName}`:m.srcName;
     return `<button type="button" class="colrow${n?'':' zero'}${state.view.col===i?' active':''}" data-col="${i}"${n?'':' disabled'} title="${esc(nm)}"><span class="nm">${esc(nm)}</span><span class="track"><span class="fill" style="display:block;width:${n/maxD*100}%"></span></span><span class="num">${n.toLocaleString()}</span></button>`;
-  }).join(''):'<p class="note">No columns are set to compare. Only key matching was checked.</p>';
+  }).join(''):`<p class="note">No columns are set to ${A?'total':'compare'}. Only key matching was checked.</p>`;
+  const A=R.agg, unit=A?'group':'row', n0=n=>n.toLocaleString();
+  let aggNote='';
+  if(A){
+    if(A.nonNum) aggNote+=`<div class="warnbox"><b>Not numbers:</b> ${n0(A.nonNum)} value${A.nonNum===1?'':'s'} in the totalled columns aren't numbers and were left out of the ${AGG[A.fn].toLowerCase()}. If a column holds text, untick Total on it or tick Group by.</div>`;
+    if(A.unrolled) aggNote+=`<div class="warnbox"><b>Not rolled up:</b> ${n0(A.unrolled)} value${A.unrolled===1?'':'s'} in ${A.rolled.join(', ')} couldn't be read as a ${A.rolled.length===1?'period':'period at that level'}, so they are grouped as they are.</div>`;
+  }
+  const meta=A?`Grouped ${n0(A.fromS)} source rows into <b>${n0(R.S.rows.length)}</b> groups and ${n0(A.fromT)} target rows into <b>${n0(R.T.rows.length)}</b>, by <b>${keyNames}</b>, then compared the ${AGG[A.fn].toLowerCase()} of each column. <b>${n0(R.pairs.length)}</b> groups are on both sides.`
+    :`Paired <b>${R.pairs.length.toLocaleString()}</b> rows from ${R.S.rows.length.toLocaleString()} in the source and ${R.T.rows.length.toLocaleString()} in the target, matched on <b>${keyNames}</b>.`;
   box.innerHTML=`
-    <p class="meta">Paired <b>${R.pairs.length.toLocaleString()}</b> rows from ${R.S.rows.length.toLocaleString()} in the source and ${R.T.rows.length.toLocaleString()} in the target, matched on <b>${keyNames}</b>.</p>
-    <div class="stats">${segs.map(([k,l,n])=>`<button type="button" class="stat s-${k}" data-tab="${k}"><span class="n">${n.toLocaleString()}</span><span class="l">${l}</span><span class="pct">${pct(n,total)} of all keys</span></button>`).join('')}</div>
+    <p class="meta">${meta}</p>
+    <div class="stats">${segs.map(([k,l,n])=>`<button type="button" class="stat s-${k}" data-tab="${k}"><span class="n">${n.toLocaleString()}</span><span class="l">${l}</span><span class="pct">${pct(n,total)} of all ${A?'groups':'keys'}</span></button>`).join('')}</div>
     <div class="bar" role="img" aria-label="Share of keys: ${segs.map(([,l,n])=>`${l} ${n}`).join(', ')}">${segs.map(([k,,n])=>n?`<span class="seg s-${k}" style="flex:${n}"></span>`:'').join('')}</div>
-    ${dup}
+    ${dup}${aggNote}
     ${R.naOnly?`<div class="infobox"><span><b>N/A against blank:</b> ${R.naOnly.toLocaleString()} difference${R.naOnly===1?' is':'s are'} only N/A (or a similar placeholder) on one side and an empty cell on the other. If they mean the same thing here, ignore them.</span><button type="button" class="btn" data-na-on>Treat N/A as blank</button></div>`:''}
-    <h3 class="cols-h">Differences by column <span class="note" style="font-family:var(--font-ui);font-weight:400">· rows where the value differs, out of ${R.pairs.length.toLocaleString()} paired</span></h3>
+    <h3 class="cols-h">Differences by column <span class="note" style="font-family:var(--font-ui);font-weight:400">· ${A?'groups where the total differs':'rows where the value differs'}, out of ${R.pairs.length.toLocaleString()} paired</span></h3>
     <div class="colsum">${cols}</div>`;
   renderTable();
 }
@@ -1005,6 +1162,9 @@ function viewRows(){
   if(v.search){ const q=v.search.toLowerCase(); list=list.filter(it=>rowText(it,v.tab).toLowerCase().includes(q)); }
   return list;
 }
+// target minus source, for totals; null when either side isn't a number
+function gap(a,b){ if(typeof a!=='number'||typeof b!=='number') return null; return parseFloat((b-a).toPrecision(12)); }
+const fmtGap=d=>(d>0?'+':'')+d.toLocaleString(undefined,{maximumFractionDigits:6});
 function renderTable(){
   const R=state.results; if(!R||R.error) return;
   const v=state.view;
@@ -1026,7 +1186,8 @@ function renderTable(){
       const sr=R.S.rows[p.s], tr=R.T.rows[p.t], ds=new Set(p.diffs);
       return '<tr>'+R.keys.map(m=>`<td class="k">${cellHtml(sr[m.src])}</td>`).join('')+cols.map(i=>{
         const m=R.cmpCols[i];
-        return ds.has(i)?`<td class="d${v.col===i?' focus':''}"><span class="sv">${cellHtml(sr[m.src])}</span><span class="tv">${cellHtml(tr[m.tgt])}</span></td>`:`<td>${cellHtml(sr[m.src])}</td>`;
+        const dv=R.agg?gap(sr[m.src],tr[m.tgt]):null;
+        return ds.has(i)?`<td class="d${v.col===i?' focus':''}"><span class="sv">${cellHtml(sr[m.src])}</span><span class="tv">${cellHtml(tr[m.tgt])}</span>${dv!=null?`<span class="dv">Diff ${esc(fmtGap(dv))}</span>`:''}</td>`:`<td>${cellHtml(sr[m.src])}</td>`;
       }).join('')+'</tr>';
     }).join('');
   }else{
@@ -1034,7 +1195,7 @@ function renderTable(){
     head=tbl.headers.map((h,c)=>`<th class="${kc.has(c)?'k':''}">${esc(h)}</th>`).join('');
     body=slice.map(i=>'<tr>'+tbl.rows[i].map((x,c)=>`<td class="${kc.has(c)?'k':''}">${cellHtml(x)}</td>`).join('')+'</tr>').join('');
   }
-  const emptyMsg={diff:'No differences. Every paired row matches on the compared columns.',same:'No identical rows.',onlyS:'Every source key was found in the target.',onlyT:'Every target key was found in the source.'}[v.tab];
+  const emptyMsg={diff:R.agg?'No differences. Every group total matches.':'No differences. Every paired row matches on the compared columns.',same:'No identical rows.',onlyS:'Every source key was found in the target.',onlyT:'Every target key was found in the source.'}[v.tab];
   $('#grid').innerHTML=list.length?`<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`:`<p class="empty">${v.search?'No rows match your search.':emptyMsg}</p>`;
   $('#pager').innerHTML=list.length>PAGE?`<span>Rows ${(v.page*PAGE+1).toLocaleString()}–${Math.min(list.length,(v.page+1)*PAGE).toLocaleString()} of ${list.length.toLocaleString()}</span><span class="btns"><button type="button" class="btn" data-page="-1"${v.page?'':' disabled'}>Previous</button><button type="button" class="btn" data-page="1"${v.page<pages-1?'':' disabled'}>Next</button></span>`:(list.length?`<span>${list.length.toLocaleString()} row${list.length===1?'':'s'}</span>`:'');
 }
@@ -1065,8 +1226,9 @@ function exportResults(){
   const keyNames=R.keys.map(m=>m.srcName);
   add([
     ['Sheet Recon comparison'],['Generated',new Date().toLocaleString()],[],
-    ['Source',R.srcLabel],['Target',R.tgtLabel],['Key',keyNames.join(' + ')],[],
-    ['Source rows',R.S.rows.length],['Target rows',R.T.rows.length],['Paired rows',R.pairs.length],
+    ['Source',R.srcLabel],['Target',R.tgtLabel],['Compare',R.agg?`Totals by key (${AGG[R.agg.fn]})`:'Row by row'],[R.agg?'Group by':'Key',keyNames.join(' + ')],[],
+    ...(R.agg?[['Source rows',R.agg.fromS],['Target rows',R.agg.fromT],['Source groups',R.S.rows.length],['Target groups',R.T.rows.length],['Paired groups',R.pairs.length]]
+      :[['Source rows',R.S.rows.length],['Target rows',R.T.rows.length],['Paired rows',R.pairs.length]]),
     ['Identical',R.samePairs.length],['With differences',R.diffPairs.length],['Only in source',R.onlyS.length],['Only in target',R.onlyT.length],
     ['Repeated keys in source',R.dupS],['Repeated keys in target',R.dupT],[],
     ['Settings'],['Remove table names from headers',yn(o.stripDax)],['Trim spaces',yn(o.trim)],['Ignore letter case',yn(o.ignoreCase)],
@@ -1075,17 +1237,18 @@ function exportResults(){
     ['Date columns',R.dateCols.join(', ')||'None']
   ],'Summary');
   add([['Source column','Target column','Rows with differences','Share of paired rows'],...R.cmpCols.map((m,i)=>[m.srcName,m.tgtName,R.colDiff[i],R.pairs.length?+(R.colDiff[i]/R.pairs.length).toFixed(4):0])],'Columns');
-  const long=[[...keyNames,'Column','Source value','Target value']];
+  const long=[[...keyNames,'Column','Source value','Target value',...(R.agg?['Difference']:[])]];
   const wide=[[...keyNames,...R.cmpCols.flatMap(m=>[`${m.srcName} (source)`,`${m.tgtName} (target)`]),'Columns that differ']];
   for(const p of R.diffPairs){
     const sr=R.S.rows[p.s], tr=R.T.rows[p.t], kv=R.keys.map(m=>sr[m.src]);
-    for(const i of p.diffs){ const m=R.cmpCols[i]; long.push([...kv,m.srcName,sr[m.src],tr[m.tgt]]); }
+    for(const i of p.diffs){ const m=R.cmpCols[i]; long.push([...kv,m.srcName,sr[m.src],tr[m.tgt],...(R.agg?[gap(sr[m.src],tr[m.tgt])??'']:[])]); }
     wide.push([...kv,...R.cmpCols.flatMap(m=>[sr[m.src],tr[m.tgt]]),p.diffs.map(i=>R.cmpCols[i].srcName).join(', ')]);
   }
   add(long,'Differences');
   add(wide,'Side by side');
   add([R.S.headers,...R.onlyS.map(i=>R.S.rows[i])],'Only in source');
   add([R.T.headers,...R.onlyT.map(i=>R.T.rows[i])],'Only in target');
+  if(R.agg){ add([[...R.S.headers,'Rows'],...R.S.rows.map((r,i)=>[...r,R.agg.sizesS[i]])],'Source totals'); add([[...R.T.headers,'Rows'],...R.T.rows.map((r,i)=>[...r,R.agg.sizesT[i]])],'Target totals'); }
   XLSX.writeFile(wb,`recon_${stamp()}.xlsx`);
 }
 
@@ -1137,14 +1300,46 @@ for(const el of $$('[data-opt]')){
   const k=el.dataset.opt, v=state.opts[k];
   if(el.type==='checkbox') el.checked=!!v; else el.value=v;
   el.addEventListener(el.type==='number'?'input':'change',()=>{
+    const was=state.opts[k];
     state.opts[k]=el.type==='checkbox'?el.checked:el.type==='number'?(parseFloat(el.value)||0):el.value;
     if(k==='exportFmt') return;
     if(k==='naBlank') syncNa();
+    if(k==='mode'){ switchMode(was); return; }
     if(k==='stripDax'||k==='looseMatch'){ buildHeaders('source'); buildHeaders('target'); buildMapping(true); }
     renderSides(); renderMapping(); changed();
   });
 }
 syncNa();
+// Row by row and Totals by key want different key and compare ticks, so each mode keeps its own.
+const snapOf=()=>state.mapping.filter(isPaired).map(m=>({srcName:m.srcName,tgtName:m.tgtName,key:m.key,use:m.use,roll:m.roll}));
+function switchMode(was){
+  state.modeSnap[was]=snapOf();
+  // the example has a monthly and a yearly budget for Totals by key
+  const ex=state.files.find(f=>f.isSample), sd=state.side;
+  if(ex&&sd.source.fileId===ex.id&&sd.target.fileId===ex.id){
+    const want=state.opts.mode==='totals'?['Budget by month','Budget by year']:['PBI Export','Warehouse'];
+    if(sd.source.sheet!==want[0]||sd.target.sheet!==want[1]){ setSide('source',ex,want[0]); setSide('target',ex,want[1]); loadSide('source'); loadSide('target'); buildMapping(false); }
+  }
+  const snap=state.modeSnap[state.opts.mode];
+  const paired=state.mapping.filter(isPaired);
+  if(snap&&paired.some(m=>snap.some(x=>x.srcName===m.srcName&&x.tgtName===m.tgtName))){
+    for(const m of paired){ const x=snap.find(x=>x.srcName===m.srcName&&x.tgtName===m.tgtName); if(x){ m.key=x.key; m.use=x.use; m.roll=x.roll; } else { m.key=false; m.use=state.opts.mode!=='totals'; } }
+    if(!paired.some(m=>m.key)) autoKey();
+  }else{
+    for(const m of paired){ m.key=false; m.use=true; }
+    autoKey();
+  }
+  state.view.col=null;
+  renderFiles(); renderSides(); renderMapping(); runCompare();
+  const keys=state.mapping.filter(m=>m.key&&isPaired(m));
+  toast(state.opts.mode==='totals'?(keys.length?`Grouping by ${keys.map(keyLabel).join(' + ')}`:'Tick Group by on the columns to group by'):'Comparing row by row');
+}
+$('#keyline').addEventListener('change',e=>{
+  const sel=e.target.closest('[data-roll]'); if(!sel) return;
+  state.mapping[+sel.dataset.roll].roll=sel.value;
+  renderMapping(); changed();
+  const again=$(`#keyline [data-roll="${sel.dataset.roll}"]`); if(again) again.focus();
+});
 $('#rematch').addEventListener('click',()=>{ buildMapping(false); renderSides(); renderMapping(); changed(); toast('Columns re-matched by name'); });
 $('#exportSrc').addEventListener('click',()=>exportClean('source'));
 $('#exportTgt').addEventListener('click',()=>exportClean('target'));
@@ -1236,9 +1431,17 @@ function loadSample(){
     ['SO-10429',1,'Summit Outdoor','2026-09-28',640,'Pending'],
     ['SO-10430',1,'Juniper Health','2026-09-30',2210,'Pending']
   ];
+  // a monthly budget and the yearly budget it should add up to, for Totals by key
+  const regions=[['North',42000],['South',36500],['East',51200],['West',28800]];
+  const byMonth=[['Region','Period','Budget']];
+  for(const [r,base] of regions) for(let mo=1;mo<=12;mo++) byMonth.push([r,`2026-${pad(mo)}-01`,base+(mo%3)*1500+(mo>6?2000:0)]);
+  const yearTotal=r=>byMonth.filter(x=>x[0]===r).reduce((a,x)=>a+x[2],0);
+  const byYear=[['Region','Period','Budget'],['North',2026,yearTotal('North')],['South',2026,yearTotal('South')],['East',2026,yearTotal('East')+4500],['West',2026,yearTotal('West')],['Central',2026,198000]];
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(pbi),'PBI Export');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(wh),'Warehouse');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(byMonth),'Budget by month');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(byYear),'Budget by year');
   const rec={id:++fileSeq,name:'example_orders.xlsx',wb,isSample:true};
   state.files.push(rec);
   setSide('source',rec,'PBI Export'); setSide('target',rec,'Warehouse');
@@ -1251,7 +1454,7 @@ function resetAll(){
   state.side={source:{fileId:null,sheet:null,headerRow:1},target:{fileId:null,sheet:null,headerRow:1}};
   state.raw={source:null,target:null}; state.hdr={source:[],target:[]}; state.mapping=[];
   state.opts=Object.assign({},DEFAULT_OPTS);
-  state.results=null; state.stale=false;
+  state.results=null; state.stale=false; state.modeSnap={};
   state.view={tab:'diff',page:0,col:null,search:'',onlyDiffCols:true};
   for(const el of $$('[data-opt]')){ const v=state.opts[el.dataset.opt]; if(el.type==='checkbox') el.checked=!!v; else el.value=v; }
   syncNa();
