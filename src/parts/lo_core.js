@@ -201,7 +201,9 @@ const LO = (() => {
       }
     });
     const gx = starts(left, gw, g), gy = starts(top, gh, g);
-    if (lab) gy.forEach((y, r) => out.push({ id: 'l' + r, region: 'labels', idx: r, type: 'textbox', title: labelOf(c, r), x: labX, y, w: lab, h: gh[r] }));
+    // a label can cover several rows (a group of rows under one name); the rows it covers have no label of their own
+    if (lab) for (let r = 0; r < rows; ) { const s = labelSpan(c, r, rows);
+      out.push({ id: 'l' + r, region: 'labels', idx: r, type: 'textbox', title: labelOf(c, r), x: labX, y: gy[r], w: lab, h: gy[r + s - 1] + gh[r + s - 1] - gy[r], rs: s }); r += s; }
     const grid = { cols, rows, x: gx, y: gy, w: gw, h: gh, left, top, right, bottom: H - m };
     const taken = {};
     c.items.forEach((x, i) => {
@@ -307,6 +309,9 @@ const LO = (() => {
     const fill = (t, n) => { const cur = now(t).slice(0, n); for (let i = cur.length; i < n; i++) cur.push({ type: t, title: HDR_NAMES[t][i % 8] }); return cur; };
     h.items = fill('card', Math.max(0, Math.min(8, cards | 0))).concat(fill('slicer', Math.max(0, Math.min(8, slicers | 0))));
   }
+  const labelSpan = (c, r, rows) => { const it = ((c.labels || {}).items || [])[r]; return Math.max(1, Math.min(rows - r, it && +it.span || 1)); };
+  // the row whose label covers row r
+  const labelAt = (c, r) => { const rows = Math.max(1, +c.grid.rows || 1); for (let k = 0; k < rows; k += labelSpan(c, k, rows)) if (r < k + labelSpan(c, k, rows)) return k; return r; };
   const labelOf = (c, r) => { const it = ((c.labels || {}).items || [])[r]; return it && it.title != null ? it.title : 'Section ' + (r + 1); };
   function upgrade(c){
     c.labels = Object.assign({ on: false, w: 140, items: [] }, c.labels || {});
@@ -318,5 +323,5 @@ const LO = (() => {
     return c;
   }
 
-  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, sized, weightsOf, fixedOf, isEven, tidy, layout, rowsOf, byRows, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure, labelOf };
+  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, sized, weightsOf, fixedOf, isEven, tidy, layout, rowsOf, byRows, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure, labelOf, labelSpan, labelAt };
 })();

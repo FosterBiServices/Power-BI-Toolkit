@@ -48,6 +48,12 @@ const { chromium } = require('playwright');
   await p.locator('#canvas [data-id="l0"]').click(); await p.fill('#edTitle', 'Sales'); console.log('label edited on the page', await labs());
   // a row added gets a label; a row removed takes its label with it
   await p.click('#rbAdd'); await p.click('#rowsB [data-r="0"][data-rdel]'); console.log('after add + remove row 1', await labs());
+  // one label over two rows
+  await p.click('#rbAdd'); await p.fill('#rowsB [data-r="0"][data-rspan]', '2'); await p.locator('#rowsB [data-r="0"][data-rspan]').press('Tab');
+  console.log('label over rows 1-2', await labs(), '| row 2 says', await p.locator('#rowsB [data-row="1"] .grp').first().innerText());
+  await p.locator('#canvas [data-id="l0"]').click(); console.log('editor', await p.locator('#editor h3').innerText(), '| covers', await p.inputValue('#edLs'));
+  await p.fill('#edLs', '1'); console.log('back to 1', await labs());
+  await p.fill('#rowsB [data-r="0"][data-rspan]', '3'); await p.click('#rowsB [data-r="1"][data-rdel]'); console.log('3 rows, removed row 2', await labs(), '(expect one label over the 2 rows left)');
   // split a visual into 2 x 2 boxes
   await p.locator('#canvas [data-id="g0"]').click(); await p.fill('#edSc', '2'); await p.fill('#edSr', '2');
   const subs = () => p.evaluate(() => state.L.items.filter(o => o.parent === 'g0').map(o => o.title + ' ' + Math.round(o.w) + 'x' + Math.round(o.h)).join(' | '));
