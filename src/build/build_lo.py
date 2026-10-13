@@ -126,6 +126,12 @@ body.dragging{user-select:none}body.drag-c,body.drag-c *{cursor:col-resize!impor
 .rb input.px{width:68px}
 .rb input.px.fixed{border-color:var(--accent);font-weight:600}
 .rb .del{margin-left:auto}
+.rb input.lbl{width:150px;font-family:var(--sans)}
+.rb-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+.rb-top .grp{display:flex;align-items:center;gap:6px}
+.rb-top input[type=number]{width:72px}
+.sub-t{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sub-t input{width:100%;font-family:var(--sans);min-width:0}
 .canvas .vis:hover rect:last-child{stroke:var(--gold);stroke-width:2}
 .canvas .vis:focus-visible rect:last-child,.canvas .cell:focus-visible rect{stroke:var(--gold);stroke-width:3;stroke-dasharray:none}
 .editor{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}

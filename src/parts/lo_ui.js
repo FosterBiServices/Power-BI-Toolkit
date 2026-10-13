@@ -205,8 +205,11 @@ function renderRows(){
       else if (el.dataset.rpx != null) el.placeholder = px[r] != null ? Math.round(px[r]) : ''; });
     return;
   }
+  const lb = state.cfg.labels;
+  $('rbLabOn').checked = !!lb.on; if (document.activeElement !== $('rbLabW')) $('rbLabW').value = lb.w; $('rbLabW').disabled = !lb.on;
   box.innerHTML = R.map((row, r) => { const t = row.widths.reduce((x, y) => x + y, 0), on = fr && fr[r] != null, nm = 'Row ' + (r + 1);
     return '<div class="rb" data-row="' + r + '"><b>' + nm + '</b>'
+      + (lb.on ? '<label class="grp"><span class="small muted">Label</span><input type="text" class="lbl" data-r="' + r + '" data-rlab value="' + esc(LO.labelOf(state.cfg, r)) + '" aria-label="' + nm + ' label" autocomplete="off"></label>' : '')
       + '<label class="grp"><span class="small muted">Visuals</span><input type="number" min="1" max="12" data-r="' + r + '" data-rn value="' + row.pieces.length + '" aria-label="' + nm + ': how many visuals"></label>'
       + (row.pieces.length > 1 ? '<span class="grp" role="group" aria-label="' + nm + ' widths"><span class="small muted">Widths %</span>' + row.widths.map((w, k) => '<input type="number" min="3" max="97" step="any" data-r="' + r + '" data-rw="' + k + '" value="' + fmtPct(w / t * 100) + '" aria-label="' + nm + ', visual ' + (k + 1) + ' width (% of the row)">').join('')
         + '<button type="button" class="chip" data-r="' + r + '" data-reven>Even</button></span>' : '')
@@ -226,6 +229,7 @@ function typeSelect(id, cur, only){
 function selItem(){
   const s = state.sel, c = state.cfg; if (!s) return null;
   if (s === 'header') return c.header.on ? { region: 'header', item: c.header } : null;
+  if (s[0] === 'l') { const i = +s.slice(1), L = c.labels; if (!L.on || i >= +c.grid.rows) return null; while (L.items.length <= i) L.items.push({ title: LO.labelOf(c, L.items.length) }); return { region: 'l', i, item: L.items[i], arr: L.items }; }
   const i = +s.slice(1), arr = s[0] === 'g' ? c.items : s[0] === 't' ? c.strip.items : s[0] === 's' ? c.side.items : s[0] === 'h' ? (c.header.items = c.header.items || []) : null;
   return arr && arr[i] ? { region: s[0], i, item: arr[i], arr } : null;
 }
@@ -234,6 +238,7 @@ function renderEditor(){
   const quick = '<div class="quick">' + (c.strip.on ? '<button type="button" class="btn small" data-act="addStrip">+ Card in the strip</button>' : '') + (c.side.pos !== 'none' ? '<button type="button" class="btn small" data-act="addSide">+ Item in the side panel</button>' : '') + '</div>';
   if (!s) { state.sel = null; $('editor').innerHTML = '<h3>Edit</h3><p class="note small">Click a visual on the page to change its type, title or span, or click an empty cell to add a visual there.</p>' + quick; return; }
   if (s.region === 'header') { $('editor').innerHTML = '<h3>Header</h3><div class="field"><label for="edTitle">Title</label><input type="text" id="edTitle" value="' + esc(c.header.title || '') + '" autocomplete="off"></div><p class="note small">Its height is in Step 1.</p>' + quick; return; }
+  if (s.region === 'l') { $('editor').innerHTML = '<h3>Row ' + (s.i + 1) + ' label</h3><div class="field"><label for="edTitle">Label</label><input type="text" id="edTitle" value="' + esc(s.item.title || '') + '" autocomplete="off"></div><p class="note small">The label column\u2019s width, and turning it off, are in Build it row by row.</p>' + quick; return; }
   const it = s.item, where = s.region === 'g' ? 'Grid' : s.region === 't' ? 'Card strip' : s.region === 'h' ? 'Header' : 'Side panel';
   let h = '<h3>' + (s.region === 'h' ? 'Header ' + (it.type === 'card' ? 'card' : 'slicer') : where + ' visual') + '</h3>'
     + (s.region === 'h' ? '<p class="note small">Header items are cards or slicers. Change how many of each in Step 1.</p>' : '<div class="field"><label for="edType">Visual</label>' + typeSelect('edType', it.type) + '</div>')
@@ -242,6 +247,10 @@ function renderEditor(){
     const g = c.grid;
     h += '<div class="grid2e"><div class="field"><label for="edC">Column</label><input type="number" id="edC" min="1" max="' + g.cols + '" value="' + (it.c + 1) + '"></div><div class="field"><label for="edR">Row</label><input type="number" id="edR" min="1" max="' + g.rows + '" value="' + (it.r + 1) + '"></div>'
       + '<div class="field"><label for="edCs">Columns wide</label><input type="number" id="edCs" min="1" max="' + g.cols + '" value="' + it.cs + '"></div><div class="field"><label for="edRs">Rows tall</label><input type="number" id="edRs" min="1" max="' + g.rows + '" value="' + it.rs + '"></div></div>';
+    // split the cell into smaller boxes, each with its own title
+    const sc = it.sub ? it.sub.cols || 1 : 1, sr = it.sub ? it.sub.rows || 1 : 1, boxes = state.L.items.filter(o => o.parent === state.sel);
+    h += '<div class="grid2e"><div class="field"><label for="edSc">Split: boxes across</label><input type="number" id="edSc" min="1" max="6" value="' + sc + '"></div><div class="field"><label for="edSr">Boxes down</label><input type="number" id="edSr" min="1" max="6" value="' + sr + '"></div></div>'
+      + (boxes.length ? '<div class="field"><label>Box titles</label><div class="sub-t">' + boxes.map(o => '<input type="text" data-sub="' + o.sub + '" value="' + esc(o.title || '') + '" aria-label="Box ' + (o.sub + 1) + ' title" autocomplete="off">').join('') + '</div></div>' : '');
   }
   h += '<div class="btns">' + (s.region !== 'g' ? '<button type="button" class="btn small" data-act="left" aria-label="Move earlier">&uarr; Earlier</button><button type="button" class="btn small" data-act="right" aria-label="Move later">&darr; Later</button>' : '') + '<button type="button" class="btn small danger-t" data-act="del">Remove</button></div>';
   const o = state.L.items.find(x => x.id === state.sel);
@@ -460,6 +469,7 @@ function init(){
         const nv = Math.max(3, Math.min(100 - 3 * (m - 1), v)), rest = 100 - p[k];
         rows[r] = { n: m, w: p.map((x, j) => j === k ? nv : rest > 0 ? x / rest * (100 - nv) : (100 - nv) / (m - 1)), items: rows[r].items }; }); return; }
     if (t.dataset.rh != null) { if (isNaN(v)) return; setShare('r', r, v); edited(); return; }
+    if (t.dataset.rlab != null) { const L = state.cfg.labels; while (L.items.length <= r) L.items.push({ title: LO.labelOf(state.cfg, L.items.length) }); L.items[r].title = t.value; edited(); return; }
     if (t.dataset.rpx != null) { if (isNaN(v) && t.value !== '') return; setPx('r', r, isNaN(v) || v <= 0 ? null : v); edited(); } });
   let rbBase = null;
   $('rowsB').addEventListener('focusin', e => { const t = e.target; rbBase = t.dataset && t.dataset.rn != null ? { r: +t.dataset.r, items: LO.rowsOf(state.cfg)[+t.dataset.r].pieces.map(p => p.idx == null ? newVisual() : state.cfg.items[p.idx]) } : null; });
@@ -468,7 +478,9 @@ function init(){
     if (mine) a.blur(); renderRows(); const n = k >= 0 && $('rowsB').querySelectorAll('input')[k]; if (n) { n.focus(); n.select(); } }); });
   $('rowsB').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const r = +b.dataset.r;
     if (b.dataset.reven != null) rowsEdit(rows => { rows[r] = { n: rows[r].items.length, items: rows[r].items }; });
-    if (b.dataset.rdel != null) { rowSizes((w, px) => { w.splice(r, 1); px.splice(r, 1); }); rowsEdit(rows => { rows.splice(r, 1); }); } });
+    if (b.dataset.rdel != null) { state.cfg.labels.items.splice(r, 1); rowSizes((w, px) => { w.splice(r, 1); px.splice(r, 1); }); rowsEdit(rows => { rows.splice(r, 1); }); } });
+  $('rbLabOn').addEventListener('change', () => { state.cfg.labels.on = $('rbLabOn').checked; state.sel = null; edited({ editor: true }); });
+  $('rbLabW').addEventListener('input', () => { state.cfg.labels.w = Math.max(40, num($('rbLabW').value, 140)); edited(); });
   $('rbAdd').addEventListener('click', () => { rowSizes((w, px) => { w.push(w.reduce((a, b) => a + b, 0) / w.length); px.push(null); }); rowsEdit(rows => { rows.push({ n: 1, items: [newVisual()] }); }); });
   let drag = null, raf = 0;
   const svgPt = e => { const sv = $('canvas').querySelector('svg'), r = sv.getBoundingClientRect(); return { x: (e.clientX - r.left) * state.cfg.w / r.width, y: (e.clientY - r.top) * state.cfg.h / r.height }; };
@@ -489,7 +501,7 @@ function init(){
   const pick = el => {
     const v = el.closest('[data-id]'), cell = el.closest('[data-cell]');
     if (v && v.dataset.id === 'logo') { $('logoW').focus(); return true; }
-    if (v) { state.sel = v.dataset.id === state.sel ? null : v.dataset.id; renderCanvas(); renderEditor(); const t = $('edType') || $('edTitle'); if (t && state.sel) t.focus(); return true; }
+    if (v) { const id = v.dataset.id.split('.')[0]; state.sel = id === state.sel ? null : id; renderCanvas(); renderEditor(); const t = $('edType') || $('edTitle'); if (t && state.sel) t.focus(); return true; }
     if (cell) { const [a, b] = cell.dataset.cell.split(',').map(Number); state.cfg.items.push({ type: 'clusteredColumnChart', title: 'New visual', c: a, r: b, cs: 1, rs: 1 }); state.sel = 'g' + (state.cfg.items.length - 1); edited({ editor: true }); const t = $('edType'); if (t) t.focus(); return true; }
     return false;
   };
@@ -498,6 +510,9 @@ function init(){
   $('editor').addEventListener('input', e => {
     const s = selItem(); if (!s) return; const t = e.target;
     if (t.id === 'edTitle') { if (s.region === 'header') state.cfg.header.title = t.value; else s.item.title = t.value; edited(); }
+    else if (t.id === 'edSc' || t.id === 'edSr') { if (t.value === '') return; const v = Math.max(1, Math.min(6, Math.round(num(t.value, 1)))), sub = s.item.sub = s.item.sub || { cols: 1, rows: 1, items: [] }; sub[t.id === 'edSc' ? 'cols' : 'rows'] = v; if (sub.cols * sub.rows < 2) delete s.item.sub;
+      edited({ editor: true }); const n = $(t.id); if (n) { n.focus(); n.select(); } }
+    else if (t.dataset.sub != null) { const sub = s.item.sub, k = +t.dataset.sub; if (!sub) return; sub.items = sub.items || []; while (sub.items.length <= k) sub.items.push({}); sub.items[k].title = t.value; edited(); }
     else if (['edC', 'edR', 'edCs', 'edRs'].includes(t.id)) { const v = Math.max(1, Math.round(num(t.value, 1))); if (t.id === 'edC') s.item.c = v - 1; if (t.id === 'edR') s.item.r = v - 1; if (t.id === 'edCs') s.item.cs = v; if (t.id === 'edRs') s.item.rs = v; edited(); }
   });
   $('editor').addEventListener('change', e => { const s = selItem(); if (s && e.target.id === 'edType') { s.item.type = e.target.value; edited(); } });

@@ -38,6 +38,7 @@ const LO = (() => {
     return { name: 'Sales overview', w: 1280, h: 720, margin: 10, gap: 10, rounding: 'fit',
       header: { on: true, h: 50, title: 'Sales overview', slicerW: 180, slicerH: 32, cardW: 150, cardH: 40, items: [], logo: { on: false, w: 120, h: 32, src: '', inBg: false } },
       side: { pos: 'none', w: 220, itemH: 64, items: [] },
+      labels: { on: false, w: 140, items: [] },
       strip: { on: true, h: 100, items: [] },
       grid: { cols: 3, rows: 2 }, items: [] };
   }
@@ -50,6 +51,7 @@ const LO = (() => {
     c.side = Object.assign({ pos: 'none', w: 220, itemH: 64, items: [] }, JSON.parse(JSON.stringify(s.side)));
     c.side.items = (s.side.items || []).map(([type, title]) => ({ type, title }));
     c.strip = { on: s.strip.on, h: s.strip.h, items: (s.strip.items || []).map(([type, title]) => ({ type, title })) };
+    c.labels = keep && keep.labels ? JSON.parse(JSON.stringify(keep.labels)) : { on: false, w: 140, items: [] };
     c.grid = Object.assign({}, s.grid, keep && keep.grid && keep.grid.grow ? { grow: keep.grid.grow } : {});
     c.items = s.items.map(x => Object.assign({}, x));
     return tidy(upgrade(c));
@@ -118,7 +120,7 @@ const LO = (() => {
     const hdr = c.header.on ? +c.header.h : 0;
     let top = m + (hdr ? hdr + g : 0);
     const side = c.side.pos === 'left' || c.side.pos === 'right' ? +c.side.w : 0;
-    const left = m + (c.side.pos === 'left' ? side + g : 0);
+    let left = m + (c.side.pos === 'left' ? side + g : 0);
     const right = W - m - (c.side.pos === 'right' ? side + g : 0);
     const cw = right - left;
     let limits = null;
@@ -174,7 +176,11 @@ const LO = (() => {
       top += sh + g;
     }
     const cols = Math.max(1, +c.grid.cols || 1), rows = Math.max(1, +c.grid.rows || 1);
-    const SC = sized(cw, cols, g, R, weightsOf(c.grid.colW, cols), fixedOf(c.grid.colPx, cols)), SR = sized(H - m - top, rows, g, R, weightsOf(c.grid.rowH, rows), fixedOf(c.grid.rowPx, rows));
+    // row labels: a column down the left of the grid, one box beside each row
+    const lab = c.labels && c.labels.on ? Math.max(40, +c.labels.w || 140) : 0, labX = left;
+    { const d = lab ? lab + g : 0; left += d; }
+    const gcw = right - left;
+    const SC = sized(gcw, cols, g, R, weightsOf(c.grid.colW, cols), fixedOf(c.grid.colPx, cols)), SR = sized(H - m - top, rows, g, R, weightsOf(c.grid.rowH, rows), fixedOf(c.grid.rowPx, rows));
     const gw = SC.s, gh = SR.s, roomFor = {};
     [[SC, 'column', 'width', 'Columns', 'on the right'], [SR, 'row', 'height', 'Rows', 'at the bottom']].forEach(([S, one, dim, Many, edge]) => {
       const px = v => Math.round(v * 100) / 100 + ' px';
@@ -195,6 +201,7 @@ const LO = (() => {
       }
     });
     const gx = starts(left, gw, g), gy = starts(top, gh, g);
+    if (lab) gy.forEach((y, r) => out.push({ id: 'l' + r, region: 'labels', idx: r, type: 'textbox', title: labelOf(c, r), x: labX, y, w: lab, h: gh[r] }));
     const grid = { cols, rows, x: gx, y: gy, w: gw, h: gh, left, top, right, bottom: H - m };
     const taken = {};
     c.items.forEach((x, i) => {
@@ -202,11 +209,18 @@ const LO = (() => {
       if (c0 >= cols || r0 >= rows) { probs.push({ level: 'warn', text: '“' + (x.title || typeOf(x.type).label) + '” is outside the ' + cols + ' × ' + rows + ' grid, so it’s left out.' }); return; }
       const c1 = Math.min(cols, c0 + cs) - 1, r1 = Math.min(rows, r0 + rs) - 1;
       for (let a = c0; a <= c1; a++) for (let b = r0; b <= r1; b++) { const k = a + ',' + b; if (taken[k] !== undefined) probs.push({ level: 'warn', text: '“' + (x.title || typeOf(x.type).label) + '” overlaps “' + (c.items[taken[k]].title || typeOf(c.items[taken[k]].type).label) + '”.' }); taken[k] = i; }
-      out.push({ id: 'g' + i, region: 'grid', idx: i, type: x.type, title: x.title, zone: x.zone, x: gx[c0], y: gy[r0], w: gx[c1] + gw[c1] - gx[c0], h: gy[r1] + gh[r1] - gy[r0], c: c0, r: r0, cs: c1 - c0 + 1, rs: r1 - r0 + 1 });
+      const box = { id: 'g' + i, region: 'grid', idx: i, type: x.type, title: x.title, zone: x.zone, x: gx[c0], y: gy[r0], w: gx[c1] + gw[c1] - gx[c0], h: gy[r1] + gh[r1] - gy[r0], c: c0, r: r0, cs: c1 - c0 + 1, rs: r1 - r0 + 1 };
+      // a cell split into smaller boxes (a cluster of cards): same gap between them, each its own visual
+      const sc = x.sub ? Math.max(1, Math.min(6, x.sub.cols | 0 || 1)) : 1, sr = x.sub ? Math.max(1, Math.min(6, x.sub.rows | 0 || 1)) : 1;
+      if (sc * sr < 2) { out.push(box); return; }
+      const sw = split(box.w, sc, g, R), sh = split(box.h, sr, g, R), sx = starts(box.x, sw, g), sy = starts(box.y, sh, g);
+      for (let b = 0; b < sr; b++) for (let a = 0; a < sc; a++) { const k = b * sc + a, s = (x.sub.items || [])[k] || {};
+        out.push(Object.assign({}, box, { id: 'g' + i + '.' + k, parent: 'g' + i, sub: k, type: s.type || x.type, title: s.title != null ? s.title : (x.title || typeOf(x.type).label) + ' ' + (k + 1), x: sx[a], y: sy[b], w: sw[a], h: sh[b] })); }
+      if (Math.min(...sw, ...sh) < 30) probs.push({ level: 'warn', text: '“' + (x.title || typeOf(x.type).label) + '” is split into boxes under 30 px. Split it into fewer, or make it bigger.' });
     });
     // sanity
     if (gw.some(v => v < 60) || gh.some(v => v < 60)) probs.push({ level: 'warn', text: 'Some grid cells are under 60 px (' + Math.min(...gw) + ' × ' + Math.min(...gh) + '). Use fewer columns or rows, or a smaller gap.' });
-    if (cw <= 0 || H - m - top <= 0) probs.push({ level: 'err', text: 'The header, strip and side panel leave no room for the grid.' });
+    if (gcw <= 0 || H - m - top <= 0) probs.push({ level: 'err', text: 'The header, strip and side panel leave no room for the grid.' });
     const over = R !== 'roundup' || (SC.all && SC.left < 0) || (SR.all && SR.left < 0) ? [] : out.filter(o => !o.band && (o.x + o.w > W + 0.01 || o.y + o.h > H + 0.01));
     if (over.length) probs.push({ level: 'info', text: 'Rounding up puts ' + over.length + ' visual' + (over.length === 1 ? '' : 's') + ' up to ' + Math.ceil(Math.max(...over.map(o => Math.max(o.x + o.w - W, o.y + o.h - H)))) + ' px past the page edge. Choose “Fill exactly” to keep everything inside.' });
     const empty = []; for (let a = 0; a < cols; a++) for (let b = 0; b < rows; b++) if (taken[a + ',' + b] === undefined) empty.push([a, b]);
@@ -218,7 +232,7 @@ const LO = (() => {
   function rowsOf(c){
     const L = layout(c), G = L.grid, room = G.right - G.left, out = [];
     for (let r = 0; r < G.rows; r++) {
-      const ps = L.items.filter(o => o.region === 'grid' && o.r <= r && r < o.r + o.rs).map(o => ({ c: o.c, cs: o.cs, idx: o.idx }))
+      const ps = L.items.filter(o => o.region === 'grid' && !o.sub && o.r <= r && r < o.r + o.rs).map(o => ({ c: o.c, cs: o.cs, idx: o.idx }))
         .concat(L.empty.filter(e => e[1] === r).map(e => ({ c: e[0], cs: 1, idx: null }))).sort((a, b) => a.c - b.c);
       const pieces = []; let next = 0;
       ps.forEach(p => { if (p.c >= next) { pieces.push(p); next = p.c + p.cs; } });
@@ -293,7 +307,9 @@ const LO = (() => {
     const fill = (t, n) => { const cur = now(t).slice(0, n); for (let i = cur.length; i < n; i++) cur.push({ type: t, title: HDR_NAMES[t][i % 8] }); return cur; };
     h.items = fill('card', Math.max(0, Math.min(8, cards | 0))).concat(fill('slicer', Math.max(0, Math.min(8, slicers | 0))));
   }
+  const labelOf = (c, r) => { const it = ((c.labels || {}).items || [])[r]; return it && it.title != null ? it.title : 'Section ' + (r + 1); };
   function upgrade(c){
+    c.labels = Object.assign({ on: false, w: 140, items: [] }, c.labels || {});
     const h = c.header = Object.assign({ slicerW: 180, slicerH: 32, cardW: 150, cardH: 40, items: [], logo: { on: false, w: 120, h: 32, src: '', inBg: false } }, c.header || {});
     if (h.itemW && !c.header._m) { h.slicerW = h.itemW; h.slicerH = h.itemH || 32; }
     delete h.itemW; delete h.itemH;
@@ -302,5 +318,5 @@ const LO = (() => {
     return c;
   }
 
-  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, sized, weightsOf, fixedOf, isEven, tidy, layout, rowsOf, byRows, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure };
+  return { TYPES, TYPE, typeOf, PAGE_SIZES, TEMPLATES, base, fromTemplate, split, sized, weightsOf, fixedOf, isEven, tidy, layout, rowsOf, byRows, positionsTsv, inset, setHeaderCounts, upgrade, setMeasure, labelOf };
 })();
