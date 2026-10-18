@@ -712,7 +712,7 @@ const SD = (() => {
     L.push('\t\t\t```', '', '\t\tannotation DAXLIB_PackageId = ' + PKG, '', '\t\tannotation DAXLIB_PackageVersion = 1.0.0', '');
     return L;
   }
-  const RANDOM_BODY = '-- One seeded random number from 0 up to 1 for each key and stream (the same inputs always give the same number)\nMOD( SIN( key * 12.9898 + stream * 78.233 + seed * 37.719 ) * 43758.5453, 1 )';
+  const RANDOM_BODY = '-- One seeded random number from 0 up to 1 for each key and stream (the same inputs always give the same number)\nMOD( SIN( row_key * 12.9898 + stream * 78.233 + seed * 37.719 ) * 43758.5453, 1 )';
   /* model: { tables: [...], rels: [[fromTable, fromCol, toTable, toCol, active]], measures: { table: [...] } }
      opts: { mode: 'udf'|'inline', args: { param: value }, measures: true, tables: [names to include] } */
   function script(model, opts){
@@ -721,7 +721,7 @@ const SD = (() => {
     const bodies = tables.map(t => tableDax(t, c));
     const L = ['createOrReplace', ''];
     if (opts.mode === 'udf') {
-      L.push(...fnBlock(FN_RANDOM, 'Seeded random number from 0 up to 1. Used by every ' + PKG + ' table function.', 'key, stream, seed', RANDOM_BODY));
+      L.push(...fnBlock(FN_RANDOM, 'Seeded random number from 0 up to 1. Used by every ' + PKG + ' table function.', 'row_key, stream, seed', RANDOM_BODY));
       Array.from(c.lists).sort().forEach(n => {
         const items = LISTS[n];
         L.push(...fnBlock(PKG + '.List.' + n, 'Picks one of ' + items.length + ' ' + LIST_DESC[n] + ' from a random number from 0 up to 1.', 'r', 'SWITCH(\n' + IND + 'INT( r * ' + items.length + ' ),\n' + items.slice(0, -1).map((v, i) => IND + i + ', ' + q(v) + ',').join('\n') + '\n' + IND + q(items[items.length - 1]) + '\n)'));
@@ -773,7 +773,7 @@ const SD = (() => {
     const t = model.tables.find(x => x.name === tableName);
     const body = tableDax(t, c);
     const fd = (name, params, b) => 'FUNCTION ' + name + ' = (' + (params ? ' ' + params + ' ' : '') + ') =>\n' + b.split('\n').map(l => IND + l).join('\n');
-    const parts = [fd(FN_RANDOM, 'key, stream, seed', RANDOM_BODY)];
+    const parts = [fd(FN_RANDOM, 'row_key, stream, seed', RANDOM_BODY)];
     Array.from(c.lists).sort().forEach(n => parts.push(fd(PKG + '.List.' + n, 'r', 'SWITCH( INT( r * ' + LISTS[n].length + ' ), ' + LISTS[n].slice(0, -1).map((v, i) => i + ', ' + q(v)).join(', ') + ', ' + q(LISTS[n][LISTS[n].length - 1]) + ' )')));
     parts.push(fd(t.fn, fnParams(t), body));
     return 'DEFINE\n' + parts.join('\n\n') + '\n\nEVALUATE\n' + (top ? 'TOPN( ' + top + ', ' + callOf(t, opts.args) + ' )' : callOf(t, opts.args)) + '\n';
@@ -1093,14 +1093,14 @@ const SD_IND = (() => {
           ['Status', iff(C('_done'), 'Closed', iff(lt(R(k, 9), 0.5), 'Open', 'Pending'))],
           ['Resolved Date', iff(C('_done'), add(C('Created Date'), int(div(C('_hours'), 24))), blank())],
           ['Resolution Hours', iff(C('_done'), C('_hours'), blank())],
-          ['SLA Met', iff(C('_done'), le(C('_hours'), C('_target')), blank())],
+          ['SLA Met', and(C('_done'), le(C('_hours'), C('_target')))],
           ['CSAT', iff(and(C('_done'), lt(R(k, 10), 0.4)), iff(le(C('_hours'), C('_target')), wpick([[3, 15], [4, 40], [5, 45]], R(k, 11)), wpick([[1, 20], [2, 30], [3, 30], [4, 20]], R(k, 11))), blank())],
           ['Reopened', and(C('_done'), lt(R(k, 12), 0.07))]] }],
         meta: [col('Ticket ID', 'text', 'Ticket number.'), key('CustomerKey', 'Links to Customers.'), key('AgentKey', 'Links to Agents.'), col('Created Date', 'date', 'When the ticket came in. Links to Date.'),
           col('Channel', 'text', 'Email, Phone, Chat or Web form.'), col('Category', 'text', 'What the ticket is about.'), col('Priority', 'text', 'Low, Medium, High or Urgent.'),
           col('First Response Minutes', 'int', 'Minutes to the first reply.', { f: '0' }), col('Status', 'text', 'Closed, Open or Pending, at the end date.'),
           col('Resolved Date', 'date', 'When it was closed. Blank while open.'), col('Resolution Hours', 'dec', 'Hours from created to closed.', { f: '0.0' }),
-          col('SLA Met', 'bool', 'TRUE when closed within the target for its priority (Urgent 4, High 24, Medium 48, Low 96 hours).'),
+          col('SLA Met', 'bool', 'TRUE when closed within the target for its priority (Urgent 4, High 24, Medium 48, Low 96 hours). FALSE while still open.'),
           col('CSAT', 'int', 'Customer survey score, 1 to 5, when the customer answered.', { f: '0' }), col('Reopened', 'bool', 'TRUE when the customer reopened it.')] },
       dateTable()],
     rels: [['Tickets', 'CustomerKey', 'Customers', 'CustomerKey'], ['Tickets', 'AgentKey', 'Agents', 'AgentKey'], ['Tickets', 'Created Date', 'Date', 'Date']],

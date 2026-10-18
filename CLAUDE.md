@@ -79,6 +79,9 @@ Things to know:
   holds the industries; `sd_mask.js` the masking. Generated functions are named
   `FosterBIServices.SampleData.*` with `DAXLIB_PackageId = FosterBIServices.SampleData`. The idea comes
   from the DataGoblins.SampleData DAX library; nothing is copied from it, and nothing generated names it.
+  DAX rules found in Desktop: `key` can't be a function parameter name (hence `row_key`), and a
+  TRUE/FALSE column can't hold BLANK (it turns FALSE), so boolean columns use `and(...)`, never
+  `iff(..., blank())`, or the preview won't match.
 - `src/pages/sheet-recon.html` is a finished page (built in another chat) with a `@@SUITE@@`
   line where build_site.py puts suite.js. Edit it directly.
 - `build_site.py`: `HOOKS` lists every tool page and the line that connects it to the shared
@@ -183,8 +186,9 @@ needs internet (or set `XLSX_FILE` to a local `xlsx.full.min.js` 0.18.5).
 ## Not yet checked in real Power BI or Copilot
 
 - Prompt files in Copilot (attaching the downloaded prompt; Copilot's file reply).
-- Sample Data Maker's Make new data: the TMDL script (functions, calculated tables, relationships,
-  measures) in TMDL view, in both styles (DAX functions, plain calculated tables).
+- Sample Data Maker's Make new data: applying the TMDL script in TMDL view (tables, relationships,
+  measures). The DAX itself is checked: every table function of all six industries, run as a DAX
+  query in Desktop (Oct 2026), gave the same row counts, sums and distinct counts as the page preview.
 - Chart Patterns: the TMDL scripts, the Format-pane steps and the combo chart marker size in a theme
   (written from the PBIP skills in Power-BI-Portfolio/AI/skills, not yet built by hand in Desktop).
 

@@ -214,7 +214,7 @@ const SD = (() => {
     L.push('\t\t\t```', '', '\t\tannotation DAXLIB_PackageId = ' + PKG, '', '\t\tannotation DAXLIB_PackageVersion = 1.0.0', '');
     return L;
   }
-  const RANDOM_BODY = '-- One seeded random number from 0 up to 1 for each key and stream (the same inputs always give the same number)\nMOD( SIN( key * 12.9898 + stream * 78.233 + seed * 37.719 ) * 43758.5453, 1 )';
+  const RANDOM_BODY = '-- One seeded random number from 0 up to 1 for each key and stream (the same inputs always give the same number)\nMOD( SIN( row_key * 12.9898 + stream * 78.233 + seed * 37.719 ) * 43758.5453, 1 )';
   /* model: { tables: [...], rels: [[fromTable, fromCol, toTable, toCol, active]], measures: { table: [...] } }
      opts: { mode: 'udf'|'inline', args: { param: value }, measures: true, tables: [names to include] } */
   function script(model, opts){
@@ -223,7 +223,7 @@ const SD = (() => {
     const bodies = tables.map(t => tableDax(t, c));
     const L = ['createOrReplace', ''];
     if (opts.mode === 'udf') {
-      L.push(...fnBlock(FN_RANDOM, 'Seeded random number from 0 up to 1. Used by every ' + PKG + ' table function.', 'key, stream, seed', RANDOM_BODY));
+      L.push(...fnBlock(FN_RANDOM, 'Seeded random number from 0 up to 1. Used by every ' + PKG + ' table function.', 'row_key, stream, seed', RANDOM_BODY));
       Array.from(c.lists).sort().forEach(n => {
         const items = LISTS[n];
         L.push(...fnBlock(PKG + '.List.' + n, 'Picks one of ' + items.length + ' ' + LIST_DESC[n] + ' from a random number from 0 up to 1.', 'r', 'SWITCH(\n' + IND + 'INT( r * ' + items.length + ' ),\n' + items.slice(0, -1).map((v, i) => IND + i + ', ' + q(v) + ',').join('\n') + '\n' + IND + q(items[items.length - 1]) + '\n)'));
@@ -275,7 +275,7 @@ const SD = (() => {
     const t = model.tables.find(x => x.name === tableName);
     const body = tableDax(t, c);
     const fd = (name, params, b) => 'FUNCTION ' + name + ' = (' + (params ? ' ' + params + ' ' : '') + ') =>\n' + b.split('\n').map(l => IND + l).join('\n');
-    const parts = [fd(FN_RANDOM, 'key, stream, seed', RANDOM_BODY)];
+    const parts = [fd(FN_RANDOM, 'row_key, stream, seed', RANDOM_BODY)];
     Array.from(c.lists).sort().forEach(n => parts.push(fd(PKG + '.List.' + n, 'r', 'SWITCH( INT( r * ' + LISTS[n].length + ' ), ' + LISTS[n].slice(0, -1).map((v, i) => i + ', ' + q(v)).join(', ') + ', ' + q(LISTS[n][LISTS[n].length - 1]) + ' )')));
     parts.push(fd(t.fn, fnParams(t), body));
     return 'DEFINE\n' + parts.join('\n\n') + '\n\nEVALUATE\n' + (top ? 'TOPN( ' + top + ', ' + callOf(t, opts.args) + ' )' : callOf(t, opts.args)) + '\n';
