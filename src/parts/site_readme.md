@@ -25,6 +25,7 @@ Grouped in the order a report gets built, the same as on the home page and in ea
 | --- | --- | :---: | :---: |
 | [Power Query Writer](https://fosterbiservices.github.io/Power-BI-Toolkit/power-query-writer.html) | Describe a query in plain words (with the source, the starting columns, other queries and existing parameters) and get a Copilot prompt that writes it to work first time, stay easy to maintain and be as short as possible: one-word step names, short comments only where needed, explicit column lists and types, parameters instead of typed-in paths, query folding kept, and formatting in the style of powerqueryformatter.com. Copilot's reply is checked on the page: step references, naming, repeated steps, column names against the ones you gave, parameters and formatting. | — | ✓ |
 | [Power Query Explainer](https://fosterbiservices.github.io/Power-BI-Toolkit/power-query-explainer.html) | Comments every step of a Power Query (M) query, or produces a cleaner version checked against the original. One query or the whole model, read from a PBIP folder or its own export; custom functions are excluded automatically. Writes a plain-language guide for business readers as a Word document. | Own export or a PBIP folder | ✓ |
+| [Sample Data Maker](https://fosterbiservices.github.io/Power-BI-Toolkit/sample-data-maker.html) | Two ways to show a report without real data. **Mask my data**: load Excel or CSV files (several files, or several sheets) and names, IDs, emails, phones, cities and addresses become fake values, numbers are scaled by a hidden factor and dates move by a hidden number of weeks; columns that link tables keep matching, and each file comes back as an .xlsx. **Make new data**: pick retail sales, HR, finance, healthcare, manufacturing or customer service and get a TMDL script of seeded DAX functions (or plain calculated tables) with the tables, relationships, date table and starter measures that industry reports on. | — | — |
 | [Date Table Generator](https://fosterbiservices.github.io/Power-BI-Toolkit/date-table-generator.html) | A date table with your fiscal year, weeks, month sort and filter columns, and rule-based holidays, as DAX, Power Query or a TMDL script. Can start and end with the dates in your data. | Optional (date columns) | — |
 
 ### Build the model
@@ -103,6 +104,7 @@ validation-query-builder.html
 power-query-explainer.html
 power-query-writer.html
 date-table-generator.html
+sample-data-maker.html
 kpi-visualizer.html
 chart-patterns.html
 theme-builder.html

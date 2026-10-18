@@ -1,0 +1,201 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Sample Data Maker</h1>
+        <p class="lede">Show what you built without showing real data. Mask a spreadsheet so names, IDs, numbers and dates are fake but still match across sheets and files, or make a sample model for an industry as DAX functions you paste into Power BI. No AI needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This removes the loaded files, puts every setting back to its default and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Load your files in Step 2 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> Two small files with made-up customers, orders and products. Load your own files in Step 2 to replace them.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">What do you want to do?</h2>
+        <p>Everything happens in this page. Your files are never uploaded or saved.</p>
+      </div>
+      <div class="modes" role="radiogroup" aria-label="What do you want to do?">
+        <label class="mode"><input type="radio" name="mode" value="mask"><span><b>Mask my data</b><small>Load Excel or CSV files. Names, IDs, numbers and dates are swapped for fake ones, and links between sheets and files still match.</small></span></label>
+        <label class="mode"><input type="radio" name="mode" value="make"><span><b>Make new data</b><small>Pick an industry and get sample tables, relationships and starter measures as a TMDL script for Power BI Desktop.</small></span></label>
+      </div>
+    </div>
+  </section>
+
+  <!-- MASK: STEP 2 -->
+  <section class="step mask-only" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">Load your files</h2>
+        <p>Every sheet is a table, with its column names in the first row. Load every file that shares keys at the same time, so the links can be kept.</p>
+      </div>
+      <div id="dropzone" class="drop" tabindex="0" role="button" aria-label="Add files">
+        <strong>Drop files here</strong> or <span class="linkbtn">browse</span>
+        <span class="hint">.xlsx, .xlsm, .xls, .csv, .tsv</span>
+        <input type="file" id="fileInput" multiple accept=".xlsx,.xlsm,.xlsb,.xls,.csv,.tsv,.txt" hidden>
+      </div>
+      <div id="fileMsg"></div>
+      <div id="fileList" class="files"></div>
+    </div>
+  </section>
+
+  <!-- MASK: STEP 3 -->
+  <section class="step mask-only" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Check each column</h2>
+        <p>The page guessed what each column holds. Change any that are wrong. <b>Keep as is</b> is right for things that aren&rsquo;t private, such as categories, regions or status.</p>
+      </div>
+      <details class="extra">
+        <summary>What each choice does</summary>
+        <div class="extra-body">
+          <ul class="howto">
+            <li><b>Fake ID</b>: digits and letters are swapped, the shape and any shared start (such as <code>CUST-</code>) stay. Each ID gets its own fake one.</li>
+            <li><b>Person name</b>, <b>Company name</b>, <b>City</b>, <b>Street address</b>, <b>Phone</b>: made-up values. The same original always gets the same fake value, in every file.</li>
+            <li><b>Email</b>: built from the fake person name in the same row when there is one, at example.com.</li>
+            <li><b>Numbered labels</b>: each different value becomes the column name and a number, such as Product 12.</li>
+            <li><b>Scale numbers</b>: the whole column is multiplied by a hidden factor, with a little noise per value, so totals and trends keep their shape. Totals that should add up across columns won&rsquo;t exactly.</li>
+            <li><b>Shift dates</b>: every date in every file moves by the same hidden number of whole weeks, so weekdays, gaps and seasons stay true.</li>
+          </ul>
+        </div>
+      </details>
+      <div id="colCards" class="cards"></div>
+    </div>
+  </section>
+
+  <!-- MASK: STEP 4 -->
+  <section class="step mask-only" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Links between tables</h2>
+        <p>Linked columns get the same fake values, so a key in one sheet still finds its row in another. These were found from matching values. Untick any that aren&rsquo;t real links.</p>
+      </div>
+      <div id="linkList"></div>
+      <div class="addlink">
+        <div class="field"><label for="linkA">Column</label><select id="linkA"></select></div>
+        <div class="field"><label for="linkB">Matches</label><select id="linkB"></select></div>
+        <button type="button" class="btn" id="addLink">Add link</button>
+      </div>
+      <div id="linkMsg"></div>
+    </div>
+  </section>
+
+  <!-- MASK: STEP 5 -->
+  <section class="step mask-only" aria-labelledby="s5">
+    <div class="step-num">Step<b>5</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s5">Check and download</h2>
+        <p>Each file you loaded comes back as an .xlsx with the same sheets and columns. Values only: formulas, charts and pivot tables aren&rsquo;t copied.</p>
+      </div>
+      <div class="cfg">
+        <div class="field"><label for="maskSeed">Seed</label><input type="number" id="maskSeed" class="num" min="1" max="999999999"></div>
+        <button type="button" class="btn" id="newSeed">New seed</button>
+      </div>
+      <p class="note">The same seed and the same files give the same fake values every time. Keep the seed to yourself: with it and your real files, someone could work out the hidden factor and date shift.</p>
+      <div class="prevbar">
+        <div class="field"><label for="prevTable">Table</label><select id="prevTable"></select></div>
+        <span class="seg" role="radiogroup" aria-label="Show">
+          <label><input type="radio" name="prevSide" value="after"><span>Masked</span></label>
+          <label><input type="radio" name="prevSide" value="before"><span>Original</span></label>
+        </span>
+      </div>
+      <div id="maskPreview"></div>
+      <div id="maskMsg"></div>
+      <div class="dl" id="downloads"></div>
+    </div>
+  </section>
+
+  <!-- MAKE: STEP 2 -->
+  <section class="step make-only" aria-labelledby="m2" hidden>
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="m2">Pick an industry</h2>
+        <p>Each one comes with the tables and measures that industry usually reports on, plus a date table.</p>
+      </div>
+      <div class="inds" id="industries" role="radiogroup" aria-label="Industry"></div>
+    </div>
+  </section>
+
+  <!-- MAKE: STEP 3 -->
+  <section class="step make-only" aria-labelledby="m3" hidden>
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="m3">Sizes and dates</h2>
+        <p>Rows per table, and the dates the data covers. The date table runs in whole years.</p>
+      </div>
+      <div class="cfg" id="sizes"></div>
+      <div class="cfg">
+        <div class="field"><label for="startDate">Start date</label><input type="date" id="startDate"></div>
+        <div class="field"><label for="endDate">End date</label><input type="date" id="endDate"></div>
+        <div class="field"><label for="makeSeed">Seed</label><input type="number" id="makeSeed" class="num" min="1" max="999999999"></div>
+      </div>
+      <div id="makeMsg"></div>
+      <div class="field"><span class="flabel">Tables</span><div class="opts" id="tablePicks"></div></div>
+      <div class="field"><span class="flabel">Write it as</span>
+        <span class="seg" role="radiogroup" aria-label="Write it as">
+          <label><input type="radio" name="style" value="udf"><span>DAX functions</span></label>
+          <label><input type="radio" name="style" value="inline"><span>Plain calculated tables</span></label>
+        </span></div>
+      <p class="note" id="styleNote"></p>
+      <label class="c"><input type="checkbox" id="addMeasures"> Add starter measures</label>
+      <div class="field" id="mtField"><span class="flabel">Measures go in a <code>_Measures</code> table, in a folder for each table</span>
+        <span class="seg" role="radiogroup" aria-label="Measures table">
+          <label><input type="radio" name="mtable" value="new"><span>Create _Measures</span></label>
+          <label><input type="radio" name="mtable" value="add"><span>Add to my _Measures</span></label>
+        </span></div>
+      <p class="note" id="mtNote"></p>
+    </div>
+  </section>
+
+  <!-- MAKE: STEP 4 -->
+  <section class="step make-only" aria-labelledby="m4" hidden>
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="m4">Preview</h2>
+        <p>The first rows of each table, as Power BI will build them.</p>
+      </div>
+      <div class="chips" id="makeTabs" role="tablist" aria-label="Tables"></div>
+      <p class="note" id="makeDesc"></p>
+      <div id="makePreview"></div>
+      <details class="extra">
+        <summary>Columns and measures</summary>
+        <div class="extra-body" id="makeCols"></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- MAKE: STEP 5 -->
+  <section class="step make-only" aria-labelledby="m5" hidden>
+    <div class="step-num">Step<b>5</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="m5">Add it to Power BI</h2>
+        <p>One TMDL script adds every table, relationship and measure.</p>
+      </div>
+      <ol class="how" id="applySteps"></ol>
+      <div class="codebox">
+        <div class="codebox-bar"><span class="t">TMDL script</span><span class="r"><button class="btn" type="button" id="dlTmdl">Download .tmdl</button><button class="btn primary" type="button" id="copyTmdl">Copy script</button></span></div>
+        <pre class="tall" id="tmdlView"></pre>
+      </div>
+      <p class="note">Tables with the same names are replaced. Change the seed for different rows with the same shape.</p>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your files never leave it and aren&rsquo;t saved; only your settings are saved in this browser.</footer>
+</div>

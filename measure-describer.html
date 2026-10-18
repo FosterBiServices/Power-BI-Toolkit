@@ -2235,7 +2235,8 @@ init();
     ['Shape the data', [
       ['power-query-writer.html', 'Power Query Writer'],
       ['power-query-explainer.html', 'Power Query Explainer'],
-      ['date-table-generator.html', 'Date Table Generator']]],
+      ['date-table-generator.html', 'Date Table Generator'],
+      ['sample-data-maker.html', 'Sample Data Maker']]],
     ['Build the model', [
       ['kpi-measure-builder.html', 'KPI Measure Builder'],
       ['time-intelligence-builder.html', 'Time Intelligence Builder'],
@@ -2281,12 +2282,13 @@ init();
   // What next: a line above the footer pointing to the tools people usually use after this one
   S.NEXT = {
     'theme-builder.html': [['layout-designer.html', 'Plan a page with these colors'], ['kpi-visualizer.html', 'Show your KPIs in these colors']],
-    'layout-designer.html': [['kpi-visualizer.html', 'Choose how to show each KPI'], ['theme-builder.html', 'Build a theme to match']],
+    'layout-designer.html': [['kpi-visualizer.html', 'Choose how to show each KPI'], ['theme-builder.html', 'Build a theme to match'], ['sample-data-maker.html', 'Make sample data to fill the page']],
     'kpi-visualizer.html': [['layout-designer.html', 'Place the cards on a page'], ['chart-patterns.html', 'Charts of many items, with share labels or paging'], ['kpi-measure-builder.html', 'Write the measures behind a KPI']],
     'chart-patterns.html': [['kpi-visualizer.html', 'Showing a single number? Choose a KPI card'], ['theme-builder.html', 'Set the combo chart bubble size in your theme'], ['layout-designer.html', 'Place the chart on a page']],
     'power-query-writer.html': [['power-query-explainer.html', 'Comment or clean up a query you already have'], ['date-table-generator.html', 'Add a date table']],
     'power-query-explainer.html': [['power-query-writer.html', 'Write a new query'], ['model-documenter.html', 'Document every query in the model']],
     'date-table-generator.html': [['time-intelligence-builder.html', 'Add year to date, last year and growth']],
+    'sample-data-maker.html': [['theme-builder.html', 'Build a theme for the sample report'], ['layout-designer.html', 'Plan the report pages'], ['kpi-measure-builder.html', 'Add your own measures']],
     'kpi-measure-builder.html': [['dax-reviewer.html', 'Review a measure'], ['validation-query-builder.html', 'Check the results'], ['measure-describer.html', 'Describe the new measures']],
     'time-intelligence-builder.html': [['field-parameter-builder.html', 'Let readers switch between the new measures'], ['validation-query-builder.html', 'Check the results']],
     'field-parameter-builder.html': [['validation-query-builder.html', 'Check the results'], ['layout-designer.html', 'Plan the page it goes on']],
@@ -2765,7 +2767,7 @@ init();
   };
 
   // ---------- Clear all pages: every tool's saved work, the saved export (and its history) and the remembered PBIP folder ----------
-  S.PREFIXES = ['kmb.', 'kmd.', 'kpa.', 'kdr.', 'kvq.', 'kti.', 'kfp.', 'krl.', 'kml.', 'kmc.', 'kmdoc.', 'kab.', 'kpw.', 'kpq.', 'kdt.', 'kkv.', 'kcp.', 'ktb.', 'klo.', 'ksr.'];
+  S.PREFIXES = ['kmb.', 'kmd.', 'kpa.', 'kdr.', 'kvq.', 'kti.', 'kfp.', 'krl.', 'kml.', 'kmc.', 'kmdoc.', 'kab.', 'kpw.', 'kpq.', 'kdt.', 'kkv.', 'kcp.', 'ktb.', 'klo.', 'ksr.', 'ksd.'];
   S.clearAll = () => {
     try {
       Object.keys(localStorage).filter(k => k.startsWith('sfpbi.') || S.PREFIXES.some(p => k.startsWith(p))).forEach(k => localStorage.removeItem(k));
