@@ -453,7 +453,13 @@ section.dim .step-body>*:not(.step-head){opacity:.45;pointer-events:none}
           <label><input type="radio" name="style" value="inline"><span>Plain calculated tables</span></label>
         </span></div>
       <p class="note" id="styleNote"></p>
-      <label class="c"><input type="checkbox" id="addMeasures"> Add starter measures (in a KPIs folder)</label>
+      <label class="c"><input type="checkbox" id="addMeasures"> Add starter measures</label>
+      <div class="field" id="mtField"><span class="flabel">Measures go in a <code>_Measures</code> table, in a folder for each table</span>
+        <span class="seg" role="radiogroup" aria-label="Measures table">
+          <label><input type="radio" name="mtable" value="new"><span>Create _Measures</span></label>
+          <label><input type="radio" name="mtable" value="add"><span>Add to my _Measures</span></label>
+        </span></div>
+      <p class="note" id="mtNote"></p>
     </div>
   </section>
 
@@ -712,9 +718,10 @@ const SD = (() => {
     L.push('\t\t\t```', '', '\t\tannotation DAXLIB_PackageId = ' + PKG, '', '\t\tannotation DAXLIB_PackageVersion = 1.0.0', '');
     return L;
   }
+  const MEASURES = '_Measures';
   const RANDOM_BODY = '-- One seeded random number from 0 up to 1 for each key and stream (the same inputs always give the same number)\nMOD( SIN( row_key * 12.9898 + stream * 78.233 + seed * 37.719 ) * 43758.5453, 1 )';
   /* model: { tables: [...], rels: [[fromTable, fromCol, toTable, toCol, active]], measures: { table: [...] } }
-     opts: { mode: 'udf'|'inline', args: { param: value }, measures: true, tables: [names to include] } */
+     opts: { mode: 'udf'|'inline', args: { param: value }, measures: true, measureTable: 'new'|'add', tables: [names to include] } */
   function script(model, opts){
     const c = { mode: opts.mode, lists: new Set() };
     const tables = model.tables.filter(t => !opts.tables || opts.tables.includes(t.name));
@@ -732,12 +739,6 @@ const SD = (() => {
       L.push('\t/// ' + t.desc, '\ttable ' + tn(t.name));
       if (t.isDate) L.push('\t\tdataCategory: Time');
       L.push('');
-      (opts.measures !== false ? (model.measures[t.name] || []) : []).forEach(m => {
-        L.push('\t\t/// ' + m.d);
-        if (m.x.includes('\n')) { L.push('\t\tmeasure ' + tn(m.n) + ' = ```'); m.x.split('\n').forEach(l => L.push('\t\t\t\t' + l)); L.push('\t\t\t\t```'); }
-        else L.push('\t\tmeasure ' + tn(m.n) + ' = ' + m.x);
-        L.push('\t\t\tformatString: ' + m.f, '\t\t\tdisplayFolder: KPIs', '');
-      });
       t.meta.forEach(m => {
         L.push('\t\t/// ' + m.d, '\t\tcolumn ' + tn(m.n), '\t\t\tdataType: ' + TT[m.t], '\t\t\tisDataTypeInferred');
         if (m.key) L.push('\t\t\tisKey');
@@ -759,6 +760,29 @@ const SD = (() => {
       }
       L.push('');
     });
+    // every measure goes in one _Measures table, in a folder named for the table it counts.
+    // 'add' puts them in the report's own _Measures (ref keeps what is already there); 'new' creates the table.
+    let ms = opts.measures === false ? [] : tables.flatMap(t => (model.measures[t.name] || []).map(m => Object.assign({ folder: t.name }, m)));
+    // leave out a measure that reads a table that isn't in the script, or a measure that was left out
+    const inScript = new Set(tables.map(t => t.name));
+    for (let n = -1; n !== ms.length;) {
+      n = ms.length; const have = new Set(ms.map(m => m.n));
+      ms = ms.filter(m => Array.from(m.x.matchAll(/(?:'([^']+)'|\b([A-Za-z_]\w*))\[/g)).every(r => inScript.has(r[1] || r[2]))
+        && Array.from(m.x.matchAll(/(^|[^\w'\]])\[([^\]]+)\]/g)).every(r => have.has(r[2])));
+    }
+    if (ms.length) {
+      if (opts.measureTable === 'add') L.push('\tref table ' + MEASURES);
+      else L.push('\t/// Measures for the sample data, in a folder for each table.', '\ttable ' + MEASURES);
+      L.push('');
+      ms.forEach(m => {
+        L.push('\t\t/// ' + m.d);
+        if (m.x.includes('\n')) { L.push('\t\tmeasure ' + tn(m.n) + ' = ```'); m.x.split('\n').forEach(l => L.push('\t\t\t\t' + l)); L.push('\t\t\t\t```'); }
+        else L.push('\t\tmeasure ' + tn(m.n) + ' = ' + m.x);
+        L.push('\t\t\tformatString: ' + m.f, '\t\t\tdisplayFolder: ' + m.folder, '');
+      });
+      if (opts.measureTable !== 'add') L.push('\t\tcolumn Value', '\t\t\tdataType: int64', '\t\t\tisDataTypeInferred', '\t\t\tisHidden', '\t\t\tsummarizeBy: none', '\t\t\tisNameInferred', '\t\t\tsourceColumn: [Value]', '',
+        '\t\tpartition ' + MEASURES + ' = calculated', '\t\t\tmode: import', '\t\t\tsource = { 1 }', '');
+    }
     const names = new Set(tables.map(t => t.name));
     model.rels.filter(r => names.has(r[0]) && names.has(r[2])).forEach(r => {
       L.push('\trelationship ' + gid(r.slice(0, 4).join('|')), '\t\tfromColumn: ' + tn(r[0]) + '.' + tn(r[1]), '\t\ttoColumn: ' + tn(r[2]) + '.' + tn(r[3]));
@@ -778,7 +802,7 @@ const SD = (() => {
     parts.push(fd(t.fn, fnParams(t), body));
     return 'DEFINE\n' + parts.join('\n\n') + '\n\nEVALUATE\n' + (top ? 'TOPN( ' + top + ', ' + callOf(t, opts.args) + ' )' : callOf(t, opts.args)) + '\n';
   }
-  return Object.assign(X, { PKG, serial, ymd, rand, tableDax, tableRows, script, query, callOf, gid, daxTable, MON });
+  return Object.assign(X, { PKG, MEASURES, serial, ymd, rand, tableDax, tableRows, script, query, callOf, gid, daxTable, MON });
 })();
 
 /* ---------- Sample Data Maker: the industry data sets ----------
@@ -977,7 +1001,8 @@ const SD_IND = (() => {
       { n: 'Turnover %', x: 'DIVIDE( [Terminations], [Headcount] )', f: '0.0%', d: 'Terminations as a share of headcount at the end of the period.' },
       { n: 'Voluntary Turnover %', x: 'DIVIDE( [Voluntary Terminations], [Headcount] )', f: '0.0%', d: 'Voluntary terminations as a share of headcount at the end of the period.' },
       { n: 'Average Salary', x: 'VAR _Day = MAX( \'Date\'[Date] )\nRETURN\n    CALCULATE(\n        AVERAGE( Employees[Annual Salary] ),\n        Employees[Hire Date] <= _Day,\n        ISBLANK( Employees[Termination Date] ) || Employees[Termination Date] > _Day,\n        REMOVEFILTERS( \'Date\' )\n    )', f: '#,0', d: 'Average yearly pay of the employees in Headcount.' },
-      { n: 'Average Tenure (Years)', x: 'VAR _Day = MAX( \'Date\'[Date] )\nRETURN\n    CALCULATE(\n        AVERAGEX( Employees, ( _Day - Employees[Hire Date] ) / 365.25 ),\n        Employees[Hire Date] <= _Day,\n        ISBLANK( Employees[Termination Date] ) || Employees[Termination Date] > _Day,\n        REMOVEFILTERS( \'Date\' )\n    )', f: '0.0', d: 'Average years since hire of the employees in Headcount.' },
+      { n: 'Average Tenure (Years)', x: 'VAR _Day = MAX( \'Date\'[Date] )\nRETURN\n    CALCULATE(\n        AVERAGEX( Employees, ( _Day - Employees[Hire Date] ) / 365.25 ),\n        Employees[Hire Date] <= _Day,\n        ISBLANK( Employees[Termination Date] ) || Employees[Termination Date] > _Day,\n        REMOVEFILTERS( \'Date\' )\n    )', f: '0.0', d: 'Average years since hire of the employees in Headcount.' }],
+      Absences: [
       { n: 'Absence Days', x: 'SUM( Absences[Days] )', f: '#,0', d: 'Working days absent, by the day each absence started.' }],
       Requisitions: [
       { n: 'Requisitions Opened', x: 'CALCULATE( COUNTROWS( Requisitions ), TREATAS( VALUES( \'Date\'[Date] ), Requisitions[Opened Date] ) )', f: '#,0', d: 'Job openings approved in the period.' },
@@ -1707,6 +1732,19 @@ function validMake(){
   if (!(m.seed >= 1 && m.seed <= 999999999 && Number.isInteger(m.seed))) e.push('The seed is a whole number from 1 to 999,999,999.');
   return e;
 }
+// does the model saved on the home page (export or PBIP folder) have a _Measures table? null when none is saved
+function hasMeasuresTable(){
+  let v = null; try { v = JSON.parse(localStorage.getItem('sfpbi.shared.model') || 'null'); } catch (e) {}
+  if (!v || !v.text) return null;
+  const cell = x => x.replace(/^"|"$/g, '').replace(/^.*\[|\]$/g, '').trim();
+  let ti = -1;
+  for (const l of v.text.replace(/\r/g, '').split('\n')) {
+    const c = l.split('\t').map(cell);
+    if (ti < 0) { if (c.some(x => x.toLowerCase() === 'kind')) ti = c.findIndex(x => x.toLowerCase() === 'table'); continue; }
+    if (c[ti] === SD.MEASURES) return true;
+  }
+  return false;
+}
 function renderMake(){
   const m = state.make, ind = SD_IND.get(m.ind);
   $('industries').innerHTML = SD_IND.LIST.map(x => '<button type="button" class="ind" role="radio" aria-checked="' + (x.id === m.ind) + '" data-ind="' + x.id + '"><b>' + esc(x.name) + '</b><span>' + esc(x.blurb) + '</span><small>' + esc(x.kpis) + '</small></button>').join('');
@@ -1715,6 +1753,14 @@ function renderMake(){
   $('startDate').value = m.start === null ? '' : isoOf(m.start); $('endDate').value = m.end === null ? '' : isoOf(m.end); $('makeSeed').value = m.seed;
   document.querySelectorAll('input[name=style]').forEach(r => { r.checked = r.value === m.style; });
   $('addMeasures').checked = m.measures;
+  const found = hasMeasuresTable();
+  const mt = m.mtable || (found ? 'add' : 'new');
+  document.querySelectorAll('input[name=mtable]').forEach(r => { r.checked = r.value === mt; });
+  $('mtField').hidden = $('mtNote').hidden = !m.measures;
+  $('mtNote').innerHTML = found === null
+    ? 'No saved model to check. If your report already has a <code>_Measures</code> table, choose <b>Add to my _Measures</b>, or Power BI replaces it and the measures in it.'
+    : found ? 'Your saved model has a <code>_Measures</code> table, so the measures are added to it and nothing in it is removed.'
+      : 'Your saved model has no <code>_Measures</code> table, so the script creates one.';
   $('styleNote').innerHTML = m.style === 'udf'
     ? 'One DAX function per table (named <code>' + SD.PKG + '.&hellip;</code>), and each table calls its function. Needs DAX user-defined functions, a preview feature in Power BI Desktop.'
     : 'Each table holds its own DAX, with no functions. Works in any recent Power BI Desktop.';
@@ -1741,7 +1787,7 @@ function renderMake(){
   const steps = (m.style === 'udf' ? ['In Power BI Desktop, go to <b>File</b> &gt; <b>Options and settings</b> &gt; <b>Options</b> &gt; <b>Preview features</b>, turn on <b>DAX user-defined functions</b> and restart Desktop.'] : [])
     .concat(['Open a report (a new blank one works) and go to <b>TMDL view</b>.', 'Paste the script into a new tab and select <b>Apply</b>.', 'If a table shows no rows, select <b>Refresh</b> on the Home tab.']);
   $('applySteps').innerHTML = steps.map(s => '<li>' + s + '</li>').join('');
-  state.tmdl = SD.script(c.model, { mode: m.style, args: c.args, measures: m.measures, tables: on.map(x => x.name) });
+  state.tmdl = SD.script(c.model, { mode: m.style, args: c.args, measures: m.measures, measureTable: mt, tables: on.map(x => x.name) });
   $('tmdlView').innerHTML = hlTmdl(state.tmdl);
 }
 
@@ -1832,6 +1878,7 @@ function init(){
   $('makeSeed').addEventListener('change', () => mk(m => { m.seed = Math.floor(+$('makeSeed').value); }));
   document.querySelectorAll('input[name=style]').forEach(r => r.addEventListener('change', () => mk(m => { m.style = r.value; })));
   $('addMeasures').addEventListener('change', () => mk(m => { m.measures = $('addMeasures').checked; }));
+  document.querySelectorAll('input[name=mtable]').forEach(r => r.addEventListener('change', () => mk(m => { m.mtable = r.value; })));
   $('tablePicks').addEventListener('change', e => { const c = e.target.closest('[data-tbl]'); if (!c) return; mk(m => { const o = m.off[m.ind] = (m.off[m.ind] || []).filter(x => x !== c.dataset.tbl); if (!c.checked) o.push(c.dataset.tbl); }); });
   $('makeTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) mk(m => { m.tab[m.ind] = b.dataset.tab; }); });
   $('copyTmdl').addEventListener('click', () => { if (state.tmdl) copyText(state.tmdl, $('copyTmdl')); });

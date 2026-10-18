@@ -223,6 +223,19 @@ function validMake(){
   if (!(m.seed >= 1 && m.seed <= 999999999 && Number.isInteger(m.seed))) e.push('The seed is a whole number from 1 to 999,999,999.');
   return e;
 }
+// does the model saved on the home page (export or PBIP folder) have a _Measures table? null when none is saved
+function hasMeasuresTable(){
+  let v = null; try { v = JSON.parse(localStorage.getItem('sfpbi.shared.model') || 'null'); } catch (e) {}
+  if (!v || !v.text) return null;
+  const cell = x => x.replace(/^"|"$/g, '').replace(/^.*\[|\]$/g, '').trim();
+  let ti = -1;
+  for (const l of v.text.replace(/\r/g, '').split('\n')) {
+    const c = l.split('\t').map(cell);
+    if (ti < 0) { if (c.some(x => x.toLowerCase() === 'kind')) ti = c.findIndex(x => x.toLowerCase() === 'table'); continue; }
+    if (c[ti] === SD.MEASURES) return true;
+  }
+  return false;
+}
 function renderMake(){
   const m = state.make, ind = SD_IND.get(m.ind);
   $('industries').innerHTML = SD_IND.LIST.map(x => '<button type="button" class="ind" role="radio" aria-checked="' + (x.id === m.ind) + '" data-ind="' + x.id + '"><b>' + esc(x.name) + '</b><span>' + esc(x.blurb) + '</span><small>' + esc(x.kpis) + '</small></button>').join('');
@@ -231,6 +244,14 @@ function renderMake(){
   $('startDate').value = m.start === null ? '' : isoOf(m.start); $('endDate').value = m.end === null ? '' : isoOf(m.end); $('makeSeed').value = m.seed;
   document.querySelectorAll('input[name=style]').forEach(r => { r.checked = r.value === m.style; });
   $('addMeasures').checked = m.measures;
+  const found = hasMeasuresTable();
+  const mt = m.mtable || (found ? 'add' : 'new');
+  document.querySelectorAll('input[name=mtable]').forEach(r => { r.checked = r.value === mt; });
+  $('mtField').hidden = $('mtNote').hidden = !m.measures;
+  $('mtNote').innerHTML = found === null
+    ? 'No saved model to check. If your report already has a <code>_Measures</code> table, choose <b>Add to my _Measures</b>, or Power BI replaces it and the measures in it.'
+    : found ? 'Your saved model has a <code>_Measures</code> table, so the measures are added to it and nothing in it is removed.'
+      : 'Your saved model has no <code>_Measures</code> table, so the script creates one.';
   $('styleNote').innerHTML = m.style === 'udf'
     ? 'One DAX function per table (named <code>' + SD.PKG + '.&hellip;</code>), and each table calls its function. Needs DAX user-defined functions, a preview feature in Power BI Desktop.'
     : 'Each table holds its own DAX, with no functions. Works in any recent Power BI Desktop.';
@@ -257,7 +278,7 @@ function renderMake(){
   const steps = (m.style === 'udf' ? ['In Power BI Desktop, go to <b>File</b> &gt; <b>Options and settings</b> &gt; <b>Options</b> &gt; <b>Preview features</b>, turn on <b>DAX user-defined functions</b> and restart Desktop.'] : [])
     .concat(['Open a report (a new blank one works) and go to <b>TMDL view</b>.', 'Paste the script into a new tab and select <b>Apply</b>.', 'If a table shows no rows, select <b>Refresh</b> on the Home tab.']);
   $('applySteps').innerHTML = steps.map(s => '<li>' + s + '</li>').join('');
-  state.tmdl = SD.script(c.model, { mode: m.style, args: c.args, measures: m.measures, tables: on.map(x => x.name) });
+  state.tmdl = SD.script(c.model, { mode: m.style, args: c.args, measures: m.measures, measureTable: mt, tables: on.map(x => x.name) });
   $('tmdlView').innerHTML = hlTmdl(state.tmdl);
 }
 
@@ -348,6 +369,7 @@ function init(){
   $('makeSeed').addEventListener('change', () => mk(m => { m.seed = Math.floor(+$('makeSeed').value); }));
   document.querySelectorAll('input[name=style]').forEach(r => r.addEventListener('change', () => mk(m => { m.style = r.value; })));
   $('addMeasures').addEventListener('change', () => mk(m => { m.measures = $('addMeasures').checked; }));
+  document.querySelectorAll('input[name=mtable]').forEach(r => r.addEventListener('change', () => mk(m => { m.mtable = r.value; })));
   $('tablePicks').addEventListener('change', e => { const c = e.target.closest('[data-tbl]'); if (!c) return; mk(m => { const o = m.off[m.ind] = (m.off[m.ind] || []).filter(x => x !== c.dataset.tbl); if (!c.checked) o.push(c.dataset.tbl); }); });
   $('makeTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) mk(m => { m.tab[m.ind] = b.dataset.tab; }); });
   $('copyTmdl').addEventListener('click', () => { if (state.tmdl) copyText(state.tmdl, $('copyTmdl')); });

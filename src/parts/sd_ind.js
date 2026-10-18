@@ -194,7 +194,8 @@ const SD_IND = (() => {
       { n: 'Turnover %', x: 'DIVIDE( [Terminations], [Headcount] )', f: '0.0%', d: 'Terminations as a share of headcount at the end of the period.' },
       { n: 'Voluntary Turnover %', x: 'DIVIDE( [Voluntary Terminations], [Headcount] )', f: '0.0%', d: 'Voluntary terminations as a share of headcount at the end of the period.' },
       { n: 'Average Salary', x: 'VAR _Day = MAX( \'Date\'[Date] )\nRETURN\n    CALCULATE(\n        AVERAGE( Employees[Annual Salary] ),\n        Employees[Hire Date] <= _Day,\n        ISBLANK( Employees[Termination Date] ) || Employees[Termination Date] > _Day,\n        REMOVEFILTERS( \'Date\' )\n    )', f: '#,0', d: 'Average yearly pay of the employees in Headcount.' },
-      { n: 'Average Tenure (Years)', x: 'VAR _Day = MAX( \'Date\'[Date] )\nRETURN\n    CALCULATE(\n        AVERAGEX( Employees, ( _Day - Employees[Hire Date] ) / 365.25 ),\n        Employees[Hire Date] <= _Day,\n        ISBLANK( Employees[Termination Date] ) || Employees[Termination Date] > _Day,\n        REMOVEFILTERS( \'Date\' )\n    )', f: '0.0', d: 'Average years since hire of the employees in Headcount.' },
+      { n: 'Average Tenure (Years)', x: 'VAR _Day = MAX( \'Date\'[Date] )\nRETURN\n    CALCULATE(\n        AVERAGEX( Employees, ( _Day - Employees[Hire Date] ) / 365.25 ),\n        Employees[Hire Date] <= _Day,\n        ISBLANK( Employees[Termination Date] ) || Employees[Termination Date] > _Day,\n        REMOVEFILTERS( \'Date\' )\n    )', f: '0.0', d: 'Average years since hire of the employees in Headcount.' }],
+      Absences: [
       { n: 'Absence Days', x: 'SUM( Absences[Days] )', f: '#,0', d: 'Working days absent, by the day each absence started.' }],
       Requisitions: [
       { n: 'Requisitions Opened', x: 'CALCULATE( COUNTROWS( Requisitions ), TREATAS( VALUES( \'Date\'[Date] ), Requisitions[Opened Date] ) )', f: '#,0', d: 'Job openings approved in the period.' },

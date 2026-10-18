@@ -29,6 +29,12 @@ const { chromium } = require('playwright');
     console.log(id, 'tables', r.tabs, '| preview rows', r.rows, '| functions', (r.t.match(/^\tfunction /gm) || []).length, '| relationships', (r.t.match(/^\trelationship /gm) || []).length, '| measures', (r.t.match(/^\t\tmeasure /gm) || []).length, '| DataGoblins', /DataGoblins/.test(r.t));
   }
   await p.click('label:has(input[name=style][value=inline])'); await p.waitForTimeout(150);
+  // measures go in _Measures: created when no saved model has one, ref'd (added to) when the saved model has one
+  console.log('measures table:', await p.evaluate(() => (state.tmdl.match(/^\t(ref )?table _Measures$/m) || ['none'])[0].trim()), '(expect table _Measures)',
+    '| folders', await p.evaluate(() => Array.from(new Set((state.tmdl.match(/displayFolder: .*/g) || []).map(x => x.slice(15)))).join(',')));
+  await p.evaluate(() => { localStorage.setItem('sfpbi.shared.model', JSON.stringify({ text: 'Kind\tTable\tName\nTable\t_Measures\t_Measures\nTable\tSales\tSales' })); changed(); });
+  console.log('with a saved _Measures:', await p.evaluate(() => (state.tmdl.match(/^\t(ref )?table _Measures$/m) || ['none'])[0].trim()), '(expect ref table _Measures) |', await p.evaluate(() => $('mtNote').textContent.slice(0, 40)));
+  await p.evaluate(() => { localStorage.removeItem('sfpbi.shared.model'); changed(); });
   console.log('plain tables: functions', await p.evaluate(() => (state.tmdl.match(/^\tfunction /gm) || []).length), '(expect 0) | VAR seed', await p.evaluate(() => /VAR seed = 1/.test(state.tmdl)));
   await p.fill('#endDate', '2019-01-01'); await p.dispatchEvent('#endDate', 'change'); await p.waitForTimeout(150);
   console.log('end before start message', await p.textContent('#makeMsg'));
