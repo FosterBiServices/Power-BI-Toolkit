@@ -8,3 +8,4 @@ src/tests/ab_tmdl.txt
 src/tests/dl_*
 src/tests/lo_dl_*
 __pycache__/
+src/tests/sd_masked.xlsx

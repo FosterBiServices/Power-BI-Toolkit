@@ -28,6 +28,7 @@ HOOKS={
  'layout-designer':"",
  'power-query-explainer':"",
  'power-query-writer':"",
+ 'sample-data-maker':"",
 }
 for name,hook in HOOKS.items():
     src=open(P+name+'.html').read()

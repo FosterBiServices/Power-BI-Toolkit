@@ -73,6 +73,12 @@ Things to know:
 - Date tables: use `isDateTable` / `dateTablesOf` from builder_core. A table counts when it is marked
   (data category Time) or is a calculated table built with CALENDAR, CALENDARAUTO or a GENERATESERIES
   of dates, since many models never mark theirs.
+- Sample Data Maker (`sd_*`): `sd_core.js` is a small expression language. Each column is written once
+  and gives both the DAX and the JavaScript that previews the same rows (one seeded hash,
+  `MOD( SIN(...) * 43758.5453, 1 )`, in both), so the preview matches what Power BI builds. `sd_ind.js`
+  holds the industries; `sd_mask.js` the masking. Generated functions are named
+  `FosterBIServices.SampleData.*` with `DAXLIB_PackageId = FosterBIServices.SampleData`. The idea comes
+  from the DataGoblins.SampleData DAX library; nothing is copied from it, and nothing generated names it.
 - `src/pages/sheet-recon.html` is a finished page (built in another chat) with a `@@SUITE@@`
   line where build_site.py puts suite.js. Edit it directly.
 - `build_site.py`: `HOOKS` lists every tool page and the line that connects it to the shared
@@ -153,6 +159,7 @@ Things to know:
 | theme-builder | ktb. | no | no |
 | layout-designer | klo. | no | no |
 | sheet-recon | ksr. (Clear entries flag only; files are never stored) | no | no |
+| sample-data-maker | ksd. (settings only; files are never stored) | no | no |
 
 Every tool that uses the export (yes or optional) also takes a PBIP folder in its Connect your model step.
 
@@ -176,6 +183,8 @@ needs internet (or set `XLSX_FILE` to a local `xlsx.full.min.js` 0.18.5).
 ## Not yet checked in real Power BI or Copilot
 
 - Prompt files in Copilot (attaching the downloaded prompt; Copilot's file reply).
+- Sample Data Maker's Make new data: the TMDL script (functions, calculated tables, relationships,
+  measures) in TMDL view, in both styles (DAX functions, plain calculated tables).
 - Chart Patterns: the TMDL scripts, the Format-pane steps and the combo chart marker size in a theme
   (written from the PBIP skills in Power-BI-Portfolio/AI/skills, not yet built by hand in Desktop).
 

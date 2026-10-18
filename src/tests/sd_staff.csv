@@ -1,0 +1,5 @@
+Employee ID,Full Name,Hire Date,Salary,Manager ID
+E-001,Jordan Blake,15/01/2020,52000,
+E-002,Avery Carter,03/02/2021,61000.5,E-001
+E-003,Riley Dalton,28/11/2019,48000,E-001
+E-004,Morgan Ellison,01/07/2022,75000,E-002
