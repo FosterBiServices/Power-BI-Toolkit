@@ -863,13 +863,35 @@ const SD_IND = (() => {
   const BASE = [52000, 56000, 42000, 48000, 78000, 64000, 60000, 55000];
   const LEVELS = ['Associate', 'Senior', 'Lead', 'Manager', 'Director'];
   const hireOf = ek => sub(E, int(mul(pow(R(ek, 40), 0.9), add(days(), 2920))));
+  const SOURCES = [['Careers site', 35], ['Job board', 30], ['Referral', 15], ['Agency', 10], ['Social media', 10]];
+  const STAGES = ['Applied', 'Screened', 'Interviewed', 'Offered', 'Hired'];
+  const ROUNDS = ['First interview', 'Second interview', 'Panel', 'Final interview'];
+  const DEPT_W = [[1, 20], [2, 8], [3, 18], [4, 20], [5, 16], [6, 6], [7, 6], [8, 6]];
+  const jobTitle = (lv, dk) => iff(ge(lv, 4), cat(at(LEVELS, sub(lv, 1)), ', ', at(DEPTS, sub(dk, 1))), iff(eq(lv, 1), at(ROLES, sub(dk, 1)), cat(at(LEVELS, sub(lv, 1)), ' ', at(ROLES, sub(dk, 1)))));
+  /* a job opening, worked out from its key (k), so Applications and Interviews can rebuild it */
+  const reqCols = () => [['_rd', wpick(DEPT_W, R(k, 21))], ['_rl', wpick([[1, 40], [2, 30], [3, 15], [4, 10], [5, 5]], R(k, 22))],
+    ['_open', add(S, int(mul(R(k, 23), days())))],
+    ['_d', add(30, int(mul(mul(pow(R(k, 24), 1.5), 80), at([1, 1.1, 1.25, 1.5, 1.8], sub(C('_rl'), 1)))))],
+    ['_can', lt(R(k, 25), 0.08)], ['_len', iff(C('_can'), int(mul(C('_d'), 0.6)), C('_d'))],
+    ['_status', iff(le(add(C('_open'), C('_len')), E), iff(C('_can'), 'Cancelled', 'Filled'), 'Open')],
+    ['_close', iff(eq(C('_status'), 'Open'), blank(), add(C('_open'), C('_len')))],
+    ['_n', add(8, int(mul(R(k, 26), 30)))], ['_h', add(1, int(mul(R(k, 27), C('_n'))))]];
+  /* an applicant to that opening (after expanding _n as Applicant Number) */
+  const ak = C('_ak');
+  const appCols = () => [['_ak', add(mul(k, 100), C('Applicant Number'))],
+    ['_hired', and(eq(C('_status'), 'Filled'), eq(C('Applicant Number'), C('_h')))], ['_end', coalesce(C('_close'), E)],
+    ['Applied Date', add(C('_open'), int(mul(mul(R(ak, 2), sub(C('_end'), C('_open'))), iff(C('_hired'), 0.3, 0.9))))],
+    ['Stage Number', iff(C('_hired'), 5, iff(lt(R(ak, 3), 0.5), 1, iff(lt(R(ak, 3), 0.78), 2, iff(lt(R(ak, 3), 0.99), 3, 4))))],
+    ['_iv', iff(lt(C('Stage Number'), 3), 0, iff(eq(C('Stage Number'), 3), add(1, int(mul(R(ak, 4), 2))), add(3, int(mul(R(ak, 4), 2)))))],
+    ['Offer Made', ge(C('Stage Number'), 4)],
+    ['Offer Date', iff(lt(C('Stage Number'), 4), blank(), iff(C('_hired'), sub(C('_close'), 2), min(add(C('Applied Date'), add(10, mul(7, C('_iv')))), C('_end'))))]];
   const termOf = (ek, hire) => iff(and(lt(R(ek, 41), 0.35), gt(int(sub(E, hire)), 60)), add(add(hire, 30), int(mul(R(ek, 42), sub(int(sub(E, hire)), 30)))), blank());
   const hr = () => ({
     tables: [
       { name: 'Departments', fn: PKG + '.HR.Departments', params: [], desc: 'Departments and the division each belongs to.',
         stages: [{ data: { cols: [['DepartmentKey', 'int'], ['Department', 'text'], ['Division', 'text']], rows: DEPTS.map((d, i) => [i + 1, d, ['Commercial', 'Commercial', 'Operations', 'Operations', 'Technology', 'Technology', 'Corporate', 'Corporate'][i]]) } }],
         meta: [key('DepartmentKey', 'Key that links to Employees.'), col('Department', 'text', 'Department name.'), col('Division', 'text', 'Commercial, Operations, Technology or Corporate.')] },
-      { name: 'Employees', fn: PKG + '.HR.Employees', params: [n('num_employees'), ...dts, seedP], desc: 'Everyone employed since well before the start date: department, job, pay, hire and leaving dates.',
+      { name: 'Employees', fn: PKG + '.HR.Employees', params: [n('num_employees'), ...dts, seedP], desc: 'Everyone employed since well before the start date: department, job, pay, hire and termination dates, and why they left.',
         stages: [{ series: P('num_employees') }, { cols: [['EmployeeKey', k], ['Employee Number', cat('E', pad(add(10000, k), '00000'))], ['_ni', nameIndex(k)],
           ['Employee', person(C('_ni'))], ['Gender', iff(lt(int(div(C('_ni'), 60)), 30), 'Female', 'Male')],
           ['DepartmentKey', wpick([[1, 20], [2, 8], [3, 18], [4, 20], [5, 16], [6, 6], [7, 6], [8, 6]], R(k, 1))],
@@ -880,14 +902,16 @@ const SD_IND = (() => {
           ['Birth Date', add(date(sub(year(E), add(22, int(mul(pow(R(k, 5), 1.3), 40)))), 1, 1), int(mul(R(k, 6), 365)))],
           ['Hire Date', hireOf(k)], ['Termination Date', termOf(k, C('Hire Date'))],
           ['Termination Reason', iff(isblank(C('Termination Date')), blank(), wpick([['Resigned', 55], ['Better offer', 15], ['Dismissed', 12], ['Redundancy', 10], ['Retired', 8]], R(k, 43)))],
-          ['Status', iff(isblank(C('Termination Date')), 'Active', 'Left')],
+          ['Termination Type', iff(isblank(C('Termination Date')), blank(), iff(or(eq(C('Termination Reason'), 'Dismissed'), eq(C('Termination Reason'), 'Redundancy')), 'Involuntary', 'Voluntary'))],
+          ['Status', iff(isblank(C('Termination Date')), 'Active', 'Left')], ['Hire Source', wpick(SOURCES, R(k, 9))],
           ['Annual Salary', round(mul(mul(at(BASE, sub(C('DepartmentKey'), 1)), at([1, 1.25, 1.5, 1.9, 2.6], sub(C('_lv'), 1))), add(0.85, mul(R(k, 7), 0.3))), -2)],
           ['Performance Rating', wpick([[1, 5], [2, 15], [3, 50], [4, 22], [5, 8]], R(k, 8))]] }],
         meta: [key('EmployeeKey', 'Key that links to Absences.'), col('Employee Number', 'text', 'Employee ID.'), col('Employee', 'text', 'Full name.'), col('Gender', 'text', 'Female or Male.'),
           key('DepartmentKey', 'Links to Departments.'), col('Job Level', 'text', 'Associate, Senior, Lead, Manager or Director.'), col('Job Title', 'text', 'Job title.'),
           col('Employment Type', 'text', 'Full-time, Part-time or Contractor.'), col('Location', 'text', 'Where the employee works.'), col('Birth Date', 'date', 'Date of birth.'),
-          col('Hire Date', 'date', 'First day of work. Links to Date (inactive; Hires uses it).'), col('Termination Date', 'date', 'Last day of work. Blank while employed. Links to Date (inactive; Leavers uses it).'),
-          col('Termination Reason', 'text', 'Why the employee left.'), col('Status', 'text', 'Active, or Left by the end date.'),
+          col('Hire Date', 'date', 'First day of work. Links to Date (inactive; Hires uses it).'), col('Termination Date', 'date', 'Last day of work. Blank while employed. Links to Date (inactive; Terminations uses it).'),
+          col('Termination Reason', 'text', 'Why the employee left.'), col('Termination Type', 'text', 'Voluntary or Involuntary (dismissed or made redundant). Blank while employed.'),
+          col('Status', 'text', 'Active, or Left by the end date.'), col('Hire Source', 'text', 'Where the employee was found: careers site, job board, referral, agency or social media.'),
           col('Annual Salary', 'dec', 'Yearly pay.', { f: '#,0' }), col('Performance Rating', 'int', 'Latest rating, 1 (low) to 5 (high).', { f: '0' })] },
       { name: 'Absences', fn: PKG + '.HR.Absences', params: [n('num_absences'), ...dts, n('num_employees'), seedP], desc: 'Absences: one row per absence, while the employee worked here, with type and days.',
         stages: [{ series: P('num_absences') }, { cols: [['Absence ID', k], ['EmployeeKey', add(int(mul(R(k, 1), P('num_employees'))), 1)], ['_hire', hireOf(C('EmployeeKey'))],
@@ -898,18 +922,73 @@ const SD_IND = (() => {
             ['Days', iff(eq(C('Absence Type'), 'Parental'), add(20, int(mul(R(k, 4), 60))), wpick([[1, 50], [2, 20], [3, 12], [5, 10], [10, 5], [15, 3]], R(k, 5)))]] }],
         meta: [col('Absence ID', 'int', 'Absence number.', { f: '0' }), key('EmployeeKey', 'Links to Employees.'), col('Start Date', 'date', 'First day of the absence. Links to Date.'),
           col('Absence Type', 'text', 'Vacation, Sick, Personal, Training or Parental.'), col('Days', 'int', 'Working days absent.', { f: '0', sum: true })] },
+      { name: 'Requisitions', fn: PKG + '.HR.Requisitions', params: [n('num_requisitions'), ...dts, seedP], desc: 'Job openings: department, job, recruiter, when each opened and closed, and how long it took to fill.',
+        stages: [{ series: P('num_requisitions') }, { cols: reqCols() }, { cols: [['RequisitionKey', k], ['Requisition ID', cat('REQ-', pad(add(1000, k), '0000'))],
+          ['DepartmentKey', C('_rd')], ['Job Level', at(LEVELS, sub(C('_rl'), 1))], ['Job Title', jobTitle(C('_rl'), C('_rd'))],
+          ['Recruiter', person(nameIndex(add(3500, mod(k, 6))))], ['Opened Date', C('_open')], ['Status', C('_status')], ['Closed Date', C('_close')],
+          ['Days to Fill', iff(eq(C('_status'), 'Filled'), C('_d'), blank())]] }],
+        meta: [key('RequisitionKey', 'Key that links to Applications.'), col('Requisition ID', 'text', 'Job opening number.'), key('DepartmentKey', 'Links to Departments.'),
+          col('Job Level', 'text', 'Associate, Senior, Lead, Manager or Director.'), col('Job Title', 'text', 'Job being hired for.'), col('Recruiter', 'text', 'Recruiter who owns the opening.'),
+          col('Opened Date', 'date', 'When the opening was approved. Requisitions Opened uses it.'), col('Status', 'text', 'Filled, Cancelled, or Open at the end date.'),
+          col('Closed Date', 'date', 'When it was filled or cancelled. Blank while open. Requisitions Filled uses it.'),
+          col('Days to Fill', 'int', 'Days from opening to the accepted offer. Blank unless filled.', { f: '0' })] },
+      { name: 'Applications', fn: PKG + '.HR.Applications', params: [n('num_requisitions'), ...dts, seedP], desc: 'Applicants: one row per person who applied to an opening, how far they got and how it ended. Filled openings have exactly one hire.',
+        stages: [{ series: P('num_requisitions') }, { cols: reqCols() }, { expand: C('_n'), as: 'Applicant Number' }, { cols: appCols() },
+          { cols: [['ApplicationKey', ak], ['RequisitionKey', k], ['Candidate', person(nameIndex(ak))], ['Source', wpick(SOURCES, R(ak, 1))],
+            ['Stage Reached', at(STAGES, sub(C('Stage Number'), 1))],
+            ['Outcome', iff(C('_hired'), 'Hired', iff(and(eq(C('_status'), 'Open'), lt(R(ak, 5), 0.6)), 'In progress', iff(eq(C('Stage Number'), 4), 'Declined offer', iff(lt(R(ak, 6), 0.15), 'Withdrew', 'Rejected'))))]] }],
+        meta: [key('ApplicationKey', 'Key that links to Interviews.'), key('RequisitionKey', 'Links to Requisitions.'), col('Candidate', 'text', 'Applicant name.'),
+          col('Source', 'text', 'Careers site, Job board, Referral, Agency or Social media.'), col('Applied Date', 'date', 'When they applied. Links to Date.'),
+          col('Stage Reached', 'text', 'Furthest step: Applied, Screened, Interviewed, Offered or Hired.', { s: 'Stage Number' }), col('Stage Number', 'int', 'Sorts Stage Reached, 1 to 5.', { f: '0', h: true }),
+          col('Outcome', 'text', 'Hired, Declined offer, Rejected, Withdrew, or In progress at the end date.'),
+          col('Offer Made', 'bool', 'TRUE when an offer was made.'), col('Offer Date', 'date', 'When the offer was made. Blank without one. Offers uses it.')] },
+      { name: 'Interviews', fn: PKG + '.HR.Interviews', params: [n('num_requisitions'), ...dts, n('num_employees'), seedP], desc: 'Interviews: one row per interview round an applicant had, with the interviewer, rating and recommendation.',
+        stages: [{ series: P('num_requisitions') }, { cols: reqCols() }, { expand: C('_n'), as: 'Applicant Number' }, { cols: appCols() },
+          { expand: C('_iv'), as: 'Round Number' },
+          { cols: [['_ik', add(mul(ak, 10), C('Round Number'))],
+            ['Interview Date', iff(isblank(C('Offer Date')), add(C('Applied Date'), add(mul(7, C('Round Number')), int(mul(R(C('_ik'), 1), 4)))),
+              add(C('Applied Date'), int(div(mul(sub(C('Offer Date'), C('Applied Date')), C('Round Number')), add(C('_iv'), 1)))))]] },
+          { filter: le(C('Interview Date'), C('_end')) },
+          { cols: [['InterviewKey', C('_ik')], ['ApplicationKey', ak], ['Round', at(ROUNDS, sub(C('Round Number'), 1))],
+            ['Interviewer', person(nameIndex(add(int(mul(R(C('_ik'), 2), P('num_employees'))), 1)))],
+            ['Rating', iff(C('Offer Made'), wpick([[3, 20], [4, 50], [5, 30]], R(C('_ik'), 3)), wpick([[1, 15], [2, 30], [3, 35], [4, 20]], R(C('_ik'), 3)))],
+            ['Recommendation', iff(ge(C('Rating'), 4), 'Hire', iff(eq(C('Rating'), 3), 'Maybe', 'No hire'))]] }],
+        meta: [key('InterviewKey', 'Interview number.'), key('ApplicationKey', 'Links to Applications.'), col('Round', 'text', 'First interview, Second interview, Panel or Final interview.', { s: 'Round Number' }),
+          col('Round Number', 'int', 'Sorts Round, 1 to 4.', { f: '0', h: true }), col('Interview Date', 'date', 'When the interview took place. Interview Count uses it.'),
+          col('Interviewer', 'text', 'Employee who ran the interview.'), col('Rating', 'int', 'Interviewer score, 1 (low) to 5 (high).', { f: '0' }), col('Recommendation', 'text', 'Hire, Maybe or No hire.')] },
       dateTable()],
     rels: [['Employees', 'DepartmentKey', 'Departments', 'DepartmentKey'], ['Absences', 'EmployeeKey', 'Employees', 'EmployeeKey'], ['Absences', 'Start Date', 'Date', 'Date'],
+      ['Requisitions', 'DepartmentKey', 'Departments', 'DepartmentKey'], ['Applications', 'RequisitionKey', 'Requisitions', 'RequisitionKey'],
+      ['Interviews', 'ApplicationKey', 'Applications', 'ApplicationKey'], ['Applications', 'Applied Date', 'Date', 'Date'],
       ['Employees', 'Hire Date', 'Date', 'Date', false], ['Employees', 'Termination Date', 'Date', 'Date', false]],
     measures: { Employees: [
       { n: 'Headcount', x: 'VAR _Day = MAX( \'Date\'[Date] )\nRETURN\n    CALCULATE(\n        COUNTROWS( Employees ),\n        Employees[Hire Date] <= _Day,\n        ISBLANK( Employees[Termination Date] ) || Employees[Termination Date] > _Day,\n        REMOVEFILTERS( \'Date\' )\n    )', f: '#,0', d: 'Employees on the payroll on the last day of the period.' },
       { n: 'Hires', x: 'CALCULATE( COUNTROWS( Employees ), USERELATIONSHIP( Employees[Hire Date], \'Date\'[Date] ) )', f: '#,0', d: 'Employees who started in the period.' },
-      { n: 'Leavers', x: 'CALCULATE( COUNTROWS( Employees ), USERELATIONSHIP( Employees[Termination Date], \'Date\'[Date] ) )', f: '#,0', d: 'Employees whose last day was in the period.' },
-      { n: 'Turnover %', x: 'DIVIDE( [Leavers], [Headcount] )', f: '0.0%', d: 'Leavers as a share of headcount at the end of the period.' },
+      { n: 'Terminations', x: 'CALCULATE( COUNTROWS( Employees ), USERELATIONSHIP( Employees[Termination Date], \'Date\'[Date] ) )', f: '#,0', d: 'Employees whose last day was in the period.' },
+      { n: 'Voluntary Terminations', x: 'CALCULATE( [Terminations], Employees[Termination Type] = "Voluntary" )', f: '#,0', d: 'Employees who chose to leave (resigned, better offer, retired).' },
+      { n: 'Involuntary Terminations', x: 'CALCULATE( [Terminations], Employees[Termination Type] = "Involuntary" )', f: '#,0', d: 'Employees who were dismissed or made redundant.' },
+      { n: 'Net Headcount Change', x: '[Hires] - [Terminations]', f: '#,0', d: 'Hires less terminations in the period.' },
+      { n: 'Turnover %', x: 'DIVIDE( [Terminations], [Headcount] )', f: '0.0%', d: 'Terminations as a share of headcount at the end of the period.' },
+      { n: 'Voluntary Turnover %', x: 'DIVIDE( [Voluntary Terminations], [Headcount] )', f: '0.0%', d: 'Voluntary terminations as a share of headcount at the end of the period.' },
       { n: 'Average Salary', x: 'VAR _Day = MAX( \'Date\'[Date] )\nRETURN\n    CALCULATE(\n        AVERAGE( Employees[Annual Salary] ),\n        Employees[Hire Date] <= _Day,\n        ISBLANK( Employees[Termination Date] ) || Employees[Termination Date] > _Day,\n        REMOVEFILTERS( \'Date\' )\n    )', f: '#,0', d: 'Average yearly pay of the employees in Headcount.' },
       { n: 'Average Tenure (Years)', x: 'VAR _Day = MAX( \'Date\'[Date] )\nRETURN\n    CALCULATE(\n        AVERAGEX( Employees, ( _Day - Employees[Hire Date] ) / 365.25 ),\n        Employees[Hire Date] <= _Day,\n        ISBLANK( Employees[Termination Date] ) || Employees[Termination Date] > _Day,\n        REMOVEFILTERS( \'Date\' )\n    )', f: '0.0', d: 'Average years since hire of the employees in Headcount.' },
-      { n: 'Absence Days', x: 'SUM( Absences[Days] )', f: '#,0', d: 'Working days absent, by the day each absence started.' }] },
-    sizes: [['num_employees', 'Employees', 600, 3600], ['num_absences', 'Absences', 3000, 100000]]
+      { n: 'Absence Days', x: 'SUM( Absences[Days] )', f: '#,0', d: 'Working days absent, by the day each absence started.' }],
+      Requisitions: [
+      { n: 'Requisitions Opened', x: 'CALCULATE( COUNTROWS( Requisitions ), TREATAS( VALUES( \'Date\'[Date] ), Requisitions[Opened Date] ) )', f: '#,0', d: 'Job openings approved in the period.' },
+      { n: 'Requisitions Filled', x: 'CALCULATE( COUNTROWS( Requisitions ), Requisitions[Status] = "Filled", TREATAS( VALUES( \'Date\'[Date] ), Requisitions[Closed Date] ) )', f: '#,0', d: 'Job openings filled in the period.' },
+      { n: 'Open Requisitions', x: 'VAR _Day = MAX( \'Date\'[Date] )\nRETURN\n    CALCULATE(\n        COUNTROWS( Requisitions ),\n        Requisitions[Opened Date] <= _Day,\n        ISBLANK( Requisitions[Closed Date] ) || Requisitions[Closed Date] > _Day\n    )', f: '#,0', d: 'Job openings still open on the last day of the period.' },
+      { n: 'Average Days to Fill', x: 'CALCULATE( AVERAGE( Requisitions[Days to Fill] ), TREATAS( VALUES( \'Date\'[Date] ), Requisitions[Closed Date] ) )', f: '0', d: 'Days from opening to accepted offer, for openings filled in the period.' }],
+      Applications: [
+      { n: 'Application Count', x: 'COUNTROWS( Applications )', f: '#,0', d: 'Applications received in the period.' },
+      { n: 'Offers', x: 'CALCULATE( COUNTROWS( Applications ), Applications[Offer Made] = TRUE(), TREATAS( VALUES( \'Date\'[Date] ), Applications[Offer Date] ), REMOVEFILTERS( \'Date\' ) )', f: '#,0', d: 'Offers made in the period.' },
+      { n: 'Offers Accepted', x: 'CALCULATE( [Offers], Applications[Outcome] = "Hired" )', f: '#,0', d: 'Offers made in the period that were accepted.' },
+      { n: 'Offer Acceptance %', x: 'DIVIDE( [Offers Accepted], [Offers] )', f: '0.0%', d: 'Accepted offers as a share of offers made.' },
+      { n: 'Application to Hire %', x: 'DIVIDE( CALCULATE( COUNTROWS( Applications ), Applications[Outcome] = "Hired" ), [Application Count] )', f: '0.0%', d: 'Applications received in the period that ended in a hire.' }],
+      Interviews: [
+      { n: 'Interview Count', x: 'CALCULATE( COUNTROWS( Interviews ), TREATAS( VALUES( \'Date\'[Date] ), Interviews[Interview Date] ), REMOVEFILTERS( \'Date\' ) )', f: '#,0', d: 'Interviews held in the period.' },
+      { n: 'Interviews per Hire', x: 'DIVIDE( [Interview Count], [Offers Accepted] )', f: '0.0', d: 'Interviews held for each accepted offer.' },
+      { n: 'Average Interview Rating', x: 'CALCULATE( AVERAGE( Interviews[Rating] ), TREATAS( VALUES( \'Date\'[Date] ), Interviews[Interview Date] ), REMOVEFILTERS( \'Date\' ) )', f: '0.00', d: 'Average interviewer score, 1 to 5, for interviews held in the period.' }] },
+    sizes: [['num_employees', 'Employees', 600, 3600], ['num_absences', 'Absences', 3000, 100000], ['num_requisitions', 'Job openings', 150, 3000]]
   });
 
   /* ---------- Finance ---------- */
@@ -1112,7 +1191,7 @@ const SD_IND = (() => {
 
   const LIST = [
     { id: 'retail', name: 'Retail sales', blurb: 'Orders, customers, products and stores.', kpis: 'Sales, gross margin, orders, average order value, units, active customers.', make: retail },
-    { id: 'hr', name: 'HR', blurb: 'Employees, departments and absences.', kpis: 'Headcount, hires, leavers, turnover, average salary, tenure, absence days.', make: hr },
+    { id: 'hr', name: 'HR', blurb: 'Employees, absences, job openings, applicants and interviews.', kpis: 'Headcount, hires, terminations, turnover, salary, tenure, absence days, open requisitions, days to fill, applications, interviews, offer acceptance.', make: hr },
     { id: 'finance', name: 'Finance', blurb: 'General ledger actuals and budget, customers and invoices.', kpis: 'Actual, budget, variance, revenue, gross margin, net income, receivables, days to pay.', make: finance },
     { id: 'health', name: 'Healthcare', blurb: 'Patients, providers and encounters.', kpis: 'Encounters, length of stay, readmission rate, ED wait, satisfaction, collection rate.', make: health },
     { id: 'mfg', name: 'Manufacturing', blurb: 'Production by machine and shift, products and machines.', kpis: 'Units, scrap rate, downtime, availability, performance, quality, OEE.', make: manufacturing },
