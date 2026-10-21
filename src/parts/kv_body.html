@@ -1,7 +1,7 @@
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>KPI Visualizer</h1>
-        <p class="lede">Describe a KPI, or a row of them, and compare ways to show it: cards, bullet charts, sparklines, progress bars, waffles and more, each with when to use it and how to build it. SVG measures come as a TMDL script. No AI needed.</p>
+        <p class="lede">Describe a KPI, or a row of them, and compare ways to show it: cards, bullet charts, sparklines, progress bars, waffles and more, each with when to use it and how to build it. SVG measures come as a TMDL script, and reusable card functions let every KPI share one card design. No AI needed.</p>
       </div>
       <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
@@ -127,8 +127,15 @@
         <div class="field" id="htmlSizeWrap"><label for="htmlW">Visual size in Power BI <span class="muted">(width &times; height, pixels)</span></label><span class="kv-wh"><input type="number" id="htmlW" min="40" max="2000" style="width:80px" aria-label="Width in pixels"> &times; <input type="number" id="htmlH" min="40" max="2000" style="width:80px" aria-label="Height in pixels"></span></div>
         <div class="field" id="refPosWrap" hidden><span class="lbl" id="refPosLbl">Reference labels</span><div class="seg" role="radiogroup" aria-labelledby="refPosLbl"><label><input type="radio" name="refPos" value="below" id="refBelow"><span>Under the value</span></label><label><input type="radio" name="refPos" value="right" id="refRight"><span>Right of the value</span></label></div></div>
         <div class="field" id="scoreWrap"><label for="scoreTable">Scorecard table name</label><input type="text" id="scoreTable" autocomplete="off" placeholder="KPI Scorecard"></div>
+        <div class="field fnf"><label for="fnDate">Date column <span class="muted">(one row per day)</span></label><input type="text" id="fnDate" list="dayCols" autocomplete="off" spellcheck="false" placeholder="'Date'[Date]"></div>
+        <div class="field fnf"><label for="fnAsOf">Last date with data <span class="muted">(optional measure)</span></label><input type="text" id="fnAsOf" list="measureNames" autocomplete="off" spellcheck="false" placeholder="Data As Of"></div>
+        <div class="field fnf"><label for="fnStyle">Your KPIs&rsquo; measures draw</label><select id="fnStyle"></select></div>
+        <div class="field fnf"><label for="fnOut">As</label><select id="fnOut"></select></div>
+        <div class="field fnf"><label for="fnCompare">Compare with</label><select id="fnCompare"></select></div>
       </div>
       <div id="htmlFit" class="kv-fit" hidden></div>
+      <div id="fnBox" class="kv-fnbox" hidden></div>
+      <datalist id="dayCols"></datalist>
       <datalist id="tableNames"></datalist><datalist id="trendCols"></datalist>
       <div id="checks"></div>
       <div id="outBox">

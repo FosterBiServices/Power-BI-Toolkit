@@ -193,6 +193,10 @@ needs internet (or set `XLSX_FILE` to a local `xlsx.full.min.js` 0.18.5).
 - Sample Data Maker's Make new data: applying the TMDL script in TMDL view (tables, relationships,
   measures), including `ref table _Measures` into a report that already has one. The DAX itself is checked: every table function of all six industries, run as a DAX
   query in Desktop (Oct 2026), gave the same row counts, sums and distinct counts as the page preview.
+- KPI Visualizer's reusable card functions (`kv_fn.js`): applying the TMDL script in TMDL view, and the HTML
+  cards' hover tooltips in the HTML Content visual. The DAX itself is checked: every function ran as a DAX query
+  (DEFINE FUNCTION) on a real model in Desktop (Oct 2026), with MoM, YoY and a target measure. Names can't use `KPI` or `Text` as a segment
+  (reserved in DAX queries), hence `FosterBIServices.KPICards.*` and `Color.Ink`.
 - Chart Patterns: the TMDL scripts, the Format-pane steps and the combo chart marker size in a theme
   (written from the PBIP skills in Power-BI-Portfolio/AI/skills, not yet built by hand in Desktop).
 

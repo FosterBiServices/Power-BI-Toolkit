@@ -2,7 +2,7 @@ from _env import open, S, P, ROOT
 p=open(P+'prep-for-ai-writer.html').read().split('\n')
 if p[3].startswith('<link rel=\"icon\"'): p = p[:2] + [p[2] + '\n' + p[3]] + p[4:]
 L=lambda a,b:'\n'.join(p[a-1:b])
-core=open(S+'builder_core.js').read(); kv=open(S+'kv_core.js').read(); ex=open(S+'kv_ex.js').read(); ui=open(S+'kv_ui.js').read(); body=open(S+'kv_body.html').read()
+core=open(S+'builder_core.js').read(); kv=open(S+'kv_core.js').read(); fn=open(S+'kv_fn.js').read(); ex=open(S+'kv_ex.js').read(); ui=open(S+'kv_ui.js').read(); body=open(S+'kv_body.html').read()
 head='<title>KPI Visualizer</title>\n<meta name="description" content="Compare ways to show a Power BI KPI: cards, bullet charts, sparklines, progress bars and more, with build steps and SVG measures as a TMDL script.">\n'+L(3,6)
 css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 /* ---------- KPI Visualizer ---------- */
@@ -123,9 +123,15 @@ css=L(7,217)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 #outBox h3{margin:6px 0 0}
 #checks{display:flex;flex-direction:column;gap:8px}
 #kpiPickWrap select{max-width:320px}
+.kv-fnbox{display:flex;flex-direction:column;gap:8px;min-width:0}
+.kv-fnbox p{margin:0}
+.kv-fngrid{display:flex;flex-wrap:wrap;gap:12px;background:#F3F2F1;border-radius:8px;padding:12px;min-width:0}
+.kv-fnfig{flex:1 1 220px;min-width:0}
+.kv-fncard svg{display:block;width:100%;height:auto;filter:drop-shadow(0 1px 2px rgba(0,0,0,.12))}
+.kv-code{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0 0}
 '''
 logo=p[318]
-src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+logo+'\n'+body+'\n<script>\n'+core+'\n'+kv+'\n'+ex+'\n'+ui+'</script>\n'
-assert '</script>' not in (core+kv+ex+ui)
+src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+logo+'\n'+body+'\n<script>\n'+core+'\n'+kv+'\n'+fn+'\n'+ex+'\n'+ui+'</script>\n'
+assert '</script>' not in (core+kv+fn+ex+ui)
 open(P+'kpi-visualizer.html','w').write(src)
 print(len(src))
