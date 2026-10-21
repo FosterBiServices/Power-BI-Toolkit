@@ -199,7 +199,10 @@ needs internet (or set `XLSX_FILE` to a local `xlsx.full.min.js` 0.18.5).
   level, then "duplicate annotation under the root"). The owner then asked for: only the chosen card's functions (a
   card or small chart, SVG image or HTML, the owner's choice), colors, band and number shortening written into the
   functions from the tool (no Color or format functions), no annotations, and the summary card's lines showing only
-  the two numbers its pill compares. That rewrite, the expression three tabs in, and the new bullet, progress,
+  the two numbers its pill compares. Then: the card list holds only cards (bullet, progress, sparkline and variance bar
+  are built as a function from their own options, "Build it as"), cards are drawn at the visual size the user types
+  (suggested size when empty), Compare with defaults to the month before and offers no target for a prior-period KPI,
+  and the HTML fits its visual with no scroll bar (`max-height:96vh`; custom visuals run in their own frame). That rewrite, the expression three tabs in, and the new bullet, progress,
   sparkline, variance bar and rolling tile functions haven't been run in Desktop yet. Names can't use `KPI` or `Text`
   as a segment (reserved in DAX queries), hence `FosterBIServices.KPICards.*`.
 - Chart Patterns: the TMDL scripts, the Format-pane steps and the combo chart marker size in a theme
