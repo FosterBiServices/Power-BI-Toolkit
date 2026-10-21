@@ -194,9 +194,14 @@ needs internet (or set `XLSX_FILE` to a local `xlsx.full.min.js` 0.18.5).
   measures), including `ref table _Measures` into a report that already has one. The DAX itself is checked: every table function of all six industries, run as a DAX
   query in Desktop (Oct 2026), gave the same row counts, sums and distinct counts as the page preview.
 - KPI Visualizer's reusable card functions (`kv_fn.js`): applying the TMDL script in TMDL view, and the HTML
-  cards' hover tooltips in the HTML Content visual. The DAX itself is checked: every function ran as a DAX query
-  (DEFINE FUNCTION) on a real model in Desktop (Oct 2026), with MoM, YoY and a target measure. Names can't use `KPI` or `Text` as a segment
-  (reserved in DAX queries), hence `FosterBIServices.KPICards.*` and `Color.Ink`.
+  cards' hover tooltips in the HTML Content visual. The first version (43 functions, with Color and format helpers) ran as
+  DAX queries on a real model in Desktop (Oct 2026), but its TMDL failed to apply (expression indented at the properties'
+  level, then "duplicate annotation under the root"). The owner then asked for: only the chosen card's functions (a
+  card or small chart, SVG image or HTML, the owner's choice), colors, band and number shortening written into the
+  functions from the tool (no Color or format functions), no annotations, and the summary card's lines showing only
+  the two numbers its pill compares. That rewrite, the expression three tabs in, and the new bullet, progress,
+  sparkline, variance bar and rolling tile functions haven't been run in Desktop yet. Names can't use `KPI` or `Text`
+  as a segment (reserved in DAX queries), hence `FosterBIServices.KPICards.*`.
 - Chart Patterns: the TMDL scripts, the Format-pane steps and the combo chart marker size in a theme
   (written from the PBIP skills in Power-BI-Portfolio/AI/skills, not yet built by hand in Desktop).
 
