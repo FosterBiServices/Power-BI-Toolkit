@@ -7,24 +7,40 @@ const KVF_PKG = 'FosterBIServices.KPICards';
 // fn: the function's name (Html added for the HTML version). suffix: the measure's name after the KPI's.
 // need: what a KPI must have to get one. dates: uses the date column. cmp: takes "MoM", "YoY" or a target.
 const KVF_STYLES = [
-  { id: 'summary', name: 'Summary card', fn: 'SummaryCard', suffix: 'Card', w: 295, h: 170, dates: true, cmp: true, tips: true, tip: 'Value, a pill with the change (MoM, YoY or vs target), the two numbers the pill compares, and 12 monthly columns.' },
-  { id: 'trend', name: 'Trend tile', fn: 'TrendTile', suffix: 'Card', w: 232, h: 130, dates: true, cmp: true, tips: true, tip: 'A compact tile: value, a pill with the change (MoM, YoY or vs target) and 12 monthly columns.' },
-  { id: 'rolling', name: 'Rolling tile', fn: 'RollingTile', suffix: 'Card', w: 232, h: 130, dates: true, days: true, tips: true, tip: 'The measure over the last N days, the change from the N days before, and 12 back-to-back windows of N days.' },
-  { id: 'snapshot', name: 'Snapshot tile', fn: 'SnapshotTile', suffix: 'Card', w: 232, h: 130, tip: 'A value that doesn’t move with the dates, with a share bar for percentages.' },
+  { id: 'summary', card: true, name: 'Summary card', fn: 'SummaryCard', suffix: 'Card', w: 295, h: 170, dates: true, cmp: true, tips: true, tip: 'Value, a pill with the change (MoM, YoY or vs target), the two numbers the pill compares, and 12 monthly columns.' },
+  { id: 'trend', card: true, name: 'Trend tile', fn: 'TrendTile', suffix: 'Card', w: 232, h: 130, dates: true, cmp: true, tips: true, tip: 'A compact tile: value, a pill with the change (MoM, YoY or vs target) and 12 monthly columns.' },
+  { id: 'rolling', card: true, name: 'Rolling tile', fn: 'RollingTile', suffix: 'Card', w: 232, h: 130, dates: true, days: true, tips: true, tip: 'The measure over the last N days, the change from the N days before, and 12 back-to-back windows of N days.' },
+  { id: 'snapshot', card: true, name: 'Snapshot tile', fn: 'SnapshotTile', suffix: 'Card', w: 232, h: 130, tip: 'A value that doesn’t move with the dates, with a share bar for percentages.' },
   { id: 'bullet', name: 'Bullet chart', fn: 'BulletChart', suffix: 'Bullet', w: 120, h: 24, need: 'target', tip: 'The bar is the value in its status color, the dark mark the target. For a card or a table column.' },
   { id: 'progress', name: 'Progress bar', fn: 'ProgressBar', suffix: 'Progress', w: 120, h: 24, need: 'target', tip: 'The value as a % of its target, in its status color.' },
   { id: 'spark', name: 'Sparkline', fn: 'Sparkline', suffix: 'Trend Line', w: 120, h: 32, dates: true, cmp: true, tip: 'The last 12 months as a line, the last point in the status color of the change (MoM, YoY or vs target).' },
   { id: 'varbar', name: 'Variance bar', fn: 'VarianceBar', suffix: 'Variance Bar', w: 120, h: 24, need: 'base', tip: 'How far above or below its target (or comparison) the value is; full width is ±25%.' }
 ];
 const KVF_OUTS = [{ id: 'html', name: 'HTML, for the HTML Content visual' }, { id: 'image', name: 'SVG image, for a card or a table' }];
-const kvfStyle = cfg => KVF_STYLES.find(s => s.id === cfg.fnStyle) || KVF_STYLES[0];
+// Reusable card functions offer the cards; the small charts are made as functions from their own options (fnAny)
+const kvfStyle = cfg => KVF_STYLES.find(s => s.id === cfg.fnStyle && (s.card || cfg.fnAny)) || KVF_STYLES[0];
+// The options that can be built as a function and one-line measures, and the function each one uses
+const KVF_OPT = { bullet: 'bullet', progress: 'progress', spark: 'spark', varbar: 'varbar' };
+function kvFnCfg(id, cfg){
+  if (id === 'fnlib') return cfg;
+  return cfg.asFn && KVF_OPT[id] ? Object.assign({}, cfg, { fnStyle: KVF_OPT[id], fnOut: 'image', fnAny: true, fnCompare: 'base' }) : null;
+}
 const kvfOut = cfg => cfg.fnOut === 'image' ? 'image' : 'html';
 const kvfN = n => KVF_PKG + '.' + n;
 const kvfFnName = cfg => kvfStyle(cfg).fn + (kvfOut(cfg) === 'html' ? 'Html' : '');
+// The visual's size: what the user typed, else the suggested size; cards need room for their text and columns
+const KVF_MIN = { summary: [240, 150], trend: [180, 120], rolling: [180, 120], snapshot: [140, 70] };
+function kvfSize(cfg, style){
+  const s = KVF_STYLES.find(x => x.id === (style || cfg.fnStyle)) || KVF_STYLES[0], m = KVF_MIN[s.id];
+  if (!m) return { w: s.w, h: s.h, own: false };
+  const num = v => { const x = Math.round(+v); return isFinite(x) && x > 0 ? x : 0; }, w = num(cfg.fnW), h = num(cfg.fnH);
+  return { w: w ? Math.max(m[0], Math.min(2000, w)) : s.w, h: h ? Math.max(m[1], Math.min(2000, h)) : s.h, own: !!(w || h), min: m };
+}
 const kvfDays = cfg => Math.max(1, Math.min(366, Math.round(+cfg.fnDays) || 30));
 const KVF_FONT = "font-family='Segoe UI, Arial, sans-serif'";
 // classes the HTML cards use for the hover; distinct names so they never meet a report's own CSS
-const KVF_CSS = '.kvc svg{display:block}.kvb .kvt{visibility:hidden}.kvb:hover .kvt{visibility:visible}.kvb:hover .kvbar{opacity:0.75}';
+// The HTML Content visual runs in its own frame, so 100vh is the visual's height: the card fits it with no scroll bar
+const KVF_CSS = '.kvc{overflow:hidden}.kvc svg{display:block;width:100%;height:auto;max-height:96vh}.kvb .kvt{visibility:hidden}.kvb:hover .kvt{visibility:visible}.kvb:hover .kvbar{opacity:0.75}';
 
 /* ---------- the date column ---------- */
 function kvfDate(cfg){
@@ -152,15 +168,15 @@ function kvfLibrary(cfg){
   const txt = (x, y, size, color, extra, text) => '"<text x=\'' + x + '\' y=\'' + y + '\' " & _font & " font-size=\'' + size + '\'' + (extra ? ' ' + extra : '') + ' fill=\'' + color + '\'>" & ' + text + ' & "</text>"';
   const fixedSvg = (w, h) => '"<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'' + w + '\' height=\'' + h + '\' viewBox=\'0 0 ' + w + ' ' + h + '\'>"';
   const cards = {
-    summary: { desc: 'The summary card (295 x 170): the value for the date filter, a pill with the change (MoM, YoY or vs a target), the two numbers the pill compares, and 12 monthly columns.',
-      params: '_title : STRING, _m : EXPR, _format : STRING, _lowerIsBetter : BOOLEAN, _compare : STRING, _target : EXPR', uses: ['StartDate', 'EndDate', 'Between', 'MonthColumns'],
+    summary: { desc: 'The summary card (_width x _height, 295 x 170 suggested): the value for the date filter, a pill with the change (MoM, YoY or vs a target), the two numbers the pill compares, and 12 monthly columns.',
+      params: '_title : STRING, _m : EXPR, _format : STRING, _lowerIsBetter : BOOLEAN, _width : INT64, _height : INT64, _compare : STRING, _target : EXPR', uses: ['StartDate', 'EndDate', 'Between', 'MonthColumns'],
       body: [...kvfCompareVars(X), ...kvfPillVars(X), 'VAR _pillW = 14 + LEN ( _pill ) * 6.1', ...X.sym,
         ...X.valueText('_valueText', 'COALESCE ( _value, 0 )'), ...X.compact('_nowText', '_now'), ...X.compact('_beforeText', '_before'),
-        'VAR _mtd = IF ( _fullMonth, ":", " MTD:" )', 'VAR _labelX = IF ( _fullMonth || _mode <> "MOM", 196, 171 )',
+        'VAR _mtd = IF ( _fullMonth, ":", " MTD:" )', 'VAR _labelX = _width - IF ( _fullMonth || _mode <> "MOM", 99, 124 )',
         'VAR _nowLabel = SWITCH ( _mode, "MOM", FORMAT ( _anchor, "mmm yyyy" ) & _mtd, "YOY", "Current:", "Actual:" )',
         'VAR _beforeLabel = SWITCH ( _mode, "MOM", FORMAT ( EDATE ( _anchor, -1 ), "mmm yyyy" ) & _mtd, "YOY", "Last year:", _name & ":" )',
-        font, 'VAR _svg =', '    "<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' viewBox=\'0 0 295 170\' preserveAspectRatio=\'xMidYMid meet\'>"',
-        '        & "<rect width=\'295\' height=\'170\' rx=\'10\' fill=\'' + P.bg + '\'/>"',
+        font, 'VAR _svg =', '    ' + svgOpen('_width', '_height'),
+        '        & "<rect width=\'" & _width & "\' height=\'" & _height & "\' rx=\'10\' fill=\'' + P.bg + '\'/>"',
         '        & ' + txt(16, 24, 11, P.muted, "font-weight='600' letter-spacing='0.6'", '_title'),
         '        & ' + txt(16, 40, 10, P.muted, '', 'FORMAT ( _start, "mmm d, yyyy" ) & " – " & FORMAT ( _end, "mmm d, yyyy" )'),
         '        & ' + txt(16, 76, 32, P.text, "font-weight='700'", '_valueText'),
@@ -168,32 +184,32 @@ function kvfLibrary(cfg){
         '        & "<text x=\'23\' y=\'98\' " & _font & " font-size=\'10.5\' font-weight=\'600\' fill=\'" & _pillInk & "\'>" & _pill & "</text>"',
         '        -- The two numbers the pill compares',
         '        & "<text x=\'" & _labelX & "\' y=\'56\' " & _font & " font-size=\'10.5\' fill=\'' + P.muted + '\'>" & _nowLabel & "</text>"',
-        '        & "<text x=\'279\' y=\'56\' " & _font & " font-size=\'10.5\' font-weight=\'600\' fill=\'' + P.text + '\' text-anchor=\'end\'>" & _nowText & "</text>"',
+        '        & "<text x=\'" & _width - 16 & "\' y=\'56\' " & _font & " font-size=\'10.5\' font-weight=\'600\' fill=\'' + P.text + '\' text-anchor=\'end\'>" & _nowText & "</text>"',
         '        & "<text x=\'" & _labelX & "\' y=\'72\' " & _font & " font-size=\'10.5\' fill=\'' + P.muted + '\'>" & _beforeLabel & "</text>"',
-        '        & "<text x=\'279\' y=\'72\' " & _font & " font-size=\'10.5\' font-weight=\'600\' fill=\'' + P.text + '\' text-anchor=\'end\'>" & _beforeText & "</text>"',
-        '        & "<line x1=\'16\' y1=\'148.5\' x2=\'279\' y2=\'148.5\' stroke=\'' + P.track + '\'/>"',
-        '        & ' + txt(16, 162, 9.5, P.line, '', 'FORMAT ( EDATE ( _anchor, -11 ), "mmm yyyy" )'),
-        '        & ' + txt(279, 162, 9.5, P.line, "text-anchor='end'", 'FORMAT ( _anchor, "mmm yyyy" )'),
+        '        & "<text x=\'" & _width - 16 & "\' y=\'72\' " & _font & " font-size=\'10.5\' font-weight=\'600\' fill=\'' + P.text + '\' text-anchor=\'end\'>" & _beforeText & "</text>"',
+        '        & "<line x1=\'16\' y1=\'" & _height - 21.5 & "\' x2=\'" & _width - 16 & "\' y2=\'" & _height - 21.5 & "\' stroke=\'' + P.track + '\'/>"',
+        '        & "<text x=\'16\' y=\'" & _height - 8 & "\' " & _font & " font-size=\'9.5\' fill=\'' + P.line + '\'>" & FORMAT ( EDATE ( _anchor, -11 ), "mmm yyyy" ) & "</text>"',
+        '        & "<text x=\'" & _width - 16 & "\' y=\'" & _height - 8 & "\' " & _font & " font-size=\'9.5\' fill=\'' + P.line + '\' text-anchor=\'end\'>" & FORMAT ( _anchor, "mmm yyyy" ) & "</text>"',
         '        -- Columns last, so each tooltip draws over the text above',
-        '        & ' + F('MonthColumns') + ' ( _m, _target, _compare, _format, _lowerIsBetter, LOWER ( _title ), 295, 16, 114, 148, 10, ' + (tips ? 'TRUE' : 'FALSE') + ' () )',
+        '        & ' + F('MonthColumns') + ' ( _m, _target, _compare, _format, _lowerIsBetter, LOWER ( _title ), _width, 16, 114, _height - 22, 10, ' + (tips ? 'TRUE' : 'FALSE') + ' () )',
         '        & "</svg>"', 'RETURN', '    IF ( _end >= _start, ' + X.out('_svg') + ' )'] },
-    trend: { desc: 'The trend tile (_width x 130): the value for the date filter, a pill with the change (MoM, YoY or vs a target) and 12 monthly columns.',
-      params: '_title : STRING, _m : EXPR, _format : STRING, _lowerIsBetter : BOOLEAN, _width : INT64, _compare : STRING, _target : EXPR', uses: ['StartDate', 'EndDate', 'Between', 'MonthColumns'],
+    trend: { desc: 'The trend tile (_width x _height, 232 x 130 suggested): the value for the date filter, a pill with the change (MoM, YoY or vs a target) and 12 monthly columns.',
+      params: '_title : STRING, _m : EXPR, _format : STRING, _lowerIsBetter : BOOLEAN, _width : INT64, _height : INT64, _compare : STRING, _target : EXPR', uses: ['StartDate', 'EndDate', 'Between', 'MonthColumns'],
       body: [...kvfCompareVars(X), ...kvfPillVars(X), 'VAR _pillW = 12 + LEN ( _pill ) * 5.9', ...X.sym, ...X.valueText('_valueText', '_value'),
-        font, 'VAR _svg =', '    ' + svgOpen('_width', 130),
-        '        & "<rect width=\'" & _width & "\' height=\'130\' rx=\'8\' fill=\'' + P.bg + '\'/>"',
+        font, 'VAR _svg =', '    ' + svgOpen('_width', '_height'),
+        '        & "<rect width=\'" & _width & "\' height=\'" & _height & "\' rx=\'8\' fill=\'' + P.bg + '\'/>"',
         '        & ' + txt(12, 19, 10, P.muted, "font-weight='600' letter-spacing='0.5'", '_title'),
         '        & ' + txt(12, 32, 9, P.muted, '', 'FORMAT ( _start, "mmm d, yyyy" ) & " – " & FORMAT ( _end, "mmm d, yyyy" )'),
         '        & ' + txt(12, 61, 24, P.text, "font-weight='700'", '_valueText'),
         '        & "<rect x=\'12\' y=\'68\' width=\'" & ' + fx('_pillW') + ' & "\' height=\'15\' rx=\'7.5\' fill=\'" & _pillFill & "\'/>"',
         '        & "<text x=\'18\' y=\'79\' " & _font & " font-size=\'9\' font-weight=\'600\' fill=\'" & _pillInk & "\'>" & _pill & "</text>"',
-        '        & "<line x1=\'12\' y1=\'110.5\' x2=\'" & _width - 12 & "\' y2=\'110.5\' stroke=\'' + P.track + '\'/>"',
-        '        & ' + txt(12, 122, 8.5, P.line, '', 'FORMAT ( EDATE ( _anchor, -11 ), "mmm yyyy" )'),
-        '        & "<text x=\'" & _width - 12 & "\' y=\'122\' " & _font & " font-size=\'8.5\' fill=\'' + P.line + '\' text-anchor=\'end\'>" & FORMAT ( _anchor, "mmm yyyy" ) & "</text>"',
-        '        & ' + F('MonthColumns') + ' ( _m, _target, _compare, _format, _lowerIsBetter, LOWER ( _title ), _width, 12, 90, 110, 9, ' + (tips ? 'TRUE' : 'FALSE') + ' () )',
+        '        & "<line x1=\'12\' y1=\'" & _height - 19.5 & "\' x2=\'" & _width - 12 & "\' y2=\'" & _height - 19.5 & "\' stroke=\'' + P.track + '\'/>"',
+        '        & ' + '"<text x=\'12\' y=\'" & _height - 8 & "\' " & _font & " font-size=\'8.5\' fill=\'' + P.line + '\'>" & FORMAT ( EDATE ( _anchor, -11 ), "mmm yyyy" ) & "</text>"',
+        '        & "<text x=\'" & _width - 12 & "\' y=\'" & _height - 8 & "\' " & _font & " font-size=\'8.5\' fill=\'' + P.line + '\' text-anchor=\'end\'>" & FORMAT ( _anchor, "mmm yyyy" ) & "</text>"',
+        '        & ' + F('MonthColumns') + ' ( _m, _target, _compare, _format, _lowerIsBetter, LOWER ( _title ), _width, 12, 90, _height - 20, 9, ' + (tips ? 'TRUE' : 'FALSE') + ' () )',
         '        & "</svg>"', 'RETURN', '    IF ( _end >= _start, ' + X.out('_svg') + ' )'] },
-    rolling: { desc: 'The rolling tile (_width x 130), for a measure over the last _days days: the value up to the last date, the change from the _days before, and 12 back-to-back windows of _days days.',
-      params: '_title : STRING, _m : EXPR, _days : INT64, _format : STRING, _lowerIsBetter : BOOLEAN, _width : INT64', uses: ['StartDate', 'EndDate', 'Between'],
+    rolling: { desc: 'The rolling tile (_width x _height, 232 x 130 suggested), for a measure over the last _days days: the value up to the last date, the change from the _days before, and 12 back-to-back windows of _days days.',
+      params: '_title : STRING, _m : EXPR, _days : INT64, _format : STRING, _lowerIsBetter : BOOLEAN, _width : INT64, _height : INT64', uses: ['StartDate', 'EndDate', 'Between'],
       body: ['VAR _start = ' + F('StartDate') + ' ()', 'VAR _end = ' + F('EndDate') + ' ()',
         'VAR _now = ' + B('_m', '_end - _days + 1', '_end'), 'VAR _prior = ' + B('_m', '_end - 2 * _days + 1', '_end - _days'),
         'VAR _change = ' + X.change('_now', '_prior'),
@@ -205,25 +221,25 @@ function kvfLibrary(cfg){
         '        "@v", COALESCE ( ' + B('_m', '[@s]', '[@e]') + ', 0 )', '    )',
         'VAR _pts = FILTER ( _base, [Value] <= 11 )', 'VAR _hi = MAX ( MAXX ( _pts, [@v] ), 1E-9 )', 'VAR _slot = ( _width - 24 ) / 12', 'VAR _barW = _slot * 0.62',
         font, 'VAR _bars =', '    CONCATENATEX (', '        _pts,', '        VAR _k = [Value]', '        VAR _x = 12 + ( 11 - _k ) * _slot + ( _slot - _barW ) / 2',
-        '        VAR _h = MAX ( DIVIDE ( [@v], _hi ) * 20, 1.5 )',
-        '        VAR _bar =', '            "<rect class=\'kvbar\' x=\'" & ' + fx('_x') + ' & "\' y=\'" & ' + fx('110 - _h') + ' & "\' width=\'" & ' + fx('_barW'),
+        '        VAR _h = MAX ( DIVIDE ( [@v], _hi ) * ( _height - 110 ), 1.5 )',
+        '        VAR _bar =', '            "<rect class=\'kvbar\' x=\'" & ' + fx('_x') + ' & "\' y=\'" & ' + fx('_height - 20 - _h') + ' & "\' width=\'" & ' + fx('_barW'),
         '                & "\' height=\'" & ' + fx('_h') + ' & "\' rx=\'1\' fill=\'" & IF ( _k = 0, "' + P.accent + '", "' + P.track + '" ) & "\'/>"']
         .concat(tips ? ['        VAR _cv = [@v]', '        VAR _pv = MAXX ( FILTER ( _base, [Value] = _k + 1 ), [@v] )', '        VAR _d = ' + X.change('_cv', '_pv'),
           ...X.tip('        ', '_x + _barW / 2', '84', '_width', '9', 'FORMAT ( [@s], "mmm d" ) & " – " & FORMAT ( [@e], "mmm d, yyyy" )', 'FORMAT ( _cv, _format ) & " in " & _days & " days"',
             '"vs prior " & _days & " days: " & IF ( ISBLANK ( _pv ), "–", FORMAT ( _pv, _format ) )', X.changeText('_d'), X.status('_d', 'text', P.muted)),
-          '        RETURN', '            "<g class=\'kvb\'><rect x=\'" & ' + fx('12 + ( 11 - _k ) * _slot') + ' & "\' y=\'84\' width=\'" & ' + fx('_slot') + ' & "\' height=\'32\' fill=\'#000000\' fill-opacity=\'0\'/>"',
+          '        RETURN', '            "<g class=\'kvb\'><rect x=\'" & ' + fx('12 + ( 11 - _k ) * _slot') + ' & "\' y=\'84\' width=\'" & ' + fx('_slot') + ' & "\' height=\'" & _height - 98 & "\' fill=\'#000000\' fill-opacity=\'0\'/>"',
           '                & _bar & _tip & "</g>",'] : ['        RETURN', '            _bar,'])
-        .concat(['        "", [Value], DESC', '    )', 'VAR _svg =', '    ' + svgOpen('_width', 130),
-          '        & "<rect width=\'" & _width & "\' height=\'130\' rx=\'8\' fill=\'' + P.bg + '\'/>"',
+        .concat(['        "", [Value], DESC', '    )', 'VAR _svg =', '    ' + svgOpen('_width', '_height'),
+          '        & "<rect width=\'" & _width & "\' height=\'" & _height & "\' rx=\'8\' fill=\'' + P.bg + '\'/>"',
           '        & ' + txt(12, 19, 10, P.muted, "font-weight='600' letter-spacing='0.5'", '_title'),
           '        & ' + txt(12, 32, 9, P.muted, '', 'FORMAT ( _end - _days + 1, "mmm d, yyyy" ) & " – " & FORMAT ( _end, "mmm d, yyyy" )'),
           '        & ' + txt(12, 61, 24, P.text, "font-weight='700'", '_valueText'),
           '        & "<rect x=\'12\' y=\'68\' width=\'" & ' + fx('_pillW') + ' & "\' height=\'15\' rx=\'7.5\' fill=\'" & _pillFill & "\'/>"',
           '        & "<text x=\'18\' y=\'79\' " & _font & " font-size=\'9\' font-weight=\'600\' fill=\'" & _pillInk & "\'>" & _pill & "</text>"',
-          '        & "<line x1=\'12\' y1=\'110.5\' x2=\'" & _width - 12 & "\' y2=\'110.5\' stroke=\'' + P.track + '\'/>"',
-          '        & ' + txt(12, 122, 8.5, P.line, '', 'FORMAT ( _end - 12 * _days + 1, "mmm d, yyyy" )'),
-          '        & "<text x=\'" & _width / 2 & "\' y=\'122\' " & _font & " font-size=\'8.5\' fill=\'' + P.line + '\' text-anchor=\'middle\'>1 bar = " & _days & " days</text>"',
-          '        & "<text x=\'" & _width - 12 & "\' y=\'122\' " & _font & " font-size=\'8.5\' fill=\'' + P.line + '\' text-anchor=\'end\'>" & FORMAT ( _end, "mmm d, yyyy" ) & "</text>"',
+          '        & "<line x1=\'12\' y1=\'" & _height - 19.5 & "\' x2=\'" & _width - 12 & "\' y2=\'" & _height - 19.5 & "\' stroke=\'' + P.track + '\'/>"',
+          '        & ' + '"<text x=\'12\' y=\'" & _height - 8 & "\' " & _font & " font-size=\'8.5\' fill=\'' + P.line + '\'>" & FORMAT ( _end - 12 * _days + 1, "mmm d, yyyy" ) & "</text>"',
+          '        & "<text x=\'" & _width / 2 & "\' y=\'" & _height - 8 & "\' " & _font & " font-size=\'8.5\' fill=\'' + P.line + '\' text-anchor=\'middle\'>1 bar = " & _days & " days</text>"',
+          '        & "<text x=\'" & _width - 12 & "\' y=\'" & _height - 8 & "\' " & _font & " font-size=\'8.5\' fill=\'' + P.line + '\' text-anchor=\'end\'>" & FORMAT ( _end, "mmm d, yyyy" ) & "</text>"',
           '        & _bars', '        & "</svg>"', 'RETURN', '    IF ( _end >= _start, ' + X.out('_svg') + ' )']) },
     snapshot: { desc: 'The snapshot tile (_width x _height), for a value that doesn’t move with the dates: title, caption, value and, when _share isn’t blank, a share bar.',
       params: '_title : STRING, _text : STRING, _caption : STRING, _share : NUMERIC, _width : INT64, _height : INT64', uses: [],
@@ -285,11 +301,15 @@ function kvfLibrary(cfg){
 }
 
 /* ---------- a measure per KPI that calls the card function ---------- */
-// What a KPI's card compares with: the choice in Step 5, or (auto) its target, else last year when it has a comparison, else the month before
-const KVF_COMPARES = [{ id: 'auto', name: 'Each KPI’s target, else last year, else last month' }, { id: 'mom', name: 'The month before (MoM)' }, { id: 'yoy', name: 'The same dates last year (YoY)' }, { id: 'target', name: 'The KPI’s target or budget' }];
+// What a KPI's card compares with: the month before unless changed. A KPI about an earlier period compares with
+// the month before or last year; one with a target can also compare with it. base (the small charts): the target,
+// else the comparison measure (last year when it says so), else the month before
+const KVF_COMPARES = [{ id: 'mom', name: 'The month before (MoM)' }, { id: 'yoy', name: 'The same dates last year (YoY)' }, { id: 'target', name: 'The KPI’s target or budget' }];
+const kvfIsYear = k => /\b(LY|PY|SPLY|YoY|year)\b/i.test((k.compare || '') + ' ' + (k.compareLabel || '')) && !/\b(PM|MoM|month)\b/i.test((k.compare || '') + ' ' + (k.compareLabel || '').replace(/same month last year/i, 'year'));
+const kvfComparesFor = k => KVF_COMPARES.filter(x => x.id !== 'target' || (kvHas(k).target && kvIntent(k) !== 'change'));
 function kvfCompare(k, cfg){
-  const h = kvHas(k), c = KVF_COMPARES.some(x => x.id === cfg.fnCompare) ? cfg.fnCompare : 'auto';
-  const pick = c === 'auto' ? (h.target ? 'target' : h.compare ? 'yoy' : 'mom') : c === 'target' && !h.target ? 'mom' : c;
+  const h = kvHas(k), ok = kvfComparesFor(k);
+  const pick = cfg.fnCompare === 'base' ? (h.target ? 'target' : h.compare && kvfIsYear(k) ? 'yoy' : 'mom') : ok.some(x => x.id === cfg.fnCompare) ? cfg.fnCompare : 'mom';
   const word = pick === 'target' ? (/budget/i.test(k.target || '') ? 'Budget' : /plan/i.test(k.target || '') ? 'Plan' : /goal/i.test(k.target || '') ? 'Goal' : 'Target') : pick === 'yoy' ? 'YoY' : 'MoM';
   return { mode: pick, word, target: pick === 'target' ? kvRef(k.target) : 'BLANK ()' };
 }
@@ -298,22 +318,22 @@ function kvfFits(k, cfg){ const n = kvfStyle(cfg).need, h = kvHas(k); return !n 
 // The one-line call for a KPI ('' when it lacks what the card needs)
 function kvfCall(k, cfg){
   const s = kvfStyle(cfg), fn = kvfN(kvfFnName(cfg)), h = kvHas(k), fmt = daxString(k.format || '#,0'), title = daxString(kvName(k).toUpperCase()), m = kvRef(k.measure), lower = k.better === 'lower' ? 'TRUE ()' : 'FALSE ()';
-  const cmp = kvfCompare(k, cfg), tail = daxString(cmp.word) + ', ' + cmp.target, call = args => fn + ' ( ' + args.join(', ') + ' )';
+  const z = kvfSize(cfg), cmp = kvfCompare(k, cfg), tail = daxString(cmp.word) + ', ' + cmp.target, call = args => fn + ' ( ' + args.join(', ') + ' )';
   if (!kvfFits(k, cfg)) return '';
   switch (s.id) {
-    case 'snapshot': return call([title, 'FORMAT ( ' + m + ', ' + fmt + ' )', h.target ? '"Target " & FORMAT ( ' + kvRef(k.target) + ', ' + fmt + ' )' : '"All dates"', h.pct ? m : 'BLANK ()', s.w, s.h]);
-    case 'trend': return call([title, m, fmt, lower, s.w, tail]);
-    case 'rolling': return call([title, m, kvfDays(cfg), fmt, lower, s.w]);
+    case 'snapshot': return call([title, 'FORMAT ( ' + m + ', ' + fmt + ' )', h.target ? '"Target " & FORMAT ( ' + kvRef(k.target) + ', ' + fmt + ' )' : '"All dates"', h.pct ? m : 'BLANK ()', z.w, z.h]);
+    case 'trend': return call([title, m, fmt, lower, z.w, z.h, tail]);
+    case 'rolling': return call([title, m, kvfDays(cfg), fmt, lower, z.w, z.h]);
     case 'bullet': case 'progress': return call([m, kvRef(k.target), lower]);
     case 'varbar': return call([m, kvRef(h.target ? k.target : k.compare), lower]);
     case 'spark': return call([m, lower, tail]);
-    default: return call([title, m, fmt, lower, tail]);
+    default: return call([title, m, fmt, lower, z.w, z.h, tail]);
   }
 }
 function kvfMeasures(k, cfg){
   const s = kvfStyle(cfg), html = kvfOut(cfg) === 'html', e = kvfCall(k, cfg);
   if (!e) return [];
-  const m = { name: kvMName(k, s.suffix), description: s.name + ' for ' + kvName(k) + (html ? ' as HTML, for the HTML Content visual' : ' as an image') + ' (' + s.w + ' x ' + s.h + ').', expression: e };
+  const m = { name: kvMName(k, s.suffix), description: s.name + ' for ' + kvName(k) + (html ? ' as HTML, for the HTML Content visual' : ' as an image') + ' (' + kvfSize(cfg).w + ' x ' + kvfSize(cfg).h + ').', expression: e };
   if (!html) m.dataCategory = 'ImageUrl';
   return [m];
 }
@@ -409,8 +429,9 @@ function kvfPreviewSvg(k, cfg, style, tips){
   if (style === 'bullet' || style === 'progress') { const c = kvfStatus(kvfChange(n.v, n.t), lower, false, cfg, P.text); return style === 'bullet' ? kvSvgBullet(n, c, P) : kvSvgProgress(n, c, P); }
   if (style === 'varbar') { const dv = kvfChange(n.v, h.target ? n.t : n.c); return kvSvgVarBar(dv, kvfStatus(dv, lower, false, cfg, P.text), P); }
   if (style === 'spark') return kvSvgSpark(n, kvfStatus(d, lower, false, cfg, P.text), P);
+  const Z = kvfSize(cfg, style), W = Z.w, H = Z.h;
   if (style === 'snapshot') {
-    const W = 232, H = 130, share = h.pct ? kvClamp(n.v, 0, 1) : null;
+    const share = h.pct ? kvClamp(n.v, 0, 1) : null;
     return "<svg xmlns='http://www.w3.org/2000/svg' width='100%' viewBox='0 0 " + W + ' ' + H + "'>" + "<rect width='" + W + "' height='" + H + "' rx='8' fill='" + P.bg + "'/>"
       + txt(12, 19, 10, P.muted, title, " font-weight='600' letter-spacing='0.5'") + txt(12, 32, 9, P.muted, h.target ? 'Target ' + kvXml(kvFmt(n.t, fmt)) : 'All dates')
       + txt(12, 61, 24, P.text, kvXml(kvFmt(n.v, fmt)), " font-weight='700'")
@@ -418,43 +439,43 @@ function kvfPreviewSvg(k, cfg, style, tips){
   }
   if (style === 'rolling') {
     // the preview's trend as 12 windows of N days ending on the last day of last month
-    const W = 232, D = kvfDays(cfg), t = n.trend.slice(-13), pts = t.slice(-12), prev = t.length > 12 ? t[0] : null, hi = Math.max(...pts, 1e-9), slot = (W - 24) / 12, bw = slot * 0.62;
+    const D = kvfDays(cfg), t = n.trend.slice(-13), pts = t.slice(-12), prev = t.length > 12 ? t[0] : null, hi = Math.max(...pts, 1e-9), slot = (W - 24) / 12, bw = slot * 0.62;
     const now = new Date(), end = new Date(now.getFullYear(), now.getMonth(), 0), day = j => new Date(end.getFullYear(), end.getMonth(), end.getDate() - j);
     const dr = kvfChange(pts[11], pts[10]), rp = dr == null ? 'No data in prior ' + D + ' days' : kvfChangeText(dr) + ' vs prior ' + D + ' days', pw = 12 + rp.length * 5.9;
     const bars = pts.map((v, i) => {
-      const k2 = 11 - i, x = 12 + i * slot + (slot - bw) / 2, hh = Math.max(v / hi * 20, 1.5);
-      const bar = "<rect class='kvbar' x='" + kvfF(x) + "' y='" + kvfF(110 - hh) + "' width='" + kvfF(bw) + "' height='" + kvfF(hh) + "' rx='1' fill='" + (k2 === 0 ? P.accent : P.track) + "'/>";
+      const k2 = 11 - i, x = 12 + i * slot + (slot - bw) / 2, hh = Math.max(v / hi * (H - 110), 1.5);
+      const bar = "<rect class='kvbar' x='" + kvfF(x) + "' y='" + kvfF(H - 20 - hh) + "' width='" + kvfF(bw) + "' height='" + kvfF(hh) + "' rx='1' fill='" + (k2 === 0 ? P.accent : P.track) + "'/>";
       if (!tips) return bar;
       const pv = i ? pts[i - 1] : prev, dd = kvfChange(v, pv);
-      return "<g class='kvb'><rect x='" + kvfF(12 + i * slot) + "' y='84' width='" + kvfF(slot) + "' height='32' fill='#000000' fill-opacity='0'/>" + bar
+      return "<g class='kvb'><rect x='" + kvfF(12 + i * slot) + "' y='84' width='" + kvfF(slot) + "' height='" + (H - 98) + "' fill='#000000' fill-opacity='0'/>" + bar
         + kvfTip(x + bw / 2, 84, W, 9, kvfDay(day((k2 + 1) * D - 1)) + ' – ' + kvfDay(day(k2 * D), true), kvFmt(v, fmt) + ' in ' + D + ' days', 'vs prior ' + D + ' days: ' + (pv == null ? '–' : kvFmt(pv, fmt)), kvfChangeText(dd), kvfStatus(dd, lower, false, cfg), P) + '</g>';
     }).join('');
-    return "<svg xmlns='http://www.w3.org/2000/svg' width='100%' viewBox='0 0 " + W + " 130'>" + "<rect width='" + W + "' height='130' rx='8' fill='" + P.bg + "'/>"
+    return "<svg xmlns='http://www.w3.org/2000/svg' width='100%' viewBox='0 0 " + W + ' ' + H + "'>" + "<rect width='" + W + "' height='" + H + "' rx='8' fill='" + P.bg + "'/>"
       + txt(12, 19, 10, P.muted, title, " font-weight='600' letter-spacing='0.5'") + txt(12, 32, 9, P.muted, kvXml(kvfDay(day(D - 1), true) + ' – ' + kvfDay(end, true)))
       + txt(12, 61, 24, P.text, kvXml(kvfValueText(pts[11], fmt)), " font-weight='700'")
       + "<rect x='12' y='68' width='" + kvfF(pw) + "' height='15' rx='7.5' fill='" + kvfStatus(dr, lower, true, cfg) + "'/>" + txt(18, 79, 9, kvfStatus(dr, lower, false, cfg), kvXml(rp), " font-weight='600'")
-      + "<line x1='12' y1='110.5' x2='" + (W - 12) + "' y2='110.5' stroke='" + P.track + "'/>" + txt(12, 122, 8.5, P.line, kvXml(kvfDay(day(12 * D - 1), true)))
-      + txt(W / 2, 122, 8.5, P.line, '1 bar = ' + D + ' days', " text-anchor='middle'") + txt(W - 12, 122, 8.5, P.line, kvXml(kvfDay(end, true)), " text-anchor='end'") + bars + '</svg>';
+      + "<line x1='12' y1='" + (H - 19.5) + "' x2='" + (W - 12) + "' y2='" + (H - 19.5) + "' stroke='" + P.track + "'/>" + txt(12, H - 8, 8.5, P.line, kvXml(kvfDay(day(12 * D - 1), true)))
+      + txt(W / 2, H - 8, 8.5, P.line, '1 bar = ' + D + ' days', " text-anchor='middle'") + txt(W - 12, H - 8, 8.5, P.line, kvXml(kvfDay(end, true)), " text-anchor='end'") + bars + '</svg>';
   }
   if (style === 'trend') {
-    const W = 232, pw = 12 + pill.length * 5.9;
-    return "<svg xmlns='http://www.w3.org/2000/svg' width='100%' viewBox='0 0 " + W + " 130'>" + "<rect width='" + W + "' height='130' rx='8' fill='" + P.bg + "'/>"
+    const pw = 12 + pill.length * 5.9;
+    return "<svg xmlns='http://www.w3.org/2000/svg' width='100%' viewBox='0 0 " + W + ' ' + H + "'>" + "<rect width='" + W + "' height='" + H + "' rx='8' fill='" + P.bg + "'/>"
       + txt(12, 19, 10, P.muted, title, " font-weight='600' letter-spacing='0.5'") + txt(12, 32, 9, P.muted, 'Last 12 months')
       + txt(12, 61, 24, P.text, kvXml(kvfValueText(n.v, fmt)), " font-weight='700'")
       + "<rect x='12' y='68' width='" + kvfF(pw) + "' height='15' rx='7.5' fill='" + kvfStatus(d, lower, true, cfg) + "'/>" + txt(18, 79, 9, kvfStatus(d, lower, false, cfg), kvXml(pill), " font-weight='600'")
-      + "<line x1='12' y1='110.5' x2='" + (W - 12) + "' y2='110.5' stroke='" + P.track + "'/>" + txt(12, 122, 8.5, P.line, mon[1]) + txt(W - 12, 122, 8.5, P.line, mon[12], " text-anchor='end'")
-      + kvfColumns(n.trend, k, cfg, W, 12, 90, 110, 9, tips, cmp) + '</svg>';
+      + "<line x1='12' y1='" + (H - 19.5) + "' x2='" + (W - 12) + "' y2='" + (H - 19.5) + "' stroke='" + P.track + "'/>" + txt(12, H - 8, 8.5, P.line, mon[1]) + txt(W - 12, H - 8, 8.5, P.line, mon[12], " text-anchor='end'")
+      + kvfColumns(n.trend, k, cfg, W, 12, 90, H - 20, 9, tips, cmp) + '</svg>';
   }
   // the summary card: the two lines are the two numbers the pill compares
-  const pw = 14 + pill.length * 6.1, row = (y, label, v) => txt(196, y, 10.5, P.muted, kvXml(label)) + txt(279, y, 10.5, P.text, kvXml(v), " font-weight='600' text-anchor='end'");
+  const pw = 14 + pill.length * 6.1, row = (y, label, v) => txt(W - 99, y, 10.5, P.muted, kvXml(label)) + txt(W - 16, y, 10.5, P.text, kvXml(v), " font-weight='600' text-anchor='end'");
   const labels = cmp.mode === 'target' ? ['Actual:', cmp.word + ':'] : cmp.mode === 'yoy' ? ['Current:', 'Last year:'] : [mon[12] + ':', mon[11] + ':'];
-  return "<svg xmlns='http://www.w3.org/2000/svg' width='100%' viewBox='0 0 295 170'>" + "<rect width='295' height='170' rx='10' fill='" + P.bg + "'/>"
+  return "<svg xmlns='http://www.w3.org/2000/svg' width='100%' viewBox='0 0 " + W + ' ' + H + "'>" + "<rect width='" + W + "' height='" + H + "' rx='10' fill='" + P.bg + "'/>"
     + txt(16, 24, 11, P.muted, title, " font-weight='600' letter-spacing='0.6'") + txt(16, 40, 10, P.muted, 'Last 12 months')
     + txt(16, 76, 32, P.text, kvXml(kvfValueText(n.v, fmt)), " font-weight='700'")
     + "<rect x='16' y='85' width='" + kvfF(pw) + "' height='18' rx='9' fill='" + kvfStatus(d, lower, true, cfg) + "'/>" + txt(23, 98, 10.5, kvfStatus(d, lower, false, cfg), kvXml(pill), " font-weight='600'")
     + row(56, labels[0], kvfCompact(cmp.now, fmt)) + row(72, labels[1], kvfCompact(cmp.before, fmt))
-    + "<line x1='16' y1='148.5' x2='279' y2='148.5' stroke='" + P.track + "'/>" + txt(16, 162, 9.5, P.line, mon[1]) + txt(279, 162, 9.5, P.line, mon[12], " text-anchor='end'")
-    + kvfColumns(n.trend, k, cfg, 295, 16, 114, 148, 10, tips, cmp) + '</svg>';
+    + "<line x1='16' y1='" + (H - 21.5) + "' x2='" + (W - 16) + "' y2='" + (H - 21.5) + "' stroke='" + P.track + "'/>" + txt(16, H - 8, 9.5, P.line, mon[1]) + txt(W - 16, H - 8, 9.5, P.line, mon[12], " text-anchor='end'")
+    + kvfColumns(n.trend, k, cfg, W, 16, 114, H - 22, 10, tips, cmp) + '</svg>';
 }
 function kvfPreview(k, cfg, style){
   const svg = kvfPreviewSvg(k, cfg, style || kvfStyle(cfg).id, true);

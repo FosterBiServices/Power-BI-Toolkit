@@ -767,7 +767,12 @@ function kvOptionMeasures(id, k, cfg){
   if (id === 'rlist') return out;
   if (id === 'rtable') { if (h.target) out.push(kvSvgMeasure('bullet', k, cfg)); out.push(kvSvgMeasure('spark', k, cfg)); }
   else if (id === 'rbullet' && !h.target) { /* nothing to draw */ }
-  else { const s = kvSvgMeasure(svgId, k, cfg); if (s) out.push(s); }
+  else {
+    const s = kvSvgMeasure(svgId, k, cfg), fc = kvFnCfg(id, cfg);
+    // built as a function: the same measure, as a one-line call to the function in the script
+    if (s && fc) { const e = kvfCall(k, fc); if (e) Object.assign(s, { expression: e, fn: true }); }
+    if (s) out.push(s);
+  }
   return out;
 }
 
@@ -815,7 +820,8 @@ function kvScorecard(kpis, cfg){
 function kvTmdl(kpis, cfg, optionId){
   const T = TAB, plan = kvPlan(kpis, cfg, optionId);
   const L = ['createOrReplace', ''];
-  if (optionId === 'fnlib') L.push(...kvfTmdlBlocks(cfg));
+  const fc = kvFnCfg(optionId, cfg);
+  if (fc && (optionId === 'fnlib' || plan.some(m => m.fn))) L.push(...kvfTmdlBlocks(fc));
   if (plan.length) { L.push(T + 'ref table ' + tmdlName((cfg.table || '').trim()), ''); plan.forEach(m => L.push(...kvMeasureLines(m, T))); }
   if (optionId === 'rtable') {
     const s = kvScorecard(kpis, cfg);
@@ -834,8 +840,9 @@ function kvTmdl(kpis, cfg, optionId){
 function kvTestQuery(kpis, cfg, optionId){
   const plan = kvPlan(kpis, cfg, optionId); if (!plan.length) return '';
   const tq = qName((cfg.table || '').trim()), I = '    ';
-  const L = ['// Run in DAX query view. It defines the new ' + (optionId === 'fnlib' ? 'functions and ' : '') + 'measures for this query only; nothing in the model changes.', 'DEFINE'];
-  if (optionId === 'fnlib') L.push(...kvfDefine(cfg));
+  const fc = kvFnCfg(optionId, cfg), fns = fc && (optionId === 'fnlib' || plan.some(m => m.fn));
+  const L = ['// Run in DAX query view. It defines the new ' + (fns ? 'functions and ' : '') + 'measures for this query only; nothing in the model changes.', 'DEFINE'];
+  if (fns) L.push(...kvfDefine(fc));
   plan.forEach(m => { L.push(I + 'MEASURE ' + tq + bracket(m.name) + ' ='); exprLines(m.expression).forEach(l => L.push(l ? I + I + l.replace(/\t/g, I) : '')); });
   L.push('EVALUATE', 'ROW (');
   const cols = plan.map(m => I + daxString(m.name) + ', ' + bracket(m.name));
@@ -854,7 +861,8 @@ function kvChecks(kpis, cfg, optionId, model){
     else if (model && kvColName(r) && ['share', 'rank', 'per', 'asof'].includes(c.kind)) { const cn = kvColName(r); if (!model.columns.some(x => lc(x.table) === lc(cn.table) && lc(x.name) === lc(cn.column))) add('err', where + ': ' + r + ' isn’t in the model export.'); }
   }));
   const plan = kvPlan(kpis, cfg, optionId);
-  if (optionId === 'fnlib') kvfChecks(kpis, cfg, model, add);
+  const fc = kvFnCfg(optionId, cfg);
+  if (fc && (optionId === 'fnlib' || plan.some(m => m.fn))) kvfChecks(kpis, fc, model, add);
   if (plan.length && !(cfg.table || '').trim()) add('err', 'Type the table the new measures go in (Step 5).');
   const names = kpis.map(k => lc(kvName(k))), dup = names.filter((x, i) => names.indexOf(x) !== i);
   if (dup.length) add('err', 'Two KPIs have the same name: ' + [...new Set(dup)].join(', ') + '. Give each its own label; the new measures are named after it.');
@@ -869,10 +877,10 @@ function kvChecks(kpis, cfg, optionId, model){
     const same = plan.filter(m => { const e = ms.get(lc(m.name)); return e && lc(e.table) === lc((cfg.table || '').trim()); });
     if (same.length) add('warn', 'The script replaces these measures, which are already in ' + cfg.table.trim() + ': ' + same.map(m => m.name).join(', ') + '.');
     const tc = (cfg.trendCol || '').match(/^'?(.*?)'?\[(.*)\]$/);
-    if (plan.some(m => /Sparkline/.test(m.name) || m.usesTrend) && tc && !model.columns.some(c => lc(c.table) === lc(tc[1]) && lc(c.name) === lc(tc[2]))) add('err', 'The trend column ' + cfg.trendCol.trim() + ' isn’t in the model export.');
+    if (plan.some(m => (/Sparkline/.test(m.name) && !m.fn) || m.usesTrend) && tc && !model.columns.some(c => lc(c.table) === lc(tc[1]) && lc(c.name) === lc(tc[2]))) add('err', 'The trend column ' + cfg.trendCol.trim() + ' isn’t in the model export.');
     if (optionId === 'rtable' && tables.has(lc(kvScoreTable(cfg)))) add('warn', 'A table called ' + kvScoreTable(cfg) + ' is already in the model. The script replaces it.');
   }
-  if (plan.some(m => /Sparkline/.test(m.name) || m.usesTrend) && /\[[^\]]*\]$/.test(cfg.trendCol || '') && !/month|period|week|quarter|year/i.test((cfg.trendCol.match(/\[([^\]]*)\]$/) || [])[1])) add('info', 'Trend by ' + cfg.trendCol.trim() + ' shows the last ' + (cfg.periods || 12) + ' values of that column (days, if it\u2019s a date). For months, use a column with one date per month, like \'Date\'[Month Start].');
-  if (plan.some(m => /Sparkline/.test(m.name) || m.usesTrend) && !/\[.+\]$/.test((cfg.trendCol || '').trim())) add('err', 'Type the trend column as \'Table\'[Column], for example \'Date\'[Month Start].');
+  if (plan.some(m => (/Sparkline/.test(m.name) && !m.fn) || m.usesTrend) && /\[[^\]]*\]$/.test(cfg.trendCol || '') && !/month|period|week|quarter|year/i.test((cfg.trendCol.match(/\[([^\]]*)\]$/) || [])[1])) add('info', 'Trend by ' + cfg.trendCol.trim() + ' shows the last ' + (cfg.periods || 12) + ' values of that column (days, if it\u2019s a date). For months, use a column with one date per month, like \'Date\'[Month Start].');
+  if (plan.some(m => (/Sparkline/.test(m.name) && !m.fn) || m.usesTrend) && !/\[.+\]$/.test((cfg.trendCol || '').trim())) add('err', 'Type the trend column as \'Table\'[Column], for example \'Date\'[Month Start].');
   return out;
 }
