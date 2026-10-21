@@ -452,8 +452,8 @@ const KV_OPTIONS = [
     avoid: 'Reports where custom visuals aren’t allowed; use a card with variance. Text in it isn’t clickable for drill-through.',
     score: h => h.base ? 50 : 40 },
   { id: 'fnlib', for: ['goal', 'change', 'trend', 'number'], name: 'Reusable card functions', kind: 'fn', need: '',
-    nmc: ['The value for the date filter’s range', 'A month-over-month pill in status colors; in the HTML version each month’s change shows on hover', '12 monthly columns, the two latest months and last year'],
-    fits: 'Many KPIs that share one card design: the functions go in your model once, then each card is a one-line measure. Hover a column in the preview.',
+    nmc: ['The value for the date filter’s range', 'A pill with the change (MoM, YoY or vs target) in status colors; in the HTML version each month’s change shows on hover', 'The two numbers the pill compares, and 12 monthly columns'],
+    fits: 'Many KPIs that share one design: pick a card or a small chart (bullet, progress, sparkline, variance bar), as an SVG image or HTML. Its function goes in your model once, then each card is a one-line measure. Hover a column in the preview.',
     avoid: 'Power BI Desktop without DAX user-defined functions, and models without a date table with one row per day.',
     score: h => 54 },
   { id: 'ctxlabel', for: ['context', 'number'], name: 'Card with context labels', kind: 'native', need: 'ctx',
@@ -854,7 +854,7 @@ function kvChecks(kpis, cfg, optionId, model){
     else if (model && kvColName(r) && ['share', 'rank', 'per', 'asof'].includes(c.kind)) { const cn = kvColName(r); if (!model.columns.some(x => lc(x.table) === lc(cn.table) && lc(x.name) === lc(cn.column))) add('err', where + ': ' + r + ' isn’t in the model export.'); }
   }));
   const plan = kvPlan(kpis, cfg, optionId);
-  if (optionId === 'fnlib') kvfChecks(cfg, model, add);
+  if (optionId === 'fnlib') kvfChecks(kpis, cfg, model, add);
   if (plan.length && !(cfg.table || '').trim()) add('err', 'Type the table the new measures go in (Step 5).');
   const names = kpis.map(k => lc(kvName(k))), dup = names.filter((x, i) => names.indexOf(x) !== i);
   if (dup.length) add('err', 'Two KPIs have the same name: ' + [...new Set(dup)].join(', ') + '. Give each its own label; the new measures are named after it.');
