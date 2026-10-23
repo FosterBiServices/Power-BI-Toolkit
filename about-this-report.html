@@ -291,6 +291,22 @@ details.more{margin-top:4px}
 ul.cand{list-style:none;margin:0;padding:0}
 ul.cand li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
 ul.cand li.ex b{font-weight:500;color:var(--muted)}
+.kpick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px;margin-top:10px}
+.kbox{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--surface);min-width:0}
+.kbox-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.kbox-h h3{margin:0;font-size:16px}
+.kbox-h .btns{display:flex;gap:6px;flex-wrap:wrap}
+.krow.kchosen{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+.krow.kchosen .kfields{grid-template-columns:minmax(0,1fr);font-size:14px}
+.krow.kedit{grid-template-columns:minmax(0,1fr)}
+.kfind{display:flex;flex-direction:column;gap:6px;margin-bottom:6px;font-size:13.5px}
+.kfind label{display:flex;gap:6px;align-items:center}
+.kfind select{flex:1;min-width:0;max-width:100%;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+ul.cand.pick{max-height:420px;overflow-y:auto}
+ul.cand.pick li{justify-content:flex-start}
+ul.cand.pick label{display:flex;gap:8px;align-items:flex-start;cursor:pointer;min-width:0}
+ul.cand.pick input{width:16px;height:16px;margin-top:3px;accent-color:var(--accent);flex:none}
+.kdesc{display:block;font-size:12.5px;line-height:1.45;margin-top:2px;overflow-wrap:anywhere}
 .airow{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-top:1px solid var(--line);padding:8px 0;font-size:14px}
 .aival{margin-top:2px;line-height:1.5}
 .aival ul{margin:0;padding-left:18px}
@@ -396,12 +412,24 @@ ul.cand li.ex b{font-weight:500;color:var(--muted)}
   </section>
 
   <!-- STEP 2 -->
-  <section class="step" aria-labelledby="s2">
+  <section class="step" aria-labelledby="sK">
     <div class="step-num">Step<b>2</b></div>
     <div class="step-body">
       <div class="step-head">
+        <h2 id="sK">Pick your key measures</h2>
+        <p>The few numbers that matter most to readers. The summary, business value, questions and notes are written around them, and the Copilot prompt lists only these. A few are suggested to start you off: tick the ones that belong and untick the rest.</p>
+      </div>
+      <div id="kpiPick"></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
         <h2 id="s2">What the model can&rsquo;t tell</h2>
-        <p>A few answers only you know. Each one improves the drafts in Step 3; leave any of them blank.</p>
+        <p>A few answers only you know. Each one improves the drafts in Step 4; leave any of them blank.</p>
       </div>
       <div class="basics">
         <div class="field wide"><label for="bName">Report name</label><input type="text" id="bName" class="txt" placeholder="for example Sales Overview"></div>
@@ -419,13 +447,13 @@ ul.cand li.ex b{font-weight:500;color:var(--muted)}
     </div>
   </section>
 
-  <!-- STEP 3 -->
+  <!-- STEP 4 -->
   <section class="step" aria-labelledby="s3">
-    <div class="step-num">Step<b>3</b></div>
+    <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">Choose what to include</h2>
-        <p>Each part says why it helps. Tick the ones you want, then edit the draft or pick another suggestion. Drafts update from Steps 1 and 2 until you edit them.</p>
+        <p>Each part says why it helps. Tick the ones you want, then edit the draft or pick another suggestion. Drafts update from Steps 1 to 3 until you edit them.</p>
       </div>
       <div class="sum-bar" id="secBar"></div>
       <div class="secs" id="secs"></div>
@@ -445,9 +473,9 @@ ul.cand li.ex b{font-weight:500;color:var(--muted)}
     </div>
   </section>
 
-  <!-- STEP 4 -->
+  <!-- STEP 5 -->
   <section class="step" aria-labelledby="s4">
-    <div class="step-num">Step<b>4</b></div>
+    <div class="step-num">Step<b>5</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s4">Your About text</h2>
@@ -2229,13 +2257,13 @@ const blankSec = () => { const o = {}; AB.SECTIONS.forEach(s => { o[s.id] = { on
 const blankCfg = () => ({
   basics: { name: '', audience: [], extraAud: [], owner: '', contact: '', freq: '', time: '' },
   sec: blankSec(),
-  kpi: { n: 5, compound: false, hidden: false, picks: null, edits: {}, off: {} },
+  kpi: { n: 5, compound: false, hidden: false, picks: null, edits: {}, descOnly: false },
   src: { edits: {}, off: {}, added: [] }, showCovers: false,
   html: { name: 'About This Report HTML', table: '', folder: '', font: 16, accent: '#1F3A5F', title: true, refresh: '' },
   ai: ''
 });
 const EX_BASICS = () => ({ name: 'Sales Overview', audience: ['Sales managers', 'Finance team'], extraAud: [], owner: 'the Sales Analytics team', contact: 'sales-analytics@contoso.com', freq: 'daily', time: '6:00 AM' });
-const state = { example: false, model: null, report: null, tmdlRows: [], detected: null, cands: [], kpiList: [], sourceList: [], cfg: blankCfg(), aiParsed: null };
+const state = { kFind: '', kGrp: '', example: false, model: null, report: null, tmdlRows: [], detected: null, cands: [], kpiList: [], sourceList: [], cfg: blankCfg(), aiParsed: null };
 
 /* ---------- derived lists ---------- */
 function derive(){
@@ -2245,7 +2273,7 @@ function derive(){
   const picks = c.kpi.picks ? c.kpi.picks.filter(n => state.cands.some(k => k.name === n)) : ok.slice(0, Math.max(1, Math.min(8, +c.kpi.n || 5))).map(k => k.name);
   state.kpiList = picks.map(n => {
     const k = state.cands.find(x => x.name === n), e = c.kpi.edits[n] || {};
-    return Object.assign({}, k, { label: e.label != null ? e.label : k.name, meaning: e.meaning != null ? e.meaning : k.meaning, on: !c.kpi.off[n] });
+    return Object.assign({}, k, { label: e.label != null ? e.label : k.name, meaning: e.meaning != null ? e.meaning : k.meaning, on: true });
   });
   // sources: the sources query, else the TMDL in a PBIP folder, plus remote models from the export
   const q = $('srcInput').value.trim() ? AB.parseSourcesQuery($('srcInput').value) : null;
@@ -2271,7 +2299,7 @@ function renderSrcMsg(){
   const q = state.srcQuery, d = state.detected;
   let h = '';
   if (q && q.error) h = '<div class="msg err">' + esc(q.error) + '</div>';
-  else if (q && d) h = '<div class="msg ok">&#10003; ' + d.sources.length + ' source' + (d.sources.length === 1 ? '' : 's') + ' found for ' + d.tables + ' table' + (d.tables === 1 ? '' : 's') + (d.calc.length ? '; ' + d.calc.length + ' built in the model' : '') + '. Review them in Step 3.</div>';
+  else if (q && d) h = '<div class="msg ok">&#10003; ' + d.sources.length + ' source' + (d.sources.length === 1 ? '' : 's') + ' found for ' + d.tables + ' table' + (d.tables === 1 ? '' : 's') + (d.calc.length ? '; ' + d.calc.length + ' built in the model' : '') + '. Review them in Step 4.</div>';
   else if (!q && state.tmdlRows.length && d) h = '<div class="msg info">Sources are read from the semantic model in the PBIP folder. Paste the query results here to use those instead.</div>';
   $('srcMsg').innerHTML = h;
 }
@@ -2329,7 +2357,7 @@ function renderFolder(){
   $('repMsg').innerHTML = '<div class="msg ok">&#10003; ' + bits.join('; ') + '.</div>';
 }
 
-/* ---------- Step 2 ---------- */
+/* ---------- Step 3 ---------- */
 function renderBasics(){
   const b = state.cfg.basics;
   $('bName').value = b.name; $('bOwner').value = b.owner; $('bContact').value = b.contact; $('bFreq').value = b.freq; $('bTime').value = b.time;
@@ -2347,7 +2375,7 @@ function renderAud(){
   $('audChips').innerHTML = all.map(a => '<button type="button" class="chip" data-aud="' + esc(a) + '" aria-pressed="' + b.audience.includes(a) + '">' + esc(a) + '</button>').join('');
 }
 
-/* ---------- Step 3: sections ---------- */
+/* ---------- Step 4: sections ---------- */
 function ctx(){ return AB.context(abState()); }
 function draftOf(id, c){ return AB.DRAFTS[id](c || ctx()); }
 function secBar(){
@@ -2357,7 +2385,7 @@ function secBar(){
     + '<div class="btns"><button type="button" class="btn" id="recOnly">Recommended only</button><button type="button" class="btn" id="allOn">Include all</button></div>';
 }
 function renderSections(){
-  secBar();
+  renderPick(); secBar();
   const c = ctx();
   $('secs').innerHTML = AB.SECTIONS.map(s => {
     const sec = state.cfg.sec[s.id];
@@ -2391,7 +2419,7 @@ function altsHtml(s, sec, c){
   const more = d.filter(t => !have.has(t.toLowerCase()));
   return (more.length ? '<span class="alts-l">More suggestions</span>' + more.map(t => '<button type="button" class="alt add" data-add="' + s.id + '" data-t="' + esc(t) + '">+ ' + esc(t) + '</button>').join('') : '') + reset;
 }
-// drafts that haven't been edited follow Steps 1 and 2
+// drafts that haven't been edited follow Steps 1 to 3
 function refreshDrafts(){
   const c = ctx();
   AB.SECTIONS.forEach(s => {
@@ -2403,27 +2431,57 @@ function refreshDrafts(){
   });
 }
 
-function kpiHtml(){
+/* ---------- Step 2: key measures ---------- */
+function pickHtml(){
   const k = state.cfg.kpi;
-  if (!state.model) return '<p class="muted">Paste a model export in Step 1 to see suggested measures.</p>';
-  const rows = state.kpiList.map((x, i) => '<div class="krow' + (x.on ? '' : ' is-off') + '">'
-    + '<input type="checkbox" data-kon="' + esc(x.name) + '"' + (x.on ? ' checked' : '') + ' aria-label="Include ' + esc(x.name) + '">'
+  if (!state.model) return '<p class="muted">Connect your model in Step 1 to see its measures.</p>';
+  const rows = state.kpiList.map((x, i) => '<div class="krow kchosen">'
+    + '<div class="kfields"><span><b>' + esc(x.name) + '</b> <span class="muted small">' + esc(x.table) + '</span></span>'
+    + '<span class="kwhy">' + (x.why.length ? 'Suggested because it&rsquo;s ' + esc(x.why.join(', ')) : 'Picked by you') + '</span></div>'
+    + '<span class="kbtns"><button type="button" class="btn small" data-kup="' + i + '" aria-label="Move ' + esc(x.name) + ' up"' + (i ? '' : ' disabled') + '>&uarr;</button><button type="button" class="btn small" data-krem="' + esc(x.name) + '">Remove</button></span></div>').join('');
+  const inList = new Set(state.kpiList.map(x => x.name));
+  const all = state.cands.slice().sort((a, b) => a.name.localeCompare(b.name) || a.table.localeCompare(b.table));
+  const withDesc = all.filter(x => x.measure.description).length;
+  const grp = x => x.table + (x.measure.folder ? ' \u00b7 ' + x.measure.folder : '');
+  const groups = [...new Set(all.map(grp))].sort((a, b) => a.localeCompare(b));
+  const item = x => '<li class="' + (x.excluded ? 'ex' : '') + '" data-kgrp="' + esc(grp(x)) + '" data-kfind="' + esc((x.name + ' ' + x.table + ' ' + (x.measure.folder || '') + ' ' + (x.measure.description || '')).toLowerCase()) + '"' + (x.measure.description ? ' data-kd="1"' : '') + '>'
+    + '<label><input type="checkbox" data-kpick="' + esc(x.name) + '"' + (inList.has(x.name) ? ' checked' : '') + '>'
+    + '<span><b>' + esc(x.name) + '</b> <span class="muted small">' + esc(x.table + (x.measure.folder ? ' \u00b7 ' + x.measure.folder : '')) + '</span>'
+    + (x.measure.description ? '<span class="kdesc">' + esc(x.measure.description) + '</span>' : '')
+    + (x.excluded ? '<span class="kdesc muted small">Not suggested: ' + esc(x.excluded.charAt(0).toLowerCase() + x.excluded.slice(1)) + '</span>' : '') + '</span></label></li>';
+  return '<div class="kset"><label>How many to suggest <input type="number" id="kN" min="1" max="8" value="' + (k.picks ? state.kpiList.length : k.n) + '"' + (k.picks ? ' disabled title="You picked the measures yourself; select Suggest again to use a number."' : '') + '></label>'
+    + '<label><input type="checkbox" id="kComp"' + (k.compound ? ' checked' : '') + '> Suggest combined measures <span class="muted">(ratios, variances, year-on-year)</span></label>'
+    + '<label><input type="checkbox" id="kHid"' + (k.hidden ? ' checked' : '') + '> Suggest hidden measures</label></div>'
+    + '<p class="note small">' + (k.picks ? 'Your own picks.' : 'Suggested by how often other measures ' + (state.report ? 'and report visuals ' : '') + 'use them, with a boost for a description or a Core or KPI folder. Helpers (titles, colors, labels, formats) and measures that combine others aren&rsquo;t suggested.') + '</p>'
+    + '<div class="kpick-grid"><div class="kbox"><div class="kbox-h"><h3>Your key measures <span class="muted">(' + state.kpiList.length + ')</span></h3><span class="btns">'
+      + (k.picks ? '<button type="button" class="btn small" id="kAuto">Suggest again</button>' : '')
+      + (state.kpiList.length ? '<button type="button" class="btn small" id="kNone">Untick all</button>' : '') + '</span></div>'
+      + (rows || '<p class="muted">None yet. Tick the ones you want from all measures.</p>')
+      + (state.kpiList.length > 1 ? '<p class="note small">The first ones lead the summary and questions, so put the most important at the top.</p>' : '') + '</div>'
+    + '<div class="kbox"><div class="kbox-h"><h3>All measures <span class="muted">(' + all.length + ')</span></h3></div>'
+      + '<div class="kfind"><input type="search" class="txt" id="kFind" value="' + esc(state.kFind) + '" placeholder="Find by name, table, folder or description" aria-label="Find a measure">'
+      + (groups.length > 1 ? '<label>Table and folder <select id="kGrp"><option value="">All</option>' + groups.map(g => '<option' + (g === state.kGrp ? ' selected' : '') + '>' + esc(g) + '</option>').join('') + '</select></label>' : '')
+      + '<label><input type="checkbox" id="kDesc"' + (k.descOnly ? ' checked' : '') + '> Only ones with a description <span class="muted">(' + withDesc + ')</span></label></div>'
+      + '<ul class="cand pick">' + all.map(item).join('') + '</ul><p class="muted small" id="kNoHit" hidden>No measures match.</p></div></div>';
+}
+function renderPick(){ $('kpiPick').innerHTML = pickHtml(); filterPicks(); }
+// show only the measures that match the search box and the description filter
+function filterPicks(){
+  const q = state.kFind.trim().toLowerCase(), d = state.cfg.kpi.descOnly, g = state.kGrp;
+  let n = 0;
+  document.querySelectorAll('[data-kfind]').forEach(li => { const show = (!q || li.dataset.kfind.includes(q)) && (!d || li.dataset.kd) && (!g || li.dataset.kgrp === g); li.hidden = !show; if (show) n++; });
+  const no = $('kNoHit'); if (no) no.hidden = n > 0;
+}
+
+// Step 4: names and meanings readers see; which measures is chosen in Step 2
+function kpiHtml(){
+  if (!state.model) return '<p class="muted">Connect your model in Step 1 to see its measures.</p>';
+  if (!state.kpiList.length) return '<p class="muted">No key measures picked. Pick them in Step 2.</p>';
+  return '<p class="note small">Rename each measure the way readers know it and say what it means. To change which measures, use Step 2.</p>'
+    + state.kpiList.map(x => '<div class="krow kedit">'
     + '<div class="kfields"><input type="text" class="txt kname" data-klabel="' + esc(x.name) + '" value="' + esc(x.label) + '" aria-label="Name readers see">'
     + '<input type="text" class="txt kmean" data-kmean="' + esc(x.name) + '" value="' + esc(x.meaning) + '" placeholder="What it means, in plain words" aria-label="Meaning">'
-    + '<span class="kwhy">' + (x.label !== x.name ? '<span class="mono">' + esc(x.name) + '</span> &middot; ' : '') + (x.why.length ? 'Picked because it&rsquo;s ' + esc(x.why.join(', ')) : 'Added by you') + (x.measure.description ? '' : ' &middot; <span class="hintw">no description in the model: add a meaning here, and consider adding it to the model too</span>') + '</span></div>'
-    + '<span class="kbtns"><button type="button" class="btn small" data-kup="' + i + '" aria-label="Move up"' + (i ? '' : ' disabled') + '>&uarr;</button><button type="button" class="btn small" data-krem="' + esc(x.name) + '">Remove</button></span></div>').join('');
-  const inList = new Set(state.kpiList.map(x => x.name));
-  const rest = state.cands.filter(x => !inList.has(x.name) && !x.excluded), excl = state.cands.filter(x => !inList.has(x.name) && x.excluded);
-  return '<div class="kset"><label>How many <input type="number" id="kN" min="1" max="8" value="' + (k.picks ? state.kpiList.length : k.n) + '"' + (k.picks ? ' disabled title="You picked the measures by hand; select Pick for me to use a number again."' : '') + '></label>'
-    + '<label><input type="checkbox" id="kComp"' + (k.compound ? ' checked' : '') + '> Include combined measures <span class="muted">(ratios, variances, year-on-year)</span></label>'
-    + '<label><input type="checkbox" id="kHid"' + (k.hidden ? ' checked' : '') + '> Include hidden measures</label>'
-    + (k.picks ? '<button type="button" class="btn small" id="kAuto">Pick for me</button>' : '') + '</div>'
-    + '<p class="note small">Ranked by how often other measures ' + (state.report ? 'and report visuals ' : '') + 'use them, with a boost for a description or a Core or KPI folder. Helpers (titles, colors, labels, formats) and measures that combine others are left out, as in the About This Report Generator rules.</p>'
-    + (rows || '<p class="muted">No measures fit. Turn on combined or hidden measures, or add one below.</p>')
-    + (rest.length || excl.length ? '<details class="extra more"><summary>Other measures <span class="muted">(' + (rest.length + excl.length) + ')</span></summary><div class="extra-body"><ul class="cand">'
-      + rest.map(x => '<li><span><b>' + esc(x.name) + '</b> <span class="muted small">' + esc(x.why.join(', ') || 'not used elsewhere') + '</span></span><button type="button" class="btn small" data-kadd="' + esc(x.name) + '">Add</button></li>').join('')
-      + excl.map(x => '<li class="ex"><span><b>' + esc(x.name) + '</b> <span class="muted small">' + esc(x.excluded) + '</span></span><button type="button" class="btn small" data-kadd="' + esc(x.name) + '">Add anyway</button></li>').join('')
-      + '</ul></div></details>' : '');
+    + '<span class="kwhy">' + (x.label !== x.name ? '<span class="mono">' + esc(x.name) + '</span>' : '') + (x.measure.description ? '' : (x.label !== x.name ? ' &middot; ' : '') + '<span class="hintw">no description in the model: add a meaning here, and consider adding it to the model too</span>') + '</span></div></div>').join('');
 }
 
 function srcHtml(){
@@ -2453,7 +2511,7 @@ function renderAi(){
   const x = r.reply, row = (id, label, val) => val ? '<div class="airow"><div><b>' + esc(label) + '</b><div class="aival">' + (Array.isArray(val) ? '<ul>' + val.map(v => '<li>' + esc(v) + '</li>').join('') + '</ul>' : esc(val)) + '</div></div><button type="button" class="btn small" data-aiuse="' + id + '">Use</button></div>' : '';
   const mm = Object.keys(x.meanings);
   $('aiOut').innerHTML = (r.warns.length ? '<div class="msg warn">' + r.warns.map(esc).join('<br>') + '</div>' : '')
-    + (x.gaps.length ? '<div class="msg info"><b>Copilot couldn&rsquo;t tell:</b><ul>' + x.gaps.map(g => '<li>' + esc(g) + '</li>').join('') + '</ul>Answer these in Step 2 or in the drafts.</div>' : '')
+    + (x.gaps.length ? '<div class="msg info"><b>Copilot couldn&rsquo;t tell:</b><ul>' + x.gaps.map(g => '<li>' + esc(g) + '</li>').join('') + '</ul>Answer these in Step 3 or in the drafts.</div>' : '')
     + row('summary', 'Report summary', x.summary) + row('value', 'Business value', x.value) + row('audience', 'Who it’s for', x.audience) + row('questions', 'Questions it answers', x.questions)
     + (mm.length ? row('meanings', 'Measure meanings', mm.map(n => n + ': ' + x.meanings[n])) : '')
     + '<div class="btns"><button type="button" class="btn primary" data-aiuse="all">Use all</button></div>';
@@ -2469,12 +2527,12 @@ function useAi(id){
   leaveExample(); derive(); renderSections(); renderOut(); persist();
 }
 
-/* ---------- Step 4 ---------- */
+/* ---------- Step 5 ---------- */
 function docNow(){ return AB.compose(abState()); }
 function renderOut(){
   const d = docNow();
   $('outCount').textContent = d.sections.length ? d.sections.length + ' part' + (d.sections.length === 1 ? '' : 's') : '';
-  $('preview').innerHTML = !d.sections.length ? '<p class="muted">Tick at least one part in Step 3.</p>'
+  $('preview').innerHTML = !d.sections.length ? '<p class="muted">Tick at least one part in Step 4.</p>'
     : (d.name ? '<h3 class="ab-name">' + esc(d.name) + '</h3>' : '') + d.sections.map(s => s.id === 'value' ? '<div class="ab-callout"><b>' + esc(s.title) + ':</b> ' + esc(s.text) + '</div>'
       : '<h4>' + esc(s.title) + '</h4>' + (s.kind === 'text' ? '<p>' + esc(s.text) + '</p>' : s.kind === 'list' ? '<ul>' + s.items.map(i => '<li>' + esc(i) + '</li>').join('') + '</ul>'
       : s.kind === 'sources' ? '<div class="ab-chips">' + s.items.map((i, k) => '<span class="c' + (k % 5) + '">' + esc(i.name) + (i.text ? ' <small>&middot; ' + esc(i.text) + '</small>' : '') + '</span>').join('') + '</div>'
@@ -2542,7 +2600,7 @@ function init(){
     if (state.example) { const v = $('srcInput').value; $('modelInput').value = ''; state.cfg = blankCfg(); setExample(false); $('srcInput').value = v; }
     clearBlank(); renderModel(); derive(); renderSrcMsg(); renderBasics(); renderSections(); renderOut(); persist();
   });
-  // Step 2
+  // Step 3
   const basic = (id, key) => $(id).addEventListener('input', () => { const v = state.example ? SF_SUITE.ownText($(id).value, state.cfg.basics[key] || '') : $(id).value; dropExample(); state.cfg.basics[key] = v; if ($(id).value !== v) $(id).value = v; refreshDrafts(); renderOut(); persist(); });
   basic('bName', 'name'); basic('bOwner', 'owner'); basic('bContact', 'contact'); basic('bTime', 'time');
   $('bFreq').addEventListener('change', () => { const v = $('bFreq').value; dropExample(); state.cfg.basics.freq = v; $('bFreq').value = v; renderBasics(); refreshDrafts(); renderOut(); persist(); });
@@ -2556,7 +2614,26 @@ function init(){
   $('audAddBtn').addEventListener('click', addAud);
   $('audAdd').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addAud(); } });
 
-  // Step 3: typing
+  // Step 2: key measures
+  const kre = focus => { leaveExample(); derive(); renderSections(); refreshDrafts(); renderOut(); persist(); const el = focus && document.querySelector(focus); if (el) el.focus(); };
+  $('kpiPick').addEventListener('input', e => {
+    const t = e.target, c = state.cfg;
+    if (t.id === 'kFind') { state.kFind = t.value; filterPicks(); }
+    else if (t.id === 'kN') { c.kpi.n = Math.max(1, Math.min(8, +t.value || 5)); kre('#kN'); }
+  });
+  $('kpiPick').addEventListener('change', e => {
+    const t = e.target, c = state.cfg;
+    if (t.dataset.kpick != null) {
+      const n = t.dataset.kpick, l = state.kpiList.map(x => x.name);
+      c.kpi.picks = t.checked ? (l.includes(n) ? l : l.concat([n])) : l.filter(x => x !== n);
+      kre('[data-kpick="' + CSS.escape(n) + '"]');
+    }
+    else if (t.id === 'kDesc') { c.kpi.descOnly = t.checked; filterPicks(); persist(); }
+    else if (t.id === 'kGrp') { state.kGrp = t.value; filterPicks(); }
+    else if (t.id === 'kComp') { c.kpi.compound = t.checked; kre(); }
+    else if (t.id === 'kHid') { c.kpi.hidden = t.checked; kre(); }
+  });
+  // Step 4: typing
   $('secs').addEventListener('input', e => {
     const t = e.target, c = state.cfg;
     if (t.dataset.draft) { c.sec[t.dataset.draft].text = t.value; const s = AB.SECTIONS.find(x => x.id === t.dataset.draft); document.querySelector('[data-alts="' + s.id + '"]').innerHTML = altsHtml(s, c.sec[s.id], ctx()); }
@@ -2565,18 +2642,14 @@ function init(){
     else if (t.dataset.kmean != null) { c.kpi.edits[t.dataset.kmean] = Object.assign({}, c.kpi.edits[t.dataset.kmean], { meaning: t.value }); derive(); }
     else if (t.dataset.slabel != null) { const k = t.dataset.slabel; if (k.startsWith('added:')) c.src.added[+k.slice(6)].label = t.value; else c.src.edits[k] = Object.assign({}, c.src.edits[k], { label: t.value }); derive(); refreshDrafts(); }
     else if (t.dataset.scover != null) { const k = t.dataset.scover; if (k.startsWith('added:')) c.src.added[+k.slice(6)].covers = t.value; else c.src.edits[k] = Object.assign({}, c.src.edits[k], { covers: t.value }); derive(); }
-    else if (t.id === 'kN') { c.kpi.n = Math.max(1, Math.min(8, +t.value || 5)); derive(); leaveExample(); renderSections(); renderOut(); persist(); $('kN').focus(); return; }
     else return;
     leaveExample(); renderOut(); persist();
   });
-  // Step 3: choices
+  // Step 4: choices
   $('secs').addEventListener('change', e => {
     const t = e.target, c = state.cfg;
     if (t.dataset.secon) c.sec[t.dataset.secon].on = t.checked;
-    else if (t.dataset.kon != null) { if (t.checked) delete c.kpi.off[t.dataset.kon]; else c.kpi.off[t.dataset.kon] = true; }
     else if (t.dataset.son != null) { const k = t.dataset.son; if (k.startsWith('added:')) c.src.added[+k.slice(6)].on = t.checked; else c.src.off[k] = !t.checked; }
-    else if (t.id === 'kComp') c.kpi.compound = t.checked;
-    else if (t.id === 'kHid') c.kpi.hidden = t.checked;
     else if (t.id === 'showCovers') c.showCovers = t.checked;
     else return;
     leaveExample(); derive(); renderSections(); renderOut(); persist();
@@ -2590,10 +2663,10 @@ function init(){
     if (b.dataset.use) { c.sec[b.dataset.use].text = b.dataset.t; return re(); }
     if (b.dataset.add) { const cur = AB.listItems(abState(), b.dataset.add); c.sec[b.dataset.add].text = cur.concat([b.dataset.t]).join('\n'); return re(); }
     if (b.dataset.reset) { c.sec[b.dataset.reset].text = null; return re(); }
-    if (b.dataset.kadd) { c.kpi.picks = state.kpiList.map(x => x.name).concat([b.dataset.kadd]); delete c.kpi.off[b.dataset.kadd]; return re(); }
     if (b.dataset.krem) { c.kpi.picks = state.kpiList.map(x => x.name).filter(n => n !== b.dataset.krem); return re(); }
     if (b.dataset.kup) { const i = +b.dataset.kup, l = state.kpiList.map(x => x.name); [l[i - 1], l[i]] = [l[i], l[i - 1]]; c.kpi.picks = l; return re(); }
     if (b.id === 'kAuto') { c.kpi.picks = null; return re(); }
+    if (b.id === 'kNone') { c.kpi.picks = []; return re(); }
     if (b.dataset.srem) { c.src.added.splice(+b.dataset.srem.slice(6), 1); return re(); }
     if (b.id === 'srcAddBtn') { const v = $('srcAdd').value.trim(); if (v) { c.src.added.push({ label: v, covers: '', on: true }); re(); } return; }
     if (b.id === 'recOnly') { AB.SECTIONS.forEach(s => { c.sec[s.id].on = s.rec; }); return re(); }

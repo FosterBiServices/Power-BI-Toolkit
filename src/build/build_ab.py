@@ -65,6 +65,22 @@ details.more{margin-top:4px}
 ul.cand{list-style:none;margin:0;padding:0}
 ul.cand li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
 ul.cand li.ex b{font-weight:500;color:var(--muted)}
+.kpick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px;margin-top:10px}
+.kbox{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--surface);min-width:0}
+.kbox-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.kbox-h h3{margin:0;font-size:16px}
+.kbox-h .btns{display:flex;gap:6px;flex-wrap:wrap}
+.krow.kchosen{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+.krow.kchosen .kfields{grid-template-columns:minmax(0,1fr);font-size:14px}
+.krow.kedit{grid-template-columns:minmax(0,1fr)}
+.kfind{display:flex;flex-direction:column;gap:6px;margin-bottom:6px;font-size:13.5px}
+.kfind label{display:flex;gap:6px;align-items:center}
+.kfind select{flex:1;min-width:0;max-width:100%;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+ul.cand.pick{max-height:420px;overflow-y:auto}
+ul.cand.pick li{justify-content:flex-start}
+ul.cand.pick label{display:flex;gap:8px;align-items:flex-start;cursor:pointer;min-width:0}
+ul.cand.pick input{width:16px;height:16px;margin-top:3px;accent-color:var(--accent);flex:none}
+.kdesc{display:block;font-size:12.5px;line-height:1.45;margin-top:2px;overflow-wrap:anywhere}
 .airow{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-top:1px solid var(--line);padding:8px 0;font-size:14px}
 .aival{margin-top:2px;line-height:1.5}
 .aival ul{margin:0;padding-left:18px}
