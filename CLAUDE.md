@@ -225,6 +225,9 @@ through both.
   title text and properties the schema doesn't list for that visual stay behind. Starting from a theme file uses its
   visualStyles, textClasses and icons in place of `tb_template.js`; its colors fill Steps 1 and 2, so the colors the
   page works out (table accent, hyperlink, gradient) follow them. Owner prefers no Copilot here.
+  Picking a PBIP folder (Step 1, or Copy settings from a visual) finds the theme the report uses (`findThemes`: report.json
+  `themeCollection`, custom theme in StaticResources/RegisteredResources, base theme in SharedResources/BaseThemes) and asks:
+  start from it, use only its colors (colors, text, good/bad, font; visual settings stay), or keep what's there.
 - Chart Patterns: the TMDL scripts, the Format-pane steps and the combo chart marker size in a theme
   (written from the PBIP skills in Power-BI-Portfolio/AI/skills, not yet built by hand in Desktop).
 

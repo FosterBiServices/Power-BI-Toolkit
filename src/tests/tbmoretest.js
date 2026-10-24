@@ -33,6 +33,8 @@ const path = require('path');
   // settings from PBIP visuals
   await p.locator('#reportInput').setInputFiles(path.join(__dirname, 'tbpbip'));
   await p.waitForSelector('#fromVisual .vlist');
+  console.log('theme question:', (await p.locator('#themeAsk3').innerText()).split('\n')[0], '(expect the theme Sample Retail)');
+  await p.click('#themeAsk3 [data-tuse="keep"]'); console.log('keep: question gone', await p.locator('#themeAsk3').isHidden(), '| colors unchanged', (await J()).dataColors[0], '(expect true, not #2A5C8A)');
   console.log('visuals found', (await p.locator('#fromVisual .vlist > li').allInnerTexts()).map(x => x.split('\n')[0]).join(' | '));
   console.log('left out', (await p.$$eval('#fromVisual .skipped div', d => d.map(x => x.innerHTML.replace(/<br>/g, '; ')))).join(' || '));
   await p.click('#addFound'); j = await J(); const V = j.visualStyles;
@@ -56,6 +58,20 @@ const path = require('path');
   await p.reload(); console.log('file kept after reload', (await J()).visualStyles.slicer['*'].data[0].mode, '(expect Dropdown)');
   await p.click('#dropBase'); j = await J(); console.log('built-in styles back: table sparklines', !!j.visualStyles.tableEx['*'].sparklines, '| colors kept', j.dataColors[1], '(expect true #7B4F9E)');
   await p.locator('#themeBox summary').click(); await p.fill('#themePaste', '{"hello": 1}'); await p.click('#themeUse'); console.log('not a theme:', await p.locator('#themeMsg').innerText());
+  // PBIP folder in Step 1: only its colors, visual settings stay
+  await p.evaluate(() => localStorage.clear()); await p.reload();
+  await p.selectOption('#v-all-titleSize', '20');
+  await p.locator('#themeBox summary').click(); await p.locator('#reportThemeInput').setInputFiles(path.join(__dirname, 'tbpbip'));
+  await p.waitForSelector('#themeAsk1 [data-tuse]');
+  console.log('step 1 question:', (await p.locator('#themeAsk1').innerText()).split('\n')[0]);
+  await p.click('#themeAsk1 [data-tuse="colors"]'); j = await J();
+  console.log('only colors:', j.dataColors.join(' '), '| fg', j.foreground, '| bad', j.bad, '| title size kept', j.visualStyles['*']['*'].title[0].fontSize, '| built-in styles kept', !!j.visualStyles.tableEx['*'].sparklines, '| no base', await p.locator('#baseNote').isHidden(), '(expect the 7 file colors, #1B2631, #E07B39, 20, true, true)');
+  console.log('msg', await p.locator('#themeMsg').innerText());
+  await p.locator('#reportThemeInput').setInputFiles(path.join(__dirname, 'tbpbip')); await p.waitForSelector('#themeAsk1 [data-tuse]');
+  await p.click('#themeAsk1 [data-tuse="all"]'); j = await J();
+  console.log('start from it:', JSON.stringify(j.visualStyles.slicer['*'].data), '| base note', await p.locator('#baseNote').isVisible(), '(expect Dropdown true)');
+  await p.locator('#reportThemeInput').setInputFiles(path.join(__dirname, 'pbiptest')); await p.waitForTimeout(500);
+  console.log('folder without a theme:', await p.locator('#themeMsg').innerText());
   // junk saved
   await p.evaluate(() => localStorage.setItem('ktb.cfg', JSON.stringify({ seeds: ['#1F6FB2'], count: 'x', custom: { tableEx: { columnHeaders: { fontSize: 'big', bold: 1, backColor: { solid: { color: 'red' } }, nope: true } }, fake: { a: { b: 1 } }, card: 5 }, base: [1, 2] })));
   await p.reload(); j = await J();
