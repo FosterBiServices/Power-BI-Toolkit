@@ -82,13 +82,14 @@ function walkEntry(entry, prefix, out){
     next();
   });
 }
-async function loadFolder(root, list){
+// o.keepTab: a folder read in another tool, while this page was left on the export tab on purpose
+async function loadFolder(root, list, o = {}){
   $('folderMsg').innerHTML = msg('info', 'Reading &ldquo;' + esc(root) + '&rdquo;&hellip;');
   const { files, seen, other } = await readList(list);
   if (state.example) setExample(false);
   state.files = files; state.root = root; state.lastRoot = root; state.readInfo = { seen, count: files.size, other };
   try { store.del('blank'); } catch (e) {}
-  setTab('folder');
+  if (!o.keepTab) setTab('folder');
   pickProjects();
   persist();
 }
@@ -205,20 +206,20 @@ function init(){
   else if (store.get('blank') !== '1' && !s.root) loadExample();
   else { setTab(s.tab || 'folder'); render(); }
 
-  $('tabFolder').addEventListener('click', () => { setTab('folder'); render(); persist(); });
-  $('tabExport').addEventListener('click', () => { setTab('export'); render(); persist(); });
+  $('tabFolder').addEventListener('click', () => { setTab('folder'); store.set('userTab', 'folder'); render(); persist(); });
+  $('tabExport').addEventListener('click', () => { setTab('export'); store.set('userTab', 'export'); render(); persist(); });
   $('pickFolder').addEventListener('click', async () => {
     if (window.showDirectoryPicker) {
       let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-model-documenter', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; $('folderInput').click(); return; }
       const list = []; try { await walkHandle(dir, dir.name, list); } catch (e) { $('folderMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(e.message || e)); return; }
-      try { await loadFolder(dir.name, list); } catch (err) { $('folderMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
+      try { await loadFolder(dir.name, list); share(dir.name, list, dir); } catch (err) { $('folderMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
     } else $('folderInput').click();
   });
   $('folderInput').addEventListener('change', async e => {
     const fl = [...e.target.files]; if (!fl.length) return;
     const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
     const list = fl.filter(f => !(f.webkitRelativePath || '').split('/').some(seg => SKIP_DIRS.has(seg))).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }));
-    try { await loadFolder(root, list); }
+    try { await loadFolder(root, list); share(root, list); }
     catch (err) { $('folderMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
     e.target.value = '';
   });
@@ -230,7 +231,8 @@ function init(){
     const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
     if (!item || !item.isDirectory) { $('folderMsg').innerHTML = msg('warn', 'Drop the project <b>folder</b>, not a file inside it.'); return; }
     const list = []; await walkEntry(item, '', list);
-    try { await loadFolder(item.name, list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file }))); } catch (err) { $('folderMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
+    const l2 = list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file }));
+    try { await loadFolder(item.name, l2); share(item.name, l2); } catch (err) { $('folderMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
   });
   $('projPick').addEventListener('change', () => { state.choice = $('projPick').value; loadChoice(); });
   $('exInput').addEventListener('input', () => {
@@ -260,6 +262,18 @@ function init(){
   document.addEventListener('click', e => { const b = e.target.closest('[data-copy=export]'); if (b) copyText(DAX_QUERY, b); });
 }
 init();
+// The folder is shared: chosen here, its model becomes every tool's model and the other PBIP tools get its report
+// pages; read in another tool, this page opens on it (unless it was cleared since)
+function share(root, list, handle){
+  if (!window.SF_SUITE || !SF_SUITE.pbipShare || !state.project) return;
+  SF_SUITE.pbipShare(root, list, handle).then(r => { if (r && r.shared) store.set('shared', String(SF_SUITE.get().savedAt)); }).catch(() => {});
+}
+window.mdSuite = async S => {
+  const d = S.pbipStored ? await S.pbipStored() : null; if (!d) return;
+  if (state.files && !state.example && store.get('shared') === String(d.savedAt)) return;
+  if (store.get('blank') === '1' && d.savedAt <= (+store.get('blankAt') || Infinity)) return;
+  try { await loadFolder(d.root, d.list, { keepTab: store.get('userTab') === 'export' }); store.set('shared', String(d.savedAt)); } catch (e) {}
+};
 
 /* ---------- Clear entries ---------- */
 (function(){

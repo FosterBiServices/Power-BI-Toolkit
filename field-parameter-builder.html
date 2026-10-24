@@ -2171,15 +2171,16 @@ init();
   const NL = '↵';
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const SKIP = new Set(['.git', 'node_modules', '.pbi', '.vs', 'StaticResources', 'RegisteredResources']);
-  const skipDir = n => SKIP.has(n) || /\.(Report|Dataset)$/i.test(n);
+  const skipDir = n => SKIP.has(n) || /\.Dataset$/i.test(n);
   const wanted = p => /\.SemanticModel\/(definition\/.+\.tmdl|model\.bim)$/i.test(p);
   const decode = async file => {
     const buf = await file.arrayBuffer();
     let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { t = new TextDecoder('windows-1252').decode(buf); }
     return t.replace(/^﻿/, '');
   };
-  // files the Connect step reads: the model's TMDL (or model.bim), plus report files on pages that check report pages
-  let FILE_RE = /\.(tmdl|bim)$/i;
+  // files the Connect step reads: the model's TMDL (or model.bim), and the report's files, which are kept for
+  // Model Linter, About This Report and Model Documenter so they don't ask for the folder again
+  const FILE_RE = /\.(tmdl|bim|json|pbir|pbip)$/i;
   async function walkHandle(dir, prefix, out){
     for await (const [name, h] of dir.entries()) {
       if (h.kind === 'directory') { if (!skipDir(name)) await walkHandle(h, prefix + '/' + name, out); }
@@ -2355,11 +2356,30 @@ init();
   const idb = fn => new Promise((res, rej) => { try { const o = indexedDB.open('sfpbi', 1); o.onupgradeneeded = () => o.result.createObjectStore('h'); o.onsuccess = () => { try { fn(o.result.transaction('h', 'readwrite').objectStore('h'), res, rej); } catch (e) { rej(e); } }; o.onerror = () => rej(o.error); } catch (e) { rej(e); } });
   const saveHandle = h => idb((st, res) => { const r = st.put(h, 'pbip'); r.onsuccess = () => res(); r.onerror = () => res(); }).catch(() => {});
   const getHandle = () => idb((st, res) => { const r = st.get('pbip'); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); }).catch(() => null);
+  // The folder's files (as text) from the last PBIP read, next to the handle, so pages that read report pages or
+  // the whole project open on the same folder. Valid while the shared export is still the one read from it.
+  const saveFiles = rec => idb((st, res) => { const r = st.put(rec, 'pbipFiles'); r.onsuccess = () => res(); r.onerror = () => res(); }).catch(() => {});
+  S.pbipStored = async () => {
+    const v = S.get(); if (!v || v.source !== 'pbip' || !window.indexedDB) return null;
+    const rec = await idb((st, res) => { const r = st.get('pbipFiles'); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); }).catch(() => null);
+    if (!rec || rec.savedAt !== v.savedAt) return null;
+    return { root: rec.root, name: rec.name, savedAt: rec.savedAt, list: rec.files.map(f => ({ path: f.path, file: new File([f.text], f.path.split('/').pop()) })) };
+  };
+  // Read a PBIP folder for every tool: its model becomes the shared export (source 'pbip') and its files are kept.
+  // list: [{ path, file }]. Returns S.pbipExport's result plus shared: true/false.
+  S.pbipShare = async (root, list, handle) => {
+    const files = [];
+    for (const { path, file } of list) if (FILE_RE.test(path) && !path.split('/').slice(1).some(skipDir) && file.size < 30 * 1024 * 1024) { try { files.push({ path, text: await decode(file) }); } catch (e) {} }
+    const r = S.pbipExport(files.filter(f => wanted(f.path)));
+    if (r.error) return r;
+    r.shared = S.set(r.text, r.name, 'pbip');
+    if (r.shared) { if (handle) await saveHandle(handle); await saveFiles({ root, name: r.name, savedAt: S.get().savedAt, files }); }
+    return r;
+  };
   // cfg (from S.hook): { input, prefix, mode, connect: { step: h2 id of the step that gets the choice, none: text for "No model" or false,
   //   exportOnly: [selectors shown only for the export], title, lede, retitle: { h2 id: text } } }
   S.connect = (cfg, ta, bar) => {
     const c = cfg.connect, h2 = document.getElementById(c.step); if (!h2) return null;
-    if (c.report) FILE_RE = /\.(tmdl|bim|json|pbir)$/i;
     const body = h2.closest('.step-body'), head = h2.closest('.step-head') || h2;
     const key = cfg.prefix + 'connect', get = k => { try { return localStorage.getItem(cfg.prefix + k); } catch (e) { return null; } }, set = (k, v) => { try { localStorage.setItem(cfg.prefix + k, v); } catch (e) {} };
     if (c.title) h2.textContent = c.title;
@@ -2404,20 +2424,26 @@ init();
     wrap.querySelector('.sc-choose').addEventListener('click', e => { const b = e.target.closest('[data-sc]'); if (b) choose(b.dataset.sc); });
     const load = async (root, list, handle) => {
       msg.innerHTML = '<div class="msg info">Reading &ldquo;' + esc(root) + '&rdquo;&hellip;</div>';
-      const r = S.pbipExport(await S.pbipFiles(list));
+      const r = await S.pbipShare(root, list, handle);
       if (r.error) { msg.innerHTML = '<div class="msg err">' + esc(r.error) + '</div>'; return; }
       S.freshStart(cfg.prefix, 'pbip:' + r.name);
       choice = 'pbip'; set('connect', 'pbip'); set('pbipName', r.name);
       try { localStorage.removeItem(cfg.prefix + 'blank'); } catch (e) {}
-      const shared = S.set(r.text, r.name, 'pbip');
-      if (handle) await saveHandle(handle);
+      const shared = r.shared;
       ta.value = cfg.mode === 'dates' ? S.dateColumns(r.text) : r.text; fire(); if (shared) onShared();
       const noDates = cfg.mode === 'dates' && !ta.value.trim();
       msg.innerHTML = '<div class="msg ' + (noDates ? 'warn' : 'ok') + '">' + (noDates ? '' : '&#10003; ') + 'Read <b>' + esc(r.name) + '</b>: ' + r.tables + ' tables, ' + r.measures + ' measures.' + (noDates ? ' It has no date columns, so set the years yourself in the next step.' : '') + (r.others.length ? ' This folder has more models (' + esc(r.others.join(', ')) + '); choose that project&rsquo;s own folder to use one of them.' : '') + (shared ? ' Every tool uses it now, so you don&rsquo;t connect again in the others.' : ' It&rsquo;s too large to share with the other tools (browser storage limit).') + ' Read it again after you change the model.</div>';
       render();
       // pages that also check report pages read them from the same folder
-      if (c.report) document.dispatchEvent(new CustomEvent('sf-pbip-folder', { detail: { root, list } }));
+      if (c.report) { document.dispatchEvent(new CustomEvent('sf-pbip-folder', { detail: { root, list } })); if (shared) set('repFrom', String(S.get().savedAt)); }
     };
+    // ...and when the folder was read in another tool, from the files kept with it (once per read, so Remove sticks)
+    if (c.report) setTimeout(async () => {
+      if (choice !== 'pbip') return;
+      const d = await S.pbipStored(); if (!d || get('repFrom') === String(d.savedAt)) return;
+      set('repFrom', String(d.savedAt));
+      document.dispatchEvent(new CustomEvent('sf-pbip-folder', { detail: { root: d.root, list: d.list } }));
+    }, 0);
     const fail = e => { msg.innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(e.message || e) + '</div>'; };
     wrap.querySelector('[data-sc-pick]').addEventListener('click', async () => {
       if (window.showDirectoryPicker) {
@@ -2470,7 +2496,7 @@ init();
       const now = String(Date.now());
       S.PREFIXES.forEach(p => { localStorage.setItem(p + 'blank', '1'); localStorage.setItem(p + 'blankAt', now); });
     } catch (e) {}
-    try { const o = indexedDB.open('sfpbi', 1); o.onupgradeneeded = () => o.result.createObjectStore('h'); o.onsuccess = () => { try { o.result.transaction('h', 'readwrite').objectStore('h').delete('pbip'); } catch (e) {} }; } catch (e) {}
+    try { const o = indexedDB.open('sfpbi', 1); o.onupgradeneeded = () => o.result.createObjectStore('h'); o.onsuccess = () => { try { const st = o.result.transaction('h', 'readwrite').objectStore('h'); st.delete('pbip'); st.delete('pbipFiles'); } catch (e) {} }; } catch (e) {}
     window.dispatchEvent(new Event('sfpbi-cleared'));
   };
   // A second choice in each page's Clear entries confirm: this page only, or every page

@@ -1,0 +1,30 @@
+table 'Sales Metric'
+
+	column 'Sales Metric'
+		summarizeBy: none
+		sourceColumn: [Value1]
+		sortByColumn: 'Sales Metric Order'
+
+		extendedProperty ParameterMetadata =
+				{
+				  "version": 3,
+				  "kind": 2
+				}
+
+	column 'Sales Metric Fields'
+		isHidden
+		summarizeBy: none
+		sourceColumn: [Value2]
+
+	column 'Sales Metric Order'
+		isHidden
+		summarizeBy: sum
+		sourceColumn: [Value3]
+
+	partition 'Sales Metric' = calculated
+		mode: import
+		source =
+				{
+				    ("Total Sales", NAMEOF('_Measures'[Total Sales]), 0),
+				    ("Order Count", NAMEOF('_Measures'[Order Count]), 1)
+				}

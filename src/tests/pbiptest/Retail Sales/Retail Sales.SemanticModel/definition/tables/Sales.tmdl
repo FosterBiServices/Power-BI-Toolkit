@@ -1,0 +1,53 @@
+table Sales
+	lineageTag: 0a1b2c3d-0000-0000-0000-000000000010
+
+	column CustomerKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: CustomerKey
+
+	column 'Order Date'
+		dataType: dateTime
+		formatString: Long Date
+		summarizeBy: none
+		sourceColumn: Order Date
+
+		variation Variation
+			isDefault
+			relationship: abc
+			defaultHierarchy: LocalDateTable_x.'Date Hierarchy'
+
+	column 'Ship Date'
+		dataType: dateTime
+		isHidden
+		summarizeBy: none
+		sourceColumn: Ship Date
+
+	column 'Net Amount'
+		dataType: decimal
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		summarizeBy: sum
+		sourceColumn: Net Amount
+
+	column Quantity
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: Quantity
+
+	column 'Line Margin' =
+			VAR _cost = Sales[Quantity] * 2
+			RETURN
+				Sales[Net Amount] - _cost
+		dataType: double
+		summarizeBy: sum
+
+	partition Sales = m
+		mode: import
+		source = ```
+				let
+				    Source = Sql.Database("server", "db")
+				in
+				    Source
+				```
