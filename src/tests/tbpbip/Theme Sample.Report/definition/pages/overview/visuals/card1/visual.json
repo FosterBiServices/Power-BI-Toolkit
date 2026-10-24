@@ -1,0 +1,9 @@
+{"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json","name":"card1","position":{"x":540,"y":20,"z":1,"height":120,"width":240},
+"visual":{"visualType":"cardVisual",
+ "query":{"queryState":{"Data":{"projections":[{"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Sales"}},"Property":"Total Sales"}}}]}}},
+ "objects":{
+  "value":[{"properties":{"fontSize":{"expr":{"Literal":{"Value":"32D"}}},"bold":{"expr":{"Literal":{"Value":"true"}}}},"selector":{"id":"default"}}],
+  "accentBar":[{"properties":{"show":{"expr":{"Literal":{"Value":"false"}}}},"selector":{"id":"default"}}],
+  "label":[{"properties":{"show":{"expr":{"Literal":{"Value":"false"}}}},"selector":{"metadata":"Sales.Total Sales"}}]
+ },
+ "visualContainerObjects":{"dropShadow":[{"properties":{"show":{"expr":{"Literal":{"Value":"true"}}}}}]}}}

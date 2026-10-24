@@ -234,6 +234,7 @@ const TB = (function(){
       return a[0];
     };
     const write = (types, k, x, onlySet) => VIS_SETTINGS[k].set.forEach(([t, obj, prop]) => (t ? types.filter(y => y === t) : types).forEach(type => {
+      if (type !== '*' && !schemaHas(type, obj, prop)) return;
       const e = entry(type, obj, !onlySet || type === '*'); if (!e) return;
       if (onlySet && type !== '*' && !(prop in e)) return;
       e[prop] = val(k, x);
@@ -253,6 +254,143 @@ const TB = (function(){
     VIS_GROUPS.forEach(g => { const s = vis.groups[g.id]; if (s) Object.keys(s).forEach(k => { write(g.types, k, s[k], false); special(g.types, k, s[k]); }); });
   }
 
+  /* ---------- Microsoft's theme schema (TB_SCHEMA, when the page has it): every card and property of every visual ---------- */
+  const SCH = () => typeof TB_SCHEMA !== 'undefined' ? TB_SCHEMA : null;
+  const objCache = {};
+  // { card name: { title, props: { property: [kind, title, ...] } } } for a visual type; "*" (all visuals) gets every card
+  function schemaObjects(type){
+    const S = SCH(); if (!S) return null;
+    if (objCache[type]) return objCache[type];
+    const out = {}, add = i => { const [name, title, pi] = S.o[i]; const o = out[name] = out[name] || { title: title, props: {} }; if (!o.title) o.title = title; Object.assign(o.props, S.p[pi]); };
+    if (S.t[type]) S.t[type].forEach(add); else if (type === '*') Object.keys(S.t).forEach(t => S.t[t].forEach(add)); else return null;
+    return objCache[type] = out;
+  }
+  const schemaTypes = () => { const S = SCH(); return S ? Object.keys(S.t) : []; };
+  // true when the schema knows the property for the type (or there's no schema to ask)
+  function schemaHas(type, obj, prop){
+    const so = schemaObjects(type); if (!so) return true;
+    return !!(so[obj] && (!prop || so[obj].props[prop]));
+  }
+  const isFill = v => !!(v && typeof v === 'object' && v.solid && typeof v.solid === 'object' && v.solid.color !== undefined
+    && (typeof v.solid.color === 'string' ? !!norm(v.solid.color) : !!(v.solid.color && v.solid.color.expr && v.solid.color.expr.ThemeDataColor && Number.isInteger(v.solid.color.expr.ThemeDataColor.ColorId))));
+  // a value that fits the property's kind, or undefined
+  function fitValue(spec, v){
+    if (!spec) return undefined;
+    const k = spec[0];
+    if (k === 'b') return typeof v === 'boolean' ? v : undefined;
+    if (k === 'n' || k === 'i') { if (typeof v !== 'number' || !isFinite(v)) return undefined; if (k === 'i') v = Math.round(v); if (spec[2] != null && v < spec[2]) v = spec[2]; if (spec[3] != null && v > spec[3]) v = spec[3]; return v; }
+    if (k === 's') return typeof v === 'string' && v.length <= 500 ? v : undefined;
+    if (k === 'e') return spec[2].some(o => o[0] === v) ? v : undefined;
+    if (k === 'c') { if (isFill(v)) return typeof v.solid.color === 'string' ? { solid: { color: norm(v.solid.color) } } : { solid: { color: { expr: { ThemeDataColor: { ColorId: v.solid.color.expr.ThemeDataColor.ColorId, Percent: +v.solid.color.expr.ThemeDataColor.Percent || 0 } } } } }; return undefined; }
+    return undefined;
+  }
+  /* Property changes: { visual type: { card: { property: value } } }, written last so they win over everything else */
+  function cleanCustom(c){
+    const out = {}; if (!c || typeof c !== 'object' || Array.isArray(c)) return out;
+    Object.keys(c).forEach(t => { const so = schemaObjects(t), ct = c[t]; if (!so || !ct || typeof ct !== 'object') return;
+      Object.keys(ct).forEach(o => { const props = so[o] && so[o].props, co = ct[o]; if (!props || !co || typeof co !== 'object') return;
+        Object.keys(co).forEach(p => { const v = fitValue(props[p], co[p]); if (v !== undefined) { out[t] = out[t] || {}; out[t][o] = out[t][o] || {}; out[t][o][p] = v; } }); }); });
+    return out;
+  }
+  function applyCustom(vs, custom){
+    Object.keys(custom).forEach(t => Object.keys(custom[t]).forEach(o => {
+      const s = vs[t] = vs[t] || {}; s['*'] = s['*'] || {};
+      let a = s['*'][o];
+      if (!Array.isArray(a) || !a.length || !a[0] || typeof a[0] !== 'object') a = s['*'][o] = [t === 'cardVisual' ? { $id: 'default' } : {}];
+      const e = a.find(x => x && (x.$id === undefined || x.$id === 'default')) || a[0];
+      Object.assign(e, JSON.parse(JSON.stringify(custom[t][o])));
+    }));
+  }
+  const countCustom = c => Object.keys(c || {}).reduce((n, t) => n + Object.keys(c[t]).reduce((m, o) => m + Object.keys(c[t][o]).length, 0), 0);
+
+  /* ---------- Settings from a visual in a report: PBIR visual.json, or the older report.json ---------- */
+  // A report stores each value as an expression: Literal 'text', 12D, 3L, true. Colors are a solid fill of one.
+  function literal(v){
+    if (!v || typeof v !== 'object') return undefined;
+    const lit = v.expr && v.expr.Literal; if (!lit || typeof lit.Value !== 'string') return undefined;
+    const x = lit.Value;
+    if (x === 'true' || x === 'false') return x === 'true';
+    if (/^-?\d+(\.\d+)?[DLM]?$/.test(x)) return parseFloat(x);
+    const m = /^'([\s\S]*)'$/.exec(x); if (m) return m[1].replace(/''/g, "'");
+    return undefined;
+  }
+  function reportValue(spec, v){
+    if (!spec) return undefined;
+    if (spec[0] === 'c') {
+      const c = v && v.solid && v.solid.color; if (!c) return undefined;
+      if (c.expr && c.expr.ThemeDataColor) return fitValue(spec, { solid: { color: c } });
+      const h = literal(c); return typeof h === 'string' && norm(h) ? { solid: { color: norm(h) } } : undefined;
+    }
+    return fitValue(spec, literal(v));
+  }
+  // Each visual's formatting as theme settings, with what couldn't be carried over
+  const SKIP_PROPS = { title: ['text'], subTitle: ['text'], visualLink: ['bookmark', 'webUrl', 'navigationSection', 'drillthroughSection'] };
+  function visualSettings(type, groups){
+    const so = schemaObjects(type), settings = {}, skipped = [];
+    Object.keys(groups).forEach(o => { const arr = groups[o]; if (!Array.isArray(arr)) return;
+      arr.forEach(entry => {
+        if (!entry || typeof entry !== 'object' || !entry.properties) return;
+        const sel = entry.selector;
+        if (sel && !(sel.id === 'default' && Object.keys(sel).length === 1)) { skipped.push(o + ' (for one series or field)'); return; }
+        Object.keys(entry.properties).forEach(p => {
+          if ((SKIP_PROPS[o] || []).indexOf(p) >= 0) return;
+          const spec = so && so[o] && so[o].props[p];
+          if (so && !spec) { skipped.push(o + '.' + p + ' (not in the theme schema for this visual)'); return; }
+          const v = so ? reportValue(spec, entry.properties[p]) : undefined;
+          if (v === undefined) { skipped.push(o + '.' + p + ' (set by a field or rule, not a fixed value)'); return; }
+          settings[o] = settings[o] || {}; settings[o][p] = v;
+        });
+      }); });
+    return { settings, skipped: [...new Set(skipped)] };
+  }
+  const titleOfVisual = vc => { const t = vc && vc.title && vc.title[0] && vc.title[0].properties && literal(vc.title[0].properties.text); return typeof t === 'string' ? t : ''; };
+  // files: [{ path, text }] from a PBIP folder, visual.json files or a pasted report.json. Returns the visuals found.
+  function readVisuals(files){
+    const out = [], pages = {};
+    const parse = t => { try { return JSON.parse(String(t).replace(/^\uFEFF/, '')); } catch (e) { return null; } };
+    files.forEach(f => { if (/(^|[\/\\])page\.json$/i.test(f.path)) { const j = parse(f.text); if (j && j.displayName) pages[f.path.replace(/[\/\\]page\.json$/i, '')] = String(j.displayName); } });
+    const add = (type, objects, vco, page, name) => {
+      if (typeof type !== 'string' || !type) return;
+      const a = visualSettings(type, objects || {}), b = visualSettings(type, vco || {});
+      const settings = a.settings; Object.keys(b.settings).forEach(o => settings[o] = Object.assign(settings[o] || {}, b.settings[o]));
+      out.push({ type, page: page || '', name: name || titleOfVisual(vco) || titleOfVisual(objects) || '', known: !!schemaObjects(type), settings, skipped: a.skipped.concat(b.skipped), count: countCustom({ x: settings }) });
+    };
+    files.forEach(f => {
+      const j = parse(f.text); if (!j || typeof j !== 'object') return;
+      if (j.visual && typeof j.visual === 'object') {   // PBIR: definition/pages/<page>/visuals/<visual>/visual.json
+        const dir = f.path.replace(/[\/\\]visuals[\/\\][^\/\\]+[\/\\]visual\.json$/i, '');
+        add(j.visual.visualType, j.visual.objects, j.visual.visualContainerObjects, pages[dir] || '', '');
+      } else if (Array.isArray(j.sections)) {          // older report.json: each visual's config is a JSON string
+        j.sections.forEach(sec => (sec.visualContainers || []).forEach(vc => {
+          const c = typeof vc.config === 'string' ? parse(vc.config) : vc.config, sv = c && c.singleVisual;
+          if (sv) add(sv.visualType, sv.objects, sv.vcObjects, sec.displayName || '', '');
+        }));
+      } else if (j.visualType || j.singleVisual) {     // a visual's config pasted on its own
+        const sv = j.singleVisual || j; add(sv.visualType, sv.objects, sv.vcObjects || sv.visualContainerObjects, '', '');
+      }
+    });
+    return out;
+  }
+
+  /* ---------- Start from a theme file ---------- */
+  function readTheme(text){
+    let t; try { t = JSON.parse(String(text).replace(/^\uFEFF/, '')); } catch (e) { return { error: 'This isn\u2019t valid JSON.' }; }
+    if (!t || typeof t !== 'object' || Array.isArray(t)) return { error: 'This isn\u2019t a theme file.' };
+    const dc = Array.isArray(t.dataColors) ? t.dataColors.map(norm).filter(Boolean) : [];
+    if (!dc.length && !(t.visualStyles && typeof t.visualStyles === 'object')) return { error: 'No dataColors or visualStyles found, so this doesn\u2019t look like a Power BI theme.' };
+    const pageBg = (() => { try { const c = t.visualStyles.page['*'].background[0].color.solid.color; return typeof c === 'string' ? norm(c) : null; } catch (e) { return null; } })();
+    const bg = norm(t.background);
+    const tc = t.textClasses && typeof t.textClasses === 'object' ? (t.textClasses.label || t.textClasses.callout || t.textClasses.title) : null;
+    const patch = { name: typeof t.name === 'string' ? t.name.slice(0, 120) : '' };
+    if (dc.length) { patch.seeds = [dc[0]]; patch.count = Math.min(Math.max(dc.length, 1), 40); patch.colors = dc.slice(0, 40); }
+    if (pageBg) { patch.background = pageBg; patch.visualBg = bg && bg !== pageBg ? bg : 'transparent'; } else if (bg) { patch.background = bg; patch.visualBg = 'transparent'; }
+    if (norm(t.foreground)) { patch.textMode = 'custom'; patch.textColor = norm(t.foreground); }
+    ['good', 'neutral', 'bad'].forEach(k => { if (norm(t[k])) patch[k] = norm(t[k]); });
+    if (tc && typeof tc.fontFace === 'string' && tc.fontFace.trim()) patch.font = tc.fontFace.split(',')[0].replace(/['"]/g, '').trim().slice(0, 60);
+    const base = {}; ['visualStyles', 'textClasses', 'icons'].forEach(k => { if (t[k] && typeof t[k] === 'object') base[k] = t[k]; });
+    return { patch, base, name: patch.name };
+  }
+
   function build(o){
     const r = roles(o);
     const map = { 1: r.text, 9: r.bad, 10: r.good, 11: r.neutral, 15: r.grey45, 16: r.grey10, 17: r.grey70 };
@@ -269,7 +407,10 @@ const TB = (function(){
       }
       return v;
     };
-    const t = walk(JSON.parse(JSON.stringify(TB_TEMPLATE)));
+    // a theme file the user started from replaces the built-in visual styles, text classes and icons
+    const b = o.base && typeof o.base === 'object' ? o.base : null;
+    const t = walk(JSON.parse(JSON.stringify(b ? Object.assign({}, TB_TEMPLATE, { visualStyles: b.visualStyles || {}, textClasses: b.textClasses || TB_TEMPLATE.textClasses, icons: b.icons || TB_TEMPLATE.icons }) : TB_TEMPLATE)));
+    if (!t.visualStyles || typeof t.visualStyles !== 'object' || Array.isArray(t.visualStyles)) t.visualStyles = {};
     // Power BI's visual type is "treemap"; styles under "treeMap" are ignored
     if (t.visualStyles && t.visualStyles.treeMap) { t.visualStyles.treemap = Object.assign({}, t.visualStyles.treeMap, t.visualStyles.treemap || {}); delete t.visualStyles.treeMap; }
     t.name = (o.name || 'My theme').trim() || 'My theme';
@@ -295,6 +436,7 @@ const TB = (function(){
     const pg = vs.page = vs.page || {}; pg['*'] = pg['*'] || {};
     pg['*'].background = [{ color: { solid: { color: r.page } }, transparency: 0 }];
     pg['*'].outspace = [{ color: { solid: { color: r.page } }, transparency: 0 }];
+    applyCustom(vs, cleanCustom(o.custom));
     // keep a tidy key order: name and colors first, then the rest of the template
     const head = ['name', 'dataColors', 'background', 'foreground', 'foregroundLight', 'foregroundNeutralSecondary', 'foregroundNeutralTertiary', 'backgroundLight', 'backgroundNeutral', 'tableAccent', 'hyperlink', 'good', 'neutral', 'bad', 'maximum', 'center', 'minimum', 'null', 'firstLevelElements', 'secondLevelElements'];
     const out = {}; head.forEach(k => { if (k in t) out[k] = t[k]; }); Object.keys(t).forEach(k => { if (!(k in out)) out[k] = t[k]; });
@@ -320,6 +462,6 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/
