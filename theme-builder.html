@@ -371,8 +371,10 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
       </div>
       <div class="msg info" id="baseNote" hidden></div>
       <details class="extra" id="themeBox"><summary>Already have a theme? Start from your theme file</summary><div class="extra-body">
-        <p class="note small">Its colors and font fill the steps below, and its visual styles replace the built-in ones. What you change on this page is added on top. In a PBIP project, a custom theme is in <span class="mono">StaticResources/RegisteredResources</span>.</p>
-        <div class="reply-actions"><button type="button" class="btn" id="openTheme">Open a theme file</button><input type="file" id="themeFile" accept=".json,application/json" hidden></div>
+        <p class="note small">Its colors and font fill the steps below, and its visual styles replace the built-in ones. What you change on this page is added on top. Or pick a PBIP report folder and the page finds the theme the report uses.</p>
+        <div class="reply-actions"><button type="button" class="btn" id="openTheme">Open a theme file</button><input type="file" id="themeFile" accept=".json,application/json" hidden>
+          <button type="button" class="btn" id="pickReportTheme">Pick a PBIP report folder</button><input type="file" id="reportThemeInput" webkitdirectory multiple hidden></div>
+        <div class="theme-ask" id="themeAsk1" hidden></div>
         <label class="small" for="themePaste">Or paste the theme JSON</label>
         <textarea id="themePaste" rows="5" spellcheck="false" placeholder='{ "name": "My theme", "dataColors": [ ... ] }'></textarea>
         <div class="reply-actions"><button type="button" class="btn" id="themeUse">Use this theme</button></div>
@@ -452,6 +454,8 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
           <textarea id="visualPaste" rows="5" spellcheck="false" placeholder='{ "visual": { "visualType": "clusteredColumnChart", "objects": { ... } } }'></textarea>
           <div class="reply-actions"><button type="button" class="btn" id="visualUse">Read it</button></div>
         </div></details>
+        <div class="theme-ask" id="themeAsk3" hidden></div>
+        <div id="themeDone3" role="status"></div>
         <div id="fromVisual" role="status"></div>
       </div>
 
@@ -889,6 +893,28 @@ const TB = (function(){
     return out;
   }
 
+  /* The themes in a PBIP report folder: its custom theme (StaticResources/RegisteredResources) and the Power BI
+     base theme (StaticResources/SharedResources/BaseThemes). report.json's themeCollection says which ones it uses. */
+  function findThemes(files){
+    const parse = t => { try { return JSON.parse(String(t).replace(/^\uFEFF/, '')); } catch (e) { return null; } };
+    const base = p => p.split(/[\/\\]/).pop();
+    let used = null;
+    files.forEach(f => { if (!/(^|[\/\\])report\.json$/i.test(f.path)) return; const j = parse(f.text); if (!j) return;
+      let tc = j.themeCollection; if (!tc && typeof j.config === 'string') { const c = parse(j.config); tc = c && c.themeCollection; }
+      if (tc && typeof tc === 'object') used = { custom: tc.customTheme && tc.customTheme.name, base: tc.baseTheme && tc.baseTheme.name }; });
+    const out = [];
+    files.forEach(f => {
+      const kind = /[\/\\]RegisteredResources[\/\\][^\/\\]+\.json$/i.test(f.path) ? 'custom' : /[\/\\]BaseThemes[\/\\][^\/\\]+\.json$/i.test(f.path) ? 'base' : '';
+      if (!kind) return;
+      const r = readTheme(f.text); if (r.error) return;
+      const file = base(f.path), stem = file.replace(/\.json$/i, '');
+      const inUse = !used || (kind === 'custom' ? used.custom === file || used.custom === stem : used.base === stem || used.base === file);
+      out.push({ kind, file, name: r.name || stem, used: inUse, text: f.text });
+    });
+    // the custom theme in use first, then the base theme in use; themes the report no longer uses are left out
+    return out.filter(t => t.used).sort((a, b) => (a.kind === 'custom' ? 0 : 1) - (b.kind === 'custom' ? 0 : 1));
+  }
+
   /* ---------- Start from a theme file ---------- */
   function readTheme(text){
     let t; try { t = JSON.parse(String(text).replace(/^\uFEFF/, '')); } catch (e) { return { error: 'This isn\u2019t valid JSON.' }; }
@@ -979,7 +1005,7 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, findThemes, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/
 
@@ -1184,7 +1210,24 @@ function renderFound(msg){
     + '<p class="note small">If two checked visuals are the same kind, the lower one wins where they differ.</p>'
     + '<div class="reply-actions"><button type="button" class="btn primary" id="addFound">Add the checked visuals to the theme</button></div>';
 }
+/* The theme a PBIP report already uses: ask whether to start from it, take only its colors, or keep what's here */
+const pbip = { themes: [] };
+function renderThemeAsk(){
+  const t = pbip.themes[0];
+  document.querySelectorAll('.theme-ask').forEach(el => { el.innerHTML = ''; el.hidden = true; });
+  if (!t) return;
+  const el = $(pbip.where === 'step1' ? 'themeAsk1' : 'themeAsk3'); if (!el) return;
+  el.hidden = false;
+  el.innerHTML = '<div class="msg info"><b>This report uses ' + (t.kind === 'custom' ? 'the theme ' + esc(t.name) : 'Power BI\u2019s built-in theme ' + esc(t.name)) + '.</b> '
+    + (t.kind === 'custom' ? 'Do you want to use it here?' : 'It has no theme of its own. Use the built-in theme&rsquo;s colors here?')
+    + '<div class="reply-actions"><button type="button" class="btn' + (t.kind === 'custom' ? ' primary' : '') + '" data-tuse="all">Start from this theme</button>'
+    + '<button type="button" class="btn" data-tuse="colors">Use only its colors</button>'
+    + '<button type="button" class="btn' + (t.kind === 'custom' ? '' : ' primary') + '" data-tuse="keep">Keep what I have</button></div>'
+    + '<p class="note small">Start from this theme: its colors, font and visual styles replace this page&rsquo;s, and your changes here are added on top, so you can update it and import it back. Only its colors: the data colors, backgrounds, text, good and bad colors and font change, and your visual settings stay.</p></div>';
+}
 function readFiles(files, how){
+  if (how === 'folder' || how === 'step1') { pbip.themes = TB.findThemes(files); pbip.where = how === 'step1' ? 'step1' : 'step3'; renderThemeAsk(); }
+  if (how === 'step1') { if (!pbip.themes.length) $('themeMsg').innerHTML = '<div class="msg warn">No theme found in that folder. Pick the .Report folder of a PBIP project; its theme files are in StaticResources.</div>'; else $('themeMsg').innerHTML = ''; return; }
   found.list = TB.readVisuals(files);
   if (!found.list.length) renderFound({ level: 'warn', text: how === 'paste' ? 'No visual found in what you pasted. Paste a visual.json from a PBIP report (definition/pages/.../visuals/.../visual.json).' : 'No visuals found. Pick the .Report folder of a PBIP project, or its visual.json files.' });
   else renderFound({ level: 'ok', text: 'Found ' + found.list.length + ' visual' + (found.list.length === 1 ? '' : 's') + '. Check the ones whose formatting you want in the theme.' });
@@ -1382,19 +1425,34 @@ function init(){
     renderEvery(); change(false);
   });
   // start from a theme file
-  const useTheme = text => {
-    const r = TB.readTheme(text);
-    if (r.error) { $('themeMsg').innerHTML = '<div class="msg err">' + esc(r.error) + '</div>'; return; }
-    const c = Object.assign(blankCfg(), r.patch, { base: r.base.visualStyles ? r.base : null, baseName: r.name || '' });
-    if (r.patch.colors) { const pal = TB.palette(c.seeds, c.count, c.style); c.overrides = {}; r.patch.colors.forEach((h, i) => { if (i && pal[i] !== h) c.overrides[i] = h; }); }
+  // 'all' starts from the theme (colors, font and visual styles); 'colors' takes only its colors and font
+  const COLOR_KEYS = ['seeds', 'count', 'background', 'visualBg', 'textMode', 'textColor', 'good', 'neutral', 'bad', 'font'];
+  const useTheme = (text, mode, msgEl) => {
+    const r = TB.readTheme(text), msg = msgEl || $('themeMsg');
+    if (r.error) { msg.innerHTML = '<div class="msg err">' + esc(r.error) + '</div>'; return; }
+    let c;
+    if (mode === 'colors') { c = Object.assign({}, state.cfg); COLOR_KEYS.forEach(k => { if (r.patch[k] !== undefined) c[k] = r.patch[k]; }); if (!c.name && r.patch.name) c.name = r.patch.name; c.style = 'varied'; }
+    else c = Object.assign(blankCfg(), r.patch, { base: r.base.visualStyles ? r.base : null, baseName: r.name || '' });
+    c.overrides = {};
+    if (r.patch.colors) { const pal = TB.palette(c.seeds, c.count, c.style); r.patch.colors.forEach((h, i) => { if (i && pal[i] !== h) c.overrides[i] = h; }); }
     delete c.colors;
     state.cfg = c; state.alt = -1;
-    $('themeMsg').innerHTML = '<div class="msg ok">Theme loaded' + (r.name ? ': ' + esc(r.name) : '') + '. Its colors are in Step 2 and its visual styles are the starting point for Step 3.</div>';
+    msg.innerHTML = '<div class="msg ok">' + (mode === 'colors' ? 'Colors taken from ' + esc(r.name || 'the theme') + '. They&rsquo;re in Steps 1 and 2; your visual settings stayed.' : 'Theme loaded' + (r.name ? ': ' + esc(r.name) : '') + '. Its colors are in Step 2 and its visual styles are the starting point for Step 3.') + '</div>';
     $('themePaste').value = '';
     change(true);
   };
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-tuse]'); if (!b) return;
+    const t = pbip.themes[0], box = b.closest('.theme-ask'), mode = b.dataset.tuse;
+    pbip.themes = []; renderThemeAsk();
+    if (!t || mode === 'keep') return;
+    const msg = box && box.id === 'themeAsk1' ? $('themeMsg') : $('themeDone3');
+    useTheme(t.text, mode, msg);
+  });
+  $('pickReportTheme').addEventListener('click', () => $('reportThemeInput').click());
+  $('reportThemeInput').addEventListener('change', e => { const fl = e.target.files; if (!fl || !fl.length) return; readAll(fl).then(files => { readFiles(files, 'step1'); e.target.value = ''; }); });
   $('openTheme').addEventListener('click', () => $('themeFile').click());
-  $('themeFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (!f) return; f.text().then(useTheme, () => {}); e.target.value = ''; });
+  $('themeFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (!f) return; f.text().then(t => useTheme(t), () => {}); e.target.value = ''; });
   $('themeUse').addEventListener('click', () => useTheme($('themePaste').value));
   $('baseNote').addEventListener('click', e => { if (!e.target.closest('#dropBase')) return; state.cfg.base = null; state.cfg.baseName = ''; change(true); });
   $('bubble').addEventListener('change', () => { state.cfg.bubble = +$('bubble').value || 0; change(false); });

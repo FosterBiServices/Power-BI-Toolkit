@@ -35,8 +35,10 @@
       </div>
       <div class="msg info" id="baseNote" hidden></div>
       <details class="extra" id="themeBox"><summary>Already have a theme? Start from your theme file</summary><div class="extra-body">
-        <p class="note small">Its colors and font fill the steps below, and its visual styles replace the built-in ones. What you change on this page is added on top. In a PBIP project, a custom theme is in <span class="mono">StaticResources/RegisteredResources</span>.</p>
-        <div class="reply-actions"><button type="button" class="btn" id="openTheme">Open a theme file</button><input type="file" id="themeFile" accept=".json,application/json" hidden></div>
+        <p class="note small">Its colors and font fill the steps below, and its visual styles replace the built-in ones. What you change on this page is added on top. Or pick a PBIP report folder and the page finds the theme the report uses.</p>
+        <div class="reply-actions"><button type="button" class="btn" id="openTheme">Open a theme file</button><input type="file" id="themeFile" accept=".json,application/json" hidden>
+          <button type="button" class="btn" id="pickReportTheme">Pick a PBIP report folder</button><input type="file" id="reportThemeInput" webkitdirectory multiple hidden></div>
+        <div class="theme-ask" id="themeAsk1" hidden></div>
         <label class="small" for="themePaste">Or paste the theme JSON</label>
         <textarea id="themePaste" rows="5" spellcheck="false" placeholder='{ "name": "My theme", "dataColors": [ ... ] }'></textarea>
         <div class="reply-actions"><button type="button" class="btn" id="themeUse">Use this theme</button></div>
@@ -116,6 +118,8 @@
           <textarea id="visualPaste" rows="5" spellcheck="false" placeholder='{ "visual": { "visualType": "clusteredColumnChart", "objects": { ... } } }'></textarea>
           <div class="reply-actions"><button type="button" class="btn" id="visualUse">Read it</button></div>
         </div></details>
+        <div class="theme-ask" id="themeAsk3" hidden></div>
+        <div id="themeDone3" role="status"></div>
         <div id="fromVisual" role="status"></div>
       </div>
 

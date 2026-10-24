@@ -372,6 +372,28 @@ const TB = (function(){
     return out;
   }
 
+  /* The themes in a PBIP report folder: its custom theme (StaticResources/RegisteredResources) and the Power BI
+     base theme (StaticResources/SharedResources/BaseThemes). report.json's themeCollection says which ones it uses. */
+  function findThemes(files){
+    const parse = t => { try { return JSON.parse(String(t).replace(/^\uFEFF/, '')); } catch (e) { return null; } };
+    const base = p => p.split(/[\/\\]/).pop();
+    let used = null;
+    files.forEach(f => { if (!/(^|[\/\\])report\.json$/i.test(f.path)) return; const j = parse(f.text); if (!j) return;
+      let tc = j.themeCollection; if (!tc && typeof j.config === 'string') { const c = parse(j.config); tc = c && c.themeCollection; }
+      if (tc && typeof tc === 'object') used = { custom: tc.customTheme && tc.customTheme.name, base: tc.baseTheme && tc.baseTheme.name }; });
+    const out = [];
+    files.forEach(f => {
+      const kind = /[\/\\]RegisteredResources[\/\\][^\/\\]+\.json$/i.test(f.path) ? 'custom' : /[\/\\]BaseThemes[\/\\][^\/\\]+\.json$/i.test(f.path) ? 'base' : '';
+      if (!kind) return;
+      const r = readTheme(f.text); if (r.error) return;
+      const file = base(f.path), stem = file.replace(/\.json$/i, '');
+      const inUse = !used || (kind === 'custom' ? used.custom === file || used.custom === stem : used.base === stem || used.base === file);
+      out.push({ kind, file, name: r.name || stem, used: inUse, text: f.text });
+    });
+    // the custom theme in use first, then the base theme in use; themes the report no longer uses are left out
+    return out.filter(t => t.used).sort((a, b) => (a.kind === 'custom' ? 0 : 1) - (b.kind === 'custom' ? 0 : 1));
+  }
+
   /* ---------- Start from a theme file ---------- */
   function readTheme(text){
     let t; try { t = JSON.parse(String(text).replace(/^\uFEFF/, '')); } catch (e) { return { error: 'This isn\u2019t valid JSON.' }; }
@@ -462,6 +484,6 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, findThemes, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/
