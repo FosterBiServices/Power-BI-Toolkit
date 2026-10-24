@@ -70,6 +70,16 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
 .alt-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
 .alt-txt .mono{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .alt-why{font-size:12px;color:var(--muted)}
+.vfields{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px 14px}
+.vfields .field{min-width:0}
+.vfields select{width:100%;max-width:100%}
+.vfields select.set{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--gold)}
+.vgroups{display:flex;flex-direction:column;gap:8px}
+.vgroup{border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.vgroup>summary{cursor:pointer;padding:10px 14px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.vgroup>.vfields{padding:4px 14px 14px}
+.vtypes{flex-basis:100%;font-size:12px;color:var(--muted)}
+.vcount{font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--info-soft);color:var(--info)}
 '''
 logo=p[318]
 src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+logo+'\n'+body+'\n<script>\n'+tpl+'\n'+tb+'\n'+ui+'</script>\n'

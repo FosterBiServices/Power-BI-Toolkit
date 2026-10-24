@@ -1,7 +1,7 @@
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>Theme Builder</h1>
-        <p class="lede">Start from one brand color. The page builds the data palette, text, background, good and bad colors, and a full report theme with styles for every common visual, checks it for readability and color blindness, and gives you the theme file to import. No AI needed.</p>
+        <p class="lede">Start from one brand color. The page builds the data palette, text, background, good and bad colors, and a full report theme with styles for every common visual (you can set titles, borders, legends and more for all visuals or one kind), checks it for readability and color blindness, and gives you the theme file to import. No AI needed.</p>
       </div>
       <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
@@ -87,11 +87,16 @@
     <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
-        <h2 id="s3">Preview</h2>
-        <p>A sketch of a report page with the theme applied, to judge the colors together. Power BI&rsquo;s own rendering will differ in detail.</p>
+        <h2 id="s3">Visual settings</h2>
+        <p>How visuals look when you add them: titles, borders, shadows, legends, labels and more. Set them once for all visuals, then change any of them for one kind of visual. Leave a setting as it is to keep the theme&rsquo;s default.</p>
       </div>
-      <div class="preview" id="preview"></div>
-      <div id="checks"></div>
+      <div class="box">
+        <h3>All visuals</h3>
+        <div class="vfields" id="visAll"></div>
+      </div>
+      <h3>By kind of visual <span class="muted small">(these win over All visuals)</span></h3>
+      <div class="vgroups" id="visGroups"></div>
+      <div class="reply-actions"><button type="button" class="linkbtn" id="resetVis">Undo my visual settings</button></div>
     </div>
   </section>
 
@@ -100,8 +105,21 @@
     <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
-        <h2 id="s4">Download and import</h2>
-        <p>The theme file includes your colors, font, text styles, icons and formatting for 27 visual types and the page.</p>
+        <h2 id="s4">Preview</h2>
+        <p>A sketch of a report page with the theme applied, to judge the colors together. Power BI&rsquo;s own rendering will differ in detail.</p>
+      </div>
+      <div class="preview" id="preview"></div>
+      <div id="checks"></div>
+    </div>
+  </section>
+
+  <!-- STEP 5 -->
+  <section class="step" aria-labelledby="s5">
+    <div class="step-num">Step<b>5</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s5">Download and import</h2>
+        <p>The theme file includes your colors, font, text styles, icons and formatting for 27 visual types and the page, with your visual settings from Step 3.</p>
       </div>
       <div class="out-head"><span class="fname" id="fileName"></span>
         <span class="btns"><button type="button" class="btn" data-copy="json">Copy JSON</button><button type="button" class="btn primary" id="download">Download theme</button></span></div>

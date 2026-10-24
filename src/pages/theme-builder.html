@@ -291,6 +291,16 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
 .alt-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
 .alt-txt .mono{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .alt-why{font-size:12px;color:var(--muted)}
+.vfields{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px 14px}
+.vfields .field{min-width:0}
+.vfields select{width:100%;max-width:100%}
+.vfields select.set{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--gold)}
+.vgroups{display:flex;flex-direction:column;gap:8px}
+.vgroup{border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.vgroup>summary{cursor:pointer;padding:10px 14px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.vgroup>.vfields{padding:4px 14px 14px}
+.vtypes{flex-basis:100%;font-size:12px;color:var(--muted)}
+.vcount{font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--info-soft);color:var(--info)}
 
 </style>
 
@@ -302,7 +312,7 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>Theme Builder</h1>
-        <p class="lede">Start from one brand color. The page builds the data palette, text, background, good and bad colors, and a full report theme with styles for every common visual, checks it for readability and color blindness, and gives you the theme file to import. No AI needed.</p>
+        <p class="lede">Start from one brand color. The page builds the data palette, text, background, good and bad colors, and a full report theme with styles for every common visual (you can set titles, borders, legends and more for all visuals or one kind), checks it for readability and color blindness, and gives you the theme file to import. No AI needed.</p>
       </div>
       <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
@@ -388,11 +398,16 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
     <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
-        <h2 id="s3">Preview</h2>
-        <p>A sketch of a report page with the theme applied, to judge the colors together. Power BI&rsquo;s own rendering will differ in detail.</p>
+        <h2 id="s3">Visual settings</h2>
+        <p>How visuals look when you add them: titles, borders, shadows, legends, labels and more. Set them once for all visuals, then change any of them for one kind of visual. Leave a setting as it is to keep the theme&rsquo;s default.</p>
       </div>
-      <div class="preview" id="preview"></div>
-      <div id="checks"></div>
+      <div class="box">
+        <h3>All visuals</h3>
+        <div class="vfields" id="visAll"></div>
+      </div>
+      <h3>By kind of visual <span class="muted small">(these win over All visuals)</span></h3>
+      <div class="vgroups" id="visGroups"></div>
+      <div class="reply-actions"><button type="button" class="linkbtn" id="resetVis">Undo my visual settings</button></div>
     </div>
   </section>
 
@@ -401,8 +416,21 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
     <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
-        <h2 id="s4">Download and import</h2>
-        <p>The theme file includes your colors, font, text styles, icons and formatting for 27 visual types and the page.</p>
+        <h2 id="s4">Preview</h2>
+        <p>A sketch of a report page with the theme applied, to judge the colors together. Power BI&rsquo;s own rendering will differ in detail.</p>
+      </div>
+      <div class="preview" id="preview"></div>
+      <div id="checks"></div>
+    </div>
+  </section>
+
+  <!-- STEP 5 -->
+  <section class="step" aria-labelledby="s5">
+    <div class="step-num">Step<b>5</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s5">Download and import</h2>
+        <p>The theme file includes your colors, font, text styles, icons and formatting for 27 visual types and the page, with your visual settings from Step 3.</p>
       </div>
       <div class="out-head"><span class="fname" id="fileName"></span>
         <span class="btns"><button type="button" class="btn" data-copy="json">Copy JSON</button><button type="button" class="btn primary" id="download">Download theme</button></span></div>
@@ -585,6 +613,100 @@ const TB = (function(){
   }
 
   const PAGE_OBJECTS = ['textbox', 'shape', 'image', 'actionButton'];
+
+  /* Visual settings: one set for all visuals, then the same kind of choices for each group of visual types.
+     Each setting lists its choices and where it goes in visualStyles: [visual type or '' for every type, object, property].
+     '' writes to "*" and to every type whose template already sets that property, so "All visuals" really reaches them all. */
+  const ONOFF = [['on', 'Show'], ['off', 'Hide']];
+  const px = ns => ns.map(n => [String(n), n + ' px']), pt = ns => ns.map(n => [String(n), n + ' pt']);
+  const VIS_SETTINGS = {
+    title: { label: 'Title', opts: ONOFF, def: 'on', set: [['', 'title', 'show']] },
+    titleSize: { label: 'Title size', opts: pt([10, 12, 14, 16, 18, 20]), def: '18', set: [['', 'title', 'fontSize']] },
+    titleAlign: { label: 'Title alignment', opts: [['left', 'Left'], ['center', 'Center'], ['right', 'Right']], def: 'left', set: [['', 'title', 'alignment']] },
+    border: { label: 'Border', opts: ONOFF, def: 'off', set: [['', 'border', 'show']] },
+    radius: { label: 'Rounded corners', opts: [['0', 'Square']].concat(px([4, 8, 12, 16])), def: '2', set: [['', 'border', 'radius']] },
+    shadow: { label: 'Shadow', opts: ONOFF, def: 'off', set: [['', 'dropShadow', 'show']] },
+    padding: { label: 'Padding', opts: px([0, 4, 8, 12, 16]), def: '4', set: [['', 'padding', 'top'], ['', 'padding', 'bottom'], ['', 'padding', 'left'], ['', 'padding', 'right']] },
+    legend: { label: 'Legend', opts: ONOFF, def: 'off', set: [['', 'legend', 'show']] },
+    legendPos: { label: 'Legend position', opts: [['Top', 'Top left'], ['TopCenter', 'Top center'], ['Bottom', 'Bottom left'], ['BottomCenter', 'Bottom center'], ['Right', 'Right'], ['Left', 'Left']], def: 'Top', set: [['', 'legend', 'position']] },
+    // only charts: cards also call their value "labels"
+    labels: { label: 'Data labels', opts: ONOFF, def: 'on', set: [['', 'labels', 'show']], charts: true },
+    gridlines: { label: 'Gridlines', opts: ONOFF, def: 'on', set: [['', 'valueAxis', 'gridlineShow'], ['', 'categoryAxis', 'gridlineShow']] },
+    axisTitles: { label: 'Axis titles', opts: ONOFF, def: 'off', set: [['', 'categoryAxis', 'showAxisTitle'], ['', 'valueAxis', 'showAxisTitle']] },
+    // cards
+    valueSize: { label: 'Value size', opts: pt([18, 20, 24, 28, 32, 40]), def: '24', set: [['card', 'labels', 'fontSize'], ['cardVisual', 'value', 'fontSize']] },
+    cardLabel: { label: 'Label under the value', opts: ONOFF, def: 'on', set: [['card', 'categoryLabels', 'show'], ['cardVisual', 'label', 'show']] },
+    labelSize: { label: 'Label size', opts: pt([9, 10, 11, 12, 14, 16]), def: '10', set: [['card', 'categoryLabels', 'fontSize'], ['cardVisual', 'label', 'fontSize'], ['multiRowCard', 'categoryLabels', 'fontSize']] },
+    accentBar: { label: 'Accent bar', opts: ONOFF, def: 'on', set: [['cardVisual', 'accentBar', 'show'], ['multiRowCard', 'card', 'barShow']] },
+    // tables and matrixes
+    header: { label: 'Column headers', opts: [['brand', 'Filled with the text color'], ['light', 'Light grey fill'], ['plain', 'No fill, bold text']], def: 'brand', set: [] },
+    fontSize: { label: 'Text size', opts: pt([8, 9, 10, 11, 12, 14]), def: '10', set: [['tableEx', 'columnHeaders', 'fontSize'], ['tableEx', 'values', 'fontSize'], ['tableEx', 'total', 'fontSize'], ['tableEx', 'grid', 'textSize'], ['pivotTable', 'columnHeaders', 'fontSize'], ['pivotTable', 'rowHeaders', 'fontSize'], ['pivotTable', 'values', 'fontSize'], ['pivotTable', 'total', 'fontSize'], ['pivotTable', 'columnTotal', 'fontSize'], ['pivotTable', 'rowTotal', 'fontSize'], ['pivotTable', 'subTotals', 'fontSize'], ['pivotTable', 'grid', 'textSize']] },
+    banded: { label: 'Banded rows', opts: ONOFF, def: 'off', set: [] },
+    rowPadding: { label: 'Row padding', opts: px([2, 3, 5, 8, 10]), def: '5', set: [['tableEx', 'grid', 'rowPadding'], ['pivotTable', 'grid', 'rowPadding']] },
+    gridH: { label: 'Row lines', opts: ONOFF, def: 'on', set: [['tableEx', 'grid', 'gridHorizontal'], ['pivotTable', 'grid', 'gridHorizontal']] },
+    gridV: { label: 'Column lines', opts: ONOFF, def: 'off', set: [['tableEx', 'grid', 'gridVertical'], ['pivotTable', 'grid', 'gridVertical']] },
+    // slicers
+    slicerStyle: { label: 'Style', opts: [['Basic', 'List'], ['Dropdown', 'Dropdown']], def: 'Basic', set: [['slicer', 'data', 'mode']] },
+    slicerHeader: { label: 'Header', opts: ONOFF, def: 'on', set: [['slicer', 'header', 'show']] },
+    slicerText: { label: 'Text size', opts: pt([9, 10, 11, 12, 14]), def: '10', set: [['slicer', 'header', 'textSize'], ['slicer', 'items', 'textSize']] },
+    // lines
+    lineWidth: { label: 'Line width', opts: px([1, 2, 3, 4, 5]), def: '3', set: [['', 'lineStyles', 'strokeWidth']] },
+    markers: { label: 'Markers', opts: ONOFF, def: 'off', set: [['', 'lineStyles', 'showMarker']] }
+  };
+  const BOX = ['title', 'titleSize', 'titleAlign', 'border', 'radius', 'shadow', 'padding'];
+  const CHART = BOX.concat(['legend', 'legendPos', 'labels', 'gridlines', 'axisTitles']);
+  const VIS_ALL = CHART;
+  const VIS_GROUPS = [
+    { id: 'cards', name: 'Cards and KPIs', types: ['card', 'cardVisual', 'multiRowCard', 'kpi'], defs: { title: 'off' }, keys: BOX.concat(['valueSize', 'cardLabel', 'labelSize', 'accentBar']) },
+    { id: 'tables', name: 'Tables and matrixes', types: ['tableEx', 'pivotTable'], keys: BOX.concat(['header', 'fontSize', 'banded', 'rowPadding', 'gridH', 'gridV']) },
+    { id: 'slicers', name: 'Slicers', types: ['slicer'], defs: { title: 'off' }, keys: BOX.concat(['slicerStyle', 'slicerHeader', 'slicerText']) },
+    { id: 'bars', name: 'Bar and column charts', types: ['clusteredColumnChart', 'clusteredBarChart', 'columnChart', 'barChart', 'hundredPercentStackedColumnChart', 'hundredPercentStackedBarChart', 'ribbonChart', 'waterfallChart'], keys: CHART },
+    { id: 'lines', name: 'Line, area and combo charts', types: ['lineChart', 'areaChart', 'stackedAreaChart', 'lineStackedColumnComboChart', 'lineClusteredColumnComboChart'], keys: CHART.concat(['lineWidth', 'markers']) },
+    { id: 'parts', name: 'Pie, donut, treemap and funnel', types: ['pieChart', 'donutChart', 'treemap', 'funnel'], keys: BOX.concat(['legend', 'legendPos', 'labels']) }
+  ];
+  const TYPE_NAMES = { card: 'Card (classic)', cardVisual: 'Card', multiRowCard: 'Multi-row card', kpi: 'KPI', tableEx: 'Table', pivotTable: 'Matrix', slicer: 'Slicer', clusteredColumnChart: 'Clustered column', clusteredBarChart: 'Clustered bar', columnChart: 'Stacked column', barChart: 'Stacked bar', hundredPercentStackedColumnChart: '100% stacked column', hundredPercentStackedBarChart: '100% stacked bar', ribbonChart: 'Ribbon', waterfallChart: 'Waterfall', lineChart: 'Line', areaChart: 'Area', stackedAreaChart: 'Stacked area', lineStackedColumnComboChart: 'Line and stacked column', lineClusteredColumnComboChart: 'Line and clustered column', pieChart: 'Pie', donutChart: 'Donut', treemap: 'Treemap', funnel: 'Funnel' };
+  // Keep only settings and choices the page knows, so a saved or junk value can't reach the theme
+  function cleanVis(v){
+    const ok = (keys, src) => { const out = {}; if (src && typeof src === 'object') keys.forEach(k => { const x = src[k]; if (typeof x === 'string' && VIS_SETTINGS[k].opts.some(o => o[0] === x)) out[k] = x; }); return out; };
+    v = v && typeof v === 'object' ? v : {};
+    const groups = {}; VIS_GROUPS.forEach(g => { const s = ok(g.keys, v.groups && v.groups[g.id]); if (Object.keys(s).length) groups[g.id] = s; });
+    return { all: ok(VIS_ALL, v.all), groups };
+  }
+  // The value a visual group ends up with: its own choice, else the all-visuals choice, else the template's
+  function visValue(vis, group, key){
+    vis = cleanVis(vis); const g = vis.groups[group] || {}, gr = VIS_GROUPS.find(x => x.id === group);
+    return g[key] || vis.all[key] || (gr && gr.defs && gr.defs[key]) || VIS_SETTINGS[key].def;
+  }
+  const solid = h => ({ solid: { color: h } });
+  function applyVis(vs, vis, r){
+    vis = cleanVis(vis);
+    const val = (k, x) => VIS_SETTINGS[k].opts[0][0] === 'on' ? x === 'on' : /^\d+$/.test(x) ? +x : x;
+    const entry = (type, obj, make) => {
+      const s = vs[type] = vs[type] || {}; s['*'] = s['*'] || {};
+      let a = s['*'][obj];
+      if (!Array.isArray(a) || !a.length || !a[0] || typeof a[0] !== 'object') { if (!make) return null; a = s['*'][obj] = [type === 'cardVisual' ? { $id: 'default' } : {}]; }
+      return a[0];
+    };
+    const write = (types, k, x, onlySet) => VIS_SETTINGS[k].set.forEach(([t, obj, prop]) => (t ? types.filter(y => y === t) : types).forEach(type => {
+      const e = entry(type, obj, !onlySet || type === '*'); if (!e) return;
+      if (onlySet && type !== '*' && !(prop in e)) return;
+      e[prop] = val(k, x);
+    }));
+    const special = (types, k, x) => {
+      if (k === 'header') {
+        const fill = x === 'brand' ? r.text : x === 'light' ? r.grey10 : r.background;
+        const text = x === 'brand' ? r.background : readable(r.dataColors[0] || r.brand, x === 'light' ? r.grey10 : r.background, 4.5);
+        types.forEach(t => { const e = entry(t, 'columnHeaders', true); e.backColor = solid(fill); e.fontColor = solid(text); e.bold = x === 'plain'; });
+      }
+      if (k === 'banded') types.forEach(t => { const e = entry(t, 'values', true); e.backColorPrimary = solid(r.background); e.backColorSecondary = solid(x === 'on' ? mix(r.grey10, r.background, 0.45) : r.background); });
+    };
+    const every = Object.keys(vs).filter(t => t !== 'page' && PAGE_OBJECTS.indexOf(t) < 0);
+    if (every.indexOf('*') < 0) every.unshift('*');
+    const charts = VIS_GROUPS.filter(g => g.keys.indexOf('labels') >= 0).reduce((a, g) => a.concat(g.types), []);
+    Object.keys(vis.all).forEach(k => VIS_SETTINGS[k].charts ? write(charts, k, vis.all[k], false) : write(every, k, vis.all[k], true));
+    VIS_GROUPS.forEach(g => { const s = vis.groups[g.id]; if (s) Object.keys(s).forEach(k => { write(g.types, k, s[k], false); special(g.types, k, s[k]); }); });
+  }
+
   function build(o){
     const r = roles(o);
     const map = { 1: r.text, 9: r.bad, 10: r.good, 11: r.neutral, 15: r.grey45, 16: r.grey10, 17: r.grey70 };
@@ -622,6 +744,7 @@ const TB = (function(){
     if (r.visual) PAGE_OBJECTS.forEach(v => { const s = vs[v] = vs[v] || {}; s['*'] = s['*'] || {}; s['*'].background = [{ show: false, transparency: 100 }]; });
     // Combo chart marker size: big enough for a marker to read as a labeled bubble over each column
     const bub = Math.round(+o.bubble || 0);
+    applyVis(vs, o.vis, r);
     if (bub > 0) { const cc = vs.lineClusteredColumnComboChart = vs.lineClusteredColumnComboChart || {}; cc['*'] = cc['*'] || {}; const ls = cc['*'].lineStyles; cc['*'].lineStyles = [Object.assign({}, Array.isArray(ls) && ls[0] || {}, { markerSize: bub })]; }
     const pg = vs.page = vs.page || {}; pg['*'] = pg['*'] || {};
     pg['*'].background = [{ color: { solid: { color: r.page } }, transparency: 0 }];
@@ -651,7 +774,7 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/
 
@@ -673,8 +796,9 @@ function copyText(text, btn){
 const BG_PRESETS = [['White', '#FFFFFF'], ['Off-white', '#F7F7F5'], ['Light grey', '#EEF0F3'], ['Dark', '#1F1F1F'], ['Navy dark', '#111827']];
 const VIS_PRESETS = [['Transparent', 'transparent'], ['White', '#FFFFFF'], ['Light grey', '#F3F4F6'], ['Soft grey', '#E9EBEE'], ['Dark grey', '#2B2B2B']];
 const SENT_PRESETS = [['Excel conditional formatting', '#006100', '#9C5700', '#9C0006'], ['Green / red', '#0F6E3A', '#8C8C8C', '#E8615A'], ['Blue / orange (color-blind safe)', '#1D6FA3', '#8C8C8C', '#E07B39']];
-const blankCfg = () => ({ name: '', seeds: ['#1F6FB2'], style: 'varied', count: 8, overrides: {}, background: '#FFFFFF', visualBg: 'transparent', textMode: 'brand', textColor: '#252423', font: 'Segoe UI', good: '#006100', neutral: '#9C5700', bad: '#9C0006', bubble: 0 });
-const EX_CFG = () => Object.assign(blankCfg(), { name: 'Contoso Retail', seeds: ['#1F6FB2', '#7A4FA3'], visualBg: '#F3F4F6' });
+const blankCfg = () => ({ name: '', seeds: ['#1F6FB2'], style: 'varied', count: 8, overrides: {}, background: '#FFFFFF', visualBg: 'transparent', textMode: 'brand', textColor: '#252423', font: 'Segoe UI', good: '#006100', neutral: '#9C5700', bad: '#9C0006', bubble: 0, vis: { all: {}, groups: {} } });
+const EX_CFG = () => Object.assign(blankCfg(), { name: 'Contoso Retail', seeds: ['#1F6FB2', '#7A4FA3'], visualBg: '#F3F4F6',
+  vis: { all: { titleSize: '14', radius: '8' }, groups: { cards: { valueSize: '28' }, tables: { header: 'light', banded: 'on' } } } });
 const state = { example: false, cfg: blankCfg(), out: {}, alt: -1 };
 
 function persist(){ store.set('cfg', JSON.stringify(state.example ? blankCfg() : state.cfg)); }
@@ -686,7 +810,7 @@ function dataColors(){
   const base = TB.palette(c.seeds, +c.count || 8, c.style);
   return base.map((h, i) => TB.norm(c.overrides[i]) || h);
 }
-function opts(){ const c = state.cfg; return { name: c.name, dataColors: dataColors(), background: c.background, visualBg: c.visualBg, textMode: c.textMode, textColor: c.textColor, font: c.font, good: c.good, neutral: c.neutral, bad: c.bad, bubble: +c.bubble || 0 }; }
+function opts(){ const c = state.cfg; return { name: c.name, dataColors: dataColors(), background: c.background, visualBg: c.visualBg, textMode: c.textMode, textColor: c.textColor, font: c.font, good: c.good, neutral: c.neutral, bad: c.bad, bubble: +c.bubble || 0, vis: c.vis }; }
 
 // what text and chart marks sit on: the visual background, or the page when visuals are transparent
 function surface(){ const c = state.cfg; return TB.norm(c.visualBg) || TB.norm(c.background) || '#FFFFFF'; }
@@ -749,22 +873,56 @@ function renderSettings(){
   $('badRow').innerHTML = colorRow('bad', 'Bad / decrease', c.bad);
 }
 
+/* ---------- visual settings: all visuals, then each kind of visual ---------- */
+const optLabel = (k, v) => { const o = TB.VIS_SETTINGS[k].opts.find(x => x[0] === v); return o ? o[1] : v; };
+function visField(scope, k){
+  const c = state.cfg, spec = TB.VIS_SETTINGS[k], cur = scope === 'all' ? c.vis.all[k] : (c.vis.groups[scope] || {})[k];
+  const first = scope === 'all' ? 'Default (' + optLabel(k, spec.def) + ')' : 'All visuals: ' + optLabel(k, TB.visValue({ all: c.vis.all }, scope, k));
+  const id = 'v-' + scope + '-' + k;
+  return '<div class="field"><label for="' + id + '">' + esc(spec.label) + '</label><select id="' + id + '" data-vg="' + scope + '" data-vk="' + k + '"' + (cur ? ' class="set"' : '') + '><option value="">' + esc(first) + '</option>'
+    + spec.opts.map(([v, l]) => '<option value="' + esc(v) + '"' + (cur === v ? ' selected' : '') + '>' + esc(l) + '</option>').join('') + '</select></div>';
+}
+const visCount = g => Object.keys(state.cfg.vis.groups[g] || {}).length;
+function visSummary(g){ const n = visCount(g.id); return '<b>' + esc(g.name) + '</b>' + (n ? ' <span class="vcount">' + n + ' changed</span>' : '') + '<span class="vtypes">' + esc(g.types.map(t => TB.TYPE_NAMES[t] || t).join(', ')) + '</span>'; }
+function renderVis(){
+  const c = state.cfg;
+  $('visAll').innerHTML = TB.VIS_ALL.map(k => visField('all', k)).join('');
+  renderVisGroups();
+}
+function renderVisGroups(){
+  const open = new Set([...document.querySelectorAll('#visGroups details[open]')].map(d => d.dataset.g));
+  $('visGroups').innerHTML = TB.VIS_GROUPS.map(g => '<details class="vgroup" data-g="' + g.id + '"' + (open.has(g.id) ? ' open' : '') + '><summary>' + visSummary(g) + '</summary><div class="vfields">' + g.keys.map(k => visField(g.id, k)).join('') + '</div></details>').join('');
+  $('resetVis').hidden = !Object.keys(state.cfg.vis.all).length && !Object.keys(state.cfg.vis.groups).length;
+}
+
 /* ---------- preview: a sketch of a report page ---------- */
 function renderPreview(){
   const o = opts(), r = TB.roles(o), dc = r.dataColors;
   if (!dc.length) { $('preview').innerHTML = ''; return; }
   const col = i => dc[i % dc.length];
+  const vv = (g, k) => TB.visValue(state.cfg.vis, g, k);
   const font = "'" + (state.cfg.font || 'Segoe UI').replace(/'/g, '') + "', 'Segoe UI', Arial, sans-serif";
-  const cards = [['Sales', '$4.21M'], ['Orders', '18,940'], ['Margin %', '38.2%']].map(([l, v]) => '<div class="pv-card" style="' + (r.visual ? 'background:' + r.visual + ';' : 'box-shadow:none;outline:1px dashed ' + r.grey10 + ';') + 'border-top:5px solid ' + dc[0] + '"><div class="pv-cl" style="color:' + dc[0] + '">' + l + '</div><div class="pv-cv" style="color:' + dc[0] + '">' + v + '</div></div>').join('');
+  // a visual's frame: background, border, rounded corners and shadow from the visual settings
+  const frame = g => (r.visual ? 'background:' + r.visual + ';box-shadow:0 1px 3px rgba(0,0,0,.12);' : 'background:transparent;box-shadow:none;outline:1px dashed ' + r.grey10 + ';')
+    + (vv(g, 'border') === 'on' ? 'border:1px solid ' + TB.mix(r.text, r.background, 0.75) + ';' : '') + 'border-radius:' + vv(g, 'radius') + 'px;'
+    + (vv(g, 'shadow') === 'on' ? 'box-shadow:0 3px 10px rgba(0,0,0,.28);' : '') + 'padding:' + (6 + +vv(g, 'padding')) + 'px ' + (8 + +vv(g, 'padding')) + 'px;';
+  const titleOf = (g, text) => vv(g, 'title') === 'on' ? '<div class="pv-title" style="color:' + dc[0] + ';font-size:' + Math.round(+vv(g, 'titleSize') * 0.8) + 'px;text-align:' + vv(g, 'titleAlign') + '">' + text + '</div>' : '';
+  const cardLbl = vv('cards', 'cardLabel') === 'on', accent = vv('cards', 'accentBar') === 'on';
+  const cards = [['Sales', '$4.21M'], ['Orders', '18,940'], ['Margin %', '38.2%']].map(([l, v]) => '<div class="pv-card" style="' + frame('cards') + (accent ? 'border-top:5px solid ' + dc[0] : '') + '">' + titleOf('cards', l)
+    + (cardLbl ? '<div class="pv-cl" style="color:' + dc[0] + ';font-size:' + (+vv('cards', 'labelSize') + 2) + 'px">' + l + '</div>' : '') + '<div class="pv-cv" style="color:' + dc[0] + ';font-size:' + Math.round(+vv('cards', 'valueSize')) + 'px">' + v + '</div></div>').join('');
   // clustered columns: 4 months x 3 series
   const vals = [[62, 48, 30], [70, 52, 36], [66, 58, 41], [80, 61, 44]], W = 300, H = 150;
   let bars = ''; vals.forEach((g, i) => g.forEach((v, j) => { const x = 18 + i * 70 + j * 18; bars += '<rect x="' + x + '" y="' + (H - 20 - v * 1.4) + '" width="15" height="' + (v * 1.4) + '" fill="' + col(j) + '" rx="1.5"/>'; }));
   const axis = ['Jan', 'Feb', 'Mar', 'Apr'].map((m, i) => '<text x="' + (40 + i * 70) + '" y="' + (H - 5) + '" font-size="10" fill="' + r.grey70 + '" text-anchor="middle">' + m + '</text>').join('');
+  const gridOn = g => vv(g, 'gridlines') === 'on';
   const grid = [40, 70, 100].map(y => '<line x1="10" x2="' + (W - 10) + '" y1="' + y + '" y2="' + y + '" stroke="' + r.grey10 + '" stroke-dasharray="2,3"/>').join('');
-  const colChart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pv-svg">' + grid + bars + axis + '</svg>';
+  const colChart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pv-svg">' + (gridOn('bars') ? grid : '') + bars + axis + '</svg>';
   // lines
   const lp = (pts, c, w) => '<polyline fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round" points="' + pts.map((v, i) => (15 + i * 45) + ',' + (130 - v)).join(' ') + '"/>';
-  const lineChart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pv-svg">' + grid + lp([40, 55, 50, 72, 80, 95, 110], col(0), 2.5) + lp([30, 38, 45, 42, 58, 60, 70], col(1), 2.5) + lp([20, 22, 30, 35, 33, 40, 46], col(2), 2) + '</svg>';
+  const lw = +vv('lines', 'lineWidth'), mk = vv('lines', 'markers') === 'on';
+  const dots = (pts, c) => mk ? pts.map((v, i) => '<circle cx="' + (15 + i * 45) + '" cy="' + (130 - v) + '" r="' + (lw + 1.5) + '" fill="' + c + '"/>').join('') : '';
+  const lines = [[40, 55, 50, 72, 80, 95, 110], [30, 38, 45, 42, 58, 60, 70], [20, 22, 30, 35, 33, 40, 46]];
+  const lineChart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pv-svg">' + (gridOn('lines') ? grid : '') + lines.map((l, i) => lp(l, col(i), lw) + dots(l, col(i))).join('') + '</svg>';
   // donut
   const parts = [30, 22, 18, 12, 10, 8]; let a0 = -Math.PI / 2, donut = '';
   parts.forEach((p, i) => { const a1 = a0 + p / 100 * Math.PI * 2, R = 52, r0 = 32, cx = 75, cy = 70, lg = a1 - a0 > Math.PI ? 1 : 0;
@@ -781,16 +939,19 @@ function renderPreview(){
     wfs += '<rect x="' + x + '" y="' + y0 + '" width="34" height="' + h + '" fill="' + fill + '" rx="1.5"/><text x="' + (x + 17) + '" y="145" font-size="9" fill="' + r.grey70 + '" text-anchor="middle">' + n + '</text>'; });
   const wfChart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pv-svg">' + wfs + '</svg>';
   const rows = [['North', '$1.42M', '+6.1%', 'good'], ['South', '$0.98M', '-2.4%', 'bad'], ['East', '$1.05M', '+1.2%', 'good'], ['West', '$0.76M', '0.0%', 'neutral']];
-  const table = '<table class="pv-table"><thead><tr>' + ['Region', 'Sales', 'vs LY'].map(h => '<th style="background:' + dc[0] + ';color:' + r.background + '">' + h + '</th>').join('') + '</tr></thead><tbody>'
-    + rows.map(([a, b, c2, s]) => '<tr style="border-bottom:1px solid ' + r.grey10 + '"><td style="color:' + dc[0] + '">' + a + '</td><td style="color:' + dc[0] + '">' + b + '</td><td style="color:' + (s === 'good' ? r.goodText : s === 'bad' ? r.badText : r.neutralText) + ';font-weight:600">' + c2 + '</td></tr>').join('') + '</tbody></table>';
-  const box = r.visual ? 'background:' + r.visual + ';box-shadow:0 1px 3px rgba(0,0,0,.12)' : 'background:transparent;box-shadow:none;outline:1px dashed ' + r.grey10;
-  const tile = (title, body) => '<div class="pv-tile" style="' + box + '"><div class="pv-title" style="color:' + dc[0] + '">' + title + '</div>' + body + '</div>';
+  const hd = vv('tables', 'header'), hFill = hd === 'brand' ? dc[0] : hd === 'light' ? r.grey10 : 'transparent', hText = hd === 'brand' ? r.background : TB.readable(dc[0], hd === 'light' ? r.grey10 : r.background, 4.5);
+  const band = vv('tables', 'banded') === 'on' ? TB.mix(r.grey10, r.background, 0.45) : '', tpad = +vv('tables', 'rowPadding') + 1;
+  const rowLine = vv('tables', 'gridH') === 'on' ? 'border-bottom:1px solid ' + r.grey10 : '', colLine = vv('tables', 'gridV') === 'on' ? 'border-right:1px solid ' + r.grey10 + ';' : '';
+  const cell = 'padding:' + tpad + 'px 8px;' + colLine;
+  const table = '<table class="pv-table" style="font-size:' + (+vv('tables', 'fontSize') + 2.5) + 'px"><thead><tr>' + ['Region', 'Sales', 'vs LY'].map(h => '<th style="' + cell + 'background:' + hFill + ';color:' + hText + (hd === 'plain' ? ';font-weight:700;border-bottom:2px solid ' + r.grey10 : '') + '">' + h + '</th>').join('') + '</tr></thead><tbody>'
+    + rows.map(([a, b, c2, s], i) => '<tr style="' + rowLine + (band && i % 2 ? ';background:' + band : '') + '"><td style="' + cell + 'color:' + dc[0] + '">' + a + '</td><td style="' + cell + 'color:' + dc[0] + '">' + b + '</td><td style="' + cell + 'color:' + (s === 'good' ? r.goodText : s === 'bad' ? r.badText : r.neutralText) + ';font-weight:600">' + c2 + '</td></tr>').join('') + '</tbody></table>';
+  const tile = (title, body, g) => '<div class="pv-tile" style="' + frame(g) + '">' + titleOf(g, title) + body + '</div>';
   $('preview').style.cssText = 'background:' + r.page + ';color:' + r.text + ';font-family:' + font;
   $('preview').innerHTML = '<div class="pv-head"><div class="pv-h1" style="color:' + r.text + '">' + esc(state.cfg.name || 'Sales overview') + '</div>'
     + '<div class="pv-slicer">' + ['2024', '2025', '2026'].map((y, i) => '<span style="' + (i === 2 ? 'background:' + dc[0] + ';color:' + r.background : 'border:1px solid ' + r.grey10 + ';color:' + r.text) + '">' + y + '</span>').join('') + '</div></div>'
     + '<div class="pv-cards">' + cards + '</div>'
-    + '<div class="pv-grid">' + tile('Sales by month and channel', colChart) + tile('Sales trend', lineChart) + tile('Sales by channel', donutChart) + tile('Sales bridge', wfChart) + tile('Sales by region', table)
-    + tile('Text styles', '<div class="pv-text"><div style="font-size:18px;font-weight:700;color:' + dc[0] + '">Title</div><div style="color:' + r.text + '">Body text and labels</div><div style="color:' + r.grey70 + '">Secondary text</div><div style="color:' + r.grey45 + '">Light label</div><div><a style="color:' + TB.readable(r.brand, r.background, 4.5) + '">A link</a></div></div>') + '</div>';
+    + '<div class="pv-grid">' + tile('Sales by month and channel', colChart, 'bars') + tile('Sales trend', lineChart, 'lines') + tile('Sales by channel', donutChart, 'parts') + tile('Sales bridge', wfChart, 'bars') + tile('Sales by region', table, 'tables')
+    + tile('Text styles', '<div class="pv-text"><div style="font-size:18px;font-weight:700;color:' + dc[0] + '">Title</div><div style="color:' + r.text + '">Body text and labels</div><div style="color:' + r.grey70 + '">Secondary text</div><div style="color:' + r.grey45 + '">Light label</div><div><a style="color:' + TB.readable(r.brand, r.background, 4.5) + '">A link</a></div></div>', 'all') + '</div>';
 }
 
 function renderOut(){
@@ -804,7 +965,7 @@ function renderOut(){
   $('jsonSize').textContent = '(' + Math.round(state.out.json.length / 1024) + ' KB)';
   $('jsonView').textContent = state.out.json;
 }
-function renderAll(){ renderSeeds(); renderSwatches(); renderSettings(); renderPreview(); renderOut(); }
+function renderAll(){ renderSeeds(); renderSwatches(); renderSettings(); renderVis(); renderPreview(); renderOut(); }
 // Update values in place so the box being typed in (or the open color picker) keeps focus
 function syncValues(){
   const c = state.cfg, dc = dataColors();
@@ -839,6 +1000,7 @@ function init(){
   if (cfg && store.get('blank') !== '1' && JSON.stringify(cfg) !== JSON.stringify(blankCfg())) state.cfg = Object.assign(blankCfg(), cfg);
   else if (store.get('blank') !== '1') { state.cfg = EX_CFG(); setExample(true); }
   else if (cfg) state.cfg = Object.assign(blankCfg(), cfg);
+  state.cfg.vis = TB.cleanVis(state.cfg.vis);
   renderAll();
   const change = full => { leaveExample(); try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {} if (full) renderAll(); else refresh(); persist(); };
   document.addEventListener('input', e => {
@@ -866,6 +1028,20 @@ function init(){
   $('sentPresets').addEventListener('click', e => { const b = e.target.closest('[data-sent]'); if (!b) return; const p = SENT_PRESETS[+b.dataset.sent]; Object.assign(state.cfg, { good: p[1], neutral: p[2], bad: p[3] }); change(false); });
   $('textMode').addEventListener('change', () => { state.cfg.textMode = $('textMode').value; change(false); });
   $('font').addEventListener('change', () => { state.cfg.font = $('font').value; change(false); });
+  // a visual setting: '' goes back to the default (or to All visuals for a kind of visual)
+  const onVis = e => {
+    const el = e.target.closest('[data-vk]'); if (!el) return;
+    const v = state.cfg.vis, g = el.dataset.vg, k = el.dataset.vk;
+    const s = g === 'all' ? v.all : (v.groups[g] = v.groups[g] || {});
+    if (el.value) s[k] = el.value; else delete s[k];
+    if (g !== 'all' && !Object.keys(s).length) delete v.groups[g];
+    el.classList.toggle('set', !!el.value);
+    if (g === 'all') renderVisGroups();
+    else { const d = el.closest('details'), gr = TB.VIS_GROUPS.find(x => x.id === g); if (d && gr) d.querySelector('summary').innerHTML = visSummary(gr); $('resetVis').hidden = !Object.keys(v.all).length && !Object.keys(v.groups).length; }
+    change(false);
+  };
+  $('visAll').addEventListener('change', onVis); $('visGroups').addEventListener('change', onVis);
+  $('resetVis').addEventListener('click', () => { state.cfg.vis = { all: {}, groups: {} }; change(true); });
   $('bubble').addEventListener('change', () => { state.cfg.bubble = +$('bubble').value || 0; change(false); });
   $('download').addEventListener('click', () => {
     if (!state.out.json) return;

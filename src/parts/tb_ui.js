@@ -16,8 +16,9 @@ function copyText(text, btn){
 const BG_PRESETS = [['White', '#FFFFFF'], ['Off-white', '#F7F7F5'], ['Light grey', '#EEF0F3'], ['Dark', '#1F1F1F'], ['Navy dark', '#111827']];
 const VIS_PRESETS = [['Transparent', 'transparent'], ['White', '#FFFFFF'], ['Light grey', '#F3F4F6'], ['Soft grey', '#E9EBEE'], ['Dark grey', '#2B2B2B']];
 const SENT_PRESETS = [['Excel conditional formatting', '#006100', '#9C5700', '#9C0006'], ['Green / red', '#0F6E3A', '#8C8C8C', '#E8615A'], ['Blue / orange (color-blind safe)', '#1D6FA3', '#8C8C8C', '#E07B39']];
-const blankCfg = () => ({ name: '', seeds: ['#1F6FB2'], style: 'varied', count: 8, overrides: {}, background: '#FFFFFF', visualBg: 'transparent', textMode: 'brand', textColor: '#252423', font: 'Segoe UI', good: '#006100', neutral: '#9C5700', bad: '#9C0006', bubble: 0 });
-const EX_CFG = () => Object.assign(blankCfg(), { name: 'Contoso Retail', seeds: ['#1F6FB2', '#7A4FA3'], visualBg: '#F3F4F6' });
+const blankCfg = () => ({ name: '', seeds: ['#1F6FB2'], style: 'varied', count: 8, overrides: {}, background: '#FFFFFF', visualBg: 'transparent', textMode: 'brand', textColor: '#252423', font: 'Segoe UI', good: '#006100', neutral: '#9C5700', bad: '#9C0006', bubble: 0, vis: { all: {}, groups: {} } });
+const EX_CFG = () => Object.assign(blankCfg(), { name: 'Contoso Retail', seeds: ['#1F6FB2', '#7A4FA3'], visualBg: '#F3F4F6',
+  vis: { all: { titleSize: '14', radius: '8' }, groups: { cards: { valueSize: '28' }, tables: { header: 'light', banded: 'on' } } } });
 const state = { example: false, cfg: blankCfg(), out: {}, alt: -1 };
 
 function persist(){ store.set('cfg', JSON.stringify(state.example ? blankCfg() : state.cfg)); }
@@ -29,7 +30,7 @@ function dataColors(){
   const base = TB.palette(c.seeds, +c.count || 8, c.style);
   return base.map((h, i) => TB.norm(c.overrides[i]) || h);
 }
-function opts(){ const c = state.cfg; return { name: c.name, dataColors: dataColors(), background: c.background, visualBg: c.visualBg, textMode: c.textMode, textColor: c.textColor, font: c.font, good: c.good, neutral: c.neutral, bad: c.bad, bubble: +c.bubble || 0 }; }
+function opts(){ const c = state.cfg; return { name: c.name, dataColors: dataColors(), background: c.background, visualBg: c.visualBg, textMode: c.textMode, textColor: c.textColor, font: c.font, good: c.good, neutral: c.neutral, bad: c.bad, bubble: +c.bubble || 0, vis: c.vis }; }
 
 // what text and chart marks sit on: the visual background, or the page when visuals are transparent
 function surface(){ const c = state.cfg; return TB.norm(c.visualBg) || TB.norm(c.background) || '#FFFFFF'; }
@@ -92,22 +93,56 @@ function renderSettings(){
   $('badRow').innerHTML = colorRow('bad', 'Bad / decrease', c.bad);
 }
 
+/* ---------- visual settings: all visuals, then each kind of visual ---------- */
+const optLabel = (k, v) => { const o = TB.VIS_SETTINGS[k].opts.find(x => x[0] === v); return o ? o[1] : v; };
+function visField(scope, k){
+  const c = state.cfg, spec = TB.VIS_SETTINGS[k], cur = scope === 'all' ? c.vis.all[k] : (c.vis.groups[scope] || {})[k];
+  const first = scope === 'all' ? 'Default (' + optLabel(k, spec.def) + ')' : 'All visuals: ' + optLabel(k, TB.visValue({ all: c.vis.all }, scope, k));
+  const id = 'v-' + scope + '-' + k;
+  return '<div class="field"><label for="' + id + '">' + esc(spec.label) + '</label><select id="' + id + '" data-vg="' + scope + '" data-vk="' + k + '"' + (cur ? ' class="set"' : '') + '><option value="">' + esc(first) + '</option>'
+    + spec.opts.map(([v, l]) => '<option value="' + esc(v) + '"' + (cur === v ? ' selected' : '') + '>' + esc(l) + '</option>').join('') + '</select></div>';
+}
+const visCount = g => Object.keys(state.cfg.vis.groups[g] || {}).length;
+function visSummary(g){ const n = visCount(g.id); return '<b>' + esc(g.name) + '</b>' + (n ? ' <span class="vcount">' + n + ' changed</span>' : '') + '<span class="vtypes">' + esc(g.types.map(t => TB.TYPE_NAMES[t] || t).join(', ')) + '</span>'; }
+function renderVis(){
+  const c = state.cfg;
+  $('visAll').innerHTML = TB.VIS_ALL.map(k => visField('all', k)).join('');
+  renderVisGroups();
+}
+function renderVisGroups(){
+  const open = new Set([...document.querySelectorAll('#visGroups details[open]')].map(d => d.dataset.g));
+  $('visGroups').innerHTML = TB.VIS_GROUPS.map(g => '<details class="vgroup" data-g="' + g.id + '"' + (open.has(g.id) ? ' open' : '') + '><summary>' + visSummary(g) + '</summary><div class="vfields">' + g.keys.map(k => visField(g.id, k)).join('') + '</div></details>').join('');
+  $('resetVis').hidden = !Object.keys(state.cfg.vis.all).length && !Object.keys(state.cfg.vis.groups).length;
+}
+
 /* ---------- preview: a sketch of a report page ---------- */
 function renderPreview(){
   const o = opts(), r = TB.roles(o), dc = r.dataColors;
   if (!dc.length) { $('preview').innerHTML = ''; return; }
   const col = i => dc[i % dc.length];
+  const vv = (g, k) => TB.visValue(state.cfg.vis, g, k);
   const font = "'" + (state.cfg.font || 'Segoe UI').replace(/'/g, '') + "', 'Segoe UI', Arial, sans-serif";
-  const cards = [['Sales', '$4.21M'], ['Orders', '18,940'], ['Margin %', '38.2%']].map(([l, v]) => '<div class="pv-card" style="' + (r.visual ? 'background:' + r.visual + ';' : 'box-shadow:none;outline:1px dashed ' + r.grey10 + ';') + 'border-top:5px solid ' + dc[0] + '"><div class="pv-cl" style="color:' + dc[0] + '">' + l + '</div><div class="pv-cv" style="color:' + dc[0] + '">' + v + '</div></div>').join('');
+  // a visual's frame: background, border, rounded corners and shadow from the visual settings
+  const frame = g => (r.visual ? 'background:' + r.visual + ';box-shadow:0 1px 3px rgba(0,0,0,.12);' : 'background:transparent;box-shadow:none;outline:1px dashed ' + r.grey10 + ';')
+    + (vv(g, 'border') === 'on' ? 'border:1px solid ' + TB.mix(r.text, r.background, 0.75) + ';' : '') + 'border-radius:' + vv(g, 'radius') + 'px;'
+    + (vv(g, 'shadow') === 'on' ? 'box-shadow:0 3px 10px rgba(0,0,0,.28);' : '') + 'padding:' + (6 + +vv(g, 'padding')) + 'px ' + (8 + +vv(g, 'padding')) + 'px;';
+  const titleOf = (g, text) => vv(g, 'title') === 'on' ? '<div class="pv-title" style="color:' + dc[0] + ';font-size:' + Math.round(+vv(g, 'titleSize') * 0.8) + 'px;text-align:' + vv(g, 'titleAlign') + '">' + text + '</div>' : '';
+  const cardLbl = vv('cards', 'cardLabel') === 'on', accent = vv('cards', 'accentBar') === 'on';
+  const cards = [['Sales', '$4.21M'], ['Orders', '18,940'], ['Margin %', '38.2%']].map(([l, v]) => '<div class="pv-card" style="' + frame('cards') + (accent ? 'border-top:5px solid ' + dc[0] : '') + '">' + titleOf('cards', l)
+    + (cardLbl ? '<div class="pv-cl" style="color:' + dc[0] + ';font-size:' + (+vv('cards', 'labelSize') + 2) + 'px">' + l + '</div>' : '') + '<div class="pv-cv" style="color:' + dc[0] + ';font-size:' + Math.round(+vv('cards', 'valueSize')) + 'px">' + v + '</div></div>').join('');
   // clustered columns: 4 months x 3 series
   const vals = [[62, 48, 30], [70, 52, 36], [66, 58, 41], [80, 61, 44]], W = 300, H = 150;
   let bars = ''; vals.forEach((g, i) => g.forEach((v, j) => { const x = 18 + i * 70 + j * 18; bars += '<rect x="' + x + '" y="' + (H - 20 - v * 1.4) + '" width="15" height="' + (v * 1.4) + '" fill="' + col(j) + '" rx="1.5"/>'; }));
   const axis = ['Jan', 'Feb', 'Mar', 'Apr'].map((m, i) => '<text x="' + (40 + i * 70) + '" y="' + (H - 5) + '" font-size="10" fill="' + r.grey70 + '" text-anchor="middle">' + m + '</text>').join('');
+  const gridOn = g => vv(g, 'gridlines') === 'on';
   const grid = [40, 70, 100].map(y => '<line x1="10" x2="' + (W - 10) + '" y1="' + y + '" y2="' + y + '" stroke="' + r.grey10 + '" stroke-dasharray="2,3"/>').join('');
-  const colChart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pv-svg">' + grid + bars + axis + '</svg>';
+  const colChart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pv-svg">' + (gridOn('bars') ? grid : '') + bars + axis + '</svg>';
   // lines
   const lp = (pts, c, w) => '<polyline fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round" points="' + pts.map((v, i) => (15 + i * 45) + ',' + (130 - v)).join(' ') + '"/>';
-  const lineChart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pv-svg">' + grid + lp([40, 55, 50, 72, 80, 95, 110], col(0), 2.5) + lp([30, 38, 45, 42, 58, 60, 70], col(1), 2.5) + lp([20, 22, 30, 35, 33, 40, 46], col(2), 2) + '</svg>';
+  const lw = +vv('lines', 'lineWidth'), mk = vv('lines', 'markers') === 'on';
+  const dots = (pts, c) => mk ? pts.map((v, i) => '<circle cx="' + (15 + i * 45) + '" cy="' + (130 - v) + '" r="' + (lw + 1.5) + '" fill="' + c + '"/>').join('') : '';
+  const lines = [[40, 55, 50, 72, 80, 95, 110], [30, 38, 45, 42, 58, 60, 70], [20, 22, 30, 35, 33, 40, 46]];
+  const lineChart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pv-svg">' + (gridOn('lines') ? grid : '') + lines.map((l, i) => lp(l, col(i), lw) + dots(l, col(i))).join('') + '</svg>';
   // donut
   const parts = [30, 22, 18, 12, 10, 8]; let a0 = -Math.PI / 2, donut = '';
   parts.forEach((p, i) => { const a1 = a0 + p / 100 * Math.PI * 2, R = 52, r0 = 32, cx = 75, cy = 70, lg = a1 - a0 > Math.PI ? 1 : 0;
@@ -124,16 +159,19 @@ function renderPreview(){
     wfs += '<rect x="' + x + '" y="' + y0 + '" width="34" height="' + h + '" fill="' + fill + '" rx="1.5"/><text x="' + (x + 17) + '" y="145" font-size="9" fill="' + r.grey70 + '" text-anchor="middle">' + n + '</text>'; });
   const wfChart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pv-svg">' + wfs + '</svg>';
   const rows = [['North', '$1.42M', '+6.1%', 'good'], ['South', '$0.98M', '-2.4%', 'bad'], ['East', '$1.05M', '+1.2%', 'good'], ['West', '$0.76M', '0.0%', 'neutral']];
-  const table = '<table class="pv-table"><thead><tr>' + ['Region', 'Sales', 'vs LY'].map(h => '<th style="background:' + dc[0] + ';color:' + r.background + '">' + h + '</th>').join('') + '</tr></thead><tbody>'
-    + rows.map(([a, b, c2, s]) => '<tr style="border-bottom:1px solid ' + r.grey10 + '"><td style="color:' + dc[0] + '">' + a + '</td><td style="color:' + dc[0] + '">' + b + '</td><td style="color:' + (s === 'good' ? r.goodText : s === 'bad' ? r.badText : r.neutralText) + ';font-weight:600">' + c2 + '</td></tr>').join('') + '</tbody></table>';
-  const box = r.visual ? 'background:' + r.visual + ';box-shadow:0 1px 3px rgba(0,0,0,.12)' : 'background:transparent;box-shadow:none;outline:1px dashed ' + r.grey10;
-  const tile = (title, body) => '<div class="pv-tile" style="' + box + '"><div class="pv-title" style="color:' + dc[0] + '">' + title + '</div>' + body + '</div>';
+  const hd = vv('tables', 'header'), hFill = hd === 'brand' ? dc[0] : hd === 'light' ? r.grey10 : 'transparent', hText = hd === 'brand' ? r.background : TB.readable(dc[0], hd === 'light' ? r.grey10 : r.background, 4.5);
+  const band = vv('tables', 'banded') === 'on' ? TB.mix(r.grey10, r.background, 0.45) : '', tpad = +vv('tables', 'rowPadding') + 1;
+  const rowLine = vv('tables', 'gridH') === 'on' ? 'border-bottom:1px solid ' + r.grey10 : '', colLine = vv('tables', 'gridV') === 'on' ? 'border-right:1px solid ' + r.grey10 + ';' : '';
+  const cell = 'padding:' + tpad + 'px 8px;' + colLine;
+  const table = '<table class="pv-table" style="font-size:' + (+vv('tables', 'fontSize') + 2.5) + 'px"><thead><tr>' + ['Region', 'Sales', 'vs LY'].map(h => '<th style="' + cell + 'background:' + hFill + ';color:' + hText + (hd === 'plain' ? ';font-weight:700;border-bottom:2px solid ' + r.grey10 : '') + '">' + h + '</th>').join('') + '</tr></thead><tbody>'
+    + rows.map(([a, b, c2, s], i) => '<tr style="' + rowLine + (band && i % 2 ? ';background:' + band : '') + '"><td style="' + cell + 'color:' + dc[0] + '">' + a + '</td><td style="' + cell + 'color:' + dc[0] + '">' + b + '</td><td style="' + cell + 'color:' + (s === 'good' ? r.goodText : s === 'bad' ? r.badText : r.neutralText) + ';font-weight:600">' + c2 + '</td></tr>').join('') + '</tbody></table>';
+  const tile = (title, body, g) => '<div class="pv-tile" style="' + frame(g) + '">' + titleOf(g, title) + body + '</div>';
   $('preview').style.cssText = 'background:' + r.page + ';color:' + r.text + ';font-family:' + font;
   $('preview').innerHTML = '<div class="pv-head"><div class="pv-h1" style="color:' + r.text + '">' + esc(state.cfg.name || 'Sales overview') + '</div>'
     + '<div class="pv-slicer">' + ['2024', '2025', '2026'].map((y, i) => '<span style="' + (i === 2 ? 'background:' + dc[0] + ';color:' + r.background : 'border:1px solid ' + r.grey10 + ';color:' + r.text) + '">' + y + '</span>').join('') + '</div></div>'
     + '<div class="pv-cards">' + cards + '</div>'
-    + '<div class="pv-grid">' + tile('Sales by month and channel', colChart) + tile('Sales trend', lineChart) + tile('Sales by channel', donutChart) + tile('Sales bridge', wfChart) + tile('Sales by region', table)
-    + tile('Text styles', '<div class="pv-text"><div style="font-size:18px;font-weight:700;color:' + dc[0] + '">Title</div><div style="color:' + r.text + '">Body text and labels</div><div style="color:' + r.grey70 + '">Secondary text</div><div style="color:' + r.grey45 + '">Light label</div><div><a style="color:' + TB.readable(r.brand, r.background, 4.5) + '">A link</a></div></div>') + '</div>';
+    + '<div class="pv-grid">' + tile('Sales by month and channel', colChart, 'bars') + tile('Sales trend', lineChart, 'lines') + tile('Sales by channel', donutChart, 'parts') + tile('Sales bridge', wfChart, 'bars') + tile('Sales by region', table, 'tables')
+    + tile('Text styles', '<div class="pv-text"><div style="font-size:18px;font-weight:700;color:' + dc[0] + '">Title</div><div style="color:' + r.text + '">Body text and labels</div><div style="color:' + r.grey70 + '">Secondary text</div><div style="color:' + r.grey45 + '">Light label</div><div><a style="color:' + TB.readable(r.brand, r.background, 4.5) + '">A link</a></div></div>', 'all') + '</div>';
 }
 
 function renderOut(){
@@ -147,7 +185,7 @@ function renderOut(){
   $('jsonSize').textContent = '(' + Math.round(state.out.json.length / 1024) + ' KB)';
   $('jsonView').textContent = state.out.json;
 }
-function renderAll(){ renderSeeds(); renderSwatches(); renderSettings(); renderPreview(); renderOut(); }
+function renderAll(){ renderSeeds(); renderSwatches(); renderSettings(); renderVis(); renderPreview(); renderOut(); }
 // Update values in place so the box being typed in (or the open color picker) keeps focus
 function syncValues(){
   const c = state.cfg, dc = dataColors();
@@ -182,6 +220,7 @@ function init(){
   if (cfg && store.get('blank') !== '1' && JSON.stringify(cfg) !== JSON.stringify(blankCfg())) state.cfg = Object.assign(blankCfg(), cfg);
   else if (store.get('blank') !== '1') { state.cfg = EX_CFG(); setExample(true); }
   else if (cfg) state.cfg = Object.assign(blankCfg(), cfg);
+  state.cfg.vis = TB.cleanVis(state.cfg.vis);
   renderAll();
   const change = full => { leaveExample(); try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {} if (full) renderAll(); else refresh(); persist(); };
   document.addEventListener('input', e => {
@@ -209,6 +248,20 @@ function init(){
   $('sentPresets').addEventListener('click', e => { const b = e.target.closest('[data-sent]'); if (!b) return; const p = SENT_PRESETS[+b.dataset.sent]; Object.assign(state.cfg, { good: p[1], neutral: p[2], bad: p[3] }); change(false); });
   $('textMode').addEventListener('change', () => { state.cfg.textMode = $('textMode').value; change(false); });
   $('font').addEventListener('change', () => { state.cfg.font = $('font').value; change(false); });
+  // a visual setting: '' goes back to the default (or to All visuals for a kind of visual)
+  const onVis = e => {
+    const el = e.target.closest('[data-vk]'); if (!el) return;
+    const v = state.cfg.vis, g = el.dataset.vg, k = el.dataset.vk;
+    const s = g === 'all' ? v.all : (v.groups[g] = v.groups[g] || {});
+    if (el.value) s[k] = el.value; else delete s[k];
+    if (g !== 'all' && !Object.keys(s).length) delete v.groups[g];
+    el.classList.toggle('set', !!el.value);
+    if (g === 'all') renderVisGroups();
+    else { const d = el.closest('details'), gr = TB.VIS_GROUPS.find(x => x.id === g); if (d && gr) d.querySelector('summary').innerHTML = visSummary(gr); $('resetVis').hidden = !Object.keys(v.all).length && !Object.keys(v.groups).length; }
+    change(false);
+  };
+  $('visAll').addEventListener('change', onVis); $('visGroups').addEventListener('change', onVis);
+  $('resetVis').addEventListener('click', () => { state.cfg.vis = { all: {}, groups: {} }; change(true); });
   $('bubble').addEventListener('change', () => { state.cfg.bubble = +$('bubble').value || 0; change(false); });
   $('download').addEventListener('click', () => {
     if (!state.out.json) return;

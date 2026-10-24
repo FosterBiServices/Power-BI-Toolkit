@@ -212,6 +212,11 @@ through both.
   and the HTML fits its visual with no scroll bar (`max-height:96vh`; custom visuals run in their own frame). That rewrite, the expression three tabs in, and the new bullet, progress,
   sparkline, variance bar and rolling tile functions haven't been run in Desktop yet. Names can't use `KPI` or `Text`
   as a segment (reserved in DAX queries), hence `FosterBIServices.KPICards.*`.
+- Theme Builder's visual settings (Step 3): importing a theme with them in Desktop. They're written from the theme
+  JSON schema's property names (`title`, `border`, `dropShadow`, `padding`, `legend`, `labels`, `valueAxis`, `lineStyles`,
+  `columnHeaders`, `values`, `grid`, slicer `data.mode`...). "All visuals" goes to `"*"` and also overwrites the same
+  property where the template sets it for one visual type, so it reaches them all; data labels only go to chart types,
+  since cards call their value `labels` too. A kind of visual (`VIS_GROUPS` in tb_core.js) wins over All visuals.
 - Chart Patterns: the TMDL scripts, the Format-pane steps and the combo chart marker size in a theme
   (written from the PBIP skills in Power-BI-Portfolio/AI/skills, not yet built by hand in Desktop).
 

@@ -159,6 +159,100 @@ const TB = (function(){
   }
 
   const PAGE_OBJECTS = ['textbox', 'shape', 'image', 'actionButton'];
+
+  /* Visual settings: one set for all visuals, then the same kind of choices for each group of visual types.
+     Each setting lists its choices and where it goes in visualStyles: [visual type or '' for every type, object, property].
+     '' writes to "*" and to every type whose template already sets that property, so "All visuals" really reaches them all. */
+  const ONOFF = [['on', 'Show'], ['off', 'Hide']];
+  const px = ns => ns.map(n => [String(n), n + ' px']), pt = ns => ns.map(n => [String(n), n + ' pt']);
+  const VIS_SETTINGS = {
+    title: { label: 'Title', opts: ONOFF, def: 'on', set: [['', 'title', 'show']] },
+    titleSize: { label: 'Title size', opts: pt([10, 12, 14, 16, 18, 20]), def: '18', set: [['', 'title', 'fontSize']] },
+    titleAlign: { label: 'Title alignment', opts: [['left', 'Left'], ['center', 'Center'], ['right', 'Right']], def: 'left', set: [['', 'title', 'alignment']] },
+    border: { label: 'Border', opts: ONOFF, def: 'off', set: [['', 'border', 'show']] },
+    radius: { label: 'Rounded corners', opts: [['0', 'Square']].concat(px([4, 8, 12, 16])), def: '2', set: [['', 'border', 'radius']] },
+    shadow: { label: 'Shadow', opts: ONOFF, def: 'off', set: [['', 'dropShadow', 'show']] },
+    padding: { label: 'Padding', opts: px([0, 4, 8, 12, 16]), def: '4', set: [['', 'padding', 'top'], ['', 'padding', 'bottom'], ['', 'padding', 'left'], ['', 'padding', 'right']] },
+    legend: { label: 'Legend', opts: ONOFF, def: 'off', set: [['', 'legend', 'show']] },
+    legendPos: { label: 'Legend position', opts: [['Top', 'Top left'], ['TopCenter', 'Top center'], ['Bottom', 'Bottom left'], ['BottomCenter', 'Bottom center'], ['Right', 'Right'], ['Left', 'Left']], def: 'Top', set: [['', 'legend', 'position']] },
+    // only charts: cards also call their value "labels"
+    labels: { label: 'Data labels', opts: ONOFF, def: 'on', set: [['', 'labels', 'show']], charts: true },
+    gridlines: { label: 'Gridlines', opts: ONOFF, def: 'on', set: [['', 'valueAxis', 'gridlineShow'], ['', 'categoryAxis', 'gridlineShow']] },
+    axisTitles: { label: 'Axis titles', opts: ONOFF, def: 'off', set: [['', 'categoryAxis', 'showAxisTitle'], ['', 'valueAxis', 'showAxisTitle']] },
+    // cards
+    valueSize: { label: 'Value size', opts: pt([18, 20, 24, 28, 32, 40]), def: '24', set: [['card', 'labels', 'fontSize'], ['cardVisual', 'value', 'fontSize']] },
+    cardLabel: { label: 'Label under the value', opts: ONOFF, def: 'on', set: [['card', 'categoryLabels', 'show'], ['cardVisual', 'label', 'show']] },
+    labelSize: { label: 'Label size', opts: pt([9, 10, 11, 12, 14, 16]), def: '10', set: [['card', 'categoryLabels', 'fontSize'], ['cardVisual', 'label', 'fontSize'], ['multiRowCard', 'categoryLabels', 'fontSize']] },
+    accentBar: { label: 'Accent bar', opts: ONOFF, def: 'on', set: [['cardVisual', 'accentBar', 'show'], ['multiRowCard', 'card', 'barShow']] },
+    // tables and matrixes
+    header: { label: 'Column headers', opts: [['brand', 'Filled with the text color'], ['light', 'Light grey fill'], ['plain', 'No fill, bold text']], def: 'brand', set: [] },
+    fontSize: { label: 'Text size', opts: pt([8, 9, 10, 11, 12, 14]), def: '10', set: [['tableEx', 'columnHeaders', 'fontSize'], ['tableEx', 'values', 'fontSize'], ['tableEx', 'total', 'fontSize'], ['tableEx', 'grid', 'textSize'], ['pivotTable', 'columnHeaders', 'fontSize'], ['pivotTable', 'rowHeaders', 'fontSize'], ['pivotTable', 'values', 'fontSize'], ['pivotTable', 'total', 'fontSize'], ['pivotTable', 'columnTotal', 'fontSize'], ['pivotTable', 'rowTotal', 'fontSize'], ['pivotTable', 'subTotals', 'fontSize'], ['pivotTable', 'grid', 'textSize']] },
+    banded: { label: 'Banded rows', opts: ONOFF, def: 'off', set: [] },
+    rowPadding: { label: 'Row padding', opts: px([2, 3, 5, 8, 10]), def: '5', set: [['tableEx', 'grid', 'rowPadding'], ['pivotTable', 'grid', 'rowPadding']] },
+    gridH: { label: 'Row lines', opts: ONOFF, def: 'on', set: [['tableEx', 'grid', 'gridHorizontal'], ['pivotTable', 'grid', 'gridHorizontal']] },
+    gridV: { label: 'Column lines', opts: ONOFF, def: 'off', set: [['tableEx', 'grid', 'gridVertical'], ['pivotTable', 'grid', 'gridVertical']] },
+    // slicers
+    slicerStyle: { label: 'Style', opts: [['Basic', 'List'], ['Dropdown', 'Dropdown']], def: 'Basic', set: [['slicer', 'data', 'mode']] },
+    slicerHeader: { label: 'Header', opts: ONOFF, def: 'on', set: [['slicer', 'header', 'show']] },
+    slicerText: { label: 'Text size', opts: pt([9, 10, 11, 12, 14]), def: '10', set: [['slicer', 'header', 'textSize'], ['slicer', 'items', 'textSize']] },
+    // lines
+    lineWidth: { label: 'Line width', opts: px([1, 2, 3, 4, 5]), def: '3', set: [['', 'lineStyles', 'strokeWidth']] },
+    markers: { label: 'Markers', opts: ONOFF, def: 'off', set: [['', 'lineStyles', 'showMarker']] }
+  };
+  const BOX = ['title', 'titleSize', 'titleAlign', 'border', 'radius', 'shadow', 'padding'];
+  const CHART = BOX.concat(['legend', 'legendPos', 'labels', 'gridlines', 'axisTitles']);
+  const VIS_ALL = CHART;
+  const VIS_GROUPS = [
+    { id: 'cards', name: 'Cards and KPIs', types: ['card', 'cardVisual', 'multiRowCard', 'kpi'], defs: { title: 'off' }, keys: BOX.concat(['valueSize', 'cardLabel', 'labelSize', 'accentBar']) },
+    { id: 'tables', name: 'Tables and matrixes', types: ['tableEx', 'pivotTable'], keys: BOX.concat(['header', 'fontSize', 'banded', 'rowPadding', 'gridH', 'gridV']) },
+    { id: 'slicers', name: 'Slicers', types: ['slicer'], defs: { title: 'off' }, keys: BOX.concat(['slicerStyle', 'slicerHeader', 'slicerText']) },
+    { id: 'bars', name: 'Bar and column charts', types: ['clusteredColumnChart', 'clusteredBarChart', 'columnChart', 'barChart', 'hundredPercentStackedColumnChart', 'hundredPercentStackedBarChart', 'ribbonChart', 'waterfallChart'], keys: CHART },
+    { id: 'lines', name: 'Line, area and combo charts', types: ['lineChart', 'areaChart', 'stackedAreaChart', 'lineStackedColumnComboChart', 'lineClusteredColumnComboChart'], keys: CHART.concat(['lineWidth', 'markers']) },
+    { id: 'parts', name: 'Pie, donut, treemap and funnel', types: ['pieChart', 'donutChart', 'treemap', 'funnel'], keys: BOX.concat(['legend', 'legendPos', 'labels']) }
+  ];
+  const TYPE_NAMES = { card: 'Card (classic)', cardVisual: 'Card', multiRowCard: 'Multi-row card', kpi: 'KPI', tableEx: 'Table', pivotTable: 'Matrix', slicer: 'Slicer', clusteredColumnChart: 'Clustered column', clusteredBarChart: 'Clustered bar', columnChart: 'Stacked column', barChart: 'Stacked bar', hundredPercentStackedColumnChart: '100% stacked column', hundredPercentStackedBarChart: '100% stacked bar', ribbonChart: 'Ribbon', waterfallChart: 'Waterfall', lineChart: 'Line', areaChart: 'Area', stackedAreaChart: 'Stacked area', lineStackedColumnComboChart: 'Line and stacked column', lineClusteredColumnComboChart: 'Line and clustered column', pieChart: 'Pie', donutChart: 'Donut', treemap: 'Treemap', funnel: 'Funnel' };
+  // Keep only settings and choices the page knows, so a saved or junk value can't reach the theme
+  function cleanVis(v){
+    const ok = (keys, src) => { const out = {}; if (src && typeof src === 'object') keys.forEach(k => { const x = src[k]; if (typeof x === 'string' && VIS_SETTINGS[k].opts.some(o => o[0] === x)) out[k] = x; }); return out; };
+    v = v && typeof v === 'object' ? v : {};
+    const groups = {}; VIS_GROUPS.forEach(g => { const s = ok(g.keys, v.groups && v.groups[g.id]); if (Object.keys(s).length) groups[g.id] = s; });
+    return { all: ok(VIS_ALL, v.all), groups };
+  }
+  // The value a visual group ends up with: its own choice, else the all-visuals choice, else the template's
+  function visValue(vis, group, key){
+    vis = cleanVis(vis); const g = vis.groups[group] || {}, gr = VIS_GROUPS.find(x => x.id === group);
+    return g[key] || vis.all[key] || (gr && gr.defs && gr.defs[key]) || VIS_SETTINGS[key].def;
+  }
+  const solid = h => ({ solid: { color: h } });
+  function applyVis(vs, vis, r){
+    vis = cleanVis(vis);
+    const val = (k, x) => VIS_SETTINGS[k].opts[0][0] === 'on' ? x === 'on' : /^\d+$/.test(x) ? +x : x;
+    const entry = (type, obj, make) => {
+      const s = vs[type] = vs[type] || {}; s['*'] = s['*'] || {};
+      let a = s['*'][obj];
+      if (!Array.isArray(a) || !a.length || !a[0] || typeof a[0] !== 'object') { if (!make) return null; a = s['*'][obj] = [type === 'cardVisual' ? { $id: 'default' } : {}]; }
+      return a[0];
+    };
+    const write = (types, k, x, onlySet) => VIS_SETTINGS[k].set.forEach(([t, obj, prop]) => (t ? types.filter(y => y === t) : types).forEach(type => {
+      const e = entry(type, obj, !onlySet || type === '*'); if (!e) return;
+      if (onlySet && type !== '*' && !(prop in e)) return;
+      e[prop] = val(k, x);
+    }));
+    const special = (types, k, x) => {
+      if (k === 'header') {
+        const fill = x === 'brand' ? r.text : x === 'light' ? r.grey10 : r.background;
+        const text = x === 'brand' ? r.background : readable(r.dataColors[0] || r.brand, x === 'light' ? r.grey10 : r.background, 4.5);
+        types.forEach(t => { const e = entry(t, 'columnHeaders', true); e.backColor = solid(fill); e.fontColor = solid(text); e.bold = x === 'plain'; });
+      }
+      if (k === 'banded') types.forEach(t => { const e = entry(t, 'values', true); e.backColorPrimary = solid(r.background); e.backColorSecondary = solid(x === 'on' ? mix(r.grey10, r.background, 0.45) : r.background); });
+    };
+    const every = Object.keys(vs).filter(t => t !== 'page' && PAGE_OBJECTS.indexOf(t) < 0);
+    if (every.indexOf('*') < 0) every.unshift('*');
+    const charts = VIS_GROUPS.filter(g => g.keys.indexOf('labels') >= 0).reduce((a, g) => a.concat(g.types), []);
+    Object.keys(vis.all).forEach(k => VIS_SETTINGS[k].charts ? write(charts, k, vis.all[k], false) : write(every, k, vis.all[k], true));
+    VIS_GROUPS.forEach(g => { const s = vis.groups[g.id]; if (s) Object.keys(s).forEach(k => { write(g.types, k, s[k], false); special(g.types, k, s[k]); }); });
+  }
+
   function build(o){
     const r = roles(o);
     const map = { 1: r.text, 9: r.bad, 10: r.good, 11: r.neutral, 15: r.grey45, 16: r.grey10, 17: r.grey70 };
@@ -196,6 +290,7 @@ const TB = (function(){
     if (r.visual) PAGE_OBJECTS.forEach(v => { const s = vs[v] = vs[v] || {}; s['*'] = s['*'] || {}; s['*'].background = [{ show: false, transparency: 100 }]; });
     // Combo chart marker size: big enough for a marker to read as a labeled bubble over each column
     const bub = Math.round(+o.bubble || 0);
+    applyVis(vs, o.vis, r);
     if (bub > 0) { const cc = vs.lineClusteredColumnComboChart = vs.lineClusteredColumnComboChart || {}; cc['*'] = cc['*'] || {}; const ls = cc['*'].lineStyles; cc['*'].lineStyles = [Object.assign({}, Array.isArray(ls) && ls[0] || {}, { markerSize: bub })]; }
     const pg = vs.page = vs.page || {}; pg['*'] = pg['*'] || {};
     pg['*'].background = [{ color: { solid: { color: r.page } }, transparency: 0 }];
@@ -225,6 +320,6 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/
