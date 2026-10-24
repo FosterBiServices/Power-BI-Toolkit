@@ -1,7 +1,7 @@
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>Theme Builder</h1>
-        <p class="lede">Start from one brand color. The page builds the data palette, text, background, good and bad colors, and a full report theme with styles for every common visual, checks it for readability and color blindness, and gives you the theme file to import. No AI needed.</p>
+        <p class="lede">Start from one brand color. The page builds the data palette, text, background, good and bad colors, and a full report theme with styles for every common visual (you can set titles, borders, legends and more for all visuals or one kind), checks it for readability and color blindness, and gives you the theme file to import. No AI needed.</p>
       </div>
       <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
@@ -33,6 +33,15 @@
         <div class="field"><label for="style">Palette</label><select id="style"><option value="varied">Varied colors that go with the brand</option><option value="shades">Shades of the brand color</option></select></div>
         <div class="field"><label for="count">Data colors</label><select id="count"><option>6</option><option>8</option><option>10</option><option>12</option></select></div>
       </div>
+      <div class="msg info" id="baseNote" hidden></div>
+      <details class="extra" id="themeBox"><summary>Already have a theme? Start from your theme file</summary><div class="extra-body">
+        <p class="note small">Its colors and font fill the steps below, and its visual styles replace the built-in ones. What you change on this page is added on top. In a PBIP project, a custom theme is in <span class="mono">StaticResources/RegisteredResources</span>.</p>
+        <div class="reply-actions"><button type="button" class="btn" id="openTheme">Open a theme file</button><input type="file" id="themeFile" accept=".json,application/json" hidden></div>
+        <label class="small" for="themePaste">Or paste the theme JSON</label>
+        <textarea id="themePaste" rows="5" spellcheck="false" placeholder='{ "name": "My theme", "dataColors": [ ... ] }'></textarea>
+        <div class="reply-actions"><button type="button" class="btn" id="themeUse">Use this theme</button></div>
+        <div id="themeMsg" role="status"></div>
+      </div></details>
     </div>
   </section>
 
@@ -87,11 +96,42 @@
     <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
-        <h2 id="s3">Preview</h2>
-        <p>A sketch of a report page with the theme applied, to judge the colors together. Power BI&rsquo;s own rendering will differ in detail.</p>
+        <h2 id="s3">Visual settings</h2>
+        <p>How visuals look when you add them. Start with the common settings for all visuals or one kind of visual. For more, copy the formatting of a visual from your own report, or set any property the theme file takes. Leave a setting as it is to keep the theme&rsquo;s default.</p>
       </div>
-      <div class="preview" id="preview"></div>
-      <div id="checks"></div>
+      <div class="box">
+        <h3>All visuals</h3>
+        <div class="vfields" id="visAll"></div>
+      </div>
+      <h3>By kind of visual <span class="muted small">(these win over All visuals)</span></h3>
+      <div class="vgroups" id="visGroups"></div>
+      <div class="reply-actions"><button type="button" class="linkbtn" id="resetVis">Undo my visual settings</button></div>
+
+      <div class="box">
+        <h3>Copy settings from a visual</h3>
+        <p class="note small">Format a visual the way you want in a sample report saved as a PBIP project. Read it here and its formatting becomes the theme&rsquo;s default for that kind of visual, so every report with the theme gets it. Titles&rsquo; text and colors set per series or by a field stay behind.</p>
+        <div class="reply-actions"><button type="button" class="btn" id="pickReport">Pick the PBIP report folder</button><input type="file" id="reportInput" webkitdirectory multiple hidden>
+          <button type="button" class="btn" id="openVisual">Open visual.json files</button><input type="file" id="visualInput" accept=".json,application/json" multiple hidden></div>
+        <details class="extra"><summary>Or paste a visual.json</summary><div class="extra-body">
+          <textarea id="visualPaste" rows="5" spellcheck="false" placeholder='{ "visual": { "visualType": "clusteredColumnChart", "objects": { ... } } }'></textarea>
+          <div class="reply-actions"><button type="button" class="btn" id="visualUse">Read it</button></div>
+        </div></details>
+        <div id="fromVisual" role="status"></div>
+      </div>
+
+      <div class="box">
+        <h3>Every property</h3>
+        <p class="note small" id="propNote">Every formatting option a theme file can set, for every visual, from Microsoft&rsquo;s theme schema. What you set here wins over everything above. Leave a box empty to keep the theme&rsquo;s value, shown in grey.</p>
+        <div class="cfg">
+          <div class="field"><label for="propType">Visual</label><select id="propType"></select></div>
+          <div class="field"><label for="propObj">Card in the Format pane</label><select id="propObj"></select></div>
+          <div class="field"><label for="propFind">Find a property</label><input type="text" id="propFind" autocomplete="off" placeholder="font, border, color..."></div>
+        </div>
+        <div class="props" id="propRows"></div>
+        <h4 class="sub">Your property changes <span class="muted" id="customCount"></span></h4>
+        <div id="customList"></div>
+        <div class="reply-actions"><button type="button" class="linkbtn" id="resetCustom">Remove all property changes</button></div>
+      </div>
     </div>
   </section>
 
@@ -100,8 +140,21 @@
     <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
-        <h2 id="s4">Download and import</h2>
-        <p>The theme file includes your colors, font, text styles, icons and formatting for 27 visual types and the page.</p>
+        <h2 id="s4">Preview</h2>
+        <p>A sketch of a report page with the theme applied, to judge the colors together. Power BI&rsquo;s own rendering will differ in detail.</p>
+      </div>
+      <div class="preview" id="preview"></div>
+      <div id="checks"></div>
+    </div>
+  </section>
+
+  <!-- STEP 5 -->
+  <section class="step" aria-labelledby="s5">
+    <div class="step-num">Step<b>5</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s5">Download and import</h2>
+        <p>The theme file includes your colors, font, text styles, icons and formatting for 27 visual types and the page, with your visual settings from Step 3.</p>
       </div>
       <div class="out-head"><span class="fname" id="fileName"></span>
         <span class="btns"><button type="button" class="btn" data-copy="json">Copy JSON</button><button type="button" class="btn primary" id="download">Download theme</button></span></div>

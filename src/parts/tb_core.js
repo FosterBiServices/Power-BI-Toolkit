@@ -159,6 +159,238 @@ const TB = (function(){
   }
 
   const PAGE_OBJECTS = ['textbox', 'shape', 'image', 'actionButton'];
+
+  /* Visual settings: one set for all visuals, then the same kind of choices for each group of visual types.
+     Each setting lists its choices and where it goes in visualStyles: [visual type or '' for every type, object, property].
+     '' writes to "*" and to every type whose template already sets that property, so "All visuals" really reaches them all. */
+  const ONOFF = [['on', 'Show'], ['off', 'Hide']];
+  const px = ns => ns.map(n => [String(n), n + ' px']), pt = ns => ns.map(n => [String(n), n + ' pt']);
+  const VIS_SETTINGS = {
+    title: { label: 'Title', opts: ONOFF, def: 'on', set: [['', 'title', 'show']] },
+    titleSize: { label: 'Title size', opts: pt([10, 12, 14, 16, 18, 20]), def: '18', set: [['', 'title', 'fontSize']] },
+    titleAlign: { label: 'Title alignment', opts: [['left', 'Left'], ['center', 'Center'], ['right', 'Right']], def: 'left', set: [['', 'title', 'alignment']] },
+    border: { label: 'Border', opts: ONOFF, def: 'off', set: [['', 'border', 'show']] },
+    radius: { label: 'Rounded corners', opts: [['0', 'Square']].concat(px([4, 8, 12, 16])), def: '2', set: [['', 'border', 'radius']] },
+    shadow: { label: 'Shadow', opts: ONOFF, def: 'off', set: [['', 'dropShadow', 'show']] },
+    padding: { label: 'Padding', opts: px([0, 4, 8, 12, 16]), def: '4', set: [['', 'padding', 'top'], ['', 'padding', 'bottom'], ['', 'padding', 'left'], ['', 'padding', 'right']] },
+    legend: { label: 'Legend', opts: ONOFF, def: 'off', set: [['', 'legend', 'show']] },
+    legendPos: { label: 'Legend position', opts: [['Top', 'Top left'], ['TopCenter', 'Top center'], ['Bottom', 'Bottom left'], ['BottomCenter', 'Bottom center'], ['Right', 'Right'], ['Left', 'Left']], def: 'Top', set: [['', 'legend', 'position']] },
+    // only charts: cards also call their value "labels"
+    labels: { label: 'Data labels', opts: ONOFF, def: 'on', set: [['', 'labels', 'show']], charts: true },
+    gridlines: { label: 'Gridlines', opts: ONOFF, def: 'on', set: [['', 'valueAxis', 'gridlineShow'], ['', 'categoryAxis', 'gridlineShow']] },
+    axisTitles: { label: 'Axis titles', opts: ONOFF, def: 'off', set: [['', 'categoryAxis', 'showAxisTitle'], ['', 'valueAxis', 'showAxisTitle']] },
+    // cards
+    valueSize: { label: 'Value size', opts: pt([18, 20, 24, 28, 32, 40]), def: '24', set: [['card', 'labels', 'fontSize'], ['cardVisual', 'value', 'fontSize']] },
+    cardLabel: { label: 'Label under the value', opts: ONOFF, def: 'on', set: [['card', 'categoryLabels', 'show'], ['cardVisual', 'label', 'show']] },
+    labelSize: { label: 'Label size', opts: pt([9, 10, 11, 12, 14, 16]), def: '10', set: [['card', 'categoryLabels', 'fontSize'], ['cardVisual', 'label', 'fontSize'], ['multiRowCard', 'categoryLabels', 'fontSize']] },
+    accentBar: { label: 'Accent bar', opts: ONOFF, def: 'on', set: [['cardVisual', 'accentBar', 'show'], ['multiRowCard', 'card', 'barShow']] },
+    // tables and matrixes
+    header: { label: 'Column headers', opts: [['brand', 'Filled with the text color'], ['light', 'Light grey fill'], ['plain', 'No fill, bold text']], def: 'brand', set: [] },
+    fontSize: { label: 'Text size', opts: pt([8, 9, 10, 11, 12, 14]), def: '10', set: [['tableEx', 'columnHeaders', 'fontSize'], ['tableEx', 'values', 'fontSize'], ['tableEx', 'total', 'fontSize'], ['tableEx', 'grid', 'textSize'], ['pivotTable', 'columnHeaders', 'fontSize'], ['pivotTable', 'rowHeaders', 'fontSize'], ['pivotTable', 'values', 'fontSize'], ['pivotTable', 'total', 'fontSize'], ['pivotTable', 'columnTotal', 'fontSize'], ['pivotTable', 'rowTotal', 'fontSize'], ['pivotTable', 'subTotals', 'fontSize'], ['pivotTable', 'grid', 'textSize']] },
+    banded: { label: 'Banded rows', opts: ONOFF, def: 'off', set: [] },
+    rowPadding: { label: 'Row padding', opts: px([2, 3, 5, 8, 10]), def: '5', set: [['tableEx', 'grid', 'rowPadding'], ['pivotTable', 'grid', 'rowPadding']] },
+    gridH: { label: 'Row lines', opts: ONOFF, def: 'on', set: [['tableEx', 'grid', 'gridHorizontal'], ['pivotTable', 'grid', 'gridHorizontal']] },
+    gridV: { label: 'Column lines', opts: ONOFF, def: 'off', set: [['tableEx', 'grid', 'gridVertical'], ['pivotTable', 'grid', 'gridVertical']] },
+    // slicers
+    slicerStyle: { label: 'Style', opts: [['Basic', 'List'], ['Dropdown', 'Dropdown']], def: 'Basic', set: [['slicer', 'data', 'mode']] },
+    slicerHeader: { label: 'Header', opts: ONOFF, def: 'on', set: [['slicer', 'header', 'show']] },
+    slicerText: { label: 'Text size', opts: pt([9, 10, 11, 12, 14]), def: '10', set: [['slicer', 'header', 'textSize'], ['slicer', 'items', 'textSize']] },
+    // lines
+    lineWidth: { label: 'Line width', opts: px([1, 2, 3, 4, 5]), def: '3', set: [['', 'lineStyles', 'strokeWidth']] },
+    markers: { label: 'Markers', opts: ONOFF, def: 'off', set: [['', 'lineStyles', 'showMarker']] }
+  };
+  const BOX = ['title', 'titleSize', 'titleAlign', 'border', 'radius', 'shadow', 'padding'];
+  const CHART = BOX.concat(['legend', 'legendPos', 'labels', 'gridlines', 'axisTitles']);
+  const VIS_ALL = CHART;
+  const VIS_GROUPS = [
+    { id: 'cards', name: 'Cards and KPIs', types: ['card', 'cardVisual', 'multiRowCard', 'kpi'], defs: { title: 'off' }, keys: BOX.concat(['valueSize', 'cardLabel', 'labelSize', 'accentBar']) },
+    { id: 'tables', name: 'Tables and matrixes', types: ['tableEx', 'pivotTable'], keys: BOX.concat(['header', 'fontSize', 'banded', 'rowPadding', 'gridH', 'gridV']) },
+    { id: 'slicers', name: 'Slicers', types: ['slicer'], defs: { title: 'off' }, keys: BOX.concat(['slicerStyle', 'slicerHeader', 'slicerText']) },
+    { id: 'bars', name: 'Bar and column charts', types: ['clusteredColumnChart', 'clusteredBarChart', 'columnChart', 'barChart', 'hundredPercentStackedColumnChart', 'hundredPercentStackedBarChart', 'ribbonChart', 'waterfallChart'], keys: CHART },
+    { id: 'lines', name: 'Line, area and combo charts', types: ['lineChart', 'areaChart', 'stackedAreaChart', 'lineStackedColumnComboChart', 'lineClusteredColumnComboChart'], keys: CHART.concat(['lineWidth', 'markers']) },
+    { id: 'parts', name: 'Pie, donut, treemap and funnel', types: ['pieChart', 'donutChart', 'treemap', 'funnel'], keys: BOX.concat(['legend', 'legendPos', 'labels']) }
+  ];
+  const TYPE_NAMES = { card: 'Card (classic)', cardVisual: 'Card', multiRowCard: 'Multi-row card', kpi: 'KPI', tableEx: 'Table', pivotTable: 'Matrix', slicer: 'Slicer', clusteredColumnChart: 'Clustered column', clusteredBarChart: 'Clustered bar', columnChart: 'Stacked column', barChart: 'Stacked bar', hundredPercentStackedColumnChart: '100% stacked column', hundredPercentStackedBarChart: '100% stacked bar', ribbonChart: 'Ribbon', waterfallChart: 'Waterfall', lineChart: 'Line', areaChart: 'Area', stackedAreaChart: 'Stacked area', lineStackedColumnComboChart: 'Line and stacked column', lineClusteredColumnComboChart: 'Line and clustered column', pieChart: 'Pie', donutChart: 'Donut', treemap: 'Treemap', funnel: 'Funnel' };
+  // Keep only settings and choices the page knows, so a saved or junk value can't reach the theme
+  function cleanVis(v){
+    const ok = (keys, src) => { const out = {}; if (src && typeof src === 'object') keys.forEach(k => { const x = src[k]; if (typeof x === 'string' && VIS_SETTINGS[k].opts.some(o => o[0] === x)) out[k] = x; }); return out; };
+    v = v && typeof v === 'object' ? v : {};
+    const groups = {}; VIS_GROUPS.forEach(g => { const s = ok(g.keys, v.groups && v.groups[g.id]); if (Object.keys(s).length) groups[g.id] = s; });
+    return { all: ok(VIS_ALL, v.all), groups };
+  }
+  // The value a visual group ends up with: its own choice, else the all-visuals choice, else the template's
+  function visValue(vis, group, key){
+    vis = cleanVis(vis); const g = vis.groups[group] || {}, gr = VIS_GROUPS.find(x => x.id === group);
+    return g[key] || vis.all[key] || (gr && gr.defs && gr.defs[key]) || VIS_SETTINGS[key].def;
+  }
+  const solid = h => ({ solid: { color: h } });
+  function applyVis(vs, vis, r){
+    vis = cleanVis(vis);
+    const val = (k, x) => VIS_SETTINGS[k].opts[0][0] === 'on' ? x === 'on' : /^\d+$/.test(x) ? +x : x;
+    const entry = (type, obj, make) => {
+      const s = vs[type] = vs[type] || {}; s['*'] = s['*'] || {};
+      let a = s['*'][obj];
+      if (!Array.isArray(a) || !a.length || !a[0] || typeof a[0] !== 'object') { if (!make) return null; a = s['*'][obj] = [type === 'cardVisual' ? { $id: 'default' } : {}]; }
+      return a[0];
+    };
+    const write = (types, k, x, onlySet) => VIS_SETTINGS[k].set.forEach(([t, obj, prop]) => (t ? types.filter(y => y === t) : types).forEach(type => {
+      if (type !== '*' && !schemaHas(type, obj, prop)) return;
+      const e = entry(type, obj, !onlySet || type === '*'); if (!e) return;
+      if (onlySet && type !== '*' && !(prop in e)) return;
+      e[prop] = val(k, x);
+    }));
+    const special = (types, k, x) => {
+      if (k === 'header') {
+        const fill = x === 'brand' ? r.text : x === 'light' ? r.grey10 : r.background;
+        const text = x === 'brand' ? r.background : readable(r.dataColors[0] || r.brand, x === 'light' ? r.grey10 : r.background, 4.5);
+        types.forEach(t => { const e = entry(t, 'columnHeaders', true); e.backColor = solid(fill); e.fontColor = solid(text); e.bold = x === 'plain'; });
+      }
+      if (k === 'banded') types.forEach(t => { const e = entry(t, 'values', true); e.backColorPrimary = solid(r.background); e.backColorSecondary = solid(x === 'on' ? mix(r.grey10, r.background, 0.45) : r.background); });
+    };
+    const every = Object.keys(vs).filter(t => t !== 'page' && PAGE_OBJECTS.indexOf(t) < 0);
+    if (every.indexOf('*') < 0) every.unshift('*');
+    const charts = VIS_GROUPS.filter(g => g.keys.indexOf('labels') >= 0).reduce((a, g) => a.concat(g.types), []);
+    Object.keys(vis.all).forEach(k => VIS_SETTINGS[k].charts ? write(charts, k, vis.all[k], false) : write(every, k, vis.all[k], true));
+    VIS_GROUPS.forEach(g => { const s = vis.groups[g.id]; if (s) Object.keys(s).forEach(k => { write(g.types, k, s[k], false); special(g.types, k, s[k]); }); });
+  }
+
+  /* ---------- Microsoft's theme schema (TB_SCHEMA, when the page has it): every card and property of every visual ---------- */
+  const SCH = () => typeof TB_SCHEMA !== 'undefined' ? TB_SCHEMA : null;
+  const objCache = {};
+  // { card name: { title, props: { property: [kind, title, ...] } } } for a visual type; "*" (all visuals) gets every card
+  function schemaObjects(type){
+    const S = SCH(); if (!S) return null;
+    if (objCache[type]) return objCache[type];
+    const out = {}, add = i => { const [name, title, pi] = S.o[i]; const o = out[name] = out[name] || { title: title, props: {} }; if (!o.title) o.title = title; Object.assign(o.props, S.p[pi]); };
+    if (S.t[type]) S.t[type].forEach(add); else if (type === '*') Object.keys(S.t).forEach(t => S.t[t].forEach(add)); else return null;
+    return objCache[type] = out;
+  }
+  const schemaTypes = () => { const S = SCH(); return S ? Object.keys(S.t) : []; };
+  // true when the schema knows the property for the type (or there's no schema to ask)
+  function schemaHas(type, obj, prop){
+    const so = schemaObjects(type); if (!so) return true;
+    return !!(so[obj] && (!prop || so[obj].props[prop]));
+  }
+  const isFill = v => !!(v && typeof v === 'object' && v.solid && typeof v.solid === 'object' && v.solid.color !== undefined
+    && (typeof v.solid.color === 'string' ? !!norm(v.solid.color) : !!(v.solid.color && v.solid.color.expr && v.solid.color.expr.ThemeDataColor && Number.isInteger(v.solid.color.expr.ThemeDataColor.ColorId))));
+  // a value that fits the property's kind, or undefined
+  function fitValue(spec, v){
+    if (!spec) return undefined;
+    const k = spec[0];
+    if (k === 'b') return typeof v === 'boolean' ? v : undefined;
+    if (k === 'n' || k === 'i') { if (typeof v !== 'number' || !isFinite(v)) return undefined; if (k === 'i') v = Math.round(v); if (spec[2] != null && v < spec[2]) v = spec[2]; if (spec[3] != null && v > spec[3]) v = spec[3]; return v; }
+    if (k === 's') return typeof v === 'string' && v.length <= 500 ? v : undefined;
+    if (k === 'e') return spec[2].some(o => o[0] === v) ? v : undefined;
+    if (k === 'c') { if (isFill(v)) return typeof v.solid.color === 'string' ? { solid: { color: norm(v.solid.color) } } : { solid: { color: { expr: { ThemeDataColor: { ColorId: v.solid.color.expr.ThemeDataColor.ColorId, Percent: +v.solid.color.expr.ThemeDataColor.Percent || 0 } } } } }; return undefined; }
+    return undefined;
+  }
+  /* Property changes: { visual type: { card: { property: value } } }, written last so they win over everything else */
+  function cleanCustom(c){
+    const out = {}; if (!c || typeof c !== 'object' || Array.isArray(c)) return out;
+    Object.keys(c).forEach(t => { const so = schemaObjects(t), ct = c[t]; if (!so || !ct || typeof ct !== 'object') return;
+      Object.keys(ct).forEach(o => { const props = so[o] && so[o].props, co = ct[o]; if (!props || !co || typeof co !== 'object') return;
+        Object.keys(co).forEach(p => { const v = fitValue(props[p], co[p]); if (v !== undefined) { out[t] = out[t] || {}; out[t][o] = out[t][o] || {}; out[t][o][p] = v; } }); }); });
+    return out;
+  }
+  function applyCustom(vs, custom){
+    Object.keys(custom).forEach(t => Object.keys(custom[t]).forEach(o => {
+      const s = vs[t] = vs[t] || {}; s['*'] = s['*'] || {};
+      let a = s['*'][o];
+      if (!Array.isArray(a) || !a.length || !a[0] || typeof a[0] !== 'object') a = s['*'][o] = [t === 'cardVisual' ? { $id: 'default' } : {}];
+      const e = a.find(x => x && (x.$id === undefined || x.$id === 'default')) || a[0];
+      Object.assign(e, JSON.parse(JSON.stringify(custom[t][o])));
+    }));
+  }
+  const countCustom = c => Object.keys(c || {}).reduce((n, t) => n + Object.keys(c[t]).reduce((m, o) => m + Object.keys(c[t][o]).length, 0), 0);
+
+  /* ---------- Settings from a visual in a report: PBIR visual.json, or the older report.json ---------- */
+  // A report stores each value as an expression: Literal 'text', 12D, 3L, true. Colors are a solid fill of one.
+  function literal(v){
+    if (!v || typeof v !== 'object') return undefined;
+    const lit = v.expr && v.expr.Literal; if (!lit || typeof lit.Value !== 'string') return undefined;
+    const x = lit.Value;
+    if (x === 'true' || x === 'false') return x === 'true';
+    if (/^-?\d+(\.\d+)?[DLM]?$/.test(x)) return parseFloat(x);
+    const m = /^'([\s\S]*)'$/.exec(x); if (m) return m[1].replace(/''/g, "'");
+    return undefined;
+  }
+  function reportValue(spec, v){
+    if (!spec) return undefined;
+    if (spec[0] === 'c') {
+      const c = v && v.solid && v.solid.color; if (!c) return undefined;
+      if (c.expr && c.expr.ThemeDataColor) return fitValue(spec, { solid: { color: c } });
+      const h = literal(c); return typeof h === 'string' && norm(h) ? { solid: { color: norm(h) } } : undefined;
+    }
+    return fitValue(spec, literal(v));
+  }
+  // Each visual's formatting as theme settings, with what couldn't be carried over
+  const SKIP_PROPS = { title: ['text'], subTitle: ['text'], visualLink: ['bookmark', 'webUrl', 'navigationSection', 'drillthroughSection'] };
+  function visualSettings(type, groups){
+    const so = schemaObjects(type), settings = {}, skipped = [];
+    Object.keys(groups).forEach(o => { const arr = groups[o]; if (!Array.isArray(arr)) return;
+      arr.forEach(entry => {
+        if (!entry || typeof entry !== 'object' || !entry.properties) return;
+        const sel = entry.selector;
+        if (sel && !(sel.id === 'default' && Object.keys(sel).length === 1)) { skipped.push(o + ' (for one series or field)'); return; }
+        Object.keys(entry.properties).forEach(p => {
+          if ((SKIP_PROPS[o] || []).indexOf(p) >= 0) return;
+          const spec = so && so[o] && so[o].props[p];
+          if (so && !spec) { skipped.push(o + '.' + p + ' (not in the theme schema for this visual)'); return; }
+          const v = so ? reportValue(spec, entry.properties[p]) : undefined;
+          if (v === undefined) { skipped.push(o + '.' + p + ' (set by a field or rule, not a fixed value)'); return; }
+          settings[o] = settings[o] || {}; settings[o][p] = v;
+        });
+      }); });
+    return { settings, skipped: [...new Set(skipped)] };
+  }
+  const titleOfVisual = vc => { const t = vc && vc.title && vc.title[0] && vc.title[0].properties && literal(vc.title[0].properties.text); return typeof t === 'string' ? t : ''; };
+  // files: [{ path, text }] from a PBIP folder, visual.json files or a pasted report.json. Returns the visuals found.
+  function readVisuals(files){
+    const out = [], pages = {};
+    const parse = t => { try { return JSON.parse(String(t).replace(/^\uFEFF/, '')); } catch (e) { return null; } };
+    files.forEach(f => { if (/(^|[\/\\])page\.json$/i.test(f.path)) { const j = parse(f.text); if (j && j.displayName) pages[f.path.replace(/[\/\\]page\.json$/i, '')] = String(j.displayName); } });
+    const add = (type, objects, vco, page, name) => {
+      if (typeof type !== 'string' || !type) return;
+      const a = visualSettings(type, objects || {}), b = visualSettings(type, vco || {});
+      const settings = a.settings; Object.keys(b.settings).forEach(o => settings[o] = Object.assign(settings[o] || {}, b.settings[o]));
+      out.push({ type, page: page || '', name: name || titleOfVisual(vco) || titleOfVisual(objects) || '', known: !!schemaObjects(type), settings, skipped: a.skipped.concat(b.skipped), count: countCustom({ x: settings }) });
+    };
+    files.forEach(f => {
+      const j = parse(f.text); if (!j || typeof j !== 'object') return;
+      if (j.visual && typeof j.visual === 'object') {   // PBIR: definition/pages/<page>/visuals/<visual>/visual.json
+        const dir = f.path.replace(/[\/\\]visuals[\/\\][^\/\\]+[\/\\]visual\.json$/i, '');
+        add(j.visual.visualType, j.visual.objects, j.visual.visualContainerObjects, pages[dir] || '', '');
+      } else if (Array.isArray(j.sections)) {          // older report.json: each visual's config is a JSON string
+        j.sections.forEach(sec => (sec.visualContainers || []).forEach(vc => {
+          const c = typeof vc.config === 'string' ? parse(vc.config) : vc.config, sv = c && c.singleVisual;
+          if (sv) add(sv.visualType, sv.objects, sv.vcObjects, sec.displayName || '', '');
+        }));
+      } else if (j.visualType || j.singleVisual) {     // a visual's config pasted on its own
+        const sv = j.singleVisual || j; add(sv.visualType, sv.objects, sv.vcObjects || sv.visualContainerObjects, '', '');
+      }
+    });
+    return out;
+  }
+
+  /* ---------- Start from a theme file ---------- */
+  function readTheme(text){
+    let t; try { t = JSON.parse(String(text).replace(/^\uFEFF/, '')); } catch (e) { return { error: 'This isn\u2019t valid JSON.' }; }
+    if (!t || typeof t !== 'object' || Array.isArray(t)) return { error: 'This isn\u2019t a theme file.' };
+    const dc = Array.isArray(t.dataColors) ? t.dataColors.map(norm).filter(Boolean) : [];
+    if (!dc.length && !(t.visualStyles && typeof t.visualStyles === 'object')) return { error: 'No dataColors or visualStyles found, so this doesn\u2019t look like a Power BI theme.' };
+    const pageBg = (() => { try { const c = t.visualStyles.page['*'].background[0].color.solid.color; return typeof c === 'string' ? norm(c) : null; } catch (e) { return null; } })();
+    const bg = norm(t.background);
+    const tc = t.textClasses && typeof t.textClasses === 'object' ? (t.textClasses.label || t.textClasses.callout || t.textClasses.title) : null;
+    const patch = { name: typeof t.name === 'string' ? t.name.slice(0, 120) : '' };
+    if (dc.length) { patch.seeds = [dc[0]]; patch.count = Math.min(Math.max(dc.length, 1), 40); patch.colors = dc.slice(0, 40); }
+    if (pageBg) { patch.background = pageBg; patch.visualBg = bg && bg !== pageBg ? bg : 'transparent'; } else if (bg) { patch.background = bg; patch.visualBg = 'transparent'; }
+    if (norm(t.foreground)) { patch.textMode = 'custom'; patch.textColor = norm(t.foreground); }
+    ['good', 'neutral', 'bad'].forEach(k => { if (norm(t[k])) patch[k] = norm(t[k]); });
+    if (tc && typeof tc.fontFace === 'string' && tc.fontFace.trim()) patch.font = tc.fontFace.split(',')[0].replace(/['"]/g, '').trim().slice(0, 60);
+    const base = {}; ['visualStyles', 'textClasses', 'icons'].forEach(k => { if (t[k] && typeof t[k] === 'object') base[k] = t[k]; });
+    return { patch, base, name: patch.name };
+  }
+
   function build(o){
     const r = roles(o);
     const map = { 1: r.text, 9: r.bad, 10: r.good, 11: r.neutral, 15: r.grey45, 16: r.grey10, 17: r.grey70 };
@@ -175,7 +407,10 @@ const TB = (function(){
       }
       return v;
     };
-    const t = walk(JSON.parse(JSON.stringify(TB_TEMPLATE)));
+    // a theme file the user started from replaces the built-in visual styles, text classes and icons
+    const b = o.base && typeof o.base === 'object' ? o.base : null;
+    const t = walk(JSON.parse(JSON.stringify(b ? Object.assign({}, TB_TEMPLATE, { visualStyles: b.visualStyles || {}, textClasses: b.textClasses || TB_TEMPLATE.textClasses, icons: b.icons || TB_TEMPLATE.icons }) : TB_TEMPLATE)));
+    if (!t.visualStyles || typeof t.visualStyles !== 'object' || Array.isArray(t.visualStyles)) t.visualStyles = {};
     // Power BI's visual type is "treemap"; styles under "treeMap" are ignored
     if (t.visualStyles && t.visualStyles.treeMap) { t.visualStyles.treemap = Object.assign({}, t.visualStyles.treeMap, t.visualStyles.treemap || {}); delete t.visualStyles.treeMap; }
     t.name = (o.name || 'My theme').trim() || 'My theme';
@@ -196,10 +431,12 @@ const TB = (function(){
     if (r.visual) PAGE_OBJECTS.forEach(v => { const s = vs[v] = vs[v] || {}; s['*'] = s['*'] || {}; s['*'].background = [{ show: false, transparency: 100 }]; });
     // Combo chart marker size: big enough for a marker to read as a labeled bubble over each column
     const bub = Math.round(+o.bubble || 0);
+    applyVis(vs, o.vis, r);
     if (bub > 0) { const cc = vs.lineClusteredColumnComboChart = vs.lineClusteredColumnComboChart || {}; cc['*'] = cc['*'] || {}; const ls = cc['*'].lineStyles; cc['*'].lineStyles = [Object.assign({}, Array.isArray(ls) && ls[0] || {}, { markerSize: bub })]; }
     const pg = vs.page = vs.page || {}; pg['*'] = pg['*'] || {};
     pg['*'].background = [{ color: { solid: { color: r.page } }, transparency: 0 }];
     pg['*'].outspace = [{ color: { solid: { color: r.page } }, transparency: 0 }];
+    applyCustom(vs, cleanCustom(o.custom));
     // keep a tidy key order: name and colors first, then the rest of the template
     const head = ['name', 'dataColors', 'background', 'foreground', 'foregroundLight', 'foregroundNeutralSecondary', 'foregroundNeutralTertiary', 'backgroundLight', 'backgroundNeutral', 'tableAccent', 'hyperlink', 'good', 'neutral', 'bad', 'maximum', 'center', 'minimum', 'null', 'firstLevelElements', 'secondLevelElements'];
     const out = {}; head.forEach(k => { if (k in t) out[k] = t[k]; }); Object.keys(t).forEach(k => { if (!(k in out)) out[k] = t[k]; });
@@ -225,6 +462,6 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/

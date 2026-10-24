@@ -2,7 +2,7 @@ from _env import open, S, P, ROOT
 p=open(P+'prep-for-ai-writer.html').read().split('\n')
 if p[3].startswith('<link rel="icon"'): p = p[:2] + [p[2] + '\n' + p[3]] + p[4:]
 L=lambda a,b:'\n'.join(p[a-1:b])
-tpl=open(S+'tb_template.js',encoding='utf-8').read(); tb=open(S+'tb_core.js').read(); ui=open(S+'tb_ui.js').read(); body=open(S+'tb_body.html').read()
+tpl=open(S+'tb_template.js',encoding='utf-8').read(); sch=open(S+'tb_schema.js',encoding='utf-8').read(); tb=open(S+'tb_core.js').read(); ui=open(S+'tb_ui.js').read(); body=open(S+'tb_body.html').read()
 head='<title>Theme Builder</title>\n<meta name="description" content="Build a complete Power BI report theme from one brand color: data palette, text, background, good and bad colors, font and visual styles, checked for readability and color blindness.">\n'+L(3,6)
 css=L(7,217)+'\n'+L(303,312)+'''
 /* ---------- Theme Builder ---------- */
@@ -70,9 +70,38 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
 .alt-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
 .alt-txt .mono{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .alt-why{font-size:12px;color:var(--muted)}
+.vfields{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px 14px}
+.vfields .field{min-width:0}
+.vfields select{width:100%;max-width:100%}
+.vfields select.set{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--gold)}
+.vgroups{display:flex;flex-direction:column;gap:8px}
+.vgroup{border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.vgroup>summary{cursor:pointer;padding:10px 14px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.vgroup>.vfields{padding:4px 14px 14px}
+.vtypes{flex-basis:100%;font-size:12px;color:var(--muted)}
+.props{display:flex;flex-direction:column;gap:10px;max-height:560px;overflow:auto;padding-right:4px}
+.pgroup{display:flex;flex-direction:column;gap:4px}
+.pgh{font-weight:600;font-size:13.5px;padding:6px 0 2px;border-bottom:1px solid var(--line)}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) 200px 30px;gap:8px;align-items:center;font-size:13px;padding:2px 0}
+.prow label{min-width:0;overflow-wrap:anywhere}
+.prow select,.prow input[type=text],.prow input[type=number]{width:100%;max-width:100%;font-size:13px;padding:4px 7px}
+.prow input.hex{width:100%!important}
+.prow.set select,.prow.set input{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--gold)}
+.prow input.bad{border-color:var(--err);background:var(--err-soft)}
+.pcolor{display:flex;gap:6px;align-items:center;min-width:0}
+.cpick.sm{width:30px;height:30px;border-radius:6px}
+.mono{font-family:var(--mono);font-size:11.5px}
+.clist,.vlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.clist li{display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:4px 4px 4px 10px;background:var(--surface)}
+.clist li span{min-width:0;overflow-wrap:anywhere}
+.vlist li{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--surface)}
+.skipped summary{font-size:12px;color:var(--muted);cursor:pointer}
+#themeBox textarea,#visualPaste{width:100%;font-family:var(--mono);font-size:12px}
+@media (max-width:560px){.prow{grid-template-columns:minmax(0,1fr) 30px}.prow label{grid-column:1/-1}}
+.vcount{font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--info-soft);color:var(--info)}
 '''
 logo=p[318]
-src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+logo+'\n'+body+'\n<script>\n'+tpl+'\n'+tb+'\n'+ui+'</script>\n'
-assert '</script>' not in (tpl+tb+ui).replace('<\\/script>','')
+src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+logo+'\n'+body+'\n<script>\n'+tpl+'\n'+sch+'\n'+tb+'\n'+ui+'</script>\n'
+assert '</script>' not in (tpl+sch+tb+ui).replace('<\\/script>','')
 open(P+'theme-builder.html','w',encoding='utf-8').write(src)
 print(len(src))
