@@ -1195,7 +1195,8 @@ function hlCode(code, lang){
     return esc(line).replace(/(&quot;.*?&quot;|"[^"]*")/g, '<span class="tok-str">$1</span>').replace(DAX_KW, '<span class="tok-kw">$1</span>');
   }).join('\n');
 }
-function fmtDate(dt){ return dt.getUTCDate() + ' ' + MONTHS[dt.getUTCMonth()].slice(0, 3) + ' ' + dt.getUTCFullYear(); }
+// a year box left empty or holding text gives an invalid date: show a dash rather than stop the page
+function fmtDate(dt){ if (!dt || isNaN(dt.getTime())) return '–'; return dt.getUTCDate() + ' ' + MONTHS[dt.getUTCMonth()].slice(0, 3) + ' ' + dt.getUTCFullYear(); }
 function persist(){ store.set('cfg', JSON.stringify(cfg)); store.set('ui', JSON.stringify({ lang: ui.lang, form: ui.form })); }
 
 /* ---------- controls ---------- */

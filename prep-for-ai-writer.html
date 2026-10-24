@@ -1893,7 +1893,8 @@ function parseObjDescriptions(text){
 
 // Insert /// descriptions into a TMDL script copied from TMDL view.
 // descs: Map(objKey -> description). Only object declarations at the table's child level are touched.
-function tmdlName(rest){
+// reads a name from a TMDL line (builder_core's tmdlName writes one)
+function tmdlReadName(rest){
   const s = rest.trim();
   if (s[0] === "'") { let i = 1, out = ''; while (i < s.length) { if (s[i] === "'" && s[i + 1] === "'") { out += "'"; i += 2; continue; } if (s[i] === "'") break; out += s[i++]; } return out; }
   return s.split(/[\s=]/)[0];
@@ -1914,7 +1915,7 @@ function applyDescriptionsToTmdl(script, descs){
     const l = lines[i], ind = indentOf(l), body = l.slice(ind.length);
     let m;
     if ((m = body.match(/^(ref\s+)?table\s+(.+)$/))) {
-      table = tmdlName(m[2]); tableIndent = ind.length; childIndent = null; isRef = !!m[1];
+      table = tmdlReadName(m[2]); tableIndent = ind.length; childIndent = null; isRef = !!m[1];
       tablesSeen.push(table);
       const k = objKey('table', table);
       if (!isRef && descs.has(k)) { pushDesc(ind, descs.get(k)); applied.add(k); }
@@ -1923,7 +1924,7 @@ function applyDescriptionsToTmdl(script, descs){
     if (table !== null && l.trim() && ind.length <= tableIndent && !/^\/\/\//.test(body)) { table = null; }
     if (table !== null && l.trim() && childIndent === null && ind.length > tableIndent && !/^\/\/\//.test(body)) childIndent = ind;
     if (table !== null && ind === childIndent && (m = body.match(/^column\s+(?!:)(.+)$/))) {
-      const k = objKey('column', table, tmdlName(m[1]));
+      const k = objKey('column', table, tmdlReadName(m[1]));
       if (descs.has(k)) { pushDesc(ind, descs.get(k)); applied.add(k); }
     }
     out.push(l);
