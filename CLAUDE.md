@@ -185,7 +185,14 @@ node run.js srtest   # only checks whose file name contains "srtest"
 Each check prints what it saw and ends with `errors [...]`; empty means no page errors.
 Several print values with "(expect ...)" to compare. Screenshots land in `src/tests/` and are
 git-ignored; look at them when changing layout. Sheet Recon loads SheetJS from cdnjs, so it
-needs internet (or set `XLSX_FILE` to a local `xlsx.full.min.js` 0.18.5).
+needs internet (or set `XLSX_FILE` to a local `xlsx.full.min.js` 0.18.5; `npm pack xlsx@0.18.5`
+has it in `package/dist/` when cdnjs is blocked but npm isn't).
+
+Two checks cover every page at once: `fuzztest.js` puts empty, junk, markup, broken exports and
+junk files into every field and presses every button (no script errors, and typed markup never
+runs; about an hour, so it asks run.js for more time with a `// time limit: N minutes` line), and
+`storagetest.js` sets every saved key to junk and reloads (the page still opens). Run a new tool
+through both.
 
 ## Not yet checked in real Power BI or Copilot
 

@@ -1878,6 +1878,7 @@ function renderAll(){ renderModel(); if (state.model) { renderChecks(); renderSe
 function refresh(keepFocus){
   const a = document.activeElement, id = a && a.dataset ? a.dataset.act + '|' + (a.dataset.i || '') + '|' + (a.dataset.part || '') : '';
   const pos = a && typeof a.selectionStart === 'number' ? a.selectionStart : null;
+  if (!state.model) { persist(); return; }
   renderSetup(); renderOut(); persist();
   if (keepFocus && id) {
     const el = [...$('setup').querySelectorAll('[data-act]')].find(e => e.dataset.act + '|' + (e.dataset.i || '') + '|' + (e.dataset.part || '') === id);
@@ -1914,8 +1915,10 @@ function init(){
   });
   $('checks').addEventListener('click', e => { const b = e.target.closest('[data-check]'); if (!b) return; leaveExample(); state.cfg.check = b.dataset.check; renderChecks(); refresh(); });
   const S = $('setup');
+  // a box for a filter or pair that's gone (the list was redrawn under it) does nothing
+  const rowFor = (a, t) => /^f(Vals|From|To|Col|Op)$/.test(a) ? state.cfg.filters[+t.dataset.i] : /^rc(Measure|Agg|Col|Table)$/.test(a) ? state.cfg.reconcile.pairs[+t.dataset.i] : true;
   S.addEventListener('input', e => {
-    const t = e.target, a = t.dataset.act, cfg = state.cfg; if (!a) return;
+    const t = e.target, a = t.dataset.act, cfg = state.cfg; if (!a || !rowFor(a, t)) return;
     leaveExample();
     if (a === 'search') { state.search[t.dataset.part] = t.value; return refresh(true); }
     if (a === 'fVals') { cfg.filters[+t.dataset.i].values = t.value; return refresh(true); }
@@ -1925,7 +1928,7 @@ function init(){
     if (a === 'rcTol') { cfg.reconcile.tol = t.value; return refresh(true); }
   });
   S.addEventListener('change', e => {
-    const t = e.target, a = t.dataset.act, cfg = state.cfg; if (!a) return;
+    const t = e.target, a = t.dataset.act, cfg = state.cfg; if (!a || !rowFor(a, t)) return;
     leaveExample();
     if (a === 'measure') { const p = cfg[t.dataset.part]; p.measures = p.measures.filter(n => lc(n) !== lc(t.value)).concat(t.checked ? [t.value] : []); }
     else if (a === 'groupSel') { const p = cfg[t.dataset.part]; if (t.value && !p.groups.some(g => lc(g) === lc(t.value))) p.groups.push(t.value); }
