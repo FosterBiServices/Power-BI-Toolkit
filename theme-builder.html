@@ -894,7 +894,8 @@ const TB = (function(){
         const sel = entry.selector && typeof entry.selector === 'object' ? entry.selector : null;
         // a selector with only an id (and hierarchyMatching) is a state; data or metadata picks one series or field
         const perField = sel && Object.keys(sel).some(k => k !== 'id' && k !== 'hierarchyMatching');
-        const props = Object.keys(entry.properties).filter(p => (SKIP_PROPS[o] || []).indexOf(p) < 0);
+        // an emptied value (a field link cleared in the Format pane leaves '') holds nothing to copy or report
+        const props = Object.keys(entry.properties).filter(p => (SKIP_PROPS[o] || []).indexOf(p) < 0 && literal(entry.properties[p]) !== '');
         if (!props.length) return;
         if (perField) {
           const m = typeof sel.metadata === 'string' ? sel.metadata.replace(/^[^.]*\./, '') : '';
