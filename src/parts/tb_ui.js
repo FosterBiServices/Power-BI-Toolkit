@@ -122,15 +122,25 @@ function renderVisGroups(){
 
 /* ---------- every property, from Microsoft's theme schema ---------- */
 const typeName = t => t === '*' ? 'All visuals' : TB.TYPE_NAMES[t] || t.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
-const objName = (o, so) => (so && so[o] && so[o].title) || o.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
+const objName = (k, so) => { const [o, st] = TB.splitCard(k); return ((so && so[o] && so[o].title) || o.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase())) + (st ? ' (' + TB.stateName(st) + ')' : ''); };
 const propState = { type: 'card', obj: '', find: '' };
 // searchable text: names as typed and split into words (dropShadow -> drop shadow)
 const words = t => (t + ' ' + t.replace(/([a-z])([A-Z])/g, '$1 $2')).toLowerCase();
+// A report's ThemeDataColor, as Power BI's color picker names it: ColorId 0 is the theme's background, 1 its
+// foreground (text), 2 and up its data colors 1, 2... Percent is a shade: -0.4 is 40% darker, 0.6 60% lighter.
+let tcCache = null;   // the theme the names are read from; each render builds it once
+function themeColorName(tc){
+  const id = +tc.ColorId, pc = +tc.Percent || 0;
+  if (!tcCache) { tcCache = {}; try { tcCache = TB.build(opts()).theme; } catch (e) {} }
+  const t = tcCache;
+  const hex = id === 0 ? t.background : id === 1 ? t.foreground : (t.dataColors || [])[id - 2];
+  return (id === 0 ? 'Background' : id === 1 ? 'Text color' : 'Theme color ' + (id - 1)) + (hex ? ' ' + hex : '') + (pc ? ', ' + Math.round(Math.abs(pc) * 100) + '% ' + (pc > 0 ? 'lighter' : 'darker') : '');
+}
 function showValue(spec, v){
   if (v === undefined || v === null) return '';
   if (spec && spec[0] === 'b') return v ? 'On' : 'Off';
   if (spec && spec[0] === 'e') { const o = spec[2].find(x => x[0] === v); return o ? o[1] : String(v); }
-  if (v && typeof v === 'object') { const c = v.solid && v.solid.color; if (typeof c === 'string') return c; if (c && c.expr && c.expr.ThemeDataColor) return 'Theme color ' + (c.expr.ThemeDataColor.ColorId + 1) + (c.expr.ThemeDataColor.Percent ? ' ' + (c.expr.ThemeDataColor.Percent > 0 ? 'lighter' : 'darker') : ''); return 'set'; }
+  if (v && typeof v === 'object') { const c = v.solid && v.solid.color; if (typeof c === 'string') return c; if (c && c.expr && c.expr.ThemeDataColor) return themeColorName(c.expr.ThemeDataColor); return 'set'; }
   return String(v);
 }
 function renderPropPickers(){
@@ -144,18 +154,21 @@ function renderPropPickers(){
   if (document.activeElement !== $('propFind')) $('propFind').value = propState.find;
 }
 function renderProps(){
+  tcCache = null;
   const t = propState.type, so = TB.schemaObjects(t); if (!so) { $('propRows').innerHTML = ''; return; }
   const custom = state.cfg.custom[t] || {}, find = propState.find.trim().toLowerCase();
   // the theme's value without the property changes, to show in grey
   const o = opts(); o.custom = {}; let built = {}; try { built = TB.build(o).theme.visualStyles || {}; } catch (e) {}
-  const themeVal = (obj, p) => { const read = vt => { const a = built[vt] && built[vt]['*'] && built[vt]['*'][obj]; const e = Array.isArray(a) && (a.find(x => x && (x.$id === undefined || x.$id === 'default')) || a[0]); return e && e[p] !== undefined ? e[p] : undefined; }; const v = read(t); return v !== undefined || t === '*' ? v : read('*'); };
-  const objs = (propState.obj ? [propState.obj] : Object.keys(so).sort((a, b) => objName(a, so).localeCompare(objName(b, so)))).filter(ob => so[ob]);
+  const themeVal = (key, p) => { const [obj, st] = TB.splitCard(key); const read = vt => { const a = built[vt] && built[vt]['*'] && built[vt]['*'][obj]; const e = Array.isArray(a) && (st ? a.find(x => x && x.$id === st) : a.find(x => x && (x.$id === undefined || x.$id === 'default')) || a[0]); return e && e[p] !== undefined ? e[p] : undefined; }; const v = read(t); return v !== undefined || t === '*' || st ? v : read('*'); };
+  // each card, then the states copied for it (hover, selected...), right after it
+  const states = ob => Object.keys(custom).filter(k => TB.splitCard(k)[0] === ob && k !== ob).sort();
+  const objs = [].concat(...(propState.obj ? [propState.obj] : Object.keys(so).sort((a, b) => objName(a, so).localeCompare(objName(b, so)))).filter(ob => so[ob]).map(ob => [ob].concat(states(ob))));
   let html = '', shown = 0;
   objs.forEach(ob => {
-    const props = so[ob].props, rows = Object.keys(props).filter(p => props[p][0] !== 'x').filter(p => !find || words(p + ' ' + props[p][1] + ' ' + ob + ' ' + objName(ob, so)).indexOf(find) >= 0).sort();
+    const base = TB.splitCard(ob)[0], props = so[base].props, rows = Object.keys(props).filter(p => props[p][0] !== 'x' && p !== '$id').filter(p => !find || words(p + ' ' + props[p][1] + ' ' + base + ' ' + objName(ob, so)).indexOf(find) >= 0).sort();
     if (!rows.length) return;
     if (shown > 400) return;
-    html += '<div class="pgroup"><div class="pgh">' + esc(objName(ob, so)) + ' <span class="mono muted">' + esc(ob) + '</span></div>';
+    html += '<div class="pgroup"><div class="pgh">' + esc(objName(ob, so)) + ' <span class="mono muted">' + esc(ob.replace('@', ' $id: ')) + '</span></div>';
     rows.forEach(p => {
       shown++;
       const spec = props[p], cur = custom[ob] && custom[ob][p], tv = themeVal(ob, p), ph = showValue(spec, tv), id = 'pp-' + ob + '-' + p, k = spec[0];
@@ -173,9 +186,10 @@ function renderProps(){
   if (shown > 400) $('propRows').insertAdjacentHTML('beforeend', '<div class="msg info">Showing the first 400. Pick a card or find a property to see the rest.</div>');
 }
 function renderCustomList(){
+  tcCache = null;
   const c = state.cfg.custom, n = TB.countCustom(c), items = [];
   Object.keys(c).forEach(t => { const so = TB.schemaObjects(t) || {}; Object.keys(c[t]).forEach(o => Object.keys(c[t][o]).forEach(p => {
-    const spec = so[o] && so[o].props[p];
+    const b = TB.splitCard(o)[0], spec = so[b] && so[b].props[p];
     items.push('<li><span>' + esc(typeName(t)) + ' &rsaquo; ' + esc(objName(o, so)) + ' &rsaquo; ' + esc((spec && spec[1]) || p) + ': <b>' + esc(showValue(spec, c[t][o][p])) + '</b></span><button type="button" class="ib" data-prm="' + esc(t + '|' + o + '|' + p) + '" aria-label="Remove">&#10005;</button></li>'); })); });
   $('customCount').textContent = n ? '(' + n + ')' : '';
   $('customList').innerHTML = n ? '<ul class="clist">' + items.join('') + '</ul>' : '<p class="note small">None yet.</p>';
@@ -189,15 +203,39 @@ function setCustom(t, o, p, v){
 }
 
 /* ---------- visuals read from a report ---------- */
+// Nothing starts checked: a report can have a hundred visuals and you may want only one. Find, Check all and the
+// page boxes act on the visuals shown.
 const found = { list: [] };
+const canPick = v => v.known && v.count > 0;
 function renderFound(msg){
   const box = $('fromVisual'), L = found.list;
   if (!L.length) { box.innerHTML = msg ? '<div class="msg ' + (msg.level || 'warn') + '">' + esc(msg.text) + '</div>' : ''; return; }
+  const pages = []; L.forEach((v, i) => { let g = pages.find(x => x.page === v.page); if (!g) pages.push(g = { page: v.page, items: [] }); g.items.push(i); });
+  const item = i => { const v = L[i];
+    return '<li data-fvi="' + i + '"><label><input type="checkbox" data-fv="' + i + '"' + (canPick(v) ? '' : ' disabled') + '> <b>' + esc(typeName(v.type)) + '</b>' + (v.name ? ' &middot; ' + esc(v.name) : '') + ' <span class="muted">&middot; ' + (v.known ? v.count + ' setting' + (v.count === 1 ? '' : 's') : 'a custom visual') + '</span></label>'
+      + (v.skipped.length ? '<details class="skipped"><summary>' + v.skipped.length + ' reason' + (v.skipped.length === 1 ? '' : 's') + ' something was left out</summary><ul class="small muted">' + v.skipped.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></details>' : '') + '</li>'; };
   box.innerHTML = (msg ? '<div class="msg ' + (msg.level || 'ok') + '">' + esc(msg.text) + '</div>' : '')
-    + '<ul class="vlist">' + L.map((v, i) => '<li><label><input type="checkbox" data-fv="' + i + '"' + (v.known && v.count ? ' checked' : ' disabled') + '> <b>' + esc(typeName(v.type)) + '</b>' + (v.name ? ' &middot; ' + esc(v.name) : '') + (v.page ? ' <span class="muted">on ' + esc(v.page) + '</span>' : '') + ' <span class="muted">&middot; ' + (v.known ? v.count + ' setting' + (v.count === 1 ? '' : 's') : 'a custom visual, so it can&rsquo;t be checked against the theme schema') + '</span></label>'
-      + (v.skipped.length ? '<details class="skipped"><summary>' + v.skipped.length + ' left out</summary><div class="small muted">' + v.skipped.map(esc).join('<br>') + '</div></details>' : '') + '</li>').join('') + '</ul>'
+    + '<div class="vtools"><input type="search" id="fvFind" placeholder="Find a visual by name, kind or page" aria-label="Find a visual">'
+    + '<button type="button" class="linkbtn" id="fvAll">Check all</button><button type="button" class="linkbtn" id="fvNone">Uncheck all</button></div>'
+    + pages.map((g, gi) => '<div class="vpage" data-fpg="' + gi + '">' + (pages.length > 1 || g.page ? '<label class="vpgh"><input type="checkbox" data-fpage="' + gi + '"' + (g.items.some(i => canPick(L[i])) ? '' : ' disabled') + '> <b>' + esc(g.page || 'No page name') + '</b> <span class="muted">(' + g.items.length + ')</span></label>' : '')
+      + '<ul class="vlist">' + g.items.map(item).join('') + '</ul></div>').join('')
+    + '<p class="note small" id="fvNoMatch" hidden>No visual matches.</p>'
     + '<p class="note small">If two checked visuals are the same kind, the lower one wins where they differ.</p>'
-    + '<div class="reply-actions"><button type="button" class="btn primary" id="addFound">Add the checked visuals to the theme</button></div>';
+    + '<div class="reply-actions"><button type="button" class="btn primary" id="addFound" disabled>Add the checked visuals to the theme</button></div>';
+  syncFound();
+}
+// page boxes, the Add button's count and what Find hides
+function syncFound(){
+  const box = $('fromVisual'), q = (($('fvFind') || {}).value || '').trim().toLowerCase();
+  let shown = 0;
+  box.querySelectorAll('[data-fvi]').forEach(li => { const v = found.list[+li.dataset.fvi]; const hit = !q || words(typeName(v.type) + ' ' + v.type + ' ' + v.name + ' ' + v.page).indexOf(q) >= 0; li.hidden = !hit; if (hit) shown++; });
+  box.querySelectorAll('[data-fpg]').forEach(g => { g.hidden = !g.querySelector('[data-fvi]:not([hidden])');
+    const pb = g.querySelector('[data-fpage]'); if (!pb) return;
+    const c = [...g.querySelectorAll('[data-fvi]:not([hidden]) [data-fv]:not(:disabled)')], on = c.filter(x => x.checked).length;
+    pb.checked = !!c.length && on === c.length; pb.indeterminate = on > 0 && on < c.length; pb.disabled = !c.length; });
+  const nm = $('fvNoMatch'); if (nm) nm.hidden = shown > 0;
+  const n = box.querySelectorAll('[data-fv]:checked').length, add = $('addFound');
+  if (add) { add.disabled = !n; add.textContent = n ? 'Add the ' + (n === 1 ? 'checked visual' : n + ' checked visuals') + ' to the theme' : 'Check the visuals to add'; }
 }
 /* The theme a PBIP report already uses: ask whether to start from it, take only its colors, or keep what's here */
 const pbip = { themes: [] };
@@ -216,8 +254,14 @@ function renderThemeAsk(){
 }
 function readFiles(files, how){
   if (how === 'folder' || how === 'step1') { pbip.themes = TB.findThemes(files); pbip.where = how === 'step1' ? 'step1' : 'step3'; renderThemeAsk(); }
-  if (how === 'step1') { if (!pbip.themes.length) $('themeMsg').innerHTML = '<div class="msg warn">No theme found in that folder. Pick the .Report folder of a PBIP project; its theme files are in StaticResources.</div>'; else $('themeMsg').innerHTML = ''; return; }
   found.list = TB.readVisuals(files);
+  if (how === 'step1') {
+    // the same pick fills Step 3's visual list, so the folder isn't picked twice
+    const n = found.list.length, more = n ? '<div class="msg info">Its ' + n + ' visual' + (n === 1 ? ' is' : 's are') + ' ready in Step 3, under Copy settings from a visual.</div>' : '';
+    $('themeMsg').innerHTML = (pbip.themes.length ? '' : '<div class="msg warn">No theme found in that folder. Pick the .Report folder of a PBIP project; its theme files are in StaticResources.</div>') + more;
+    if (n) renderFound({ level: 'ok', text: 'Found ' + n + ' visual' + (n === 1 ? '' : 's') + ' in the report you picked in Step 1. Check the ones whose formatting you want in the theme.' });
+    return;
+  }
   if (!found.list.length) renderFound({ level: 'warn', text: how === 'paste' ? 'No visual found in what you pasted. Paste a visual.json from a PBIP report (definition/pages/.../visuals/.../visual.json).' : 'No visuals found. Pick the .Report folder of a PBIP project, or its visual.json files.' });
   else renderFound({ level: 'ok', text: 'Found ' + found.list.length + ' visual' + (found.list.length === 1 ? '' : 's') + '. Check the ones whose formatting you want in the theme.' });
 }
@@ -404,7 +448,15 @@ function init(){
   $('openVisual').addEventListener('click', () => $('visualInput').click());
   [['reportInput', 'folder'], ['visualInput', 'files']].forEach(([id, how]) => $(id).addEventListener('change', e => { const fl = e.target.files; if (!fl || !fl.length) return; readAll(fl).then(files => { readFiles(files, how); e.target.value = ''; }); }));
   $('visualUse').addEventListener('click', () => readFiles([{ path: 'visual.json', text: $('visualPaste').value }], 'paste'));
+  $('fromVisual').addEventListener('input', e => { if (e.target.id === 'fvFind') syncFound(); });
+  $('fromVisual').addEventListener('change', e => {
+    const pg = e.target.dataset.fpage;
+    if (pg !== undefined) { const g = e.target.closest('[data-fpg]'); g.querySelectorAll('[data-fvi]:not([hidden]) [data-fv]:not(:disabled)').forEach(x => { x.checked = e.target.checked; }); }
+    if (pg !== undefined || e.target.dataset.fv !== undefined) syncFound();
+  });
   $('fromVisual').addEventListener('click', e => {
+    const all = e.target.closest('#fvAll'), none = e.target.closest('#fvNone');
+    if (all || none) { $('fromVisual').querySelectorAll('[data-fvi]:not([hidden]) [data-fv]:not(:disabled)').forEach(x => { x.checked = !!all; }); syncFound(); return; }
     if (!e.target.closest('#addFound')) return;
     const picked = [...document.querySelectorAll('#fromVisual [data-fv]:checked')].map(x => found.list[+x.dataset.fv]).filter(v => v && v.known);
     if (!picked.length) return;

@@ -1,0 +1,26 @@
+{
+  "name": "slicer1",
+  "position": { "x": 0, "y": 0, "z": 0, "height": 80, "width": 180 },
+  "visual": {
+    "visualType": "listSlicer",
+    "objects": {
+      "general": [ { "properties": { "filter": { "filter": { "Version": 2 } } } } ],
+      "label": [
+        { "properties": { "show": { "expr": { "Literal": { "Value": "false" } } } }, "selector": { "id": "default" } },
+        { "properties": { "field": { "expr": { "Measure": { "Expression": { "SourceRef": { "Entity": "_Measures" } }, "Property": "Total Sales" } } } },
+          "selector": { "data": [ { "dataViewWildcard": { "matchingOption": 1 } } ], "id": "default", "hierarchyMatching": 1 } }
+      ],
+      "value": [
+        { "properties": { "fontSize": { "expr": { "Literal": { "Value": "10D" } } } }, "selector": { "id": "default" } },
+        { "properties": { "fontColor": { "solid": { "color": "#204060" } } }, "selector": { "id": "interaction:hover" } },
+        { "properties": { "fontColor": { "solid": { "color": { "expr": { "ThemeDataColor": { "ColorId": 2, "Percent": 0 } } } } } }, "selector": { "id": "selection:selected" } }
+      ],
+      "fillCustom": [ { "properties": { "transparency": { "expr": { "Literal": { "Value": "50D" } } } }, "selector": { "id": "interaction:hover" } } ],
+      "selectionIcon": [ { "properties": { "color": { "solid": { "color": "#556677" } } }, "selector": { "id": "default", "hierarchyMatching": 1 } } ]
+    },
+    "visualContainerObjects": {
+      "title": [ { "properties": { "text": { "expr": { "Literal": { "Value": "'Region'" } } }, "show": { "expr": { "Literal": { "Value": "true" } } } } } ],
+      "subTitle": [ { "properties": { "fontSize": { "expr": { "Literal": { "Value": "'10'" } } } } } ]
+    }
+  }
+}

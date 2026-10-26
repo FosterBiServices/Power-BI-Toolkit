@@ -35,7 +35,7 @@
       </div>
       <div class="msg info" id="baseNote" hidden></div>
       <details class="extra" id="themeBox"><summary>Already have a theme? Start from your theme file</summary><div class="extra-body">
-        <p class="note small">Its colors and font fill the steps below, and its visual styles replace the built-in ones. What you change on this page is added on top. Or pick a PBIP report folder and the page finds the theme the report uses.</p>
+        <p class="note small">Its colors and font fill the steps below, and its visual styles replace the built-in ones. What you change on this page is added on top. Or pick a PBIP report folder and the page finds the theme the report uses, and lists its visuals in Step 3.</p>
         <div class="reply-actions"><button type="button" class="btn" id="openTheme">Open a theme file</button><input type="file" id="themeFile" accept=".json,application/json" hidden>
           <button type="button" class="btn" id="pickReportTheme">Pick a PBIP report folder</button><input type="file" id="reportThemeInput" webkitdirectory multiple hidden></div>
         <div class="theme-ask" id="themeAsk1" hidden></div>
@@ -111,7 +111,7 @@
 
       <div class="box">
         <h3>Copy settings from a visual</h3>
-        <p class="note small">Format a visual the way you want in a sample report saved as a PBIP project. Read it here and its formatting becomes the theme&rsquo;s default for that kind of visual, so every report with the theme gets it. Titles&rsquo; text and colors set per series or by a field stay behind.</p>
+        <p class="note small">Format a visual the way you want in a sample report saved as a PBIP project. Read it here and its formatting becomes the theme&rsquo;s default for that kind of visual, so every report with the theme gets it. Styles for hover and selected come too. Title text, and colors set for one series or by a field, stay behind; each visual says what was left out and why.</p>
         <div class="reply-actions"><button type="button" class="btn" id="pickReport">Pick the PBIP report folder</button><input type="file" id="reportInput" webkitdirectory multiple hidden>
           <button type="button" class="btn" id="openVisual">Open visual.json files</button><input type="file" id="visualInput" accept=".json,application/json" multiple hidden></div>
         <details class="extra"><summary>Or paste a visual.json</summary><div class="extra-body">
