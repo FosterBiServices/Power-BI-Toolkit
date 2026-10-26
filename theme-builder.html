@@ -322,6 +322,9 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
 .clist li span{min-width:0;overflow-wrap:anywhere}
 .vlist li{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--surface)}
 .skipped summary{font-size:12px;color:var(--muted);cursor:pointer}
+.skipped ul{margin:4px 0 0;padding-left:18px}.skipped li{border:0;padding:1px 0;background:none}
+.vtools{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin:8px 0}.vtools input[type=search]{flex:1 1 220px;min-width:0;font:14px var(--sans);color:var(--ink);background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px}.vtools input[type=search]:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.vpage{margin:8px 0}.vpgh{display:block;margin:0 0 4px;font-size:13px}
 #themeBox textarea,#visualPaste{width:100%;font-family:var(--mono);font-size:12px}
 @media (max-width:560px){.prow{grid-template-columns:minmax(0,1fr) 30px}.prow label{grid-column:1/-1}}
 .vcount{font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--info-soft);color:var(--info)}
@@ -447,7 +450,7 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
 
       <div class="box">
         <h3>Copy settings from a visual</h3>
-        <p class="note small">Format a visual the way you want in a sample report saved as a PBIP project. Read it here and its formatting becomes the theme&rsquo;s default for that kind of visual, so every report with the theme gets it. Titles&rsquo; text and colors set per series or by a field stay behind.</p>
+        <p class="note small">Format a visual the way you want in a sample report saved as a PBIP project. Read it here and its formatting becomes the theme&rsquo;s default for that kind of visual, so every report with the theme gets it. Styles for hover and selected come too. Title text, and colors set for one series or by a field, stay behind; each visual says what was left out and why.</p>
         <div class="reply-actions"><button type="button" class="btn" id="pickReport">Pick the PBIP report folder</button><input type="file" id="reportInput" webkitdirectory multiple hidden>
           <button type="button" class="btn" id="openVisual">Open visual.json files</button><input type="file" id="visualInput" accept=".json,application/json" multiple hidden></div>
         <details class="extra"><summary>Or paste a visual.json</summary><div class="extra-body">
@@ -809,17 +812,22 @@ const TB = (function(){
   function cleanCustom(c){
     const out = {}; if (!c || typeof c !== 'object' || Array.isArray(c)) return out;
     Object.keys(c).forEach(t => { const so = schemaObjects(t), ct = c[t]; if (!so || !ct || typeof ct !== 'object') return;
-      Object.keys(ct).forEach(o => { const props = so[o] && so[o].props, co = ct[o]; if (!props || !co || typeof co !== 'object') return;
-        Object.keys(co).forEach(p => { const v = fitValue(props[p], co[p]); if (v !== undefined) { out[t] = out[t] || {}; out[t][o] = out[t][o] || {}; out[t][o][p] = v; } }); }); });
+      Object.keys(ct).forEach(k => { const [o, st] = splitCard(k), props = so[o] && so[o].props, co = ct[k]; if (!props || !co || typeof co !== 'object') return;
+        if (st && (!stateOk(t, o) || !STATE_RX.test(st) || st === 'default')) return;
+        Object.keys(co).forEach(p => { if (p === '$id') return; const v = fitValue(props[p], co[p]); if (v !== undefined) { out[t] = out[t] || {}; out[t][k] = out[t][k] || {}; out[t][k][p] = v; } }); }); });
     return out;
   }
   function applyCustom(vs, custom){
-    Object.keys(custom).forEach(t => Object.keys(custom[t]).forEach(o => {
+    Object.keys(custom).forEach(t => Object.keys(custom[t]).forEach(k => {
+      const [o, st] = splitCard(k);
       const s = vs[t] = vs[t] || {}; s['*'] = s['*'] || {};
       let a = s['*'][o];
-      if (!Array.isArray(a) || !a.length || !a[0] || typeof a[0] !== 'object') a = s['*'][o] = [t === 'cardVisual' ? { $id: 'default' } : {}];
-      const e = a.find(x => x && (x.$id === undefined || x.$id === 'default')) || a[0];
-      Object.assign(e, JSON.parse(JSON.stringify(custom[t][o])));
+      if (!Array.isArray(a) || !a.length || !a[0] || typeof a[0] !== 'object') a = s['*'][o] = [];
+      let e = st ? a.find(x => x && x.$id === st) : a.find(x => x && (x.$id === undefined || x.$id === 'default'));
+      if (!e) { e = st || t === 'cardVisual' ? { $id: st || 'default' } : {}; if (st) a.push(e); else a.unshift(e); }
+      // once a card has a state entry, its plain entry is marked default too, as Power BI's own themes do
+      if (st) a.forEach(x => { if (x && typeof x === 'object' && x.$id === undefined) x.$id = 'default'; });
+      Object.assign(e, JSON.parse(JSON.stringify(custom[t][k])));
     }));
   }
   const countCustom = c => Object.keys(c || {}).reduce((n, t) => n + Object.keys(c[t]).reduce((m, o) => m + Object.keys(c[t][o]).length, 0), 0);
@@ -840,29 +848,78 @@ const TB = (function(){
     if (spec[0] === 'c') {
       const c = v && v.solid && v.solid.color; if (!c) return undefined;
       if (c.expr && c.expr.ThemeDataColor) return fitValue(spec, { solid: { color: c } });
-      const h = literal(c); return typeof h === 'string' && norm(h) ? { solid: { color: norm(h) } } : undefined;
+      const h = typeof c === 'string' ? c : literal(c); return typeof h === 'string' && norm(h) ? { solid: { color: norm(h) } } : undefined;
     }
-    return fitValue(spec, literal(v));
+    let x = literal(v);
+    // Desktop saves some sizes as text ('10'), not as a number (10D)
+    if ((spec[0] === 'n' || spec[0] === 'i') && typeof x === 'string' && /^\s*-?\d+(\.\d+)?\s*$/.test(x)) x = parseFloat(x);
+    return fitValue(spec, x);
   }
-  // Each visual's formatting as theme settings, with what couldn't be carried over
-  const SKIP_PROPS = { title: ['text'], subTitle: ['text'], visualLink: ['bookmark', 'webUrl', 'navigationSection', 'drillthroughSection'] };
+  /* A card can hold styles for a state (hover, selected, pressed...) as its own entry in the theme, marked $id.
+     Settings keep them as "card@state", e.g. "value@interaction:hover". */
+  const STATE_RX = /^[A-Za-z][A-Za-z:\-]{0,59}$/;
+  // the schema marks the cards that take $id; Power BI's own base theme also gives states to the other cards of
+  // those visuals (an advanced slicer's fill on hover), so any card of a visual with states can have them
+  function stateOk(type, o){
+    const so = schemaObjects(type); if (!so || !so[o]) return false;
+    return !!so[o].props.$id || Object.keys(so).some(k => so[k].props.$id && k !== 'title' && k !== 'subTitle');
+  }
+  const splitCard = k => { const i = k.indexOf('@'); return i < 0 ? [k, ''] : [k.slice(0, i), k.slice(i + 1)]; };
+  const STATE_WORDS = { 'interaction:hover': 'hover', 'interaction:press': 'pressed', 'interaction:rest': 'not hovered', 'selection:selected': 'selected', 'selection:selected-interaction:rest': 'selected, not hovered', 'selection:selected-interaction:hover': 'selected, hovered', 'selection:unselected': 'not selected' };
+  const stateName = s => !s || s === 'default' ? '' : STATE_WORDS[s] || s.replace(/^(interaction|selection):/, '').replace(/-/g, ', ').replace(/:/g, ' ');
+  // the field or measure a value is linked to, from a report expression
+  function linkedTo(v){
+    let found = '';
+    const walk = (x, d) => { if (found || !x || typeof x !== 'object' || d > 12) return;
+      ['Measure', 'Column', 'Aggregation', 'HierarchyLevel'].some(k => { const m = x[k]; if (m && typeof m.Property === 'string') { found = m.Property; return true; } return false; });
+      if (!found) Object.keys(x).forEach(k => walk(x[k], d + 1)); };
+    walk(v, 0); return found;
+  }
+  // Each visual's formatting as theme settings, with what couldn't be carried over: one line per reason
+  const SKIP_PROPS = { title: ['text'], subTitle: ['text'], header: ['text'], visualLink: ['bookmark', 'webUrl', 'navigationSection', 'drillthroughSection'] };
+  const WHY = [
+    ['field', 'Set for one series, field or value (a theme sets every one alike)'],
+    ['linked', 'Linked to a field, measure or rule'],
+    ['filter', 'The slicer\u2019s current selection (not formatting)'],
+    ['state', 'Styles for a state this card can\u2019t hold in a theme'],
+    ['schema', 'Not a theme setting for this kind of visual'],
+    ['value', 'A value a theme can\u2019t hold']];
   function visualSettings(type, groups){
-    const so = schemaObjects(type), settings = {}, skipped = [];
+    const so = schemaObjects(type), settings = {}, why = {};
+    const nameOf = (o, p) => { const c = so && so[o]; return ((c && c.title) || o) + (p ? ' \u203a ' + ((c && c.props[p] && c.props[p][1]) || p) : ''); };
+    const skip = (k, text) => { (why[k] = why[k] || []).push(text); };
     Object.keys(groups).forEach(o => { const arr = groups[o]; if (!Array.isArray(arr)) return;
       arr.forEach(entry => {
-        if (!entry || typeof entry !== 'object' || !entry.properties) return;
-        const sel = entry.selector;
-        if (sel && !(sel.id === 'default' && Object.keys(sel).length === 1)) { skipped.push(o + ' (for one series or field)'); return; }
-        Object.keys(entry.properties).forEach(p => {
-          if ((SKIP_PROPS[o] || []).indexOf(p) >= 0) return;
+        if (!entry || typeof entry !== 'object' || !entry.properties || typeof entry.properties !== 'object') return;
+        const sel = entry.selector && typeof entry.selector === 'object' ? entry.selector : null;
+        // a selector with only an id (and hierarchyMatching) is a state; data or metadata picks one series or field
+        const perField = sel && Object.keys(sel).some(k => k !== 'id' && k !== 'hierarchyMatching');
+        const props = Object.keys(entry.properties).filter(p => (SKIP_PROPS[o] || []).indexOf(p) < 0);
+        if (!props.length) return;
+        if (perField) {
+          const m = typeof sel.metadata === 'string' ? sel.metadata.replace(/^[^.]*\./, '') : '';
+          const fields = props.map(p => linkedTo(entry.properties[p])).filter(Boolean);
+          skip(fields.length === props.length ? 'linked' : 'field', nameOf(o) + (m ? ' for ' + m : '') + (fields.length ? ' (' + [...new Set(fields)].join(', ') + ')' : ''));
+          return;
+        }
+        const state = sel && typeof sel.id === 'string' && sel.id !== 'default' ? sel.id : '';
+        const st = state ? ' (' + stateName(state) + ')' : '';
+        if (state && so && so[o] && (!stateOk(type, o) || !STATE_RX.test(state))) { skip('state', nameOf(o) + st); return; }
+        const key = state ? o + '@' + state : o;
+        props.forEach(p => {
+          if (type !== 'page' && o === 'general' && p === 'filter') { skip('filter', ''); return; }
           const spec = so && so[o] && so[o].props[p];
-          if (so && !spec) { skipped.push(o + '.' + p + ' (not in the theme schema for this visual)'); return; }
-          const v = so ? reportValue(spec, entry.properties[p]) : undefined;
-          if (v === undefined) { skipped.push(o + '.' + p + ' (set by a field or rule, not a fixed value)'); return; }
-          settings[o] = settings[o] || {}; settings[o][p] = v;
+          if (!spec || p === '$id') { skip('schema', nameOf(o, p) + st); return; }
+          const v = reportValue(spec, entry.properties[p]);
+          if (v === undefined) { const f = linkedTo(entry.properties[p]); skip(f ? 'linked' : 'value', nameOf(o, p) + st + (f ? ' (' + f + ')' : '')); return; }
+          settings[key] = settings[key] || {}; settings[key][p] = v;
         });
       }); });
-    return { settings, skipped: [...new Set(skipped)] };
+    return { settings, why };
+  }
+  // the reasons as lines: "Reason: a, b, c"
+  function whyLines(why){
+    return WHY.filter(([k]) => why[k]).map(([k, label]) => { const items = [...new Set(why[k].filter(Boolean))]; return label + (items.length ? ': ' + items.join(', ') : ''); });
   }
   const titleOfVisual = vc => { const t = vc && vc.title && vc.title[0] && vc.title[0].properties && literal(vc.title[0].properties.text); return typeof t === 'string' ? t : ''; };
   // files: [{ path, text }] from a PBIP folder, visual.json files or a pasted report.json. Returns the visuals found.
@@ -872,9 +929,12 @@ const TB = (function(){
     files.forEach(f => { if (/(^|[\/\\])page\.json$/i.test(f.path)) { const j = parse(f.text); if (j && j.displayName) pages[f.path.replace(/[\/\\]page\.json$/i, '')] = String(j.displayName); } });
     const add = (type, objects, vco, page, name) => {
       if (typeof type !== 'string' || !type) return;
+      const known = !!schemaObjects(type);
       const a = visualSettings(type, objects || {}), b = visualSettings(type, vco || {});
       const settings = a.settings; Object.keys(b.settings).forEach(o => settings[o] = Object.assign(settings[o] || {}, b.settings[o]));
-      out.push({ type, page: page || '', name: name || titleOfVisual(vco) || titleOfVisual(objects) || '', known: !!schemaObjects(type), settings, skipped: a.skipped.concat(b.skipped), count: countCustom({ x: settings }) });
+      const why = {}; [a.why, b.why].forEach(w => Object.keys(w).forEach(k => why[k] = (why[k] || []).concat(w[k])));
+      const skipped = known ? whyLines(why) : ['A custom visual: Microsoft\u2019s theme schema doesn\u2019t cover it, so its settings can\u2019t be checked or copied'];
+      out.push({ type, page: page || '', name: name || titleOfVisual(vco) || titleOfVisual(objects) || '', known, settings: known ? settings : {}, skipped, count: known ? countCustom({ x: settings }) : 0 });
     };
     files.forEach(f => {
       const j = parse(f.text); if (!j || typeof j !== 'object') return;
@@ -1005,7 +1065,7 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, findThemes, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { splitCard, stateName, schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, findThemes, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/
 
@@ -1133,7 +1193,7 @@ function renderVisGroups(){
 
 /* ---------- every property, from Microsoft's theme schema ---------- */
 const typeName = t => t === '*' ? 'All visuals' : TB.TYPE_NAMES[t] || t.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
-const objName = (o, so) => (so && so[o] && so[o].title) || o.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
+const objName = (k, so) => { const [o, st] = TB.splitCard(k); return ((so && so[o] && so[o].title) || o.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase())) + (st ? ' (' + TB.stateName(st) + ')' : ''); };
 const propState = { type: 'card', obj: '', find: '' };
 // searchable text: names as typed and split into words (dropShadow -> drop shadow)
 const words = t => (t + ' ' + t.replace(/([a-z])([A-Z])/g, '$1 $2')).toLowerCase();
@@ -1159,14 +1219,16 @@ function renderProps(){
   const custom = state.cfg.custom[t] || {}, find = propState.find.trim().toLowerCase();
   // the theme's value without the property changes, to show in grey
   const o = opts(); o.custom = {}; let built = {}; try { built = TB.build(o).theme.visualStyles || {}; } catch (e) {}
-  const themeVal = (obj, p) => { const read = vt => { const a = built[vt] && built[vt]['*'] && built[vt]['*'][obj]; const e = Array.isArray(a) && (a.find(x => x && (x.$id === undefined || x.$id === 'default')) || a[0]); return e && e[p] !== undefined ? e[p] : undefined; }; const v = read(t); return v !== undefined || t === '*' ? v : read('*'); };
-  const objs = (propState.obj ? [propState.obj] : Object.keys(so).sort((a, b) => objName(a, so).localeCompare(objName(b, so)))).filter(ob => so[ob]);
+  const themeVal = (key, p) => { const [obj, st] = TB.splitCard(key); const read = vt => { const a = built[vt] && built[vt]['*'] && built[vt]['*'][obj]; const e = Array.isArray(a) && (st ? a.find(x => x && x.$id === st) : a.find(x => x && (x.$id === undefined || x.$id === 'default')) || a[0]); return e && e[p] !== undefined ? e[p] : undefined; }; const v = read(t); return v !== undefined || t === '*' || st ? v : read('*'); };
+  // each card, then the states copied for it (hover, selected...), right after it
+  const states = ob => Object.keys(custom).filter(k => TB.splitCard(k)[0] === ob && k !== ob).sort();
+  const objs = [].concat(...(propState.obj ? [propState.obj] : Object.keys(so).sort((a, b) => objName(a, so).localeCompare(objName(b, so)))).filter(ob => so[ob]).map(ob => [ob].concat(states(ob))));
   let html = '', shown = 0;
   objs.forEach(ob => {
-    const props = so[ob].props, rows = Object.keys(props).filter(p => props[p][0] !== 'x').filter(p => !find || words(p + ' ' + props[p][1] + ' ' + ob + ' ' + objName(ob, so)).indexOf(find) >= 0).sort();
+    const base = TB.splitCard(ob)[0], props = so[base].props, rows = Object.keys(props).filter(p => props[p][0] !== 'x' && p !== '$id').filter(p => !find || words(p + ' ' + props[p][1] + ' ' + base + ' ' + objName(ob, so)).indexOf(find) >= 0).sort();
     if (!rows.length) return;
     if (shown > 400) return;
-    html += '<div class="pgroup"><div class="pgh">' + esc(objName(ob, so)) + ' <span class="mono muted">' + esc(ob) + '</span></div>';
+    html += '<div class="pgroup"><div class="pgh">' + esc(objName(ob, so)) + ' <span class="mono muted">' + esc(ob.replace('@', ' $id: ')) + '</span></div>';
     rows.forEach(p => {
       shown++;
       const spec = props[p], cur = custom[ob] && custom[ob][p], tv = themeVal(ob, p), ph = showValue(spec, tv), id = 'pp-' + ob + '-' + p, k = spec[0];
@@ -1186,7 +1248,7 @@ function renderProps(){
 function renderCustomList(){
   const c = state.cfg.custom, n = TB.countCustom(c), items = [];
   Object.keys(c).forEach(t => { const so = TB.schemaObjects(t) || {}; Object.keys(c[t]).forEach(o => Object.keys(c[t][o]).forEach(p => {
-    const spec = so[o] && so[o].props[p];
+    const b = TB.splitCard(o)[0], spec = so[b] && so[b].props[p];
     items.push('<li><span>' + esc(typeName(t)) + ' &rsaquo; ' + esc(objName(o, so)) + ' &rsaquo; ' + esc((spec && spec[1]) || p) + ': <b>' + esc(showValue(spec, c[t][o][p])) + '</b></span><button type="button" class="ib" data-prm="' + esc(t + '|' + o + '|' + p) + '" aria-label="Remove">&#10005;</button></li>'); })); });
   $('customCount').textContent = n ? '(' + n + ')' : '';
   $('customList').innerHTML = n ? '<ul class="clist">' + items.join('') + '</ul>' : '<p class="note small">None yet.</p>';
@@ -1200,15 +1262,39 @@ function setCustom(t, o, p, v){
 }
 
 /* ---------- visuals read from a report ---------- */
+// Nothing starts checked: a report can have a hundred visuals and you may want only one. Find, Check all and the
+// page boxes act on the visuals shown.
 const found = { list: [] };
+const canPick = v => v.known && v.count > 0;
 function renderFound(msg){
   const box = $('fromVisual'), L = found.list;
   if (!L.length) { box.innerHTML = msg ? '<div class="msg ' + (msg.level || 'warn') + '">' + esc(msg.text) + '</div>' : ''; return; }
+  const pages = []; L.forEach((v, i) => { let g = pages.find(x => x.page === v.page); if (!g) pages.push(g = { page: v.page, items: [] }); g.items.push(i); });
+  const item = i => { const v = L[i];
+    return '<li data-fvi="' + i + '"><label><input type="checkbox" data-fv="' + i + '"' + (canPick(v) ? '' : ' disabled') + '> <b>' + esc(typeName(v.type)) + '</b>' + (v.name ? ' &middot; ' + esc(v.name) : '') + ' <span class="muted">&middot; ' + (v.known ? v.count + ' setting' + (v.count === 1 ? '' : 's') : 'a custom visual') + '</span></label>'
+      + (v.skipped.length ? '<details class="skipped"><summary>' + v.skipped.length + ' reason' + (v.skipped.length === 1 ? '' : 's') + ' something was left out</summary><ul class="small muted">' + v.skipped.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></details>' : '') + '</li>'; };
   box.innerHTML = (msg ? '<div class="msg ' + (msg.level || 'ok') + '">' + esc(msg.text) + '</div>' : '')
-    + '<ul class="vlist">' + L.map((v, i) => '<li><label><input type="checkbox" data-fv="' + i + '"' + (v.known && v.count ? ' checked' : ' disabled') + '> <b>' + esc(typeName(v.type)) + '</b>' + (v.name ? ' &middot; ' + esc(v.name) : '') + (v.page ? ' <span class="muted">on ' + esc(v.page) + '</span>' : '') + ' <span class="muted">&middot; ' + (v.known ? v.count + ' setting' + (v.count === 1 ? '' : 's') : 'a custom visual, so it can&rsquo;t be checked against the theme schema') + '</span></label>'
-      + (v.skipped.length ? '<details class="skipped"><summary>' + v.skipped.length + ' left out</summary><div class="small muted">' + v.skipped.map(esc).join('<br>') + '</div></details>' : '') + '</li>').join('') + '</ul>'
+    + '<div class="vtools"><input type="search" id="fvFind" placeholder="Find a visual by name, kind or page" aria-label="Find a visual">'
+    + '<button type="button" class="linkbtn" id="fvAll">Check all</button><button type="button" class="linkbtn" id="fvNone">Uncheck all</button></div>'
+    + pages.map((g, gi) => '<div class="vpage" data-fpg="' + gi + '">' + (pages.length > 1 || g.page ? '<label class="vpgh"><input type="checkbox" data-fpage="' + gi + '"' + (g.items.some(i => canPick(L[i])) ? '' : ' disabled') + '> <b>' + esc(g.page || 'No page name') + '</b> <span class="muted">(' + g.items.length + ')</span></label>' : '')
+      + '<ul class="vlist">' + g.items.map(item).join('') + '</ul></div>').join('')
+    + '<p class="note small" id="fvNoMatch" hidden>No visual matches.</p>'
     + '<p class="note small">If two checked visuals are the same kind, the lower one wins where they differ.</p>'
-    + '<div class="reply-actions"><button type="button" class="btn primary" id="addFound">Add the checked visuals to the theme</button></div>';
+    + '<div class="reply-actions"><button type="button" class="btn primary" id="addFound" disabled>Add the checked visuals to the theme</button></div>';
+  syncFound();
+}
+// page boxes, the Add button's count and what Find hides
+function syncFound(){
+  const box = $('fromVisual'), q = (($('fvFind') || {}).value || '').trim().toLowerCase();
+  let shown = 0;
+  box.querySelectorAll('[data-fvi]').forEach(li => { const v = found.list[+li.dataset.fvi]; const hit = !q || words(typeName(v.type) + ' ' + v.type + ' ' + v.name + ' ' + v.page).indexOf(q) >= 0; li.hidden = !hit; if (hit) shown++; });
+  box.querySelectorAll('[data-fpg]').forEach(g => { g.hidden = !g.querySelector('[data-fvi]:not([hidden])');
+    const pb = g.querySelector('[data-fpage]'); if (!pb) return;
+    const c = [...g.querySelectorAll('[data-fvi]:not([hidden]) [data-fv]:not(:disabled)')], on = c.filter(x => x.checked).length;
+    pb.checked = !!c.length && on === c.length; pb.indeterminate = on > 0 && on < c.length; pb.disabled = !c.length; });
+  const nm = $('fvNoMatch'); if (nm) nm.hidden = shown > 0;
+  const n = box.querySelectorAll('[data-fv]:checked').length, add = $('addFound');
+  if (add) { add.disabled = !n; add.textContent = n ? 'Add the ' + (n === 1 ? 'checked visual' : n + ' checked visuals') + ' to the theme' : 'Check the visuals to add'; }
 }
 /* The theme a PBIP report already uses: ask whether to start from it, take only its colors, or keep what's here */
 const pbip = { themes: [] };
@@ -1415,7 +1501,15 @@ function init(){
   $('openVisual').addEventListener('click', () => $('visualInput').click());
   [['reportInput', 'folder'], ['visualInput', 'files']].forEach(([id, how]) => $(id).addEventListener('change', e => { const fl = e.target.files; if (!fl || !fl.length) return; readAll(fl).then(files => { readFiles(files, how); e.target.value = ''; }); }));
   $('visualUse').addEventListener('click', () => readFiles([{ path: 'visual.json', text: $('visualPaste').value }], 'paste'));
+  $('fromVisual').addEventListener('input', e => { if (e.target.id === 'fvFind') syncFound(); });
+  $('fromVisual').addEventListener('change', e => {
+    const pg = e.target.dataset.fpage;
+    if (pg !== undefined) { const g = e.target.closest('[data-fpg]'); g.querySelectorAll('[data-fvi]:not([hidden]) [data-fv]:not(:disabled)').forEach(x => { x.checked = e.target.checked; }); }
+    if (pg !== undefined || e.target.dataset.fv !== undefined) syncFound();
+  });
   $('fromVisual').addEventListener('click', e => {
+    const all = e.target.closest('#fvAll'), none = e.target.closest('#fvNone');
+    if (all || none) { $('fromVisual').querySelectorAll('[data-fvi]:not([hidden]) [data-fv]:not(:disabled)').forEach(x => { x.checked = !!all; }); syncFound(); return; }
     if (!e.target.closest('#addFound')) return;
     const picked = [...document.querySelectorAll('#fromVisual [data-fv]:checked')].map(x => found.list[+x.dataset.fv]).filter(v => v && v.known);
     if (!picked.length) return;

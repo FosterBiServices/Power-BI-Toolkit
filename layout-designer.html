@@ -949,17 +949,22 @@ const TB = (function(){
   function cleanCustom(c){
     const out = {}; if (!c || typeof c !== 'object' || Array.isArray(c)) return out;
     Object.keys(c).forEach(t => { const so = schemaObjects(t), ct = c[t]; if (!so || !ct || typeof ct !== 'object') return;
-      Object.keys(ct).forEach(o => { const props = so[o] && so[o].props, co = ct[o]; if (!props || !co || typeof co !== 'object') return;
-        Object.keys(co).forEach(p => { const v = fitValue(props[p], co[p]); if (v !== undefined) { out[t] = out[t] || {}; out[t][o] = out[t][o] || {}; out[t][o][p] = v; } }); }); });
+      Object.keys(ct).forEach(k => { const [o, st] = splitCard(k), props = so[o] && so[o].props, co = ct[k]; if (!props || !co || typeof co !== 'object') return;
+        if (st && (!stateOk(t, o) || !STATE_RX.test(st) || st === 'default')) return;
+        Object.keys(co).forEach(p => { if (p === '$id') return; const v = fitValue(props[p], co[p]); if (v !== undefined) { out[t] = out[t] || {}; out[t][k] = out[t][k] || {}; out[t][k][p] = v; } }); }); });
     return out;
   }
   function applyCustom(vs, custom){
-    Object.keys(custom).forEach(t => Object.keys(custom[t]).forEach(o => {
+    Object.keys(custom).forEach(t => Object.keys(custom[t]).forEach(k => {
+      const [o, st] = splitCard(k);
       const s = vs[t] = vs[t] || {}; s['*'] = s['*'] || {};
       let a = s['*'][o];
-      if (!Array.isArray(a) || !a.length || !a[0] || typeof a[0] !== 'object') a = s['*'][o] = [t === 'cardVisual' ? { $id: 'default' } : {}];
-      const e = a.find(x => x && (x.$id === undefined || x.$id === 'default')) || a[0];
-      Object.assign(e, JSON.parse(JSON.stringify(custom[t][o])));
+      if (!Array.isArray(a) || !a.length || !a[0] || typeof a[0] !== 'object') a = s['*'][o] = [];
+      let e = st ? a.find(x => x && x.$id === st) : a.find(x => x && (x.$id === undefined || x.$id === 'default'));
+      if (!e) { e = st || t === 'cardVisual' ? { $id: st || 'default' } : {}; if (st) a.push(e); else a.unshift(e); }
+      // once a card has a state entry, its plain entry is marked default too, as Power BI's own themes do
+      if (st) a.forEach(x => { if (x && typeof x === 'object' && x.$id === undefined) x.$id = 'default'; });
+      Object.assign(e, JSON.parse(JSON.stringify(custom[t][k])));
     }));
   }
   const countCustom = c => Object.keys(c || {}).reduce((n, t) => n + Object.keys(c[t]).reduce((m, o) => m + Object.keys(c[t][o]).length, 0), 0);
@@ -980,29 +985,78 @@ const TB = (function(){
     if (spec[0] === 'c') {
       const c = v && v.solid && v.solid.color; if (!c) return undefined;
       if (c.expr && c.expr.ThemeDataColor) return fitValue(spec, { solid: { color: c } });
-      const h = literal(c); return typeof h === 'string' && norm(h) ? { solid: { color: norm(h) } } : undefined;
+      const h = typeof c === 'string' ? c : literal(c); return typeof h === 'string' && norm(h) ? { solid: { color: norm(h) } } : undefined;
     }
-    return fitValue(spec, literal(v));
+    let x = literal(v);
+    // Desktop saves some sizes as text ('10'), not as a number (10D)
+    if ((spec[0] === 'n' || spec[0] === 'i') && typeof x === 'string' && /^\s*-?\d+(\.\d+)?\s*$/.test(x)) x = parseFloat(x);
+    return fitValue(spec, x);
   }
-  // Each visual's formatting as theme settings, with what couldn't be carried over
-  const SKIP_PROPS = { title: ['text'], subTitle: ['text'], visualLink: ['bookmark', 'webUrl', 'navigationSection', 'drillthroughSection'] };
+  /* A card can hold styles for a state (hover, selected, pressed...) as its own entry in the theme, marked $id.
+     Settings keep them as "card@state", e.g. "value@interaction:hover". */
+  const STATE_RX = /^[A-Za-z][A-Za-z:\-]{0,59}$/;
+  // the schema marks the cards that take $id; Power BI's own base theme also gives states to the other cards of
+  // those visuals (an advanced slicer's fill on hover), so any card of a visual with states can have them
+  function stateOk(type, o){
+    const so = schemaObjects(type); if (!so || !so[o]) return false;
+    return !!so[o].props.$id || Object.keys(so).some(k => so[k].props.$id && k !== 'title' && k !== 'subTitle');
+  }
+  const splitCard = k => { const i = k.indexOf('@'); return i < 0 ? [k, ''] : [k.slice(0, i), k.slice(i + 1)]; };
+  const STATE_WORDS = { 'interaction:hover': 'hover', 'interaction:press': 'pressed', 'interaction:rest': 'not hovered', 'selection:selected': 'selected', 'selection:selected-interaction:rest': 'selected, not hovered', 'selection:selected-interaction:hover': 'selected, hovered', 'selection:unselected': 'not selected' };
+  const stateName = s => !s || s === 'default' ? '' : STATE_WORDS[s] || s.replace(/^(interaction|selection):/, '').replace(/-/g, ', ').replace(/:/g, ' ');
+  // the field or measure a value is linked to, from a report expression
+  function linkedTo(v){
+    let found = '';
+    const walk = (x, d) => { if (found || !x || typeof x !== 'object' || d > 12) return;
+      ['Measure', 'Column', 'Aggregation', 'HierarchyLevel'].some(k => { const m = x[k]; if (m && typeof m.Property === 'string') { found = m.Property; return true; } return false; });
+      if (!found) Object.keys(x).forEach(k => walk(x[k], d + 1)); };
+    walk(v, 0); return found;
+  }
+  // Each visual's formatting as theme settings, with what couldn't be carried over: one line per reason
+  const SKIP_PROPS = { title: ['text'], subTitle: ['text'], header: ['text'], visualLink: ['bookmark', 'webUrl', 'navigationSection', 'drillthroughSection'] };
+  const WHY = [
+    ['field', 'Set for one series, field or value (a theme sets every one alike)'],
+    ['linked', 'Linked to a field, measure or rule'],
+    ['filter', 'The slicer\u2019s current selection (not formatting)'],
+    ['state', 'Styles for a state this card can\u2019t hold in a theme'],
+    ['schema', 'Not a theme setting for this kind of visual'],
+    ['value', 'A value a theme can\u2019t hold']];
   function visualSettings(type, groups){
-    const so = schemaObjects(type), settings = {}, skipped = [];
+    const so = schemaObjects(type), settings = {}, why = {};
+    const nameOf = (o, p) => { const c = so && so[o]; return ((c && c.title) || o) + (p ? ' \u203a ' + ((c && c.props[p] && c.props[p][1]) || p) : ''); };
+    const skip = (k, text) => { (why[k] = why[k] || []).push(text); };
     Object.keys(groups).forEach(o => { const arr = groups[o]; if (!Array.isArray(arr)) return;
       arr.forEach(entry => {
-        if (!entry || typeof entry !== 'object' || !entry.properties) return;
-        const sel = entry.selector;
-        if (sel && !(sel.id === 'default' && Object.keys(sel).length === 1)) { skipped.push(o + ' (for one series or field)'); return; }
-        Object.keys(entry.properties).forEach(p => {
-          if ((SKIP_PROPS[o] || []).indexOf(p) >= 0) return;
+        if (!entry || typeof entry !== 'object' || !entry.properties || typeof entry.properties !== 'object') return;
+        const sel = entry.selector && typeof entry.selector === 'object' ? entry.selector : null;
+        // a selector with only an id (and hierarchyMatching) is a state; data or metadata picks one series or field
+        const perField = sel && Object.keys(sel).some(k => k !== 'id' && k !== 'hierarchyMatching');
+        const props = Object.keys(entry.properties).filter(p => (SKIP_PROPS[o] || []).indexOf(p) < 0);
+        if (!props.length) return;
+        if (perField) {
+          const m = typeof sel.metadata === 'string' ? sel.metadata.replace(/^[^.]*\./, '') : '';
+          const fields = props.map(p => linkedTo(entry.properties[p])).filter(Boolean);
+          skip(fields.length === props.length ? 'linked' : 'field', nameOf(o) + (m ? ' for ' + m : '') + (fields.length ? ' (' + [...new Set(fields)].join(', ') + ')' : ''));
+          return;
+        }
+        const state = sel && typeof sel.id === 'string' && sel.id !== 'default' ? sel.id : '';
+        const st = state ? ' (' + stateName(state) + ')' : '';
+        if (state && so && so[o] && (!stateOk(type, o) || !STATE_RX.test(state))) { skip('state', nameOf(o) + st); return; }
+        const key = state ? o + '@' + state : o;
+        props.forEach(p => {
+          if (type !== 'page' && o === 'general' && p === 'filter') { skip('filter', ''); return; }
           const spec = so && so[o] && so[o].props[p];
-          if (so && !spec) { skipped.push(o + '.' + p + ' (not in the theme schema for this visual)'); return; }
-          const v = so ? reportValue(spec, entry.properties[p]) : undefined;
-          if (v === undefined) { skipped.push(o + '.' + p + ' (set by a field or rule, not a fixed value)'); return; }
-          settings[o] = settings[o] || {}; settings[o][p] = v;
+          if (!spec || p === '$id') { skip('schema', nameOf(o, p) + st); return; }
+          const v = reportValue(spec, entry.properties[p]);
+          if (v === undefined) { const f = linkedTo(entry.properties[p]); skip(f ? 'linked' : 'value', nameOf(o, p) + st + (f ? ' (' + f + ')' : '')); return; }
+          settings[key] = settings[key] || {}; settings[key][p] = v;
         });
       }); });
-    return { settings, skipped: [...new Set(skipped)] };
+    return { settings, why };
+  }
+  // the reasons as lines: "Reason: a, b, c"
+  function whyLines(why){
+    return WHY.filter(([k]) => why[k]).map(([k, label]) => { const items = [...new Set(why[k].filter(Boolean))]; return label + (items.length ? ': ' + items.join(', ') : ''); });
   }
   const titleOfVisual = vc => { const t = vc && vc.title && vc.title[0] && vc.title[0].properties && literal(vc.title[0].properties.text); return typeof t === 'string' ? t : ''; };
   // files: [{ path, text }] from a PBIP folder, visual.json files or a pasted report.json. Returns the visuals found.
@@ -1012,9 +1066,12 @@ const TB = (function(){
     files.forEach(f => { if (/(^|[\/\\])page\.json$/i.test(f.path)) { const j = parse(f.text); if (j && j.displayName) pages[f.path.replace(/[\/\\]page\.json$/i, '')] = String(j.displayName); } });
     const add = (type, objects, vco, page, name) => {
       if (typeof type !== 'string' || !type) return;
+      const known = !!schemaObjects(type);
       const a = visualSettings(type, objects || {}), b = visualSettings(type, vco || {});
       const settings = a.settings; Object.keys(b.settings).forEach(o => settings[o] = Object.assign(settings[o] || {}, b.settings[o]));
-      out.push({ type, page: page || '', name: name || titleOfVisual(vco) || titleOfVisual(objects) || '', known: !!schemaObjects(type), settings, skipped: a.skipped.concat(b.skipped), count: countCustom({ x: settings }) });
+      const why = {}; [a.why, b.why].forEach(w => Object.keys(w).forEach(k => why[k] = (why[k] || []).concat(w[k])));
+      const skipped = known ? whyLines(why) : ['A custom visual: Microsoft\u2019s theme schema doesn\u2019t cover it, so its settings can\u2019t be checked or copied'];
+      out.push({ type, page: page || '', name: name || titleOfVisual(vco) || titleOfVisual(objects) || '', known, settings: known ? settings : {}, skipped, count: known ? countCustom({ x: settings }) : 0 });
     };
     files.forEach(f => {
       const j = parse(f.text); if (!j || typeof j !== 'object') return;
@@ -1145,7 +1202,7 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, findThemes, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { splitCard, stateName, schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, findThemes, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/
 

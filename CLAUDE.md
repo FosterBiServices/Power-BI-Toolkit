@@ -221,8 +221,15 @@ through both.
   (download a newer `reportThemeSchema-2.x.json` from microsoft/powerbi-desktop-samples and run it; build.py doesn't).
   Property changes (`cfg.custom`) are written last and win over everything. Copy settings from a visual reads PBIR
   `visual.json` (`objects` and `visualContainerObjects`, Literal values and ThemeDataColor fills) or an older
-  `report.json`; entries for one series or field (a selector other than `id: default`), values set by a field or rule,
-  title text and properties the schema doesn't list for that visual stay behind. Starting from a theme file uses its
+  `report.json`. A selector with only an `id` (and `hierarchyMatching`) is a state (`interaction:hover`, `selection:selected`...):
+  it's kept as `cfg.custom[type]["card@state"]` and written as that card's `$id` entry, as Power BI's own base themes do
+  (any card of a visual whose schema has `$id` anywhere, since the schema leaves it off some, e.g. an advanced slicer's fillCustom).
+  Sizes Desktop saves as text (`'10'`) are read as numbers. Entries for one series or field (`data` or `metadata`
+  selectors), values linked to a field or rule, a slicer's current selection (`general.filter`), title and header text,
+  and properties the schema doesn't list stay behind, each visual listing one line per reason. Custom visuals can't be
+  copied (the schema doesn't cover them). The visual list starts with nothing checked (Check all, Uncheck all, a box per
+  page and Find act on the visuals shown), since a report can have 100+ visuals and you may want one.
+  NOT yet checked in Desktop: importing a theme with state (`$id`) entries copied from a list or advanced slicer. Starting from a theme file uses its
   visualStyles, textClasses and icons in place of `tb_template.js`; its colors fill Steps 1 and 2, so the colors the
   page works out (table accent, hyperlink, gradient) follow them. Owner prefers no Copilot here.
   Picking a PBIP folder (Step 1, or Copy settings from a visual) finds the theme the report uses (`findThemes`: report.json

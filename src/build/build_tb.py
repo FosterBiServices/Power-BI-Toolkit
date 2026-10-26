@@ -96,6 +96,9 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
 .clist li span{min-width:0;overflow-wrap:anywhere}
 .vlist li{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--surface)}
 .skipped summary{font-size:12px;color:var(--muted);cursor:pointer}
+.skipped ul{margin:4px 0 0;padding-left:18px}.skipped li{border:0;padding:1px 0;background:none}
+.vtools{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin:8px 0}.vtools input[type=search]{flex:1 1 220px;min-width:0;font:14px var(--sans);color:var(--ink);background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px}.vtools input[type=search]:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.vpage{margin:8px 0}.vpgh{display:block;margin:0 0 4px;font-size:13px}
 #themeBox textarea,#visualPaste{width:100%;font-family:var(--mono);font-size:12px}
 @media (max-width:560px){.prow{grid-template-columns:minmax(0,1fr) 30px}.prow label{grid-column:1/-1}}
 .vcount{font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--info-soft);color:var(--info)}
