@@ -368,7 +368,7 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
       </div>
       <div class="msg info" id="baseNote" hidden></div>
       <details class="extra" id="themeBox"><summary>Already have a theme? Start from your theme file</summary><div class="extra-body">
-        <p class="note small">Its colors and font fill the steps below, and its visual styles replace the built-in ones. What you change on this page is added on top. Or pick a PBIP report folder and the page finds the theme the report uses.</p>
+        <p class="note small">Its colors and font fill the steps below, and its visual styles replace the built-in ones. What you change on this page is added on top. Or pick a PBIP report folder and the page finds the theme the report uses, and lists its visuals in Step 3.</p>
         <div class="reply-actions"><button type="button" class="btn" id="openTheme">Open a theme file</button><input type="file" id="themeFile" accept=".json,application/json" hidden>
           <button type="button" class="btn" id="pickReportTheme">Pick a PBIP report folder</button><input type="file" id="reportThemeInput" webkitdirectory multiple hidden></div>
         <div class="theme-ask" id="themeAsk1" hidden></div>
@@ -922,6 +922,11 @@ const TB = (function(){
     const out = [], pages = {};
     const parse = t => { try { return JSON.parse(String(t).replace(/^\uFEFF/, '')); } catch (e) { return null; } };
     files.forEach(f => { if (/(^|[\/\\])page\.json$/i.test(f.path)) { const j = parse(f.text); if (j && j.displayName) pages[f.path.replace(/[\/\\]page\.json$/i, '')] = String(j.displayName); } });
+    // pages.json's pageOrder lists the page folders in the report's tab order
+    const order = {};
+    files.forEach(f => { if (/(^|[\/\\])pages\.json$/i.test(f.path)) { const j = parse(f.text); if (j && Array.isArray(j.pageOrder)) j.pageOrder.forEach((n, i) => { if (typeof n === 'string') order[n] = i; }); } });
+    const num = x => typeof x === 'number' && isFinite(x) ? x : 0;
+    let rank = 0, pos = {};
     const add = (type, objects, vco, page, name) => {
       if (typeof type !== 'string' || !type) return;
       const known = !!schemaObjects(type);
@@ -929,23 +934,27 @@ const TB = (function(){
       const settings = a.settings; Object.keys(b.settings).forEach(o => settings[o] = Object.assign(settings[o] || {}, b.settings[o]));
       const why = {}; [a.why, b.why].forEach(w => Object.keys(w).forEach(k => why[k] = (why[k] || []).concat(w[k])));
       const skipped = known ? whyLines(why) : ['A custom visual: Microsoft\u2019s theme schema doesn\u2019t cover it, so its settings can\u2019t be checked or copied'];
-      out.push({ type, page: page || '', name: name || titleOfVisual(vco) || titleOfVisual(objects) || '', known, settings: known ? settings : {}, skipped, count: known ? countCustom({ x: settings }) : 0 });
+      out.push({ type, page: page || '', name: name || titleOfVisual(vco) || titleOfVisual(objects) || '', known, settings: known ? settings : {}, skipped, count: known ? countCustom({ x: settings }) : 0, rank, y: num(pos.y), x: num(pos.x), n: out.length });
     };
     files.forEach(f => {
       const j = parse(f.text); if (!j || typeof j !== 'object') return;
       if (j.visual && typeof j.visual === 'object') {   // PBIR: definition/pages/<page>/visuals/<visual>/visual.json
-        const dir = f.path.replace(/[\/\\]visuals[\/\\][^\/\\]+[\/\\]visual\.json$/i, '');
+        const dir = f.path.replace(/[\/\\]visuals[\/\\][^\/\\]+[\/\\]visual\.json$/i, ''), id = dir.split(/[\/\\]/).pop();
+        rank = order[id] !== undefined ? order[id] : 1e6; pos = j.position || {};
         add(j.visual.visualType, j.visual.objects, j.visual.visualContainerObjects, pages[dir] || '', '');
       } else if (Array.isArray(j.sections)) {          // older report.json: each visual's config is a JSON string
-        j.sections.forEach(sec => (sec.visualContainers || []).forEach(vc => {
+        j.sections.forEach((sec, si) => (sec.visualContainers || []).forEach(vc => {
           const c = typeof vc.config === 'string' ? parse(vc.config) : vc.config, sv = c && c.singleVisual;
+          rank = typeof sec.ordinal === 'number' ? sec.ordinal : si; pos = vc;
           if (sv) add(sv.visualType, sv.objects, sv.vcObjects, sec.displayName || '', '');
         }));
       } else if (j.visualType || j.singleVisual) {     // a visual's config pasted on its own
-        const sv = j.singleVisual || j; add(sv.visualType, sv.objects, sv.vcObjects || sv.visualContainerObjects, '', '');
+        const sv = j.singleVisual || j; rank = 1e6; pos = {}; add(sv.visualType, sv.objects, sv.vcObjects || sv.visualContainerObjects, '', '');
       }
     });
-    return out;
+    // in the report's page order, then top to bottom and left to right on each page
+    out.sort((a, b) => a.rank - b.rank || (a.page < b.page ? -1 : a.page > b.page ? 1 : 0) || a.y - b.y || a.x - b.x || a.n - b.n);
+    return out.map(({ rank, y, x, n, ...v }) => v);
   }
 
   /* The themes in a PBIP report folder: its custom theme (StaticResources/RegisteredResources) and the Power BI
@@ -1308,8 +1317,14 @@ function renderThemeAsk(){
 }
 function readFiles(files, how){
   if (how === 'folder' || how === 'step1') { pbip.themes = TB.findThemes(files); pbip.where = how === 'step1' ? 'step1' : 'step3'; renderThemeAsk(); }
-  if (how === 'step1') { if (!pbip.themes.length) $('themeMsg').innerHTML = '<div class="msg warn">No theme found in that folder. Pick the .Report folder of a PBIP project; its theme files are in StaticResources.</div>'; else $('themeMsg').innerHTML = ''; return; }
   found.list = TB.readVisuals(files);
+  if (how === 'step1') {
+    // the same pick fills Step 3's visual list, so the folder isn't picked twice
+    const n = found.list.length, more = n ? '<div class="msg info">Its ' + n + ' visual' + (n === 1 ? ' is' : 's are') + ' ready in Step 3, under Copy settings from a visual.</div>' : '';
+    $('themeMsg').innerHTML = (pbip.themes.length ? '' : '<div class="msg warn">No theme found in that folder. Pick the .Report folder of a PBIP project; its theme files are in StaticResources.</div>') + more;
+    if (n) renderFound({ level: 'ok', text: 'Found ' + n + ' visual' + (n === 1 ? '' : 's') + ' in the report you picked in Step 1. Check the ones whose formatting you want in the theme.' });
+    return;
+  }
   if (!found.list.length) renderFound({ level: 'warn', text: how === 'paste' ? 'No visual found in what you pasted. Paste a visual.json from a PBIP report (definition/pages/.../visuals/.../visual.json).' : 'No visuals found. Pick the .Report folder of a PBIP project, or its visual.json files.' });
   else renderFound({ level: 'ok', text: 'Found ' + found.list.length + ' visual' + (found.list.length === 1 ? '' : 's') + '. Check the ones whose formatting you want in the theme.' });
 }

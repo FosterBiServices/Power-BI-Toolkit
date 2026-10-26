@@ -235,6 +235,8 @@ through both.
   Picking a PBIP folder (Step 1, or Copy settings from a visual) finds the theme the report uses (`findThemes`: report.json
   `themeCollection`, custom theme in StaticResources/RegisteredResources, base theme in SharedResources/BaseThemes) and asks:
   start from it, use only its colors (colors, text, good/bad, font; visual settings stay), or keep what's there.
+  A Step 1 pick also fills Step 3's visual list, so the folder isn't picked twice. The list follows pages.json `pageOrder`,
+  then each visual's position (top to bottom, left to right).
 - Chart Patterns: the TMDL scripts, the Format-pane steps and the combo chart marker size in a theme
   (written from the PBIP skills in Power-BI-Portfolio/AI/skills, not yet built by hand in Desktop).
 

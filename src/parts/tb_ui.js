@@ -242,8 +242,14 @@ function renderThemeAsk(){
 }
 function readFiles(files, how){
   if (how === 'folder' || how === 'step1') { pbip.themes = TB.findThemes(files); pbip.where = how === 'step1' ? 'step1' : 'step3'; renderThemeAsk(); }
-  if (how === 'step1') { if (!pbip.themes.length) $('themeMsg').innerHTML = '<div class="msg warn">No theme found in that folder. Pick the .Report folder of a PBIP project; its theme files are in StaticResources.</div>'; else $('themeMsg').innerHTML = ''; return; }
   found.list = TB.readVisuals(files);
+  if (how === 'step1') {
+    // the same pick fills Step 3's visual list, so the folder isn't picked twice
+    const n = found.list.length, more = n ? '<div class="msg info">Its ' + n + ' visual' + (n === 1 ? ' is' : 's are') + ' ready in Step 3, under Copy settings from a visual.</div>' : '';
+    $('themeMsg').innerHTML = (pbip.themes.length ? '' : '<div class="msg warn">No theme found in that folder. Pick the .Report folder of a PBIP project; its theme files are in StaticResources.</div>') + more;
+    if (n) renderFound({ level: 'ok', text: 'Found ' + n + ' visual' + (n === 1 ? '' : 's') + ' in the report you picked in Step 1. Check the ones whose formatting you want in the theme.' });
+    return;
+  }
   if (!found.list.length) renderFound({ level: 'warn', text: how === 'paste' ? 'No visual found in what you pasted. Paste a visual.json from a PBIP report (definition/pages/.../visuals/.../visual.json).' : 'No visuals found. Pick the .Report folder of a PBIP project, or its visual.json files.' });
   else renderFound({ level: 'ok', text: 'Found ' + found.list.length + ' visual' + (found.list.length === 1 ? '' : 's') + '. Check the ones whose formatting you want in the theme.' });
 }
