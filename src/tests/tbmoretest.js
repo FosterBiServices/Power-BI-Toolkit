@@ -76,7 +76,7 @@ const path = require('path');
   await p.locator('#themeBox summary').click(); await p.locator('#reportThemeInput').setInputFiles(path.join(__dirname, 'tbpbip'));
   await p.waitForSelector('#themeAsk1 [data-tuse]');
   console.log('step 1 question:', (await p.locator('#themeAsk1').innerText()).split('\n')[0]);
-  console.log('step 1 pick lists the visuals in step 3:', (await p.locator('#fromVisual .vlist > li').allInnerTexts()).map(x => x.split('\n')[0]).join(' | '), '| note', await p.locator('#themeMsg').innerText(), '(expect 4: the Summary page's Funnel first, then Sales Overview top to bottom)');
+  console.log('step 1 pick lists the visuals in step 3:', (await p.locator('#fromVisual .vlist > li').allInnerTexts()).map(x => x.split('\n')[0]).join(' | '), '| note', await p.locator('#themeMsg').innerText(), '(expect 4: the Summary page Funnel first, then Sales Overview top to bottom)');
   await p.click('#themeAsk1 [data-tuse="colors"]'); j = await J();
   console.log('only colors:', j.dataColors.join(' '), '| fg', j.foreground, '| bad', j.bad, '| title size kept', j.visualStyles['*']['*'].title[0].fontSize, '| built-in styles kept', !!j.visualStyles.tableEx['*'].sparklines, '| no base', await p.locator('#baseNote').isHidden(), '(expect the 7 file colors, #1B2631, #E07B39, 20, true, true)');
   console.log('msg', await p.locator('#themeMsg').innerText());

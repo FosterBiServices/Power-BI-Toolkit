@@ -1207,11 +1207,21 @@ const objName = (k, so) => { const [o, st] = TB.splitCard(k); return ((so && so[
 const propState = { type: 'card', obj: '', find: '' };
 // searchable text: names as typed and split into words (dropShadow -> drop shadow)
 const words = t => (t + ' ' + t.replace(/([a-z])([A-Z])/g, '$1 $2')).toLowerCase();
+// A report's ThemeDataColor, as Power BI's color picker names it: ColorId 0 is the theme's background, 1 its
+// foreground (text), 2 and up its data colors 1, 2... Percent is a shade: -0.4 is 40% darker, 0.6 60% lighter.
+let tcCache = null;   // the theme the names are read from; each render builds it once
+function themeColorName(tc){
+  const id = +tc.ColorId, pc = +tc.Percent || 0;
+  if (!tcCache) { tcCache = {}; try { tcCache = TB.build(opts()).theme; } catch (e) {} }
+  const t = tcCache;
+  const hex = id === 0 ? t.background : id === 1 ? t.foreground : (t.dataColors || [])[id - 2];
+  return (id === 0 ? 'Background' : id === 1 ? 'Text color' : 'Theme color ' + (id - 1)) + (hex ? ' ' + hex : '') + (pc ? ', ' + Math.round(Math.abs(pc) * 100) + '% ' + (pc > 0 ? 'lighter' : 'darker') : '');
+}
 function showValue(spec, v){
   if (v === undefined || v === null) return '';
   if (spec && spec[0] === 'b') return v ? 'On' : 'Off';
   if (spec && spec[0] === 'e') { const o = spec[2].find(x => x[0] === v); return o ? o[1] : String(v); }
-  if (v && typeof v === 'object') { const c = v.solid && v.solid.color; if (typeof c === 'string') return c; if (c && c.expr && c.expr.ThemeDataColor) return 'Theme color ' + (c.expr.ThemeDataColor.ColorId + 1) + (c.expr.ThemeDataColor.Percent ? ' ' + (c.expr.ThemeDataColor.Percent > 0 ? 'lighter' : 'darker') : ''); return 'set'; }
+  if (v && typeof v === 'object') { const c = v.solid && v.solid.color; if (typeof c === 'string') return c; if (c && c.expr && c.expr.ThemeDataColor) return themeColorName(c.expr.ThemeDataColor); return 'set'; }
   return String(v);
 }
 function renderPropPickers(){
@@ -1225,6 +1235,7 @@ function renderPropPickers(){
   if (document.activeElement !== $('propFind')) $('propFind').value = propState.find;
 }
 function renderProps(){
+  tcCache = null;
   const t = propState.type, so = TB.schemaObjects(t); if (!so) { $('propRows').innerHTML = ''; return; }
   const custom = state.cfg.custom[t] || {}, find = propState.find.trim().toLowerCase();
   // the theme's value without the property changes, to show in grey
@@ -1256,6 +1267,7 @@ function renderProps(){
   if (shown > 400) $('propRows').insertAdjacentHTML('beforeend', '<div class="msg info">Showing the first 400. Pick a card or find a property to see the rest.</div>');
 }
 function renderCustomList(){
+  tcCache = null;
   const c = state.cfg.custom, n = TB.countCustom(c), items = [];
   Object.keys(c).forEach(t => { const so = TB.schemaObjects(t) || {}; Object.keys(c[t]).forEach(o => Object.keys(c[t][o]).forEach(p => {
     const b = TB.splitCard(o)[0], spec = so[b] && so[b].props[p];
