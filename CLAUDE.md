@@ -128,6 +128,13 @@ Things to know:
   A folder read in any tool is saved as the shared export with `source: 'pbip'`, so every other tool
   opens on it (unless it chose No model or its own export). The folder picker's handle is kept in
   IndexedDB (`sfpbi`, store `h`, key `pbip`) for the **Read it again** button.
+  `S.pbipShare(root, list, handle)` does the reading for every pick: it also keeps the folder's files
+  (model and report, as text) in the same store under key `pbipFiles`, stamped with the export's `savedAt`.
+  `S.pbipStored()` returns them while the shared export is still that read. So a folder read in any tool
+  reaches the report pages too: report pages send the stored files as `sf-pbip-folder` once per read
+  (`<prefix>repFrom`, so Remove report pages sticks), and Model Documenter (`window.mdSuite` in its HOOKS
+  line) opens its folder tab on them, and shares a folder chosen on its own page the same way. Every
+  page's folder walk reads `.json`, `.pbir` and `.pbip` too and doesn't skip `.Report` folders.
 - Home link and Switch tool menu, grouped by `S.GROUPS` (Design the report, Shape the data, Build the
   model, Check it, Explain it: the order a report gets built). `S.TOOLS` is the flat list made from it.
   The home page shows the same groups, under a **Connect your model once** box (the export query and

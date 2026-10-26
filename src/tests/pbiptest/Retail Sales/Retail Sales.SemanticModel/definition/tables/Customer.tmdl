@@ -1,0 +1,38 @@
+/// One row per customer
+table Customer
+	lineageTag: 0a1b2c3d-0000-0000-0000-000000000001
+
+	column CustomerKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 0a1b2c3d-0000-0000-0000-000000000002
+		summarizeBy: none
+		sourceColumn: CustomerKey
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Name as billed
+	column 'Customer Name'
+		dataType: string
+		lineageTag: 0a1b2c3d-0000-0000-0000-000000000003
+		summarizeBy: none
+		sourceColumn: Customer Name
+
+	column Region
+		dataType: string
+		displayFolder: Geography
+		lineageTag: 0a1b2c3d-0000-0000-0000-000000000004
+		summarizeBy: none
+		sourceColumn: Region
+
+	partition Customer = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents("C:\Data\customers.csv")),
+				    Promoted = Table.PromoteHeaders(Source)
+				in
+				    Promoted
+
+	annotation PBI_ResultType = Table
