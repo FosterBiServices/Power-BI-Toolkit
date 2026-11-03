@@ -9,31 +9,22 @@ const MC = (() => {
   const skipName = n => /^RowNumber-/i.test(n);
   const skipTable = t => /^(LocalDateTable_|DateTableTemplate_)/i.test(t);
 
-  // every row as { kind, table, name, props{...} }; columns the export doesn't have stay undefined
+  // every row as { kind, table, name, props{...} }; columns the export doesn't have stay undefined.
+  // The model is read by the shared reader (readModel in builder_core).
   function parse(text){
-    const raw = (text || '').replace(/\r/g, '');
-    if (!raw.trim()) return null;
-    const lines = raw.split('\n');
-    let h = -1, map = {};
-    for (let i = 0; i < Math.min(lines.length, 15); i++) {
-      const cells = lines[i].split('\t').map(c => lc(unquoteCell(c.trim())).replace(/^.*\[|\]$/g, ''));
-      if (cells.includes('kind') && cells.includes('table') && cells.includes('name')) { h = i; cells.forEach((c, j) => { map[c] = j; }); break; }
-    }
-    if (h < 0) return { error: 'The header row (Kind, Table, Name…) wasn’t found. Paste the results of the model export query, copied with the Copy button above the results grid.' };
-    const has = k => map[k] !== undefined;
-    const out = { rows: [], has: { summarize: has('summarize'), sortby: has('sortby'), hierarchies: has('hierarchies'), storage: has('storage'), source: has('source'), model: false } };
-    for (let i = h + 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue;
-      const c = lines[i].split('\t');
-      const g = k => has(k) ? restore(unquoteCell((c[map[k]] || '').trim())) : undefined;
-      const kind = lc(g('kind')), table = g('table') || '', name = g('name') || '';
-      if (skipTable(table) || skipName(name) || skipTable(g('totable') || '')) continue;
-      const flags = lc(g('flags') || '').split(/\s+/).filter(Boolean);
-      if (kind === 'table' && flags.includes('private')) continue;
-      if (kind === 'model') out.has.model = true;
-      out.rows.push({ kind, table, name, type: g('type'), folder: g('folder'), flags, description: g('description'), expression: g('expression'),
-        toTable: g('totable'), toColumn: g('tocolumn'), summarize: g('summarize'), sortBy: g('sortby'), hierarchies: g('hierarchies'), storage: g('storage'), source: g('source') });
-    }
+    if (!(text || '').trim()) return null;
+    const m = readModel(text);
+    if (!('model' in m.has)) return { error: 'The header row (Kind, Table, Name…) wasn’t found. Paste the results of the model export query, copied with the Copy button above the results grid.' };
+    const has = k => m.cols.has(k), v = (k, x) => has(k) ? (x === undefined ? '' : x) : undefined;
+    const out = { rows: [], has: { summarize: has('summarize'), sortby: has('sortby'), hierarchies: has('hierarchies'), storage: has('storage'), source: has('source'), model: m.has.model } };
+    const row = (kind, table, name, type, x) => ({ kind, table, name, type: v('type', type), folder: v('folder', x.folder), flags: x.flags, description: v('description', x.description),
+      expression: v('expression', x.expression), toTable: v('totable', x.toTable), toColumn: v('tocolumn', x.toColumn), summarize: v('summarize', x.summarize),
+      sortBy: v('sortby', x.sortBy), hierarchies: v('hierarchies', x.hierarchies), storage: v('storage', x.storage), source: v('source', x.source) });
+    m.tables.filter(t => !t.private).forEach(t => out.rows.push(row('table', t.name, t.name, t.category, Object.assign({}, t, { expression: t.calc }))));
+    m.columns.forEach(c => out.rows.push(row('column', c.table, c.name, c.dataType, c)));
+    m.measures.forEach(x => out.rows.push(row('measure', x.table, x.name, x.formatString, x)));
+    m.rels.forEach(r => out.rows.push(row('relationship', r.fromTable, r.fromColumn, r.card, r)));
+    if (m.model) out.rows.push(row('model', m.model.table, m.model.name, m.model.type, m.model));
     out.has.calc = out.rows.some(r => r.kind === 'table' && (r.expression || '').trim());
     if (!out.rows.length) return { error: 'The header row was found but no model rows came with it. Paste the full results.' };
     return out;

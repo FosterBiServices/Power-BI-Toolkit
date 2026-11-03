@@ -699,8 +699,23 @@ function isDateTable(t){ return isMarkedDateTable(t) || isCalcDateTable(t); }
 // marked ones first
 function dateTablesOf(model){ return model.tables.filter(isMarkedDateTable).concat(model.tables.filter(t => !isMarkedDateTable(t) && isCalcDateTable(t))); }
 
-function parseModel(text){
-  const res = { tables: [], columns: [], measures: [], rels: [], error: null, skipped: 0 };
+/* ---------- the shared model reader ----------
+   readModel() is the one place the model export is read. It keeps every column and flag the export has,
+   so a tool doesn't need its own parser. Rows Power BI makes for itself (auto date tables, RowNumber
+   columns) are left out; private tables are kept with private: true, and each tool decides.
+   tables   { name, category, hidden, private, description, storage, source, calc, flags[] }
+   columns  { table, name, dataType, folder, hidden, key, description, expression, summarize, sortBy, hierarchies, flags[] }
+   measures { table, name, formatString, folder, hidden, text, dynamicFormat, description, expression, flags[] }
+   rels     { fromTable, fromColumn, toTable, toColumn, card, fromCard, toCard, both, inactive, flags[] }
+   model    { name, table, type, discourage, flags[] } from the _model row, or null
+   opts.keepAuto keeps auto date tables and RowNumber columns (Model Documenter can show them).
+   opts.keepAuto keeps auto date tables and RowNumber columns (Model Documenter can show them).
+   cols     the export's column names (lower case), for tools that tell an older export query from a newer one
+   has      which optional export columns came with it (summarize, sortBy, hierarchies, storage, source, model, upgraded) */
+const AUTO_DATE_TABLE = /^(localdatetable_|datetabletemplate_)/i;
+function readModel(text, opts){
+  const keepAuto = !!(opts && opts.keepAuto);
+  const res = { tables: [], columns: [], measures: [], rels: [], model: null, has: {}, error: null, skipped: 0 };
   const raw = (text || '').replace(/\r/g, '');
   if (!raw.trim()) return res;
   const lines = raw.split('\n');
@@ -712,47 +727,114 @@ function parseModel(text){
     }
   }
   if (hIdx < 0) {
-    res.error = 'The header row (Kind, Table, Name…) wasn\u2019t found. Use the Copy button above the results grid so the column names come along, and make sure the query from Step 1 is the one you ran.';
+    res.error = 'The header row (Kind, Table, Name…) wasn’t found. Use the Copy button above the results grid so the column names come along, and make sure the query from Step 1 is the one you ran.';
     return res;
   }
+  const has = k => map[k] !== undefined;
+  res.cols = new Set(Object.keys(map)); // the export's column names, lower case
+  res.has = { summarize: has('summarize'), sortBy: has('sortby'), hierarchies: has('hierarchies'), storage: has('storage'), source: has('source'), model: false };
   const get = (cells, k) => map[k] === undefined ? '' : restore(unquoteCell((cells[map[k]] || '').trim()));
-  const tablesSeen = new Map();
   for (let i = hIdx + 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
     const c = lines[i].split('\t');
     const kind = lc(get(c, 'kind'));
     const table = get(c, 'table');
     const name = get(c, 'name');
-    const flags = lc(get(c, 'flags'));
-    if (/^(localdatetable_|datetabletemplate_)/i.test(table)) { res.skipped++; continue; }
+    const fl = lc(get(c, 'flags')), flags = fl.split(/\s+/).filter(Boolean);
+    if (!keepAuto && AUTO_DATE_TABLE.test(table)) { res.skipped++; continue; }
     if (kind === 'table') {
-      if (flags.includes('private')) { res.skipped++; continue; }
-      const t = { name, category: get(c, 'type'), hidden: flags.includes('hidden'), description: get(c, 'description'),
-        storage: get(c, 'storage'), source: get(c, 'source'), calc: get(c, 'expression') };
-      res.tables.push(t); tablesSeen.set(lc(name), t);
+      res.tables.push({ name, category: get(c, 'type'), hidden: flags.includes('hidden'), private: flags.includes('private'), description: get(c, 'description'),
+        storage: get(c, 'storage'), source: get(c, 'source'), calc: get(c, 'expression'), flags });
     } else if (kind === 'column') {
-      if (/^RowNumber-/i.test(name)) { res.skipped++; continue; }
-      res.columns.push({ table, name, dataType: get(c, 'type'), hidden: flags.includes('hidden'), key: flags.includes('key'),
-        description: get(c, 'description'), expression: get(c, 'expression') });
+      if (!keepAuto && /^RowNumber-/i.test(name)) { res.skipped++; continue; }
+      res.columns.push({ table, name, dataType: get(c, 'type'), folder: get(c, 'folder'), hidden: flags.includes('hidden'), key: flags.includes('key'),
+        description: get(c, 'description'), expression: get(c, 'expression'),
+        summarize: get(c, 'summarize'), sortBy: get(c, 'sortby'), hierarchies: get(c, 'hierarchies'), flags });
     } else if (kind === 'measure') {
       res.measures.push({ table, name, formatString: get(c, 'type'), folder: get(c, 'folder'), hidden: flags.includes('hidden'),
-        description: get(c, 'description'), expression: get(c, 'expression') });
+        text: flags.includes('text'), dynamicFormat: flags.includes('dynamic-format'),
+        description: get(c, 'description'), expression: get(c, 'expression'), flags });
     } else if (kind === 'relationship') {
-      const card = get(c, 'type').split(':');
+      const card = get(c, 'type'), parts = card.split(':');
       const toT = get(c, 'totable');
-      if (/^(localdatetable_|datetabletemplate_)/i.test(toT)) { res.skipped++; continue; }
-      res.rels.push({ fromTable: table, fromColumn: name, toTable: toT, toColumn: get(c, 'tocolumn'),
-        fromCard: card[0] || '', toCard: card[1] || '', both: /both/i.test(flags), inactive: /inactive/.test(flags) });
+      if (!keepAuto && AUTO_DATE_TABLE.test(toT)) { res.skipped++; continue; }
+      res.rels.push({ fromTable: table, fromColumn: name, toTable: toT, toColumn: get(c, 'tocolumn'), card,
+        fromCard: parts[0] || '', toCard: parts[1] || '', both: /both/.test(fl), inactive: /inactive/.test(fl), flags });
+    } else if (kind === 'model') {
+      res.has.model = true; res.model = { name, table, type: get(c, 'type'), discourage: /discourage-implicit/.test(fl), flags };
     }
   }
-  // tables referenced by columns/measures but missing a table row
+  res.has.upgraded = res.has.summarize && res.has.model;
+  if (!res.tables.length && !res.columns.length && !res.measures.length) res.error = NO_ROWS;
+  return res;
+}
+const NO_ROWS = 'The header row was found but no model rows came with it. Paste the full results.';
+// The model as most tools use it: private tables left out, a table row for every table that has
+// columns or measures, sorted by name, with composite-model source groups.
+function parseModel(text){
+  const res = readModel(text);
+  if (!('model' in res.has)) return res; // empty, or no header row
+  const priv = res.tables.filter(t => t.private).length;
+  res.tables = res.tables.filter(t => !t.private); res.skipped += priv;
+  const tablesSeen = new Map(res.tables.map(t => [lc(t.name), t]));
   for (const x of [...res.columns, ...res.measures]) {
     if (x.table && !tablesSeen.has(lc(x.table))) { const t = { name: x.table, category: '', hidden: false, description: '' }; res.tables.push(t); tablesSeen.set(lc(x.table), t); }
   }
   res.tables.sort((a, b) => a.name.localeCompare(b.name));
-  if (!res.tables.length && !res.columns.length) res.error = 'The header row was found but no model rows came with it. Paste the full results.';
+  if (!res.tables.length && !res.columns.length) res.error = NO_ROWS;
   annotateSources(res);
   return res;
+}
+
+/* ---------- DAX references ---------- */
+// Blank out comments and string literals in one pass, so "--" or "//" inside a string (a URL, say)
+// doesn't hide the rest of the line, and a name inside a string isn't read as a reference.
+// Quoted table names and [bracketed] names are kept as they are.
+function stripDaxText(e){
+  const s = e || ''; let out = '', i = 0;
+  while (i < s.length) {
+    const c = s[i], n = s[i + 1];
+    if (c === '"') { let j = i + 1; while (j < s.length) { if (s[j] === '"') { if (s[j + 1] === '"') { j += 2; continue; } break; } j++; } out += '""'; i = j + 1; continue; }
+    if (c === "'") { let j = i + 1; while (j < s.length) { if (s[j] === "'") { if (s[j + 1] === "'") { j += 2; continue; } break; } j++; } out += s.slice(i, j + 1); i = j + 1; continue; }
+    if (c === '[') { const j = s.indexOf(']', i + 1); let k = j; while (k >= 0 && s[k + 1] === ']') k = s.indexOf(']', k + 2); if (k < 0) { out += s.slice(i); break; } out += s.slice(i, k + 1); i = k + 1; continue; }
+    if ((c === '/' && n === '/') || (c === '-' && n === '-')) { const j = s.indexOf('\n', i); out += ' '; i = j < 0 ? s.length : j; continue; }
+    if (c === '/' && n === '*') { const j = s.indexOf('*/', i + 2); out += ' '; i = j < 0 ? s.length : j + 2; continue; }
+    out += c; i++;
+  }
+  return out;
+}
+// Every 'Table'[Name], Table[Name] or bare [Name] in an expression, as { table, col } (table '' when bare).
+function daxRefs(expr){
+  const out = [], re = /(?:'((?:[^']|'')+)'|([A-Za-z_À-￿][\w.À-￿]*))?\s*\[((?:[^\]]|\]\])+)\]/g;
+  const s = stripDaxText(expr); let m;
+  while ((m = re.exec(s))) {
+    const table = m[1] ? m[1].replace(/''/g, "'") : m[2] && !DAX_WORD_BEFORE.test(m[2]) ? m[2] : '';
+    out.push({ table, col: m[3].replace(/\]\]/g, ']') });
+  }
+  return out;
+}
+// A keyword before a bracket (RETURN [Sales], VAR, IN, AND, OR, NOT) isn't a table name.
+const DAX_WORD_BEFORE = /^(var|return|in|and|or|not)$/i;
+// The model's measures an expression refers to as a bare [Name].
+function daxMeasureRefs(expr, model){
+  const names = new Map(model.measures.map(m => [lc(m.name), m])), out = new Set();
+  daxRefs(expr).forEach(r => { if (!r.table && names.has(lc(r.col))) out.add(names.get(lc(r.col))); });
+  return out;
+}
+// The measures a list of measures depends on, up to `depth` levels down (all levels when left out), not counting the list itself.
+function measureDeps(model, list, depth){
+  const inList = new Set(list.map(m => lc(m.name))), found = new Map();
+  let frontier = list;
+  for (let d = 0; d < (depth || Infinity) && frontier.length; d++) {
+    const next = [];
+    for (const m of frontier) for (const x of daxMeasureRefs(m.expression, model)) {
+      const k = lc(x.name);
+      if (inList.has(k) || found.has(k)) continue;
+      found.set(k, x); next.push(x);
+    }
+    frontier = next;
+  }
+  return [...found.values()];
 }
 
 /* ---------- composite models ----------
