@@ -73,9 +73,14 @@ Things to know:
 - Reading the model export: use `readModel` from builder_core. It's the one reader and keeps every export column
   and flag (summarize, sortBy, hierarchies, measure text/dynamic-format, relationship card, the `_model` row, `has`).
   `parseModel` is the view most tools use: the same objects without private tables, plus a table row for every
-  table with columns or measures, and composite-model source groups. `daxRefs(expr)` lists the `'Table'[Name]` and
-  `[Name]` references in DAX (strings and comments skipped). Model Linter reads through these; Model Compare,
-  About This Report and the TMDL readers still have their own and are next to move over, one tool at a time.
+  table with columns or measures, and composite-model source groups. `readModel(text, { keepAuto: true })` keeps auto
+  date tables and RowNumber columns (Model Documenter's "show auto"). `daxRefs(expr)` lists the `'Table'[Name]` and
+  `[Name]` references in DAX (strings and comments skipped, `RETURN [x]` is bare); `daxMeasureRefs` and
+  `measureDeps(model, list, depth)` give the measures a DAX expression or a list of measures depends on. Every tool reads the export
+  and scans DAX references through these: no tool has its own export parser. A PBIP folder becomes export rows
+  (`S.pbipExport`) and then goes through `readModel` too. The other TMDL readers read what the export doesn't
+  carry: Model Documenter's folder mode (partitions, M sources, report pages), About This Report's data sources and
+  Power Query Explainer's queries. Model Documenter also keeps its DAX tokenizer for its syntax checks.
 - Date tables: use `isDateTable` / `dateTablesOf` from builder_core. A table counts when it is marked
   (data category Time) or is a calculated table built with CALENDAR, CALENDARAUTO or a GENERATESERIES
   of dates, since many models never mark theirs.

@@ -504,10 +504,14 @@ function dateTablesOf(model){ return model.tables.filter(isMarkedDateTable).conc
    columns  { table, name, dataType, folder, hidden, key, description, expression, summarize, sortBy, hierarchies, flags[] }
    measures { table, name, formatString, folder, hidden, text, dynamicFormat, description, expression, flags[] }
    rels     { fromTable, fromColumn, toTable, toColumn, card, fromCard, toCard, both, inactive, flags[] }
-   model    { name, discourage } from the _model row, or null
+   model    { name, table, type, discourage, flags[] } from the _model row, or null
+   opts.keepAuto keeps auto date tables and RowNumber columns (Model Documenter can show them).
+   opts.keepAuto keeps auto date tables and RowNumber columns (Model Documenter can show them).
+   cols     the export's column names (lower case), for tools that tell an older export query from a newer one
    has      which optional export columns came with it (summarize, sortBy, hierarchies, storage, source, model, upgraded) */
 const AUTO_DATE_TABLE = /^(localdatetable_|datetabletemplate_)/i;
-function readModel(text){
+function readModel(text, opts){
+  const keepAuto = !!(opts && opts.keepAuto);
   const res = { tables: [], columns: [], measures: [], rels: [], model: null, has: {}, error: null, skipped: 0 };
   const raw = (text || '').replace(/\r/g, '');
   if (!raw.trim()) return res;
@@ -524,6 +528,7 @@ function readModel(text){
     return res;
   }
   const has = k => map[k] !== undefined;
+  res.cols = new Set(Object.keys(map)); // the export's column names, lower case
   res.has = { summarize: has('summarize'), sortBy: has('sortby'), hierarchies: has('hierarchies'), storage: has('storage'), source: has('source'), model: false };
   const get = (cells, k) => map[k] === undefined ? '' : restore(unquoteCell((cells[map[k]] || '').trim()));
   for (let i = hIdx + 1; i < lines.length; i++) {
@@ -533,12 +538,12 @@ function readModel(text){
     const table = get(c, 'table');
     const name = get(c, 'name');
     const fl = lc(get(c, 'flags')), flags = fl.split(/\s+/).filter(Boolean);
-    if (AUTO_DATE_TABLE.test(table)) { res.skipped++; continue; }
+    if (!keepAuto && AUTO_DATE_TABLE.test(table)) { res.skipped++; continue; }
     if (kind === 'table') {
       res.tables.push({ name, category: get(c, 'type'), hidden: flags.includes('hidden'), private: flags.includes('private'), description: get(c, 'description'),
         storage: get(c, 'storage'), source: get(c, 'source'), calc: get(c, 'expression'), flags });
     } else if (kind === 'column') {
-      if (/^RowNumber-/i.test(name)) { res.skipped++; continue; }
+      if (!keepAuto && /^RowNumber-/i.test(name)) { res.skipped++; continue; }
       res.columns.push({ table, name, dataType: get(c, 'type'), folder: get(c, 'folder'), hidden: flags.includes('hidden'), key: flags.includes('key'),
         description: get(c, 'description'), expression: get(c, 'expression'),
         summarize: get(c, 'summarize'), sortBy: get(c, 'sortby'), hierarchies: get(c, 'hierarchies'), flags });
@@ -549,11 +554,11 @@ function readModel(text){
     } else if (kind === 'relationship') {
       const card = get(c, 'type'), parts = card.split(':');
       const toT = get(c, 'totable');
-      if (AUTO_DATE_TABLE.test(toT)) { res.skipped++; continue; }
+      if (!keepAuto && AUTO_DATE_TABLE.test(toT)) { res.skipped++; continue; }
       res.rels.push({ fromTable: table, fromColumn: name, toTable: toT, toColumn: get(c, 'tocolumn'), card,
         fromCard: parts[0] || '', toCard: parts[1] || '', both: /both/.test(fl), inactive: /inactive/.test(fl), flags });
     } else if (kind === 'model') {
-      res.has.model = true; res.model = { name, discourage: /discourage-implicit/.test(fl) };
+      res.has.model = true; res.model = { name, table, type: get(c, 'type'), discourage: /discourage-implicit/.test(fl), flags };
     }
   }
   res.has.upgraded = res.has.summarize && res.has.model;
@@ -599,8 +604,34 @@ function stripDaxText(e){
 function daxRefs(expr){
   const out = [], re = /(?:'((?:[^']|'')+)'|([A-Za-z_À-￿][\w.À-￿]*))?\s*\[((?:[^\]]|\]\])+)\]/g;
   const s = stripDaxText(expr); let m;
-  while ((m = re.exec(s))) out.push({ table: m[1] ? m[1].replace(/''/g, "'") : m[2] || '', col: m[3].replace(/\]\]/g, ']') });
+  while ((m = re.exec(s))) {
+    const table = m[1] ? m[1].replace(/''/g, "'") : m[2] && !DAX_WORD_BEFORE.test(m[2]) ? m[2] : '';
+    out.push({ table, col: m[3].replace(/\]\]/g, ']') });
+  }
   return out;
+}
+// A keyword before a bracket (RETURN [Sales], VAR, IN, AND, OR, NOT) isn't a table name.
+const DAX_WORD_BEFORE = /^(var|return|in|and|or|not)$/i;
+// The model's measures an expression refers to as a bare [Name].
+function daxMeasureRefs(expr, model){
+  const names = new Map(model.measures.map(m => [lc(m.name), m])), out = new Set();
+  daxRefs(expr).forEach(r => { if (!r.table && names.has(lc(r.col))) out.add(names.get(lc(r.col))); });
+  return out;
+}
+// The measures a list of measures depends on, up to `depth` levels down (all levels when left out), not counting the list itself.
+function measureDeps(model, list, depth){
+  const inList = new Set(list.map(m => lc(m.name))), found = new Map();
+  let frontier = list;
+  for (let d = 0; d < (depth || Infinity) && frontier.length; d++) {
+    const next = [];
+    for (const m of frontier) for (const x of daxMeasureRefs(m.expression, model)) {
+      const k = lc(x.name);
+      if (inList.has(k) || found.has(k)) continue;
+      found.set(k, x); next.push(x);
+    }
+    frontier = next;
+  }
+  return [...found.values()];
 }
 
 /* ---------- composite models ----------
@@ -1494,12 +1525,10 @@ const RLS = (() => {
       const ex = (r.expr || '').trim();
       if (!ex) errs.push('Write the DAX filter: a TRUE/FALSE expression evaluated for each row of the table.');
       if (ex && m) {
-        const re = /'((?:[^']|'')+)'\s*\[([^\]]+)\]|\b([A-Za-z_][\w]*)\s*\[([^\]]+)\]/g; let x;
         const tables = new Set(m.tables.map(t => low(t.name)));
-        while ((x = re.exec(ex.replace(/"(?:[^"]|"")*"/g, '""')))) {
-          const t = (x[1] || x[3] || '').replace(/''/g, "'"), c = x[2] || x[4];
-          if (tables.has(low(t)) && !findCol(m, t, c)) errs.push('There\u2019s no column ' + colRef(t, c) + ' in the model export.');
-        }
+        daxRefs(ex).forEach(({ table: t, col: c }) => {
+          if (t && tables.has(low(t)) && !findCol(m, t, c)) errs.push('There\u2019s no column ' + colRef(t, c) + ' in the model export.');
+        });
         if (/\bUSERNAME\s*\(/i.test(ex)) warns.push('USERNAME() returns DOMAIN\\user in Power BI Desktop but an email in the service. USERPRINCIPALNAME() is the same in both.');
       }
       if (ex && (r.table || '').trim()) out.push({ table: r.table, expr: ex });

@@ -487,10 +487,14 @@ function dateTablesOf(model){ return model.tables.filter(isMarkedDateTable).conc
    columns  { table, name, dataType, folder, hidden, key, description, expression, summarize, sortBy, hierarchies, flags[] }
    measures { table, name, formatString, folder, hidden, text, dynamicFormat, description, expression, flags[] }
    rels     { fromTable, fromColumn, toTable, toColumn, card, fromCard, toCard, both, inactive, flags[] }
-   model    { name, discourage } from the _model row, or null
+   model    { name, table, type, discourage, flags[] } from the _model row, or null
+   opts.keepAuto keeps auto date tables and RowNumber columns (Model Documenter can show them).
+   opts.keepAuto keeps auto date tables and RowNumber columns (Model Documenter can show them).
+   cols     the export's column names (lower case), for tools that tell an older export query from a newer one
    has      which optional export columns came with it (summarize, sortBy, hierarchies, storage, source, model, upgraded) */
 const AUTO_DATE_TABLE = /^(localdatetable_|datetabletemplate_)/i;
-function readModel(text){
+function readModel(text, opts){
+  const keepAuto = !!(opts && opts.keepAuto);
   const res = { tables: [], columns: [], measures: [], rels: [], model: null, has: {}, error: null, skipped: 0 };
   const raw = (text || '').replace(/\r/g, '');
   if (!raw.trim()) return res;
@@ -507,6 +511,7 @@ function readModel(text){
     return res;
   }
   const has = k => map[k] !== undefined;
+  res.cols = new Set(Object.keys(map)); // the export's column names, lower case
   res.has = { summarize: has('summarize'), sortBy: has('sortby'), hierarchies: has('hierarchies'), storage: has('storage'), source: has('source'), model: false };
   const get = (cells, k) => map[k] === undefined ? '' : restore(unquoteCell((cells[map[k]] || '').trim()));
   for (let i = hIdx + 1; i < lines.length; i++) {
@@ -516,12 +521,12 @@ function readModel(text){
     const table = get(c, 'table');
     const name = get(c, 'name');
     const fl = lc(get(c, 'flags')), flags = fl.split(/\s+/).filter(Boolean);
-    if (AUTO_DATE_TABLE.test(table)) { res.skipped++; continue; }
+    if (!keepAuto && AUTO_DATE_TABLE.test(table)) { res.skipped++; continue; }
     if (kind === 'table') {
       res.tables.push({ name, category: get(c, 'type'), hidden: flags.includes('hidden'), private: flags.includes('private'), description: get(c, 'description'),
         storage: get(c, 'storage'), source: get(c, 'source'), calc: get(c, 'expression'), flags });
     } else if (kind === 'column') {
-      if (/^RowNumber-/i.test(name)) { res.skipped++; continue; }
+      if (!keepAuto && /^RowNumber-/i.test(name)) { res.skipped++; continue; }
       res.columns.push({ table, name, dataType: get(c, 'type'), folder: get(c, 'folder'), hidden: flags.includes('hidden'), key: flags.includes('key'),
         description: get(c, 'description'), expression: get(c, 'expression'),
         summarize: get(c, 'summarize'), sortBy: get(c, 'sortby'), hierarchies: get(c, 'hierarchies'), flags });
@@ -532,11 +537,11 @@ function readModel(text){
     } else if (kind === 'relationship') {
       const card = get(c, 'type'), parts = card.split(':');
       const toT = get(c, 'totable');
-      if (AUTO_DATE_TABLE.test(toT)) { res.skipped++; continue; }
+      if (!keepAuto && AUTO_DATE_TABLE.test(toT)) { res.skipped++; continue; }
       res.rels.push({ fromTable: table, fromColumn: name, toTable: toT, toColumn: get(c, 'tocolumn'), card,
         fromCard: parts[0] || '', toCard: parts[1] || '', both: /both/.test(fl), inactive: /inactive/.test(fl), flags });
     } else if (kind === 'model') {
-      res.has.model = true; res.model = { name, discourage: /discourage-implicit/.test(fl) };
+      res.has.model = true; res.model = { name, table, type: get(c, 'type'), discourage: /discourage-implicit/.test(fl), flags };
     }
   }
   res.has.upgraded = res.has.summarize && res.has.model;
@@ -582,8 +587,34 @@ function stripDaxText(e){
 function daxRefs(expr){
   const out = [], re = /(?:'((?:[^']|'')+)'|([A-Za-z_À-￿][\w.À-￿]*))?\s*\[((?:[^\]]|\]\])+)\]/g;
   const s = stripDaxText(expr); let m;
-  while ((m = re.exec(s))) out.push({ table: m[1] ? m[1].replace(/''/g, "'") : m[2] || '', col: m[3].replace(/\]\]/g, ']') });
+  while ((m = re.exec(s))) {
+    const table = m[1] ? m[1].replace(/''/g, "'") : m[2] && !DAX_WORD_BEFORE.test(m[2]) ? m[2] : '';
+    out.push({ table, col: m[3].replace(/\]\]/g, ']') });
+  }
   return out;
+}
+// A keyword before a bracket (RETURN [Sales], VAR, IN, AND, OR, NOT) isn't a table name.
+const DAX_WORD_BEFORE = /^(var|return|in|and|or|not)$/i;
+// The model's measures an expression refers to as a bare [Name].
+function daxMeasureRefs(expr, model){
+  const names = new Map(model.measures.map(m => [lc(m.name), m])), out = new Set();
+  daxRefs(expr).forEach(r => { if (!r.table && names.has(lc(r.col))) out.add(names.get(lc(r.col))); });
+  return out;
+}
+// The measures a list of measures depends on, up to `depth` levels down (all levels when left out), not counting the list itself.
+function measureDeps(model, list, depth){
+  const inList = new Set(list.map(m => lc(m.name))), found = new Map();
+  let frontier = list;
+  for (let d = 0; d < (depth || Infinity) && frontier.length; d++) {
+    const next = [];
+    for (const m of frontier) for (const x of daxMeasureRefs(m.expression, model)) {
+      const k = lc(x.name);
+      if (inList.has(k) || found.has(k)) continue;
+      found.set(k, x); next.push(x);
+    }
+    frontier = next;
+  }
+  return [...found.values()];
 }
 
 /* ---------- composite models ----------
@@ -1984,41 +2015,25 @@ var MD = (function () {
   }
 
   /* ---------- the toolkit's shared model export (INFO.VIEW) ---------- */
+  // read with the toolkit's shared reader (readModel in builder_core), keeping auto date tables for "show auto"
   function projectFromExport(text, modelName) {
-    const lines = String(text || '').replace(/\r/g, '').split('\n');
-    const unq = s => { s = s.trim(); if (s.length >= 2 && s[0] === '"' && s[s.length - 1] === '"') s = s.slice(1, -1).replace(/""/g, '"'); return s; };
-    const restore = s => s.split('↵').join('\n');
-    let map = null; const project = newProject({ name: modelName || 'Model', source: 'export', semantic_root: '', report_root: null, compatibility_level: 'Not in the export', culture: 'Not in the export' });
-    const rows = [];
-    for (const l of lines) {
-      if (!l.trim()) continue;
-      const c = l.split('\t');
-      if (!map) {
-        const low = c.map(x => unq(x).toLowerCase().replace(/^.*\[|\]$/g, ''));
-        if (low.includes('kind') && low.includes('table') && low.includes('name')) { map = {}; low.forEach((k, i) => { map[k] = i; }); }
-        continue;
-      }
-      const g = k => (map[k] === undefined ? '' : restore(unq(c[map[k]] || '')));
-      rows.push({ kind: g('kind').toLowerCase(), table: g('table'), name: g('name'), type: g('type'), folder: g('folder'), flags: g('flags').toLowerCase(), description: g('description'), expression: g('expression'), totable: g('totable'), tocolumn: g('tocolumn'), storage: g('storage'), source: g('source') });
-    }
-    if (!map) throw new ProjectError('The header row (Kind, Table, Name…) wasn’t found. Paste the results of the toolkit export query, with headers.');
-    const hidden = f => /\bhidden\b/.test(f);
-    for (const r of rows) if (r.kind === 'table') {
-      const t = setdefault(project.tables, r.table || r.name, Table(r.table || r.name));
-      t.description = r.description; t.is_hidden = hidden(r.flags);
+    const m = readModel(text, { keepAuto: true });
+    if (!('model' in m.has)) throw new ProjectError('The header row (Kind, Table, Name…) wasn’t found. Paste the results of the toolkit export query, with headers.');
+    const project = newProject({ name: modelName || 'Model', source: 'export', semantic_root: '', report_root: null, compatibility_level: 'Not in the export', culture: 'Not in the export' });
+    for (const r of m.tables) {
+      const t = setdefault(project.tables, r.name, Table(r.name));
+      t.description = r.description; t.is_hidden = r.hidden;
       if (r.storage || r.source) t.partitions.push({ name: t.name, mode: r.storage || '', source_type: r.source ? 'Remote model' : 'Not in export', expression: '', source_kind: r.source ? 'Remote semantic model (' + r.source + ')' : 'Not in export', source_file: '', line_number: 0 });
     }
-    for (const r of rows) {
-      if (r.kind === 'column') setdefault(project.tables, r.table, Table(r.table)).columns.push({ name: r.name, data_type: r.type, format_string: '', description: r.description, summarize_by: '', sort_by: '', source_column: '', is_hidden: hidden(r.flags), is_key: /\bkey\b/.test(r.flags), expression: r.expression });
-      else if (r.kind === 'measure') {
-        const [colRefs, br] = measureReferences(r.expression);
-        setdefault(project.tables, r.table, Table(r.table)).measures.push({ name: r.name, expression: r.expression, format_string: r.type, display_folder: r.folder, description: r.description, is_hidden: hidden(r.flags), column_refs: colRefs, measure_refs: br.filter(x => cf(x) !== cf(r.name)) });
-      } else if (r.kind === 'relationship') {
-        const [fc, tc] = (r.type || 'many:one').split(':');
-        const crossRaw = r.flags.replace(/\binactive\b/, '').trim();
-        project.relationships.push({ name: r.table + '[' + r.name + '] → ' + r.totable + '[' + r.tocolumn + ']', from_table: r.table, from_column: r.name, to_table: r.totable, to_column: r.tocolumn,
-          from_cardinality: cf(fc || 'many'), to_cardinality: cf(tc || 'one'), cross_filtering: /both/.test(crossRaw) ? 'bothDirections' : /automatic/.test(crossRaw) ? 'automatic' : 'oneDirection', is_active: !/\binactive\b/.test(r.flags) });
-      }
+    for (const r of m.columns) setdefault(project.tables, r.table, Table(r.table)).columns.push({ name: r.name, data_type: r.dataType, format_string: '', description: r.description, summarize_by: '', sort_by: '', source_column: '', is_hidden: r.hidden, is_key: r.key, expression: r.expression });
+    for (const r of m.measures) {
+      const [colRefs, br] = measureReferences(r.expression);
+      setdefault(project.tables, r.table, Table(r.table)).measures.push({ name: r.name, expression: r.expression, format_string: r.formatString, display_folder: r.folder, description: r.description, is_hidden: r.hidden, column_refs: colRefs, measure_refs: br.filter(x => cf(x) !== cf(r.name)) });
+    }
+    for (const r of m.rels) {
+      const crossRaw = r.flags.filter(f => f !== 'inactive').join(' ');
+      project.relationships.push({ name: r.fromTable + '[' + r.fromColumn + '] → ' + r.toTable + '[' + r.toColumn + ']', from_table: r.fromTable, from_column: r.fromColumn, to_table: r.toTable, to_column: r.toColumn,
+        from_cardinality: cf((r.card || 'many:one').split(':')[0] || 'many'), to_cardinality: cf((r.card || 'many:one').split(':')[1] || 'one'), cross_filtering: /both/.test(crossRaw) ? 'bothDirections' : /automatic/.test(crossRaw) ? 'automatic' : 'oneDirection', is_active: !r.inactive });
     }
     return project;
   }
@@ -2119,8 +2134,6 @@ var MD = (function () {
   }
 
   /* ---------- v26_lineage.py ---------- */
-  const MEASURE_TOKEN = /(?<![\p{L}\p{N}_'])\[([^\]]+)\]/gu;
-  const QUALIFIED_COLUMN = /(?:'((?:''|[^'])+)'|([A-Za-z_][\p{L}\p{N}_ ]*))\s*\[([^\]]+)\]/gu;
   function buildLineage(project, tables) {
     const nodes = new Map(), nameIndex = new Map();
     for (const t of tables) for (const m of t.measures) {
@@ -2130,9 +2143,12 @@ var MD = (function () {
     }
     for (const n of nodes.values()) {
       const colNames = new Set();
-      for (const m of n.expression.matchAll(QUALIFIED_COLUMN)) { const tn = (m[1] || m[2] || '').replace(/''/g, "'").trim(), cn = m[3].trim(); n.cols.add(tn + '[' + cn + ']'); colNames.add(cf(cn)); }
-      for (const m of n.expression.matchAll(MEASURE_TOKEN)) {
-        const cand = m[1].trim(); if (colNames.has(cf(cand))) continue;
+      // references read by the toolkit's shared scanner (daxRefs in builder_core): strings and comments are skipped
+      const refs = daxRefs(n.expression);
+      for (const r of refs) if (r.table) { const tn = r.table.trim(), cn = r.col.trim(); n.cols.add(tn + '[' + cn + ']'); colNames.add(cf(cn)); }
+      for (const r of refs) {
+        if (r.table) continue;
+        const cand = r.col.trim(); if (colNames.has(cf(cand))) continue;
         const hits = nameIndex.get(cf(cand)) || [];
         if (hits.length === 1 && hits[0] !== n.key) n.deps.add(hits[0]);
         else if (hits.length !== 1) n.unresolved.add(cand);

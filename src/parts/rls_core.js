@@ -73,12 +73,10 @@ const RLS = (() => {
       const ex = (r.expr || '').trim();
       if (!ex) errs.push('Write the DAX filter: a TRUE/FALSE expression evaluated for each row of the table.');
       if (ex && m) {
-        const re = /'((?:[^']|'')+)'\s*\[([^\]]+)\]|\b([A-Za-z_][\w]*)\s*\[([^\]]+)\]/g; let x;
         const tables = new Set(m.tables.map(t => low(t.name)));
-        while ((x = re.exec(ex.replace(/"(?:[^"]|"")*"/g, '""')))) {
-          const t = (x[1] || x[3] || '').replace(/''/g, "'"), c = x[2] || x[4];
-          if (tables.has(low(t)) && !findCol(m, t, c)) errs.push('There\u2019s no column ' + colRef(t, c) + ' in the model export.');
-        }
+        daxRefs(ex).forEach(({ table: t, col: c }) => {
+          if (t && tables.has(low(t)) && !findCol(m, t, c)) errs.push('There\u2019s no column ' + colRef(t, c) + ' in the model export.');
+        });
         if (/\bUSERNAME\s*\(/i.test(ex)) warns.push('USERNAME() returns DOMAIN\\user in Power BI Desktop but an email in the service. USERPRINCIPALNAME() is the same in both.');
       }
       if (ex && (r.table || '').trim()) out.push({ table: r.table, expr: ex });

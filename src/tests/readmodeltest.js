@@ -36,6 +36,8 @@ const EXPORT = [H.join('\t'),
       refs: daxRefs(lab.expression).map(x => (x.table ? x.table : '') + '[' + x.col + ']').join(' '),
       refsComment: daxRefs(m.measures[0].expression).map(x => x.table + '[' + x.col + ']').join(' '),
       linterSame: l.tables.length === m.tables.length && l.measures.length === m.measures.length && !!l.model && l.has.upgraded,
+      keyword: daxRefs('VAR x = [A] RETURN [B] + Sales[C]').map(x => x.table + '[' + x.col + ']').join(' '),
+      deps: measureDeps(v, [v.measures.find(x => x.name === 'Label')]).map(x => x.name).join(', '),
       noHeader: parseModel('hello').error ? 'error' : 'none', linterNoHeader: /header row/.test(ML.parse('').error || '')
     };
   }, EXPORT);
@@ -49,6 +51,8 @@ const EXPORT = [H.join('\t'),
   console.log('daxRefs:', r.refs, '(expect [Total Sales] Customer[Region]; nothing from the string)');
   console.log('daxRefs past a comment:', r.refsComment, '(expect Sales[Amount] only)');
   console.log('Model Linter reads the same model:', r.linterSame, '(expect true)');
+  console.log('keywords are not tables:', r.keyword, '(expect [A] [B] Sales[C])');
+  console.log('measureDeps of Label:', r.deps, '(expect Total Sales)');
   console.log('no header:', r.noHeader, r.linterNoHeader, '(expect error true)');
   await b.close();
   console.log('errors', errs);

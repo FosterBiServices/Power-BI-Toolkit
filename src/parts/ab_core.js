@@ -34,25 +34,8 @@ const AB = (() => {
   ];
 
   /* ---------- model reading ---------- */
-  // measure flags (text, dynamic-format) aren't kept by parseModel, so read them here
-  function measureFlags(text){
-    const out = new Map(); const lines = (text || '').replace(/\r/g, '').split('\n');
-    let map = null;
-    for (const line of lines) {
-      const cells = line.split('\t').map(c => lcs(unquoteCell(c.trim())).replace(/^.*\[|\]$/g, ''));
-      if (!map) { if (cells.includes('kind') && cells.includes('flags')) { map = {}; cells.forEach((c, j) => { map[c] = j; }); } continue; }
-      const raw = line.split('\t'), g = k => unquoteCell((raw[map[k]] || '').trim());
-      if (lcs(g('kind')) === 'measure') out.set(lcs(g('table')) + '|' + lcs(g('name')), lcs(g('flags')));
-    }
-    return out;
-  }
-  function parse(text){
-    const m = parseModel(text);
-    if (m.error) return m;
-    const fl = measureFlags(text);
-    m.measures.forEach(x => { const f = fl.get(lcs(x.table) + '|' + lcs(x.name)) || ''; x.text = /\btext\b/.test(f); });
-    return m;
-  }
+  // the shared reader keeps each measure's text and dynamic-format flags
+  const parse = text => parseModel(text);
 
   // table roles: date tables, measure tables, facts (many side), dimensions (one side)
   function roles(model){
@@ -97,17 +80,16 @@ const AB = (() => {
   const EXCL_NAME = ['background color', 'font color', 'text color', 'color', 'colour', 'display label', 'label', 'html', 'selected', 'title', 'format', 'switch', 'metric value', 'last refresh', 'tooltip', 'subtitle', 'placeholder', 'dummy', 'blank'];
   const EXCL_FOLDER = ['format', 'html', 'color', 'colour', 'label', 'metadata', 'helper', 'switch', 'title'];
   const COMPOUND = ['DIVIDE(', 'SWITCH(', 'FORMAT('];
-  const REF = /(?<![A-Za-z0-9_])\[([^\]]+)\]/g;
   function compound(m){
     const e = (m.expression || '').toUpperCase().replace(/\s+/g, '');
     if (COMPOUND.some(f => e.includes(f))) return true;
-    const refs = new Set([...(m.expression || '').matchAll(REF)].map(x => lcs(x[1]))); refs.delete(lcs(m.name));
+    const refs = new Set(daxRefs(m.expression).filter(r => !r.table).map(r => lcs(r.col))); refs.delete(lcs(m.name));
     return refs.size >= 2 || /\[[^\]]+\]\s*[+\-*/]\s*\[[^\]]+\]/.test(m.expression || '');
   }
   function usedBy(model){
     const n = new Map();
     model.measures.forEach(m => {
-      const refs = new Set([...(m.expression || '').matchAll(REF)].map(x => lcs(x[1])));
+      const refs = new Set(daxRefs(m.expression).filter(r => !r.table).map(r => lcs(r.col)));
       refs.forEach(r => { if (r !== lcs(m.name)) n.set(r, (n.get(r) || 0) + 1); });
     });
     return n;
