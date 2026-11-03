@@ -2,7 +2,7 @@ from _env import open, S, P, ROOT
 p=open(P+'prep-for-ai-writer.html').read().split('\n')
 if p[3].startswith('<link rel="icon"'): p = p[:2] + [p[2] + '\n' + p[3]] + p[4:]
 L=lambda a,b:'\n'.join(p[a-1:b])
-mq=open(S+'mq_core.js').read(); pw=open(S+'pw_core.js').read(); ex=open(S+'pw_ex.js').read(); ui=open(S+'pw_ui.js').read(); body=open(S+'pw_body.html').read()
+mq=open(S+'mq_core.js').read(); pw=open(S+'pw_core.js').read()+'\n'+open(S+'pw_lint.js').read(); ex=open(S+'pw_ex.js').read(); ui=open(S+'pw_ui.js').read(); body=open(S+'pw_body.html').read()
 head='<title>Power Query Writer</title>\n<meta name="description" content="Describe a Power Query query in plain words and get a Copilot prompt that writes it short, maintainable and formatted, then check the reply.">\n'+L(3,6)
 css=L(7,217)+'\n'+L(145,149)+'\n'+L(175,176)+'\n'+L(180,180)+'\n'+L(219,265)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 /* ---------- Power Query Writer ---------- */

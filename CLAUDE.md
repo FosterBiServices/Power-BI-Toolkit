@@ -272,6 +272,23 @@ pairs whose columns exist, every other column text, one Table.TransformColumnTyp
 and Step 2 shows it to copy. Types come from the pasted rows (whole number -> Int64.Type, number, date, datetime, logical,
 otherwise text). Unticked, the rule is the conditional one (a type step only when the TASK changes types). Check: `pwtypetest.js`.
 
+Power Query Writer reply checks (`src/parts/pw_lint.js`, `PWL.lint`, added to pw_core in build_pw.py): functions that don't
+exist (Table, List, Text, Record and Duration are listed in full; `ALIAS` maps names Copilot invents, such as Table.FilterRows,
+to the real one) and argument counts (`ARITY`, about 350 functions); `[Column]` inside Table.TransformColumns and
+`Text.Upper(_)`-style calls inside Table.AddColumn/SelectRows; steps that use a later step; step names that hide a library
+(Duration, Table...); Table.RemoveColumns without MissingField.Ignore; and the type map coming back changed. Unbalanced
+brackets and quotes are already reported by parseM. The prompt now asks for MissingField.Ignore when the TASK removes
+named columns and forbids library names for steps (from the first real Copilot test, `src/tests/pw_reply_copilot.txt`).
+Check: `pwlinttest.js`.
+
+Power Query Writer fix loop (`PW.fixPrompt(inp, reply, findings, problem)`): under Step 4, "Didn't work in Power BI
+Desktop?" takes the Desktop error or a plain description; with it, or with any Fix/Check finding, the page writes a
+follow-up prompt (the current query as STARTING POINT, the error and findings in CONTEXT, change only what the fix needs,
+keep the type map, common Power Query errors and their causes, the shared FINAL VALIDATION list `VALIDATION` plus "every
+other step is as it was"). The reply comes back in the same format plus a CHANGES block, pasted into the same reply box;
+the page shows "What Copilot changed" and checks it again. Registered in suite.js PROMPTS (pwFixView -> pwReply).
+Check: `pwfixtest.js`.
+
 Theme Builder: **Start from my logo** reads the image in the page (never saved), and `TB.logoColors(rgba)` returns its main
 colors (white, black and grey backgrounds and see-through pixels left out, close shades merged, each the average of
 its pixels) with their share; the biggest non-grey ones (up to 3, at least 5%) come ticked and become the brand colors.

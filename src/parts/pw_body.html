@@ -95,7 +95,7 @@
     <div class="step-body">
       <div class="step-head">
         <h2 id="s4">Paste Copilot&rsquo;s reply</h2>
-        <p>The query is read and checked here: step references, the naming rule, repeated steps, column names, parameters and formatting.</p>
+        <p>The query is read and checked here: brackets and quotes, functions that don&rsquo;t exist and argument counts, <code>each</code> with <code>_</code> or <code>[Column]</code> in the right place, step references and order, column names, the type map, parameters, the naming rule and formatting.</p>
       </div>
       <textarea id="pwReply" class="mid" spellcheck="false" aria-label="Copilot's reply" placeholder="Paste Copilot's whole reply here"></textarea>
       <div id="replyMsg"></div>
@@ -108,6 +108,17 @@
         <div id="stepsBox"></div>
         <div id="paramsBox"></div>
         <div id="questionsBox"></div>
+        <div id="changesBox"></div>
+        <div class="fixbox">
+          <h3 class="sub">Didn&rsquo;t work in Power BI Desktop?</h3>
+          <p class="note small">Paste the error Power Query shows (the message in the yellow bar, or click <b>Error</b> in a cell to see it), or say what&rsquo;s wrong. The page writes a short prompt that asks Copilot to fix only that and keep the rest of the query. Paste Copilot&rsquo;s answer into the reply box above, in place of the old one, and the checks run again.</p>
+          <textarea id="pwError" class="short" spellcheck="false" aria-label="The error or problem" placeholder="For example: Expression.Error: The column 'Create Date' of the table wasn't found. Or: Duration Days is empty for every row."></textarea>
+          <div id="fixMsg"></div>
+          <div class="codebox" id="fixBox" hidden>
+            <div class="codebox-bar"><span class="t">Fix prompt for Copilot</span><span class="r"><button class="btn primary" type="button" data-copy="fix">Copy prompt</button></span></div>
+            <pre class="tall" id="pwFixView" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+          </div>
+        </div>
       </div>
     </div>
   </section>

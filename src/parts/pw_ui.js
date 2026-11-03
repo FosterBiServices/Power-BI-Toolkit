@@ -26,8 +26,8 @@ function copyText(text, btn){
   try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
 }
 
-const FIELDS = ['goal', 'sourceDetail', 'existing', 'columns', 'merges', 'params', 'culture', 'pwReply'];
-const blank = () => ({ goal: '', start: 'new', source: 'sql', sourceDetail: '', existing: '', columns: '', merges: '', params: '', culture: '', makeParams: true, typeMap: true, pwReply: '' });
+const FIELDS = ['goal', 'sourceDetail', 'existing', 'columns', 'merges', 'params', 'culture', 'pwReply', 'pwError'];
+const blank = () => ({ goal: '', start: 'new', source: 'sql', sourceDetail: '', existing: '', columns: '', merges: '', params: '', culture: '', makeParams: true, typeMap: true, pwReply: '', pwError: '' });
 const state = { example: false, v: blank(), prompt: '', reply: null };
 
 function inputs(){
@@ -91,6 +91,14 @@ function renderReply(){
   } else $('stepsBox').innerHTML = '';
   $('paramsBox').innerHTML = r.params.length ? '<h3 class="sub">Parameters to create first</h3><p class="note small">In Power Query: <b>Home &gt; Manage Parameters &gt; New Parameter</b>, or create a blank query, open the Advanced Editor and paste its line below, then rename the query to the parameter name.</p>'
     + r.params.map((p, i) => '<div class="codebox"><div class="codebox-bar"><span class="t">' + esc(p.name) + '</span><span class="r"><button class="btn" type="button" data-copyparam="' + i + '">Copy</button></span></div><pre class="short">' + esc(paramQuery(p)) + '</pre></div>').join('') : '';
+  // a fixed reply says what it changed
+  $('changesBox').innerHTML = (r.changes || []).length ? '<h3 class="sub">What Copilot changed</h3><div class="msg info"><ul class="qs">' + r.changes.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></div>' : '';
+  // the fix prompt: the Desktop error (or what's wrong) and the page's own findings
+  const prob = (state.v.pwError || '').trim(), found = c.list.filter(x => x.level === 'err' || x.level === 'warn').length;
+  state.fix = prob || found ? PW.fixPrompt(inputs(), r, c.list, prob) : '';
+  $('fixBox').hidden = !state.fix; $('pwFixView').textContent = state.fix;
+  $('fixMsg').innerHTML = state.fix ? (prob ? '' : '<div class="msg info">The prompt below asks Copilot to fix the ' + found + ' problem' + (found === 1 ? '' : 's') + ' the page found. Add the error from Desktop above if there is one.</div>')
+    : '<div class="msg ok">Nothing to fix from the checks. If Desktop shows an error or the result is wrong, describe it above and a fix prompt appears.</div>';
   $('questionsBox').innerHTML = r.questions.length ? '<h3 class="sub">Copilot&rsquo;s assumptions and questions</h3><div class="msg info"><ul class="qs">' + r.questions.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>Answer them in Step 1 and send the prompt again if they change the query.</div>' : '';
 }
 function renderAll(){ renderStart(); renderCols(); renderPrompt(); renderReply(); }
@@ -118,7 +126,7 @@ function init(){
     if (state.example) { const val = SF_SUITE.ownText($(k).value, state.v[k] || ''); leaveExample(); state.v[k] = val; $(k).value = val; }
     else state.v[k] = $(k).value;
     try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
-    if (k === 'pwReply') renderReply(); else if (k === 'columns' || k === 'culture') { renderCols(); renderPrompt(); renderReply(); } else if (k === 'existing') { renderStart(); renderPrompt(); } else { renderPrompt(); if (k === 'params' || k === 'merges') renderReply(); }
+    if (k === 'pwReply' || k === 'pwError') renderReply(); else if (k === 'columns' || k === 'culture') { renderCols(); renderPrompt(); renderReply(); } else if (k === 'existing') { renderStart(); renderPrompt(); } else { renderPrompt(); if (k === 'params' || k === 'merges') renderReply(); }
     persist();
   }));
   $('source').addEventListener('change', () => { leaveExample(); state.v.source = $('source').value; renderStart(); renderPrompt(); persist(); });
@@ -129,6 +137,7 @@ function init(){
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.copy === 'prompt' && state.prompt) copyText(state.prompt, b);
     else if (b.dataset.copy === 'query' && state.reply) copyText(state.reply.code, b);
+    else if (b.dataset.copy === 'fix' && state.fix) copyText(state.fix, b);
     else if (b.dataset.copy === 'typemap') copyText($('typeMapCode').textContent, b);
     else if (b.dataset.copyparam != null && state.reply) copyText(paramQuery(state.reply.params[+b.dataset.copyparam]), b);
   });
