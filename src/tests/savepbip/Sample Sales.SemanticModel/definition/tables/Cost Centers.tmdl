@@ -1,0 +1,57 @@
+/// Cost centers and the division each belongs to.
+table 'Cost Centers'
+
+	/// Key that links to General Ledger.
+	column CostCenterKey
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [CostCenterKey]
+
+	/// Cost center name.
+	column 'Cost Center'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Cost Center]
+
+	/// Corporate, Sales, Operations or Technology.
+	column Division
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Division]
+
+	partition 'Cost Centers' = calculated
+		mode: import
+		source =
+			-- Cost centers and the division each belongs to.
+			    VAR _Rows =
+			        DATATABLE(
+			            "CostCenterKey", INTEGER,
+			            "Cost Center", STRING,
+			            "Division", STRING,
+			            {
+			                { 1, "Head Office", "Corporate" },
+			                { 2, "North Region", "Sales" },
+			                { 3, "South Region", "Sales" },
+			                { 4, "East Region", "Sales" },
+			                { 5, "West Region", "Sales" },
+			                { 6, "Manufacturing", "Operations" },
+			                { 7, "Distribution", "Operations" },
+			                { 8, "Research", "Technology" }
+			            }
+			        )
+			    RETURN
+			        SELECTCOLUMNS(
+			            _Rows,
+			            "CostCenterKey", [CostCenterKey],
+			            "Cost Center", [Cost Center],
+			            "Division", [Division]
+			        )
+

@@ -11,6 +11,7 @@ css=L(7,217)+'\n'+L(303,312)+'''
 .cfg{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end}
 .cfg input[type=text]{width:260px;font-family:var(--sans)}
 .seeds{display:flex;flex-wrap:wrap;gap:10px}
+.logo-cols:empty{display:none}.logo-cols{margin-top:10px}.logo-list{display:flex;flex-wrap:wrap;gap:6px 16px;margin:8px 0}.logo-col{display:inline-flex;align-items:center;gap:6px;cursor:pointer}.logo-col .dot{width:18px;height:18px;border-radius:4px;border:1px solid var(--line)}
 .seed,.sw{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px 10px}
 .sw.changed{border-color:var(--accent);box-shadow:inset 0 -3px 0 var(--gold)}
 .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}

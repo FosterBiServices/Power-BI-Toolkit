@@ -28,7 +28,8 @@
         <div class="field"><label for="tName">Theme name</label><input type="text" id="tName" autocomplete="off" placeholder="Contoso Retail"></div>
       </div>
       <div class="seeds" id="seeds"></div>
-      <div class="reply-actions"><button type="button" class="btn" id="addSeed">+ Add a brand color</button></div>
+      <div class="reply-actions"><button type="button" class="btn" id="addSeed">+ Add a brand color</button><button type="button" class="btn" id="logoPick">Start from my logo</button><input type="file" id="logoFile" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif" hidden></div>
+      <div id="logoCols" class="logo-cols" aria-live="polite"></div>
       <div class="cfg">
         <div class="field"><label for="style">Palette</label><select id="style"><option value="varied">Varied colors that go with the brand</option><option value="shades">Shades of the brand color</option></select></div>
         <div class="field"><label for="count">Data colors</label><select id="count"><option>6</option><option>8</option><option>10</option><option>12</option></select></div>

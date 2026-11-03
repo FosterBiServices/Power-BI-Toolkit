@@ -9,7 +9,7 @@ const SD_IND = (() => {
   const person = ix => cat(firstOf(ix), ' ', lastOf(ix));
   const REGIONS = ['North', 'South', 'East', 'West', 'Central'];
   const seedP = ['seed', 'INT64'];
-  const n = name => [name, 'INT64'];
+  const n = name => [SD.pname(name), 'INT64'];
   const dts = [['start_date', 'DATETIME'], ['end_date', 'DATETIME']];
   const col = (nm, t, d, x) => Object.assign({ n: nm, t, d }, x || {});
   const key = (nm, d) => col(nm, 'int', d, { f: '0' });
@@ -421,5 +421,53 @@ const SD_IND = (() => {
     { id: 'mfg', name: 'Manufacturing', blurb: 'Production by machine and shift, products and machines.', kpis: 'Units, scrap rate, downtime, availability, performance, quality, OEE.', make: manufacturing },
     { id: 'service', name: 'Customer service', blurb: 'Tickets, agents and customers.', kpis: 'Tickets, backlog, first response, resolution time, SLA met, CSAT, reopen rate.', make: service }
   ];
-  return { LIST, get: id => LIST.find(x => x.id === id) || LIST[0], DATE_ARGS };
+  const get = id => LIST.find(x => x.id === id) || LIST[0];
+  const SHORT = { retail: 'Retail', hr: 'HR', finance: 'Finance', health: 'Health', mfg: 'Manufacturing', service: 'Service' };
+
+  /* Two or more industries in one model. They share one Date table. A table or measure name an earlier industry
+     already uses gets the industry's name in front (Finance Customers, Finance Gross Margin %), and its measures
+     are rewritten to match. A size both use (Customers) becomes one per industry: Customers (Retail), Customers (Finance).
+     Each size is [key, label, default, max, industry id, key in that industry]. */
+  const tq = x => /^[A-Za-z_]\w*$/.test(x) ? x : "'" + x.replace(/'/g, "''") + "'";
+  function renameIn(x, tmap, mmap){
+    return x.replace(/"(?:[^"]|"")*"|'(?:[^']|'')*'|\[[^\]]*\]|[A-Za-z_][\w.]*/g, (tok, off, str) => {
+      if (tok[0] === '"') return tok;
+      if (tok[0] === "'") { const nm = tok.slice(1, -1).replace(/''/g, "'"); return tmap[nm] ? tq(tmap[nm]) : tok; }
+      if (tok[0] === '[') { const nm = tok.slice(1, -1), prev = str[off - 1]; return mmap[nm] && !(prev && /[\w'\]]/.test(prev)) ? '[' + mmap[nm] + ']' : tok; }
+      return tmap[tok] ? tq(tmap[tok]) : tok;
+    });
+  }
+  function combine(ids){
+    ids = (Array.isArray(ids) ? ids : [ids]).filter((x, i, a) => LIST.some(l => l.id === x) && a.indexOf(x) === i);
+    if (!ids.length) ids = [LIST[0].id];
+    const plain = ids.map(id => get(id).make()), used = {};
+    plain.forEach(m => m.sizes.forEach(s => { used[s[0]] = (used[s[0]] || 0) + 1; }));
+    const out = { tables: [], rels: [], measures: {}, sizes: [], renamed: [], ids };
+    const tnames = new Set(), mnames = new Set(), rels = new Set();
+    ids.forEach((id, i) => {
+      const pm = {};
+      plain[i].sizes.forEach(s => { if (used[s[0]] > 1) pm[s[0]] = s[0] + '_' + id; });
+      let m = plain[i];
+      if (Object.keys(pm).length) { SD.pmap = pm; try { m = get(id).make(); } finally { SD.pmap = null; } }
+      const tmap = {}, mmap = {};
+      m.tables.forEach(t => {
+        if (t.isDate && tnames.has(t.name)) return;
+        if (tnames.has(t.name)) { const nm = SHORT[id] + ' ' + t.name; tmap[t.name] = nm; out.renamed.push({ kind: 'table', from: t.name, to: nm, ind: id }); t.name = nm; }
+        tnames.add(t.name); out.tables.push(t);
+      });
+      m.rels.forEach(r => {
+        const nr = [tmap[r[0]] || r[0], r[1], tmap[r[2]] || r[2], r[3]].concat(r.slice(4)), k = nr.slice(0, 4).join('|');
+        if (!rels.has(k)) { rels.add(k); out.rels.push(nr); }
+      });
+      const all = [].concat(...Object.values(m.measures));
+      all.forEach(x => { if (mnames.has(x.n)) { mmap[x.n] = SHORT[id] + ' ' + x.n; out.renamed.push({ kind: 'measure', from: x.n, to: mmap[x.n], ind: id }); } });
+      Object.keys(m.measures).forEach(tk => {
+        out.measures[tmap[tk] || tk] = m.measures[tk].map(x => Object.assign({}, x, { n: mmap[x.n] || x.n, x: renameIn(x.x, tmap, mmap) }));
+      });
+      all.forEach(x => mnames.add(mmap[x.n] || x.n));
+      m.sizes.forEach(s => out.sizes.push([pm[s[0]] || s[0], pm[s[0]] ? s[1] + ' (' + SHORT[id] + ')' : s[1], s[2], s[3], id, s[0]]));
+    });
+    return out;
+  }
+  return { LIST, get, combine, SHORT, DATE_ARGS };
 })();

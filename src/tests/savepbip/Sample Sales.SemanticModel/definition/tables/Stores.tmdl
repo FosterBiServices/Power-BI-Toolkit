@@ -1,0 +1,82 @@
+/// Stores with city, region and type.
+table Stores
+
+	/// Key that links to Sales.
+	column StoreKey
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [StoreKey]
+
+	/// Store name.
+	column Store
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Store]
+
+	/// City the store is in.
+	column City
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [City]
+
+	/// Sales region.
+	column Region
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Region]
+
+	/// Mall, High street, Outlet or Online.
+	column 'Store Type'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Store Type]
+
+	partition Stores = calculated
+		mode: import
+		source =
+			-- Stores with city, region and type.
+			VAR num_stores = 12
+			VAR seed = 2012
+			RETURN
+			    VAR _Rows =
+			        SELECTCOLUMNS( GENERATESERIES( 1, num_stores, 1 ), "_k", [Value] )
+			    VAR _Step1 =
+			        ADDCOLUMNS(
+			            _Rows,
+			            "StoreKey", [_k],
+			            "_c", INT( MOD( SIN( [_k] * 12.9898 + 1 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 25 ),
+			            "Store Type", SWITCH( TRUE(), MOD( SIN( [_k] * 12.9898 + 2 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.35, "Mall", MOD( SIN( [_k] * 12.9898 + 2 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.7, "High street", MOD( SIN( [_k] * 12.9898 + 2 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.9, "Outlet", "Online" )
+			        )
+			    VAR _Step2 =
+			        ADDCOLUMNS(
+			            _Step1,
+			            "City", SWITCH( [_c], 0, "Springfield", 1, "Riverton", 2, "Lakewood", 3, "Fairview", 4, "Greenville", 5, "Madison", 6, "Clinton", 7, "Georgetown", 8, "Franklin", 9, "Arlington", 10, "Salem", 11, "Bristol", 12, "Ashland", 13, "Milton", 14, "Oxford", 15, "Dover", 16, "Burlington", 17, "Kingston", 18, "Newport", 19, "Clayton", 20, "Hudson", 21, "Marion", 22, "Auburn", 23, "Dayton", "Glendale" ),
+			            "Region", SWITCH( MOD( [_c], 5 ), 0, "North", 1, "South", 2, "East", 3, "West", "Central" )
+			        )
+			    VAR _Step3 =
+			        ADDCOLUMNS(
+			            _Step2,
+			            "Store", "Store " & FORMAT( [_k], "00" ) & " " & [City]
+			        )
+			    RETURN
+			        SELECTCOLUMNS(
+			            _Step3,
+			            "StoreKey", [StoreKey],
+			            "Store", [Store],
+			            "City", [City],
+			            "Region", [Region],
+			            "Store Type", [Store Type]
+			        )
+

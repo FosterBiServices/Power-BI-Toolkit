@@ -58,6 +58,8 @@ table.prev td{font-family:var(--mono);font-size:12.5px}
 .ind small{font-size:12.5px;color:var(--muted);line-height:1.45}
 .ind:hover{border-color:var(--accent)}
 .ind[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 -3px 0 var(--gold)}
+.ind b::before{content:"";display:inline-block;width:14px;height:14px;margin-right:8px;vertical-align:-1px;border:1.5px solid var(--muted);border-radius:3px;background:var(--surface)}
+.ind[aria-checked="true"] b::before{border-color:var(--accent);background:var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3 7.5l2.5 2.5L11 4.5' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center/12px no-repeat}
 .ind:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .chips .chip{font-family:var(--sans)}
 h3.sub{margin:8px 0 2px;font-size:15px}

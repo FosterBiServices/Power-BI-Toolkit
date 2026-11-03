@@ -30,7 +30,7 @@ function dataColors(){
   const base = TB.palette(c.seeds, +c.count || 8, c.style);
   return base.map((h, i) => TB.norm(c.overrides[i]) || h);
 }
-function opts(){ const c = state.cfg; return { name: c.name, dataColors: dataColors(), background: c.background, visualBg: c.visualBg, textMode: c.textMode, textColor: c.textColor, font: c.font, good: c.good, neutral: c.neutral, bad: c.bad, bubble: +c.bubble || 0, vis: c.vis, custom: c.custom, base: c.base }; }
+function opts(){ const c = state.cfg; return { name: c.name, brandColors: (c.seeds || []).map(TB.norm).filter(Boolean), dataColors: dataColors(), background: c.background, visualBg: c.visualBg, textMode: c.textMode, textColor: c.textColor, font: c.font, good: c.good, neutral: c.neutral, bad: c.bad, bubble: +c.bubble || 0, vis: c.vis, custom: c.custom, base: c.base }; }
 
 // what text and chart marks sit on: the visual background, or the page when visuals are transparent
 function surface(){ const c = state.cfg; return TB.norm(c.visualBg) || TB.norm(c.background) || '#FFFFFF'; }
@@ -380,6 +380,36 @@ function init(){
   if (!state.cfg.overrides || typeof state.cfg.overrides !== 'object') state.cfg.overrides = {};
   renderAll();
   const change = full => { leaveExample(); try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {} if (full) renderAll(); else refresh(); persist(); };
+  // Start from my logo: the logo's main colors, the biggest ticked (up to 3); the image stays in this page and isn't saved
+  const logoMsg = html => { $('logoCols').innerHTML = html; };
+  $('logoPick').addEventListener('click', () => $('logoFile').click());
+  $('logoFile').addEventListener('change', () => {
+    const f = $('logoFile').files[0]; $('logoFile').value = ''; if (!f) return;
+    if (f.size > 5 * 1024 * 1024) { logoMsg('<div class="msg err">That image is over 5 MB. Use a smaller PNG, JPEG or SVG.</div>'); return; }
+    const rd = new FileReader();
+    rd.onload = () => { const img = new Image();
+      img.onload = () => {
+        let w = img.naturalWidth || 300, h = img.naturalHeight || 150; const k = Math.min(1, 240 / Math.max(w, h)); w = Math.max(1, Math.round(w * k)); h = Math.max(1, Math.round(h * k));
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0, w, h);
+        let cols; try { cols = TB.logoColors(cx.getImageData(0, 0, w, h).data, 6); } catch (e) { logoMsg('<div class="msg err">That image couldn\u2019t be read.</div>'); return; }
+        if (!cols.length) { logoMsg('<div class="msg warn">No colors were found: the logo looks white, black or grey only. Type your brand color in above.</div>'); return; }
+        const pick = cols.filter(c => !c.grey && c.share >= 0.05).slice(0, 3).map(c => c.hex);
+        logoMsg('<div class="msg info"><b>Colors in your logo</b>, biggest first. Tick the ones that are your brand colors (up to 3; the first ticked is the main one).'
+          + '<div class="logo-list">' + cols.map((c, i) => '<label class="logo-col"><input type="checkbox" data-logocol="' + c.hex + '"' + (pick.includes(c.hex) ? ' checked' : '') + '><span class="dot" style="background:' + c.hex + '"></span><code>' + c.hex + '</code> <span class="small muted">' + Math.round(c.share * 100) + '%' + (c.grey ? ', grey' : '') + '</span></label>').join('') + '</div>'
+          + '<div class="reply-actions"><button type="button" class="btn primary" id="logoUse">Use the ticked colors</button><button type="button" class="btn" id="logoCancel">Cancel</button></div></div>');
+      };
+      img.onerror = () => logoMsg('<div class="msg err">That file couldn\u2019t be read as an image.</div>');
+      img.src = rd.result; };
+    rd.readAsDataURL(f);
+  });
+  $('logoCols').addEventListener('change', e => { const t = e.target.closest('[data-logocol]'); if (!t) return; const on = $('logoCols').querySelectorAll('[data-logocol]:checked'); if (on.length > 3) t.checked = false; });
+  $('logoCols').addEventListener('click', e => {
+    if (e.target.id === 'logoCancel') { logoMsg(''); return; }
+    if (e.target.id !== 'logoUse') return;
+    const ticked = Array.from($('logoCols').querySelectorAll('[data-logocol]:checked')).map(x => x.dataset.logocol).slice(0, 3);
+    if (!ticked.length) { $('logoCols').querySelector('.msg').insertAdjacentHTML('beforeend', '<div class="small" style="color:var(--bad,#B00020)">Tick at least one color.</div>'); return; }
+    state.cfg.seeds = ticked; state.cfg.overrides = {}; logoMsg('<div class="msg ok">&#10003; Your brand colors are now ' + ticked.join(', ') + '. The rest of the palette is filled to match.</div>'); change(true);
+  });
   document.addEventListener('input', e => {
     const k = e.target.dataset.c;
     if (k) { if (setColor(k, e.target.value)) { const hx = document.querySelector('[data-h="' + k + '"]'); if (hx) hx.value = TB.norm(e.target.value); if (k.startsWith('seed')) { state.cfg.overrides = {}; } change(false); if (k.startsWith('seed')) { /* seeds re-rendered lazily */ } } return; }

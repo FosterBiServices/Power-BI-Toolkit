@@ -1590,6 +1590,19 @@ const ML = (() => {
   const TYPE_NAMES = { tableEx: 'Table', pivotTable: 'Matrix', cardVisual: 'Card', card: 'Card', multiRowCard: 'Multi-row card', kpi: 'KPI', image: 'Image', map: 'Map', filledMap: 'Filled map', azureMap: 'Azure map', decompositionTreeVisual: 'Decomposition tree' };
   const typeName = t => TYPE_NAMES[t] || (t ? t.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase()) : 'Visual');
   const looksKey = n => /(key|id|sk|code)$/i.test(n.replace(/[\s_]+/g, '')) || /^(id|key)\b/i.test(n);
+  const isDateCol = c => /date/i.test(c.dataType || '');
+  // a measure that returns text: a label, an SVG image or HTML. A format string does nothing for these.
+  // The export flags them (text); a PBIP folder doesn't say, so this reads the expression.
+  function returnsText(expr){
+    const x = (expr || '').replace(/\/\/[^\n]*|--[^\n]*|\/\*[\s\S]*?\*\//g, '');
+    if (/data:image\/svg|<svg[\s>]|<\/?(div|span|table|td|p|b|br)\b/i.test(x)) return true;
+    const TEXT = /^(?:"|(?:FORMAT|CONCATENATE|CONCATENATEX|UNICHAR|REPT|LEFT|RIGHT|MID|UPPER|LOWER|TRIM|SUBSTITUTE|COMBINEVALUES)\s*\()/i;
+    const parts = x.split(/\bRETURN\b/i);
+    let res = parts[parts.length - 1].trim();
+    const v = /^([A-Za-z_]\w*)$/.exec(res);
+    if (v) { const d = new RegExp('\\bVAR\\s+' + v[1] + '\\s*=\\s*([\\s\\S]*?)(?=\\bVAR\\b|\\bRETURN\\b|$)', 'i').exec(x); if (d) res = d[1].trim(); }
+    return TEXT.test(res) || /"\s*&|&\s*"/.test(res);
+  }
 
   function lint(m, cfg){
     const on = id => !cfg.off || !cfg.off[id];
@@ -1608,9 +1621,14 @@ const ML = (() => {
         add('folder', 'warn', 'Measure', x.table, x.name, 'No display folder. ' + (perTable[low(x.table)] > 1 ? perTable[low(x.table)] + ' measures in this table.' : 'The only measure in this table.')));
     }
     if (on('format')) {
-      m.measures.filter(visible).filter(x => !(x.formatString || '').trim() && !x.dynamicFormat && !x.text).forEach(x =>
-        add('format', 'warn', 'Measure', x.table, x.name, 'No format string.'));
-      if (!m.has.upgraded) notes.format = 'Measures with a dynamic format string, or that return text, also show here. The updated export query tells them apart.';
+      let textMs = 0;
+      m.measures.filter(visible).filter(x => !(x.formatString || '').trim() && !x.dynamicFormat && !x.text).forEach(x => {
+        if (returnsText(x.expression)) { textMs++; return; }
+        add('format', 'warn', 'Measure', x.table, x.name, 'No format string.');
+      });
+      const tn = !textMs ? '' : textMs + ' measure' + (textMs === 1 ? '' : 's') + ' that return text, an image or HTML ' + (textMs === 1 ? 'isn\u2019t' : 'aren\u2019t') + ' listed: a format string does nothing for ' + (textMs === 1 ? 'it' : 'them') + '.';
+      const old = m.has.upgraded ? '' : 'Measures with a dynamic format string may also show here. The updated export query tells them apart.';
+      if (tn || old) notes.format = [tn, old].filter(Boolean).join(' ');
     }
     if (on('keys')) {
       const seen = new Set();
@@ -1619,11 +1637,14 @@ const ML = (() => {
         const many = /^many/i.test(r.card) || !/:/.test(r.card);
         [[r.fromTable, r.fromColumn, many ? 'many' : 'one', r.toTable], [r.toTable, r.toColumn, /:many$/i.test(r.card) ? 'many' : 'one', r.fromTable]].forEach(([t, n, side, other]) => {
           const c = colOf(t, n); const k = key(t, n); if (!c || seen.has(k) || !visible(c)) return; seen.add(k);
+          // a date on the one side (Date[Date]) is what people slice by: not a key to hide
+          if (isDateCol(c) && side === 'one') return;
+          if (isDateCol(c)) { add('keys', 'info', 'Column', t, n, 'Visible date that links this table to ' + other + '. Hide it if people should use the dates in ' + other + ' (they also get its months and years).'); return; }
           if (side === 'many') add('keys', 'warn', 'Column', t, n, 'Visible foreign key: it links this table to ' + other + '. Authors should use the columns of ' + other + ' instead.');
           else add('keys', looksKey(n) ? 'warn' : 'info', 'Column', t, n, 'Visible key on the one side of the relationship with ' + other + '.' + (looksKey(n) ? '' : ' Keep it visible if people read it as a label (a code or name, say).'));
         });
       });
-      m.columns.filter(c => c.key && visible(c) && !seen.has(key(c.table, c.name))).forEach(c => add('keys', 'info', 'Column', c.table, c.name, 'Marked as the table’s key column and visible.'));
+      m.columns.filter(c => c.key && visible(c) && !isDateCol(c) && !seen.has(key(c.table, c.name))).forEach(c => add('keys', 'info', 'Column', c.table, c.name, 'Marked as the table’s key column and visible.'));
     }
     if (on('bidir')) {
       m.rels.filter(r => r.both).forEach(r => {
@@ -1876,7 +1897,7 @@ const ML = (() => {
     return out;
   }
 
-  return { parse, lint, whereUsed, DEPS_QUERY, parseDeps, stripDaxText, refs, usage, measureUsage, reportUsage, reportList, mergeReports, matchScore, RULES, numeric, typeName };
+  return { parse, lint, returnsText, whereUsed, DEPS_QUERY, parseDeps, stripDaxText, refs, usage, measureUsage, reportUsage, reportList, mergeReports, matchScore, RULES, numeric, typeName };
 })();
 
 
@@ -2612,7 +2633,7 @@ init();
     const rows = [HEAD.join('\t')], r = o => rows.push(HEAD.map(h => cell(o[h])).join('\t'));
     m.tables.forEach(t => r({ Kind: 'Table', Table: t.name, Name: t.name, Type: t.category, Flags: [t.hidden ? 'hidden' : '', t.private ? 'private' : ''].filter(Boolean).join(' '), Description: t.description, Expression: t.calc, Storage: t.storage, Source: t.source }));
     m.columns.forEach(c => r({ Kind: 'Column', Table: c.table, Name: c.name, Type: c.type, Folder: c.folder, Flags: [c.hidden ? 'hidden' : '', c.key ? 'key' : ''].filter(Boolean).join(' '), Description: c.description, Expression: c.expression, Summarize: c.summarize, SortBy: c.sortBy, Hierarchies: c.hierarchies }));
-    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
+    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : '', x.text ? 'text' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
     m.rels.forEach(x => r({ Kind: 'Relationship', Table: x.fromTable, Name: x.fromColumn, Type: x.fromCard + ':' + x.toCard, Flags: x.cross + (x.active ? '' : ' inactive'), ToTable: x.toTable, ToColumn: x.toColumn }));
     if (m.model) r({ Kind: 'Model', Name: m.model.name, Flags: m.model.discourage ? 'discourage-implicit' : '' });
     return rows.join('\n');
@@ -2655,6 +2676,7 @@ init();
             description: c.doc || c.props.description || '', expression: c.value || '', summarize: c.props.summarizeby ? cap(c.props.summarizeby) : num ? 'Default' : 'None', sortBy: unq(c.props.sortbycolumn || ''), hierarchies: (levels[c.name] || []).join(', ') });
         } else if (c.kind === 'measure') {
           m.measures.push({ table: o.name, name: c.name, format: c.props.formatstring || '', folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), dynamic: 'formatstringdefinition' in c.props || c.children.some(x => x.kind === 'formatstringdefinition'),
+            text: /^(imageurl|weburl)$/i.test(unq(c.props.datacategory || '')) || /^string$/i.test(c.props.datatype || ''),
             description: c.doc || c.props.description || '', expression: c.value || '' });
         }
       });
@@ -2669,7 +2691,7 @@ init();
       (t.hierarchies || []).forEach(h => (h.levels || []).forEach(l => { (levels[l.column] = levels[l.column] || []).push(h.name); }));
       m.tables.push({ name: t.name, category: t.dataCategory || '', hidden: !!t.isHidden, private: !!t.isPrivate, description: join(t.description), calc: s.type === 'calculated' ? join(s.expression) : '', storage: cap(p.mode || 'import').replace(/^Directquery$/i, 'DirectQuery'), source: s.type === 'entity' ? (s.expressionSource || '') : '' });
       (t.columns || []).forEach(c => { if (c.type === 'rowNumber') return; const num = /int64|double|decimal/i.test(c.dataType || ''); m.columns.push({ table: t.name, name: c.name, type: TYPES[(c.dataType || '').toLowerCase()] || c.dataType || '', folder: c.displayFolder || '', hidden: !!c.isHidden, key: !!c.isKey, description: join(c.description), expression: c.type === 'calculated' ? join(c.expression) : '', summarize: c.summarizeBy ? cap(c.summarizeBy) : num ? 'Default' : 'None', sortBy: c.sortByColumn || '', hierarchies: (levels[c.name] || []).join(', ') }); });
-      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, description: join(x.description), expression: join(x.expression) }));
+      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, text: /^(imageurl|weburl)$/i.test(x.dataCategory || '') || /^string$/i.test(x.dataType || ''), description: join(x.description), expression: join(x.expression) }));
     });
     (md.relationships || []).forEach(r => m.rels.push({ fromTable: r.fromTable, fromColumn: r.fromColumn, toTable: r.toTable, toColumn: r.toColumn, fromCard: cap(r.fromCardinality || 'many'), toCard: cap(r.toCardinality || 'one'), cross: cap(r.crossFilteringBehavior || 'oneDirection'), active: r.isActive !== false }));
     return m;

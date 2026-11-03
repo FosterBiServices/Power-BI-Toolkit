@@ -27,18 +27,18 @@ function copyText(text, btn){
 }
 
 const FIELDS = ['goal', 'sourceDetail', 'existing', 'columns', 'merges', 'params', 'culture', 'pwReply'];
-const blank = () => ({ goal: '', start: 'new', source: 'sql', sourceDetail: '', existing: '', columns: '', merges: '', params: '', culture: '', makeParams: true, pwReply: '' });
+const blank = () => ({ goal: '', start: 'new', source: 'sql', sourceDetail: '', existing: '', columns: '', merges: '', params: '', culture: '', makeParams: true, typeMap: true, pwReply: '' });
 const state = { example: false, v: blank(), prompt: '', reply: null };
 
 function inputs(){
   const v = state.v, ex = v.start === 'existing' && v.existing.trim() ? parseM(v.existing) : null;
   return { goal: v.goal, start: v.start, source: v.source, sourceDetail: v.sourceDetail, existing: v.existing, existingDb: ex && !ex.error && sourceInfo(ex).kind === 'database',
-    columns: v.columns, merges: v.merges, params: v.params, culture: v.culture, makeParams: v.makeParams };
+    columns: v.columns, merges: v.merges, params: v.params, culture: v.culture, makeParams: v.makeParams, typeMap: v.typeMap !== false };
 }
 function toForm(){
   const v = state.v;
   FIELDS.forEach(k => { $(k).value = v[k] || ''; });
-  $('source').value = v.source; $('makeParams').checked = v.makeParams;
+  $('source').value = v.source; $('makeParams').checked = v.makeParams; $('typeMap').checked = v.typeMap !== false;
   document.querySelectorAll('input[name=start]').forEach(i => { i.checked = i.value === v.start; });
 }
 
@@ -56,6 +56,9 @@ function renderStart(){
 function renderCols(){
   const cols = PW.parseColumns(state.v.columns);
   $('colChips').innerHTML = cols.length ? cols.map(c => '<span class="chip">' + esc(c.name) + (c.type ? ' <small>' + esc(c.type) + '</small>' : '') + '</span>').join('') + '<span class="muted small">' + cols.length + ' column' + (cols.length === 1 ? '' : 's') + '</span>' : '';
+  // the type map: shown once there are columns
+  $('typeMapBox').hidden = !cols.length;
+  $('typeMapCode').textContent = cols.length ? PW.typeMap(cols, 'PromotedHeaders', state.v.culture) : '';
 }
 function renderPrompt(){
   const v = state.v;
@@ -115,16 +118,18 @@ function init(){
     if (state.example) { const val = SF_SUITE.ownText($(k).value, state.v[k] || ''); leaveExample(); state.v[k] = val; $(k).value = val; }
     else state.v[k] = $(k).value;
     try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
-    if (k === 'pwReply') renderReply(); else if (k === 'columns') { renderCols(); renderPrompt(); renderReply(); } else if (k === 'existing') { renderStart(); renderPrompt(); } else { renderPrompt(); if (k === 'params' || k === 'merges') renderReply(); }
+    if (k === 'pwReply') renderReply(); else if (k === 'columns' || k === 'culture') { renderCols(); renderPrompt(); renderReply(); } else if (k === 'existing') { renderStart(); renderPrompt(); } else { renderPrompt(); if (k === 'params' || k === 'merges') renderReply(); }
     persist();
   }));
   $('source').addEventListener('change', () => { leaveExample(); state.v.source = $('source').value; renderStart(); renderPrompt(); persist(); });
   $('makeParams').addEventListener('change', () => { state.v.makeParams = $('makeParams').checked; renderPrompt(); persist(); });
+  $('typeMap').addEventListener('change', () => { state.v.typeMap = $('typeMap').checked; renderPrompt(); persist(); });
   document.querySelectorAll('input[name=start]').forEach(i => i.addEventListener('change', () => { leaveExample(); state.v.start = i.value; toForm(); renderAll(); persist(); }));
   document.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.copy === 'prompt' && state.prompt) copyText(state.prompt, b);
     else if (b.dataset.copy === 'query' && state.reply) copyText(state.reply.code, b);
+    else if (b.dataset.copy === 'typemap') copyText($('typeMapCode').textContent, b);
     else if (b.dataset.copyparam != null && state.reply) copyText(paramQuery(state.reply.params[+b.dataset.copyparam]), b);
   });
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); $('goal').focus(); });

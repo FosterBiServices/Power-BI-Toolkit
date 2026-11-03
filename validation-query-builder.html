@@ -2473,7 +2473,7 @@ init();
     const rows = [HEAD.join('\t')], r = o => rows.push(HEAD.map(h => cell(o[h])).join('\t'));
     m.tables.forEach(t => r({ Kind: 'Table', Table: t.name, Name: t.name, Type: t.category, Flags: [t.hidden ? 'hidden' : '', t.private ? 'private' : ''].filter(Boolean).join(' '), Description: t.description, Expression: t.calc, Storage: t.storage, Source: t.source }));
     m.columns.forEach(c => r({ Kind: 'Column', Table: c.table, Name: c.name, Type: c.type, Folder: c.folder, Flags: [c.hidden ? 'hidden' : '', c.key ? 'key' : ''].filter(Boolean).join(' '), Description: c.description, Expression: c.expression, Summarize: c.summarize, SortBy: c.sortBy, Hierarchies: c.hierarchies }));
-    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
+    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : '', x.text ? 'text' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
     m.rels.forEach(x => r({ Kind: 'Relationship', Table: x.fromTable, Name: x.fromColumn, Type: x.fromCard + ':' + x.toCard, Flags: x.cross + (x.active ? '' : ' inactive'), ToTable: x.toTable, ToColumn: x.toColumn }));
     if (m.model) r({ Kind: 'Model', Name: m.model.name, Flags: m.model.discourage ? 'discourage-implicit' : '' });
     return rows.join('\n');
@@ -2516,6 +2516,7 @@ init();
             description: c.doc || c.props.description || '', expression: c.value || '', summarize: c.props.summarizeby ? cap(c.props.summarizeby) : num ? 'Default' : 'None', sortBy: unq(c.props.sortbycolumn || ''), hierarchies: (levels[c.name] || []).join(', ') });
         } else if (c.kind === 'measure') {
           m.measures.push({ table: o.name, name: c.name, format: c.props.formatstring || '', folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), dynamic: 'formatstringdefinition' in c.props || c.children.some(x => x.kind === 'formatstringdefinition'),
+            text: /^(imageurl|weburl)$/i.test(unq(c.props.datacategory || '')) || /^string$/i.test(c.props.datatype || ''),
             description: c.doc || c.props.description || '', expression: c.value || '' });
         }
       });
@@ -2530,7 +2531,7 @@ init();
       (t.hierarchies || []).forEach(h => (h.levels || []).forEach(l => { (levels[l.column] = levels[l.column] || []).push(h.name); }));
       m.tables.push({ name: t.name, category: t.dataCategory || '', hidden: !!t.isHidden, private: !!t.isPrivate, description: join(t.description), calc: s.type === 'calculated' ? join(s.expression) : '', storage: cap(p.mode || 'import').replace(/^Directquery$/i, 'DirectQuery'), source: s.type === 'entity' ? (s.expressionSource || '') : '' });
       (t.columns || []).forEach(c => { if (c.type === 'rowNumber') return; const num = /int64|double|decimal/i.test(c.dataType || ''); m.columns.push({ table: t.name, name: c.name, type: TYPES[(c.dataType || '').toLowerCase()] || c.dataType || '', folder: c.displayFolder || '', hidden: !!c.isHidden, key: !!c.isKey, description: join(c.description), expression: c.type === 'calculated' ? join(c.expression) : '', summarize: c.summarizeBy ? cap(c.summarizeBy) : num ? 'Default' : 'None', sortBy: c.sortByColumn || '', hierarchies: (levels[c.name] || []).join(', ') }); });
-      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, description: join(x.description), expression: join(x.expression) }));
+      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, text: /^(imageurl|weburl)$/i.test(x.dataCategory || '') || /^string$/i.test(x.dataType || ''), description: join(x.description), expression: join(x.expression) }));
     });
     (md.relationships || []).forEach(r => m.rels.push({ fromTable: r.fromTable, fromColumn: r.fromColumn, toTable: r.toTable, toColumn: r.toColumn, fromCard: cap(r.fromCardinality || 'many'), toCard: cap(r.toCardinality || 'one'), cross: cap(r.crossFilteringBehavior || 'oneDirection'), active: r.isActive !== false }));
     return m;

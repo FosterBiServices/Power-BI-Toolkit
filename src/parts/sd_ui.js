@@ -34,7 +34,7 @@ const serialOf = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
 /* ---------- state ---------- */
 function makeDefaults(){
   const t = today(), [y, m] = SD.ymd(t);
-  return { ind: 'retail', sizes: {}, start: SD.serial(y - 2, 1, 1), end: SD.serial(y, m, 1) - 1, seed: 1, style: 'udf', measures: true, off: {}, tab: {} };
+  return { ind: 'retail', inds: ['retail'], sizes: {}, start: SD.serial(y - 2, 1, 1), end: SD.serial(y, m, 1) - 1, seed: 1, style: 'udf', measures: true, off: {}, tab: {} };
 }
 const state = { mode: 'mask', example: false, tables: [], treats: {}, sugs: [], manual: [], seed: randSeed(), prevTable: '', prevSide: 'after', make: makeDefaults(), masked: null, ver: 0, maskedVer: -1 };
 let tid = 0;
@@ -187,10 +187,18 @@ function writeFile(file){
 
 /* ---------- make: render ---------- */
 const sizeOf = (ind, key, def) => { const s = state.make.sizes[ind] || {}; return s[key] !== undefined ? s[key] : def; };
+// the industries picked, in the order picked (the first one keeps its table and measure names)
+function indsOf(m){
+  let a = Array.isArray(m.inds) ? m.inds.filter(x => SD_IND.LIST.some(l => l.id === x)) : [];
+  if (!a.length) a = [SD_IND.get(m.ind).id];
+  return Array.from(new Set(a));
+}
+const indKey = m => indsOf(m).join('+');
+const indNames = m => indsOf(m).map(id => SD_IND.get(id).name);
 let makeCache = { key: '', model: null, counts: {}, rows: {} };
 function makeArgs(model){
   const m = state.make, a = { start_date: m.start, end_date: m.end, seed: m.seed };
-  model.sizes.forEach(s => { a[s[0]] = sizeOf(m.ind, s[0], s[2]); });
+  model.sizes.forEach(s => { a[s[0]] = sizeOf(s[4], s[5], s[2]); });
   return a;
 }
 function sourceSize(t, env){
@@ -201,9 +209,9 @@ function sourceSize(t, env){
   return s.grid.reduce((p, g) => p * (g.days ? g.days[1].f({}, env) - g.days[0].f({}, env) + 1 : Math.floor(g.n.f ? g.n.f({}, env) : g.n) + (g.from === 0 ? 1 : 0)), 1);
 }
 function makeModel(){
-  const m = state.make, key = JSON.stringify([m.ind, m.sizes[m.ind] || {}, m.start, m.end, m.seed]);
+  const m = state.make, inds = indsOf(m), key = JSON.stringify([inds, inds.map(id => m.sizes[id] || {}), m.start, m.end, m.seed]);
   if (makeCache.key === key) return makeCache;
-  const ind = SD_IND.get(m.ind), model = ind.make(), args = makeArgs(model), env = { p: args, seed: m.seed };
+  const ind = SD_IND.get(inds[0]), model = SD_IND.combine(inds), args = makeArgs(model), env = { p: args, seed: m.seed };
   const counts = {}, rows = {};
   model.tables.forEach(t => {
     const n = sourceSize(t, env), lim = n > 20000 ? 4000 : 0;
@@ -237,10 +245,13 @@ function hasMeasuresTable(){
   return false;
 }
 function renderMake(){
-  const m = state.make, ind = SD_IND.get(m.ind);
-  $('industries').innerHTML = SD_IND.LIST.map(x => '<button type="button" class="ind" role="radio" aria-checked="' + (x.id === m.ind) + '" data-ind="' + x.id + '"><b>' + esc(x.name) + '</b><span>' + esc(x.blurb) + '</span><small>' + esc(x.kpis) + '</small></button>').join('');
-  const model0 = ind.make();
-  $('sizes').innerHTML = model0.sizes.map(s => '<div class="field"><label for="sz-' + s[0] + '">' + esc(s[1]) + '</label><input type="number" class="num" id="sz-' + s[0] + '" data-size="' + s[0] + '" min="1" max="' + s[3] + '" value="' + sizeOf(m.ind, s[0], s[2]) + '"></div>').join('');
+  const m = state.make, inds = indsOf(m), ik = inds.join('+');
+  $('industries').innerHTML = SD_IND.LIST.map(x => '<button type="button" class="ind" role="checkbox" aria-checked="' + inds.includes(x.id) + '" data-ind="' + x.id + '"><b>' + esc(x.name) + '</b><span>' + esc(x.blurb) + '</span><small>' + esc(x.kpis) + '</small></button>').join('');
+  const model0 = SD_IND.combine(inds);
+  const ren = model0.renamed.map(r => (r.kind === 'measure' ? 'measure ' : '') + '<b>' + esc(r.from) + '</b> from ' + esc(SD_IND.get(r.ind).name) + ' is <b>' + esc(r.to) + '</b>');
+  $('combineNote').innerHTML = inds.length < 2 ? '' : msg('info', 'One model with ' + inds.map(id => esc(SD_IND.get(id).name)).join(' and ') + '. They share one Date table; '
+    + 'each industry\u2019s other tables link only to each other.' + (ren.length ? ' So names don\u2019t clash: ' + ren.join('; ') + '.' : ''));
+  $('sizes').innerHTML = model0.sizes.map(s => '<div class="field"><label for="sz-' + s[0] + '">' + esc(s[1]) + '</label><input type="number" class="num" id="sz-' + s[0] + '" data-size="' + s[0] + '" data-ind="' + s[4] + '" data-key="' + s[5] + '" min="1" max="' + s[3] + '" value="' + sizeOf(s[4], s[5], s[2]) + '"></div>').join('');
   $('startDate').value = m.start === null ? '' : isoOf(m.start); $('endDate').value = m.end === null ? '' : isoOf(m.end); $('makeSeed').value = m.seed;
   document.querySelectorAll('input[name=style]').forEach(r => { r.checked = r.value === m.style; });
   $('addMeasures').checked = m.measures;
@@ -256,16 +267,20 @@ function renderMake(){
     ? 'One DAX function per table (named <code>' + SD.PKG + '.&hellip;</code>), and each table calls its function. Needs DAX user-defined functions, a preview feature in Power BI Desktop.'
     : 'Each table holds its own DAX, with no functions. Works in any recent Power BI Desktop.';
   const errs = validMake();
-  const sizeErr = model0.sizes.filter(s => { const v = sizeOf(m.ind, s[0], s[2]); return !(Number.isInteger(v) && v >= 1 && v <= s[3]); }).map(s => esc(s[1]) + ' is a whole number from 1 to ' + s[3].toLocaleString() + '.');
+  const sizeErr = model0.sizes.filter(s => { const v = sizeOf(s[4], s[5], s[2]); return !(Number.isInteger(v) && v >= 1 && v <= s[3]); }).map(s => esc(s[1]) + ' is a whole number from 1 to ' + s[3].toLocaleString() + '.');
   const all = errs.concat(sizeErr);
   $('makeMsg').innerHTML = all.length ? msg('err', all.join('<br>')) : '';
-  const off = m.off[m.ind] || [];
+  const off = Array.isArray(m.off[ik]) ? m.off[ik] : [];
   $('tablePicks').innerHTML = model0.tables.map(t => '<label class="c"><input type="checkbox" data-tbl="' + esc(t.name) + '"' + (off.includes(t.name) ? '' : ' checked') + '> ' + esc(t.name) + '</label>').join('');
   ['m4', 'm5'].forEach(id => { $(id).closest('section').classList.toggle('dim', !!all.length); });
+  $('dropMsg').innerHTML = '';
   if (all.length) { $('tmdlView').textContent = ''; state.tmdl = ''; return; }
   const c = makeModel(), on = c.model.tables.filter(t => !off.includes(t.name));
   if (!on.length) { $('makeTabs').innerHTML = ''; $('makePreview').innerHTML = msg('warn', 'Tick at least one table.'); $('tmdlView').textContent = ''; state.tmdl = ''; return; }
-  let tab = m.tab[m.ind]; if (!on.some(t => t.name === tab)) tab = (on.find(t => (c.model.measures[t.name] || []).length) || on[0]).name;
+  const lo = SD.leftOut(c.model, on.map(x => x.name)), loMs = m.measures ? lo.measures : [];
+  if (loMs.length || lo.rels.length) $('dropMsg').innerHTML = msg('warn', 'Left out because a table isn\u2019t ticked: '
+    + loMs.map(x => 'measure <b>' + esc(x.n) + '</b> (' + (x.table ? 'reads ' + esc(x.table) : 'uses ' + esc(x.measure)) + ')').concat(lo.rels.map(r => 'the relationship from ' + esc(r[0]) + '[' + esc(r[1]) + '] to ' + esc(r[2]) + '[' + esc(r[3]) + ']')).join('; ') + '.');
+  let tab = m.tab[ik]; if (!on.some(t => t.name === tab)) tab = (on.find(t => (c.model.measures[t.name] || []).length) || on[0]).name;
   $('makeTabs').innerHTML = on.map(t => '<button type="button" class="chip" role="tab" aria-selected="' + (t.name === tab) + '" aria-pressed="' + (t.name === tab) + '" data-tab="' + esc(t.name) + '">' + esc(t.name) + ' <small>' + (c.counts[t.name].about ? 'about ' : '') + c.counts[t.name].n.toLocaleString() + ' rows</small></button>').join('');
   const t = on.find(x => x.name === tab);
   $('makeDesc').textContent = t.desc;
@@ -362,18 +377,23 @@ function init(){
   });
   // make
   const mk = fn => { fn(state.make); changed(); persist(); };
-  $('industries').addEventListener('click', e => { const b = e.target.closest('[data-ind]'); if (b) mk(m => { m.ind = b.dataset.ind; }); });
-  $('sizes').addEventListener('change', e => { const i = e.target.closest('[data-size]'); if (!i) return; mk(m => { const s = m.sizes[m.ind] = m.sizes[m.ind] || {}; s[i.dataset.size] = Math.floor(+i.value); }); });
+  // an industry card adds or removes that industry; the last one picked can't be removed
+  $('industries').addEventListener('click', e => { const b = e.target.closest('[data-ind]'); if (!b) return; mk(m => {
+    const id = b.dataset.ind, a = indsOf(m);
+    m.inds = a.includes(id) ? (a.length > 1 ? a.filter(x => x !== id) : a) : a.concat(id);
+    m.ind = m.inds[0];
+  }); });
+  $('sizes').addEventListener('change', e => { const i = e.target.closest('[data-size]'); if (!i) return; mk(m => { const s = m.sizes[i.dataset.ind] = m.sizes[i.dataset.ind] || {}; s[i.dataset.key] = Math.floor(+i.value); }); });
   $('startDate').addEventListener('change', () => mk(m => { m.start = serialOf($('startDate').value); }));
   $('endDate').addEventListener('change', () => mk(m => { m.end = serialOf($('endDate').value); }));
   $('makeSeed').addEventListener('change', () => mk(m => { m.seed = Math.floor(+$('makeSeed').value); }));
   document.querySelectorAll('input[name=style]').forEach(r => r.addEventListener('change', () => mk(m => { m.style = r.value; })));
   $('addMeasures').addEventListener('change', () => mk(m => { m.measures = $('addMeasures').checked; }));
   document.querySelectorAll('input[name=mtable]').forEach(r => r.addEventListener('change', () => mk(m => { m.mtable = r.value; })));
-  $('tablePicks').addEventListener('change', e => { const c = e.target.closest('[data-tbl]'); if (!c) return; mk(m => { const o = m.off[m.ind] = (m.off[m.ind] || []).filter(x => x !== c.dataset.tbl); if (!c.checked) o.push(c.dataset.tbl); }); });
-  $('makeTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) mk(m => { m.tab[m.ind] = b.dataset.tab; }); });
+  $('tablePicks').addEventListener('change', e => { const c = e.target.closest('[data-tbl]'); if (!c) return; mk(m => { const ik = indKey(m), o = m.off[ik] = (Array.isArray(m.off[ik]) ? m.off[ik] : []).filter(x => x !== c.dataset.tbl); if (!c.checked) o.push(c.dataset.tbl); }); });
+  $('makeTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) mk(m => { m.tab[indKey(m)] = b.dataset.tab; }); });
   $('copyTmdl').addEventListener('click', () => { if (state.tmdl) copyText(state.tmdl, $('copyTmdl')); });
-  $('dlTmdl').addEventListener('click', () => { if (state.tmdl) download('Sample data - ' + SD_IND.get(state.make.ind).name + '.tmdl', new Blob([state.tmdl], { type: 'text/plain' })); });
+  $('dlTmdl').addEventListener('click', () => { if (state.tmdl) download('Sample data - ' + indNames(state.make).join(' + ') + '.tmdl', new Blob([state.tmdl], { type: 'text/plain' })); });
   $('clearAll').addEventListener('click', () => { resetAll(); store.set('blank', '1'); persist(); });
 }
 init();

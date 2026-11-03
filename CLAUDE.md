@@ -17,7 +17,9 @@ prompt the user takes to Copilot, then check the reply pasted back. Nothing call
   example text keeps only what was typed (`SF_SUITE.ownText`), and every other example field
   is cleared, so no example content reaches a Copilot prompt.
 - Every Copilot prompt uses the same sections: TASK (the user's request, or what the tool
-  asks for), CONTEXT, STARTING POINT, RULES, and REPLY FORMAT (marked as a template). suite.js
+  asks for), CONTEXT, STARTING POINT, RULES, and REPLY FORMAT (marked as a template). Power Query Writer adds a
+  FINAL VALIDATION section before REPLY FORMAT (the owner's choice: Copilot checks the whole M query before replying), and its
+  rules only ask for a type or column-selection step when the TASK needs one. suite.js
   adds `READ_RULE` to every copied or downloaded prompt: only TASK is the task, and sample or
   example content (including the reply template) is never a requirement. Reply parsers skip
   blocks that are only the reply template, in case Copilot repeats it.
@@ -85,7 +87,16 @@ Things to know:
   Measures all go in a `_Measures` table, with a display folder named for the table each one counts
   (the owner's choice). The page checks the model saved on the home page: if it has `_Measures`, the
   script uses `ref table _Measures` (adds, keeps what's there); otherwise it creates the table. The
-  user can switch. Measures whose tables (or measures) are left out of the script are dropped.
+  user can switch. Measures whose tables (or measures) are left out of the script are dropped, and the page says which
+  (and which relationships) under the table list (`SD.leftOut`).
+  Several industries can go in one model (`SD_IND.combine`, `state.make.inds` in the order picked). They share one Date
+  table; a table or measure name an earlier industry already uses gets the industry's name in front (`Finance Customers`,
+  `Finance Gross Margin %`) and that industry's measures are rewritten to match. A size two industries both have
+  (`num_customers`) becomes one per industry (`num_customers_retail`, `num_customers_finance`): `SD.pmap` renames
+  settings while an industry is built, so builders must call `P()` and `n()` inside the industry function, not at load.
+  Per-industry choices (`off`, `tab`) are saved under the industries joined with `+`; sizes stay per industry.
+  In plain calculated tables the settings are VARs chained straight into the table's own `VAR _Rows ... RETURN` (no
+  RETURN of their own, since a table with no settings would start with a bare RETURN, which Desktop rejects).
 - `src/pages/sheet-recon.html` is a finished page (built in another chat) with a `@@SUITE@@`
   line where build_site.py puts suite.js. Edit it directly.
 - `build_site.py`: `HOOKS` lists every tool page and the line that connects it to the shared
@@ -196,6 +207,8 @@ through both.
 
 ## Not yet checked in real Power BI or Copilot
 
+- Sample Data Maker: a script with two or more industries combined (renamed tables and measures, per-industry sizes),
+  and the plain calculated tables after the RETURN fix (Accounts, Cost Centers and Departments failed before it).
 - Prompt files in Copilot (attaching the downloaded prompt; Copilot's file reply).
 - Sample Data Maker's Make new data: applying the TMDL script in TMDL view (tables, relationships,
   measures), including `ref table _Measures` into a report that already has one. The DAX itself is checked: every table function of all six industries, run as a DAX
@@ -242,6 +255,28 @@ through both.
 - Chart Patterns: the TMDL scripts, the Format-pane steps and the combo chart marker size in a theme
   (written from the PBIP skills in Power-BI-Portfolio/AI/skills, not yet built by hand in Desktop).
 
+Power Query Writer: types follow the owner's **type map** pattern (`PW.typeMap(cols, prev, culture)`): TypePairs, only the
+pairs whose columns exist, every other column text, one Table.TransformColumnTypes (ChangeTypes). With columns pasted,
+"Set column types with a type map" is on by default; the prompt then gives Copilot the filled-in block as a required step,
+and Step 2 shows it to copy. Types come from the pasted rows (whole number -> Int64.Type, number, date, datetime, logical,
+otherwise text). Unticked, the rule is the conditional one (a type step only when the TASK changes types). Check: `pwtypetest.js`.
+
+Theme Builder: **Start from my logo** reads the image in the page (never saved), and `TB.logoColors(rgba)` returns its main
+colors (white, black and grey backgrounds and see-through pixels left out, close shades merged, each the average of
+its pixels) with their share; the biggest non-grey ones (up to 3, at least 5%) come ticked and become the brand colors.
+The green/red/amber note skips brand colors (`opts().brandColors`), since the person chose them. Other options vary
+the brand shade by data color position, so the lists don't all open with the same color. Check: `tbfixtest.js`.
+
+Layout Designer: a suggestion that changes the page size (Taller page, Larger page, or the 16:9 start when the page
+isn't 16:9) is never the Best fit and its card says "Changes your page from W x H to W x H". A logo added in Step 1 is
+drawn on the background by default (`header.logo.inBg`), and Step 4 says when the background has no logo and where to
+put an Image visual. Visuals can be renamed in Step 4's positions table (`renameItem`, by layout id: g2, g2.1, t0, s1,
+h0, l3, title). Check: `lofixtest.js`.
+
+Model Linter skips measures that return text (labels, SVG images, HTML) in the format string check: the export flags
+them, a PBIP folder's Image URL and Web URL measures are flagged by suite.js, and `ML.returnsText` reads the expression
+for the rest. A date column on the one side of a relationship (Date[Date]) isn't a visible key; on the many side it's info.
+
 Checked on a real model in Power BI Desktop 2.158 (Oct 2026): the About This Report data
 sources query, the Model Linter dependencies query, the shared export, and Model Compare on a
 before/after change. Power Query Writer gave a working query from Copilot on a real
@@ -249,3 +284,16 @@ Excel-based query. On that build INFO.VIEW.MEASURES leaves FormatString empty, s
 reads measure format strings from INFO.MEASURES.
 
 The owner keeps a progress doc and checklist in Claude (claude.ai); it isn't in this repo.
+
+## Parked (built, then taken out; possible future updates)
+
+- **Save to a PBIP folder** (`src/parts/pbip_save.js`): a button under every TMDL script that merges it into a PBIP
+  folder's model files (tables, `_Measures`, relationships, functions, roles, `model.tmdl`) after showing the list of
+  changes; Chrome/Edge write in place, other browsers get a .zip. `S.pbipPlan(script, files)` is the pure merge.
+  Taken out (Nov 2026) because it overwrites the person's own project files. Options when it comes back: a .zip only,
+  a backup copy of each file first, or in place as built. Checks: `pbipsavetest.js`, `pbipbtntest.js` (fixture
+  `src/tests/savepbip/`); they skip while it's parked.
+- **Layout Designer: Add as a page to a PBIP report** (`src/parts/lo_pbir.js`, `LPB`): writes the layout as a PBIR page
+  (page.json with the background PNG, a visual.json per box with type, position and title, no fields), registers the
+  images in report.json and adds the page to pages.json. Uses pbip_save.js's folder flow. Check: `lopbirtest.js`.
+  Neither was opened in Power BI Desktop.

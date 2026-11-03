@@ -237,6 +237,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 .cfg{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end}
 .cfg input[type=text]{width:260px;font-family:var(--sans)}
 .seeds{display:flex;flex-wrap:wrap;gap:10px}
+.logo-cols:empty{display:none}.logo-cols{margin-top:10px}.logo-list{display:flex;flex-wrap:wrap;gap:6px 16px;margin:8px 0}.logo-col{display:inline-flex;align-items:center;gap:6px;cursor:pointer}.logo-col .dot{width:18px;height:18px;border-radius:4px;border:1px solid var(--line)}
 .seed,.sw{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px 10px}
 .sw.changed{border-color:var(--accent);box-shadow:inset 0 -3px 0 var(--gold)}
 .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
@@ -367,7 +368,8 @@ input.hex.bad{border-color:var(--err);background:var(--err-soft)}
         <div class="field"><label for="tName">Theme name</label><input type="text" id="tName" autocomplete="off" placeholder="Contoso Retail"></div>
       </div>
       <div class="seeds" id="seeds"></div>
-      <div class="reply-actions"><button type="button" class="btn" id="addSeed">+ Add a brand color</button></div>
+      <div class="reply-actions"><button type="button" class="btn" id="addSeed">+ Add a brand color</button><button type="button" class="btn" id="logoPick">Start from my logo</button><input type="file" id="logoFile" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif" hidden></div>
+      <div id="logoCols" class="logo-cols" aria-live="polite"></div>
       <div class="cfg">
         <div class="field"><label for="style">Palette</label><select id="style"><option value="varied">Varied colors that go with the brand</option><option value="shades">Shades of the brand color</option></select></div>
         <div class="field"><label for="count">Data colors</label><select id="count"><option>6</option><option>8</option><option>10</option><option>12</option></select></div>
@@ -646,9 +648,12 @@ const TB = (function(){
     const APART = 'Stands apart from your other data colors, so its series is easy to pick out';
     for (const [n, g] of [[3, 10], [2.2, Math.min(7, curD)]]) {
       need = n; gap = g;
-      // 1. a lighter or darker shade of the brand: always goes with it
-      const lighter = dark ? Lb < 0.7 : Lb < 0.5;
-      if (!out.some(x => x.shade)) for (const d of [0.14, 0.2, 0.26, 0.32]) if (add(fromLch(clamp(Lb + (lighter ? d : -d), 0.3, 0.9), Cb * (lighter ? 0.85 : 1), Hb), (lighter ? 'A lighter' : 'A darker') + ' shade of your brand color, so it always goes with it')) { out[out.length - 1].shade = true; break; }
+      // 1. a lighter or darker shade of the brand: always goes with it. Each data color gets a different shade (direction and
+      //    depth turn with its position), so the lists for colors 2, 3, 4... don't all start with the same one
+      const lighter = dark ? Lb < 0.7 : Lb < 0.5, both = Lb > 0.36 && Lb < 0.74;
+      const dirs = both && i % 2 ? [!lighter, lighter] : [lighter, !lighter], steps = [0.14, 0.2, 0.26, 0.32], rot = i % steps.length;
+      const ds = steps.slice(rot).concat(steps.slice(0, rot));
+      if (!out.some(x => x.shade)) outer: for (const up of (both ? dirs : [lighter])) for (const d of ds) if (add(fromLch(clamp(Lb + (up ? d : -d), 0.3, 0.9), Cb * (up ? 0.85 : 1), Hb), (up ? 'A lighter' : 'A darker') + ' shade of your brand color, so it always goes with it')) { out[out.length - 1].shade = true; break outer; }
       // 2. next to the brand on the color wheel
       if (!family(brand) && !out.some(x => x.near)) { const near = [30, -30, 45, -45, 60, -60].map(d => (Hb + d + 360) % 360).filter(inSafe); if (best(near.flatMap(h => Ls.map(L => fromLch(L, Ct, h))), 'Next to your brand color on the color wheel, so the two sit well together')) out[out.length - 1].near = true; }
       // 3. hues that stand apart from everything already in the palette
@@ -659,6 +664,29 @@ const TB = (function(){
       if (out.length >= k) break;
     }
     return out.map(x => ({ hex: x.hex, name: x.name, why: x.why }));
+  }
+
+  /* The main colors of a logo, from its pixels (RGBA, as a canvas gives them): [{ hex, share }] with the biggest first.
+     See-through pixels, the white or grey background and very small specks are left out; close shades count as one color,
+     shown as the most common shade among them. share is that color's part of the logo's colored pixels. */
+  function logoColors(px, max){
+    max = max || 5;
+    const bins = new Map();
+    for (let i = 0; i + 3 < px.length; i += 4) {
+      if (px[i + 3] < 128) continue;
+      const k = (px[i] >> 3) << 10 | (px[i + 1] >> 3) << 5 | px[i + 2] >> 3;
+      const b = bins.get(k) || [0, 0, 0, 0]; b[0]++; b[1] += px[i]; b[2] += px[i + 1]; b[3] += px[i + 2]; bins.set(k, b);
+    }
+    const list = [];
+    // each bin's color is the average of its pixels, so a flat logo color comes back exactly
+    bins.forEach(b => { const n = b[0], h = toHex([b[1] / n / 255, b[2] / n / 255, b[3] / n / 255]); const [L, C] = toLch(h); list.push({ hex: h, n, L, C }); });
+    list.sort((a, b) => b.n - a.n);
+    // the background: near white, or the single most common grey when it covers most of the image
+    const plain = c => (c.L > 0.93 && c.C < 0.04) || c.C < 0.02 && (c.L > 0.85 || c.L < 0.12);
+    const groups = [];
+    list.forEach(c => { if (plain(c)) return; const g = groups.find(x => deltaE(x.hex, c.hex) < 12); if (g) g.n += c.n; else groups.push({ hex: c.hex, n: c.n, C: c.C }); });
+    const total = groups.reduce((a, g) => a + g.n, 0) || 1;
+    return groups.filter(g => g.n / total >= 0.02).sort((a, b) => b.n - a.n).slice(0, max).map(g => ({ hex: g.hex, share: g.n / total, grey: g.C < 0.04 }));
   }
 
   /* Every color the theme uses, derived from a few choices */
@@ -1067,7 +1095,9 @@ const TB = (function(){
     const close = [];
     for (let i = 0; i < r.dataColors.length; i++) for (let j = i + 1; j < r.dataColors.length; j++) if (deltaE(r.dataColors[i], r.dataColors[j]) < 8) close.push((i + 1) + ' and ' + (j + 1));
     if (close.length) add('warn', 'Some data colors are very alike (colors ' + close.join('; ') + '), so their series will be hard to tell apart.');
-    const fam = r.dataColors.map((c, i) => [i + 1, c, family(c)]).filter(x => x[2]);
+    // brand colors are the person's own choice: only the colors the page suggested are flagged
+    const brand = new Set((o.brandColors || []).map(norm));
+    const fam = r.dataColors.map((c, i) => [i + 1, c, family(c)]).filter(x => x[2] && !brand.has(norm(x[1])));
     if (fam.length) add('info', 'Some data colors look ' + [...new Set(fam.map(x => x[2]))].join(', ') + ' (' + fam.map(x => 'color ' + x[0] + ', ' + x[1]).join('; ') + '). Readers often take green as good, red as bad and amber as a warning, so these can suggest a meaning the data doesn\u2019t have. Fine if they\u2019re your brand colors.');
     if (deltaE(deutan(r.good), deutan(r.bad)) < 12) add('warn', 'Your good and bad colors look almost the same to people with red-green color blindness (about 1 in 12 men). Blue for good and orange for bad is a common safe pair.');
     if (contrast(r.text, r.background) < 4.5) add('warn', 'The text color is hard to read on the ' + (r.visual ? 'visual ' : '') + 'background (' + contrast(r.text, r.background).toFixed(1) + ':1).');
@@ -1075,7 +1105,7 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { splitCard, stateName, schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, findThemes, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { splitCard, stateName, schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, findThemes, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, logoColors, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/
 
@@ -1111,7 +1141,7 @@ function dataColors(){
   const base = TB.palette(c.seeds, +c.count || 8, c.style);
   return base.map((h, i) => TB.norm(c.overrides[i]) || h);
 }
-function opts(){ const c = state.cfg; return { name: c.name, dataColors: dataColors(), background: c.background, visualBg: c.visualBg, textMode: c.textMode, textColor: c.textColor, font: c.font, good: c.good, neutral: c.neutral, bad: c.bad, bubble: +c.bubble || 0, vis: c.vis, custom: c.custom, base: c.base }; }
+function opts(){ const c = state.cfg; return { name: c.name, brandColors: (c.seeds || []).map(TB.norm).filter(Boolean), dataColors: dataColors(), background: c.background, visualBg: c.visualBg, textMode: c.textMode, textColor: c.textColor, font: c.font, good: c.good, neutral: c.neutral, bad: c.bad, bubble: +c.bubble || 0, vis: c.vis, custom: c.custom, base: c.base }; }
 
 // what text and chart marks sit on: the visual background, or the page when visuals are transparent
 function surface(){ const c = state.cfg; return TB.norm(c.visualBg) || TB.norm(c.background) || '#FFFFFF'; }
@@ -1461,6 +1491,36 @@ function init(){
   if (!state.cfg.overrides || typeof state.cfg.overrides !== 'object') state.cfg.overrides = {};
   renderAll();
   const change = full => { leaveExample(); try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {} if (full) renderAll(); else refresh(); persist(); };
+  // Start from my logo: the logo's main colors, the biggest ticked (up to 3); the image stays in this page and isn't saved
+  const logoMsg = html => { $('logoCols').innerHTML = html; };
+  $('logoPick').addEventListener('click', () => $('logoFile').click());
+  $('logoFile').addEventListener('change', () => {
+    const f = $('logoFile').files[0]; $('logoFile').value = ''; if (!f) return;
+    if (f.size > 5 * 1024 * 1024) { logoMsg('<div class="msg err">That image is over 5 MB. Use a smaller PNG, JPEG or SVG.</div>'); return; }
+    const rd = new FileReader();
+    rd.onload = () => { const img = new Image();
+      img.onload = () => {
+        let w = img.naturalWidth || 300, h = img.naturalHeight || 150; const k = Math.min(1, 240 / Math.max(w, h)); w = Math.max(1, Math.round(w * k)); h = Math.max(1, Math.round(h * k));
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0, w, h);
+        let cols; try { cols = TB.logoColors(cx.getImageData(0, 0, w, h).data, 6); } catch (e) { logoMsg('<div class="msg err">That image couldn\u2019t be read.</div>'); return; }
+        if (!cols.length) { logoMsg('<div class="msg warn">No colors were found: the logo looks white, black or grey only. Type your brand color in above.</div>'); return; }
+        const pick = cols.filter(c => !c.grey && c.share >= 0.05).slice(0, 3).map(c => c.hex);
+        logoMsg('<div class="msg info"><b>Colors in your logo</b>, biggest first. Tick the ones that are your brand colors (up to 3; the first ticked is the main one).'
+          + '<div class="logo-list">' + cols.map((c, i) => '<label class="logo-col"><input type="checkbox" data-logocol="' + c.hex + '"' + (pick.includes(c.hex) ? ' checked' : '') + '><span class="dot" style="background:' + c.hex + '"></span><code>' + c.hex + '</code> <span class="small muted">' + Math.round(c.share * 100) + '%' + (c.grey ? ', grey' : '') + '</span></label>').join('') + '</div>'
+          + '<div class="reply-actions"><button type="button" class="btn primary" id="logoUse">Use the ticked colors</button><button type="button" class="btn" id="logoCancel">Cancel</button></div></div>');
+      };
+      img.onerror = () => logoMsg('<div class="msg err">That file couldn\u2019t be read as an image.</div>');
+      img.src = rd.result; };
+    rd.readAsDataURL(f);
+  });
+  $('logoCols').addEventListener('change', e => { const t = e.target.closest('[data-logocol]'); if (!t) return; const on = $('logoCols').querySelectorAll('[data-logocol]:checked'); if (on.length > 3) t.checked = false; });
+  $('logoCols').addEventListener('click', e => {
+    if (e.target.id === 'logoCancel') { logoMsg(''); return; }
+    if (e.target.id !== 'logoUse') return;
+    const ticked = Array.from($('logoCols').querySelectorAll('[data-logocol]:checked')).map(x => x.dataset.logocol).slice(0, 3);
+    if (!ticked.length) { $('logoCols').querySelector('.msg').insertAdjacentHTML('beforeend', '<div class="small" style="color:var(--bad,#B00020)">Tick at least one color.</div>'); return; }
+    state.cfg.seeds = ticked; state.cfg.overrides = {}; logoMsg('<div class="msg ok">&#10003; Your brand colors are now ' + ticked.join(', ') + '. The rest of the palette is filled to match.</div>'); change(true);
+  });
   document.addEventListener('input', e => {
     const k = e.target.dataset.c;
     if (k) { if (setColor(k, e.target.value)) { const hx = document.querySelector('[data-h="' + k + '"]'); if (hx) hx.value = TB.norm(e.target.value); if (k.startsWith('seed')) { state.cfg.overrides = {}; } change(false); if (k.startsWith('seed')) { /* seeds re-rendered lazily */ } } return; }
@@ -2046,7 +2106,7 @@ init();
     const rows = [HEAD.join('\t')], r = o => rows.push(HEAD.map(h => cell(o[h])).join('\t'));
     m.tables.forEach(t => r({ Kind: 'Table', Table: t.name, Name: t.name, Type: t.category, Flags: [t.hidden ? 'hidden' : '', t.private ? 'private' : ''].filter(Boolean).join(' '), Description: t.description, Expression: t.calc, Storage: t.storage, Source: t.source }));
     m.columns.forEach(c => r({ Kind: 'Column', Table: c.table, Name: c.name, Type: c.type, Folder: c.folder, Flags: [c.hidden ? 'hidden' : '', c.key ? 'key' : ''].filter(Boolean).join(' '), Description: c.description, Expression: c.expression, Summarize: c.summarize, SortBy: c.sortBy, Hierarchies: c.hierarchies }));
-    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
+    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : '', x.text ? 'text' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
     m.rels.forEach(x => r({ Kind: 'Relationship', Table: x.fromTable, Name: x.fromColumn, Type: x.fromCard + ':' + x.toCard, Flags: x.cross + (x.active ? '' : ' inactive'), ToTable: x.toTable, ToColumn: x.toColumn }));
     if (m.model) r({ Kind: 'Model', Name: m.model.name, Flags: m.model.discourage ? 'discourage-implicit' : '' });
     return rows.join('\n');
@@ -2089,6 +2149,7 @@ init();
             description: c.doc || c.props.description || '', expression: c.value || '', summarize: c.props.summarizeby ? cap(c.props.summarizeby) : num ? 'Default' : 'None', sortBy: unq(c.props.sortbycolumn || ''), hierarchies: (levels[c.name] || []).join(', ') });
         } else if (c.kind === 'measure') {
           m.measures.push({ table: o.name, name: c.name, format: c.props.formatstring || '', folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), dynamic: 'formatstringdefinition' in c.props || c.children.some(x => x.kind === 'formatstringdefinition'),
+            text: /^(imageurl|weburl)$/i.test(unq(c.props.datacategory || '')) || /^string$/i.test(c.props.datatype || ''),
             description: c.doc || c.props.description || '', expression: c.value || '' });
         }
       });
@@ -2103,7 +2164,7 @@ init();
       (t.hierarchies || []).forEach(h => (h.levels || []).forEach(l => { (levels[l.column] = levels[l.column] || []).push(h.name); }));
       m.tables.push({ name: t.name, category: t.dataCategory || '', hidden: !!t.isHidden, private: !!t.isPrivate, description: join(t.description), calc: s.type === 'calculated' ? join(s.expression) : '', storage: cap(p.mode || 'import').replace(/^Directquery$/i, 'DirectQuery'), source: s.type === 'entity' ? (s.expressionSource || '') : '' });
       (t.columns || []).forEach(c => { if (c.type === 'rowNumber') return; const num = /int64|double|decimal/i.test(c.dataType || ''); m.columns.push({ table: t.name, name: c.name, type: TYPES[(c.dataType || '').toLowerCase()] || c.dataType || '', folder: c.displayFolder || '', hidden: !!c.isHidden, key: !!c.isKey, description: join(c.description), expression: c.type === 'calculated' ? join(c.expression) : '', summarize: c.summarizeBy ? cap(c.summarizeBy) : num ? 'Default' : 'None', sortBy: c.sortByColumn || '', hierarchies: (levels[c.name] || []).join(', ') }); });
-      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, description: join(x.description), expression: join(x.expression) }));
+      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, text: /^(imageurl|weburl)$/i.test(x.dataCategory || '') || /^string$/i.test(x.dataType || ''), description: join(x.description), expression: join(x.expression) }));
     });
     (md.relationships || []).forEach(r => m.rels.push({ fromTable: r.fromTable, fromColumn: r.fromColumn, toTable: r.toTable, toColumn: r.toColumn, fromCard: cap(r.fromCardinality || 'many'), toCard: cap(r.toCardinality || 'one'), cross: cap(r.crossFilteringBehavior || 'oneDirection'), active: r.isActive !== false }));
     return m;

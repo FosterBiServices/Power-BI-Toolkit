@@ -285,6 +285,8 @@ table.prev td{font-family:var(--mono);font-size:12.5px}
 .ind small{font-size:12.5px;color:var(--muted);line-height:1.45}
 .ind:hover{border-color:var(--accent)}
 .ind[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 -3px 0 var(--gold)}
+.ind b::before{content:"";display:inline-block;width:14px;height:14px;margin-right:8px;vertical-align:-1px;border:1.5px solid var(--muted);border-radius:3px;background:var(--surface)}
+.ind[aria-checked="true"] b::before{border-color:var(--accent);background:var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3 7.5l2.5 2.5L11 4.5' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center/12px no-repeat}
 .ind:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .chips .chip{font-family:var(--sans)}
 h3.sub{margin:8px 0 2px;font-size:15px}
@@ -424,10 +426,11 @@ section.dim .step-body>*:not(.step-head){opacity:.45;pointer-events:none}
     <div class="step-num">Step<b>2</b></div>
     <div class="step-body">
       <div class="step-head">
-        <h2 id="m2">Pick an industry</h2>
-        <p>Each one comes with the tables and measures that industry usually reports on, plus a date table.</p>
+        <h2 id="m2">Pick one or more industries</h2>
+        <p>Each one comes with the tables and measures that industry usually reports on, plus a date table. Pick more than one to put them in one model.</p>
       </div>
-      <div class="inds" id="industries" role="radiogroup" aria-label="Industry"></div>
+      <div class="inds" id="industries" role="group" aria-label="Industries"></div>
+      <div id="combineNote"></div>
     </div>
   </section>
 
@@ -447,6 +450,7 @@ section.dim .step-body>*:not(.step-head){opacity:.45;pointer-events:none}
       </div>
       <div id="makeMsg"></div>
       <div class="field"><span class="flabel">Tables</span><div class="opts" id="tablePicks"></div></div>
+      <div id="dropMsg"></div>
       <div class="field"><span class="flabel">Write it as</span>
         <span class="seg" role="radiogroup" aria-label="Write it as">
           <label><input type="radio" name="style" value="udf"><span>DAX functions</span></label>
@@ -532,7 +536,11 @@ const SD = (() => {
 
   const X = {};
   X.lit = lit;
-  X.P = name => node(() => name, (r, e) => e.p[name]);
+  // a setting (function parameter). X.pmap renames settings while an industry is built, so two industries
+  // combined in one model each keep their own (num_customers_retail, num_customers_finance)
+  X.pmap = null;
+  X.pname = name => (X.pmap && X.pmap[name]) || name;
+  X.P = name => { const nm = X.pname(name); return node(() => nm, (r, e) => e.p[nm]); };
   X.C = name => node(() => '[' + name + ']', r => r[name], [name]);
   X.blank = () => lit(null);
   // seeded random number from 0 up to 1, from a whole-number key and a stream number (one stream per use)
@@ -722,6 +730,29 @@ const SD = (() => {
   const RANDOM_BODY = '-- One seeded random number from 0 up to 1 for each key and stream (the same inputs always give the same number)\nMOD( SIN( row_key * 12.9898 + stream * 78.233 + seed * 37.719 ) * 43758.5453, 1 )';
   /* model: { tables: [...], rels: [[fromTable, fromCol, toTable, toCol, active]], measures: { table: [...] } }
      opts: { mode: 'udf'|'inline', args: { param: value }, measures: true, measureTable: 'new'|'add', tables: [names to include] } */
+  /* What goes in the script for the ticked tables: their measures and relationships, and what is left out and why.
+     A measure is left out when it reads a table that isn't ticked, or uses a measure that was left out. */
+  function kept(model, tables){
+    const inScript = new Set(tables.map(t => t.name)), out = [];
+    let ms = tables.flatMap(t => (model.measures[t.name] || []).map(m => Object.assign({ folder: t.name }, m)));
+    for (let n = -1; n !== ms.length;) {
+      n = ms.length; const have = new Set(ms.map(m => m.n));
+      ms = ms.filter(m => {
+        const tbl = Array.from(m.x.matchAll(/(?:'([^']+)'|\b([A-Za-z_]\w*))\[/g)).map(r => r[1] || r[2]).find(x => !inScript.has(x));
+        const mea = tbl ? null : Array.from(m.x.matchAll(/(^|[^\w'\]])\[([^\]]+)\]/g)).map(r => r[2]).find(x => !have.has(x));
+        if (tbl || mea) out.push({ n: m.n, folder: m.folder, table: tbl || null, measure: mea || null });
+        return !tbl && !mea;
+      });
+    }
+    const rels = model.rels.filter(r => inScript.has(r[0]) && inScript.has(r[2]));
+    const relsOut = model.rels.filter(r => (inScript.has(r[0]) || inScript.has(r[2])) && !(inScript.has(r[0]) && inScript.has(r[2])));
+    return { ms, rels, out, relsOut };
+  }
+  // what unticking tables leaves out: { measures: [{ n, folder, table, measure }], rels: [[from, col, to, col]] }
+  function leftOut(model, names){
+    const k = kept(model, model.tables.filter(t => names.includes(t.name)));
+    return { measures: k.out, rels: k.relsOut };
+  }
   function script(model, opts){
     const c = { mode: opts.mode, lists: new Set() };
     const tables = model.tables.filter(t => !opts.tables || opts.tables.includes(t.name));
@@ -754,22 +785,16 @@ const SD = (() => {
       else {
         L.push('\t\t\tsource =');
         L.push('\t\t\t\t-- ' + t.desc);
+        // the settings as VARs, chained straight into the body's own VAR _Rows ... RETURN.
+        // No RETURN of their own: a table with no settings would start with a bare RETURN, which Desktop rejects.
         t.params.forEach(p => L.push('\t\t\t\tVAR ' + p[0] + ' = ' + argText(opts.args[p[0]], p[1])));
-        L.push('\t\t\t\tRETURN');
-        bodies[i].split('\n').forEach(l => L.push('\t\t\t\t' + IND + l));
+        bodies[i].split('\n').forEach(l => L.push('\t\t\t\t' + l));
       }
       L.push('');
     });
     // every measure goes in one _Measures table, in a folder named for the table it counts.
     // 'add' puts them in the report's own _Measures (ref keeps what is already there); 'new' creates the table.
-    let ms = opts.measures === false ? [] : tables.flatMap(t => (model.measures[t.name] || []).map(m => Object.assign({ folder: t.name }, m)));
-    // leave out a measure that reads a table that isn't in the script, or a measure that was left out
-    const inScript = new Set(tables.map(t => t.name));
-    for (let n = -1; n !== ms.length;) {
-      n = ms.length; const have = new Set(ms.map(m => m.n));
-      ms = ms.filter(m => Array.from(m.x.matchAll(/(?:'([^']+)'|\b([A-Za-z_]\w*))\[/g)).every(r => inScript.has(r[1] || r[2]))
-        && Array.from(m.x.matchAll(/(^|[^\w'\]])\[([^\]]+)\]/g)).every(r => have.has(r[2])));
-    }
+    const ms = opts.measures === false ? [] : kept(model, tables).ms;
     if (ms.length) {
       if (opts.measureTable === 'add') L.push('\tref table ' + MEASURES);
       else L.push('\t/// Measures for the sample data, in a folder for each table.', '\ttable ' + MEASURES);
@@ -783,8 +808,7 @@ const SD = (() => {
       if (opts.measureTable !== 'add') L.push('\t\tcolumn Value', '\t\t\tdataType: int64', '\t\t\tisDataTypeInferred', '\t\t\tisHidden', '\t\t\tsummarizeBy: none', '\t\t\tisNameInferred', '\t\t\tsourceColumn: [Value]', '',
         '\t\tpartition ' + MEASURES + ' = calculated', '\t\t\tmode: import', '\t\t\tsource = { 1 }', '');
     }
-    const names = new Set(tables.map(t => t.name));
-    model.rels.filter(r => names.has(r[0]) && names.has(r[2])).forEach(r => {
+    kept(model, tables).rels.forEach(r => {
       L.push('\trelationship ' + gid(r.slice(0, 4).join('|')), '\t\tfromColumn: ' + tn(r[0]) + '.' + tn(r[1]), '\t\ttoColumn: ' + tn(r[2]) + '.' + tn(r[3]));
       if (r[4] === false) L.push('\t\tisActive: false');
       L.push('');
@@ -802,7 +826,7 @@ const SD = (() => {
     parts.push(fd(t.fn, fnParams(t), body));
     return 'DEFINE\n' + parts.join('\n\n') + '\n\nEVALUATE\n' + (top ? 'TOPN( ' + top + ', ' + callOf(t, opts.args) + ' )' : callOf(t, opts.args)) + '\n';
   }
-  return Object.assign(X, { PKG, MEASURES, serial, ymd, rand, tableDax, tableRows, script, query, callOf, gid, daxTable, MON });
+  return Object.assign(X, { PKG, MEASURES, serial, ymd, rand, tableDax, tableRows, script, leftOut, query, callOf, gid, daxTable, MON });
 })();
 
 /* ---------- Sample Data Maker: the industry data sets ----------
@@ -816,7 +840,7 @@ const SD_IND = (() => {
   const person = ix => cat(firstOf(ix), ' ', lastOf(ix));
   const REGIONS = ['North', 'South', 'East', 'West', 'Central'];
   const seedP = ['seed', 'INT64'];
-  const n = name => [name, 'INT64'];
+  const n = name => [SD.pname(name), 'INT64'];
   const dts = [['start_date', 'DATETIME'], ['end_date', 'DATETIME']];
   const col = (nm, t, d, x) => Object.assign({ n: nm, t, d }, x || {});
   const key = (nm, d) => col(nm, 'int', d, { f: '0' });
@@ -1228,7 +1252,55 @@ const SD_IND = (() => {
     { id: 'mfg', name: 'Manufacturing', blurb: 'Production by machine and shift, products and machines.', kpis: 'Units, scrap rate, downtime, availability, performance, quality, OEE.', make: manufacturing },
     { id: 'service', name: 'Customer service', blurb: 'Tickets, agents and customers.', kpis: 'Tickets, backlog, first response, resolution time, SLA met, CSAT, reopen rate.', make: service }
   ];
-  return { LIST, get: id => LIST.find(x => x.id === id) || LIST[0], DATE_ARGS };
+  const get = id => LIST.find(x => x.id === id) || LIST[0];
+  const SHORT = { retail: 'Retail', hr: 'HR', finance: 'Finance', health: 'Health', mfg: 'Manufacturing', service: 'Service' };
+
+  /* Two or more industries in one model. They share one Date table. A table or measure name an earlier industry
+     already uses gets the industry's name in front (Finance Customers, Finance Gross Margin %), and its measures
+     are rewritten to match. A size both use (Customers) becomes one per industry: Customers (Retail), Customers (Finance).
+     Each size is [key, label, default, max, industry id, key in that industry]. */
+  const tq = x => /^[A-Za-z_]\w*$/.test(x) ? x : "'" + x.replace(/'/g, "''") + "'";
+  function renameIn(x, tmap, mmap){
+    return x.replace(/"(?:[^"]|"")*"|'(?:[^']|'')*'|\[[^\]]*\]|[A-Za-z_][\w.]*/g, (tok, off, str) => {
+      if (tok[0] === '"') return tok;
+      if (tok[0] === "'") { const nm = tok.slice(1, -1).replace(/''/g, "'"); return tmap[nm] ? tq(tmap[nm]) : tok; }
+      if (tok[0] === '[') { const nm = tok.slice(1, -1), prev = str[off - 1]; return mmap[nm] && !(prev && /[\w'\]]/.test(prev)) ? '[' + mmap[nm] + ']' : tok; }
+      return tmap[tok] ? tq(tmap[tok]) : tok;
+    });
+  }
+  function combine(ids){
+    ids = (Array.isArray(ids) ? ids : [ids]).filter((x, i, a) => LIST.some(l => l.id === x) && a.indexOf(x) === i);
+    if (!ids.length) ids = [LIST[0].id];
+    const plain = ids.map(id => get(id).make()), used = {};
+    plain.forEach(m => m.sizes.forEach(s => { used[s[0]] = (used[s[0]] || 0) + 1; }));
+    const out = { tables: [], rels: [], measures: {}, sizes: [], renamed: [], ids };
+    const tnames = new Set(), mnames = new Set(), rels = new Set();
+    ids.forEach((id, i) => {
+      const pm = {};
+      plain[i].sizes.forEach(s => { if (used[s[0]] > 1) pm[s[0]] = s[0] + '_' + id; });
+      let m = plain[i];
+      if (Object.keys(pm).length) { SD.pmap = pm; try { m = get(id).make(); } finally { SD.pmap = null; } }
+      const tmap = {}, mmap = {};
+      m.tables.forEach(t => {
+        if (t.isDate && tnames.has(t.name)) return;
+        if (tnames.has(t.name)) { const nm = SHORT[id] + ' ' + t.name; tmap[t.name] = nm; out.renamed.push({ kind: 'table', from: t.name, to: nm, ind: id }); t.name = nm; }
+        tnames.add(t.name); out.tables.push(t);
+      });
+      m.rels.forEach(r => {
+        const nr = [tmap[r[0]] || r[0], r[1], tmap[r[2]] || r[2], r[3]].concat(r.slice(4)), k = nr.slice(0, 4).join('|');
+        if (!rels.has(k)) { rels.add(k); out.rels.push(nr); }
+      });
+      const all = [].concat(...Object.values(m.measures));
+      all.forEach(x => { if (mnames.has(x.n)) { mmap[x.n] = SHORT[id] + ' ' + x.n; out.renamed.push({ kind: 'measure', from: x.n, to: mmap[x.n], ind: id }); } });
+      Object.keys(m.measures).forEach(tk => {
+        out.measures[tmap[tk] || tk] = m.measures[tk].map(x => Object.assign({}, x, { n: mmap[x.n] || x.n, x: renameIn(x.x, tmap, mmap) }));
+      });
+      all.forEach(x => mnames.add(mmap[x.n] || x.n));
+      m.sizes.forEach(s => out.sizes.push([pm[s[0]] || s[0], pm[s[0]] ? s[1] + ' (' + SHORT[id] + ')' : s[1], s[2], s[3], id, s[0]]));
+    });
+    return out;
+  }
+  return { LIST, get, combine, SHORT, DATE_ARGS };
 })();
 
 /* ---------- Sample Data Maker: masking ----------
@@ -1543,7 +1615,7 @@ const serialOf = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
 /* ---------- state ---------- */
 function makeDefaults(){
   const t = today(), [y, m] = SD.ymd(t);
-  return { ind: 'retail', sizes: {}, start: SD.serial(y - 2, 1, 1), end: SD.serial(y, m, 1) - 1, seed: 1, style: 'udf', measures: true, off: {}, tab: {} };
+  return { ind: 'retail', inds: ['retail'], sizes: {}, start: SD.serial(y - 2, 1, 1), end: SD.serial(y, m, 1) - 1, seed: 1, style: 'udf', measures: true, off: {}, tab: {} };
 }
 const state = { mode: 'mask', example: false, tables: [], treats: {}, sugs: [], manual: [], seed: randSeed(), prevTable: '', prevSide: 'after', make: makeDefaults(), masked: null, ver: 0, maskedVer: -1 };
 let tid = 0;
@@ -1696,10 +1768,18 @@ function writeFile(file){
 
 /* ---------- make: render ---------- */
 const sizeOf = (ind, key, def) => { const s = state.make.sizes[ind] || {}; return s[key] !== undefined ? s[key] : def; };
+// the industries picked, in the order picked (the first one keeps its table and measure names)
+function indsOf(m){
+  let a = Array.isArray(m.inds) ? m.inds.filter(x => SD_IND.LIST.some(l => l.id === x)) : [];
+  if (!a.length) a = [SD_IND.get(m.ind).id];
+  return Array.from(new Set(a));
+}
+const indKey = m => indsOf(m).join('+');
+const indNames = m => indsOf(m).map(id => SD_IND.get(id).name);
 let makeCache = { key: '', model: null, counts: {}, rows: {} };
 function makeArgs(model){
   const m = state.make, a = { start_date: m.start, end_date: m.end, seed: m.seed };
-  model.sizes.forEach(s => { a[s[0]] = sizeOf(m.ind, s[0], s[2]); });
+  model.sizes.forEach(s => { a[s[0]] = sizeOf(s[4], s[5], s[2]); });
   return a;
 }
 function sourceSize(t, env){
@@ -1710,9 +1790,9 @@ function sourceSize(t, env){
   return s.grid.reduce((p, g) => p * (g.days ? g.days[1].f({}, env) - g.days[0].f({}, env) + 1 : Math.floor(g.n.f ? g.n.f({}, env) : g.n) + (g.from === 0 ? 1 : 0)), 1);
 }
 function makeModel(){
-  const m = state.make, key = JSON.stringify([m.ind, m.sizes[m.ind] || {}, m.start, m.end, m.seed]);
+  const m = state.make, inds = indsOf(m), key = JSON.stringify([inds, inds.map(id => m.sizes[id] || {}), m.start, m.end, m.seed]);
   if (makeCache.key === key) return makeCache;
-  const ind = SD_IND.get(m.ind), model = ind.make(), args = makeArgs(model), env = { p: args, seed: m.seed };
+  const ind = SD_IND.get(inds[0]), model = SD_IND.combine(inds), args = makeArgs(model), env = { p: args, seed: m.seed };
   const counts = {}, rows = {};
   model.tables.forEach(t => {
     const n = sourceSize(t, env), lim = n > 20000 ? 4000 : 0;
@@ -1746,10 +1826,13 @@ function hasMeasuresTable(){
   return false;
 }
 function renderMake(){
-  const m = state.make, ind = SD_IND.get(m.ind);
-  $('industries').innerHTML = SD_IND.LIST.map(x => '<button type="button" class="ind" role="radio" aria-checked="' + (x.id === m.ind) + '" data-ind="' + x.id + '"><b>' + esc(x.name) + '</b><span>' + esc(x.blurb) + '</span><small>' + esc(x.kpis) + '</small></button>').join('');
-  const model0 = ind.make();
-  $('sizes').innerHTML = model0.sizes.map(s => '<div class="field"><label for="sz-' + s[0] + '">' + esc(s[1]) + '</label><input type="number" class="num" id="sz-' + s[0] + '" data-size="' + s[0] + '" min="1" max="' + s[3] + '" value="' + sizeOf(m.ind, s[0], s[2]) + '"></div>').join('');
+  const m = state.make, inds = indsOf(m), ik = inds.join('+');
+  $('industries').innerHTML = SD_IND.LIST.map(x => '<button type="button" class="ind" role="checkbox" aria-checked="' + inds.includes(x.id) + '" data-ind="' + x.id + '"><b>' + esc(x.name) + '</b><span>' + esc(x.blurb) + '</span><small>' + esc(x.kpis) + '</small></button>').join('');
+  const model0 = SD_IND.combine(inds);
+  const ren = model0.renamed.map(r => (r.kind === 'measure' ? 'measure ' : '') + '<b>' + esc(r.from) + '</b> from ' + esc(SD_IND.get(r.ind).name) + ' is <b>' + esc(r.to) + '</b>');
+  $('combineNote').innerHTML = inds.length < 2 ? '' : msg('info', 'One model with ' + inds.map(id => esc(SD_IND.get(id).name)).join(' and ') + '. They share one Date table; '
+    + 'each industry\u2019s other tables link only to each other.' + (ren.length ? ' So names don\u2019t clash: ' + ren.join('; ') + '.' : ''));
+  $('sizes').innerHTML = model0.sizes.map(s => '<div class="field"><label for="sz-' + s[0] + '">' + esc(s[1]) + '</label><input type="number" class="num" id="sz-' + s[0] + '" data-size="' + s[0] + '" data-ind="' + s[4] + '" data-key="' + s[5] + '" min="1" max="' + s[3] + '" value="' + sizeOf(s[4], s[5], s[2]) + '"></div>').join('');
   $('startDate').value = m.start === null ? '' : isoOf(m.start); $('endDate').value = m.end === null ? '' : isoOf(m.end); $('makeSeed').value = m.seed;
   document.querySelectorAll('input[name=style]').forEach(r => { r.checked = r.value === m.style; });
   $('addMeasures').checked = m.measures;
@@ -1765,16 +1848,20 @@ function renderMake(){
     ? 'One DAX function per table (named <code>' + SD.PKG + '.&hellip;</code>), and each table calls its function. Needs DAX user-defined functions, a preview feature in Power BI Desktop.'
     : 'Each table holds its own DAX, with no functions. Works in any recent Power BI Desktop.';
   const errs = validMake();
-  const sizeErr = model0.sizes.filter(s => { const v = sizeOf(m.ind, s[0], s[2]); return !(Number.isInteger(v) && v >= 1 && v <= s[3]); }).map(s => esc(s[1]) + ' is a whole number from 1 to ' + s[3].toLocaleString() + '.');
+  const sizeErr = model0.sizes.filter(s => { const v = sizeOf(s[4], s[5], s[2]); return !(Number.isInteger(v) && v >= 1 && v <= s[3]); }).map(s => esc(s[1]) + ' is a whole number from 1 to ' + s[3].toLocaleString() + '.');
   const all = errs.concat(sizeErr);
   $('makeMsg').innerHTML = all.length ? msg('err', all.join('<br>')) : '';
-  const off = m.off[m.ind] || [];
+  const off = Array.isArray(m.off[ik]) ? m.off[ik] : [];
   $('tablePicks').innerHTML = model0.tables.map(t => '<label class="c"><input type="checkbox" data-tbl="' + esc(t.name) + '"' + (off.includes(t.name) ? '' : ' checked') + '> ' + esc(t.name) + '</label>').join('');
   ['m4', 'm5'].forEach(id => { $(id).closest('section').classList.toggle('dim', !!all.length); });
+  $('dropMsg').innerHTML = '';
   if (all.length) { $('tmdlView').textContent = ''; state.tmdl = ''; return; }
   const c = makeModel(), on = c.model.tables.filter(t => !off.includes(t.name));
   if (!on.length) { $('makeTabs').innerHTML = ''; $('makePreview').innerHTML = msg('warn', 'Tick at least one table.'); $('tmdlView').textContent = ''; state.tmdl = ''; return; }
-  let tab = m.tab[m.ind]; if (!on.some(t => t.name === tab)) tab = (on.find(t => (c.model.measures[t.name] || []).length) || on[0]).name;
+  const lo = SD.leftOut(c.model, on.map(x => x.name)), loMs = m.measures ? lo.measures : [];
+  if (loMs.length || lo.rels.length) $('dropMsg').innerHTML = msg('warn', 'Left out because a table isn\u2019t ticked: '
+    + loMs.map(x => 'measure <b>' + esc(x.n) + '</b> (' + (x.table ? 'reads ' + esc(x.table) : 'uses ' + esc(x.measure)) + ')').concat(lo.rels.map(r => 'the relationship from ' + esc(r[0]) + '[' + esc(r[1]) + '] to ' + esc(r[2]) + '[' + esc(r[3]) + ']')).join('; ') + '.');
+  let tab = m.tab[ik]; if (!on.some(t => t.name === tab)) tab = (on.find(t => (c.model.measures[t.name] || []).length) || on[0]).name;
   $('makeTabs').innerHTML = on.map(t => '<button type="button" class="chip" role="tab" aria-selected="' + (t.name === tab) + '" aria-pressed="' + (t.name === tab) + '" data-tab="' + esc(t.name) + '">' + esc(t.name) + ' <small>' + (c.counts[t.name].about ? 'about ' : '') + c.counts[t.name].n.toLocaleString() + ' rows</small></button>').join('');
   const t = on.find(x => x.name === tab);
   $('makeDesc').textContent = t.desc;
@@ -1871,18 +1958,23 @@ function init(){
   });
   // make
   const mk = fn => { fn(state.make); changed(); persist(); };
-  $('industries').addEventListener('click', e => { const b = e.target.closest('[data-ind]'); if (b) mk(m => { m.ind = b.dataset.ind; }); });
-  $('sizes').addEventListener('change', e => { const i = e.target.closest('[data-size]'); if (!i) return; mk(m => { const s = m.sizes[m.ind] = m.sizes[m.ind] || {}; s[i.dataset.size] = Math.floor(+i.value); }); });
+  // an industry card adds or removes that industry; the last one picked can't be removed
+  $('industries').addEventListener('click', e => { const b = e.target.closest('[data-ind]'); if (!b) return; mk(m => {
+    const id = b.dataset.ind, a = indsOf(m);
+    m.inds = a.includes(id) ? (a.length > 1 ? a.filter(x => x !== id) : a) : a.concat(id);
+    m.ind = m.inds[0];
+  }); });
+  $('sizes').addEventListener('change', e => { const i = e.target.closest('[data-size]'); if (!i) return; mk(m => { const s = m.sizes[i.dataset.ind] = m.sizes[i.dataset.ind] || {}; s[i.dataset.key] = Math.floor(+i.value); }); });
   $('startDate').addEventListener('change', () => mk(m => { m.start = serialOf($('startDate').value); }));
   $('endDate').addEventListener('change', () => mk(m => { m.end = serialOf($('endDate').value); }));
   $('makeSeed').addEventListener('change', () => mk(m => { m.seed = Math.floor(+$('makeSeed').value); }));
   document.querySelectorAll('input[name=style]').forEach(r => r.addEventListener('change', () => mk(m => { m.style = r.value; })));
   $('addMeasures').addEventListener('change', () => mk(m => { m.measures = $('addMeasures').checked; }));
   document.querySelectorAll('input[name=mtable]').forEach(r => r.addEventListener('change', () => mk(m => { m.mtable = r.value; })));
-  $('tablePicks').addEventListener('change', e => { const c = e.target.closest('[data-tbl]'); if (!c) return; mk(m => { const o = m.off[m.ind] = (m.off[m.ind] || []).filter(x => x !== c.dataset.tbl); if (!c.checked) o.push(c.dataset.tbl); }); });
-  $('makeTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) mk(m => { m.tab[m.ind] = b.dataset.tab; }); });
+  $('tablePicks').addEventListener('change', e => { const c = e.target.closest('[data-tbl]'); if (!c) return; mk(m => { const ik = indKey(m), o = m.off[ik] = (Array.isArray(m.off[ik]) ? m.off[ik] : []).filter(x => x !== c.dataset.tbl); if (!c.checked) o.push(c.dataset.tbl); }); });
+  $('makeTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) mk(m => { m.tab[indKey(m)] = b.dataset.tab; }); });
   $('copyTmdl').addEventListener('click', () => { if (state.tmdl) copyText(state.tmdl, $('copyTmdl')); });
-  $('dlTmdl').addEventListener('click', () => { if (state.tmdl) download('Sample data - ' + SD_IND.get(state.make.ind).name + '.tmdl', new Blob([state.tmdl], { type: 'text/plain' })); });
+  $('dlTmdl').addEventListener('click', () => { if (state.tmdl) download('Sample data - ' + indNames(state.make).join(' + ') + '.tmdl', new Blob([state.tmdl], { type: 'text/plain' })); });
   $('clearAll').addEventListener('click', () => { resetAll(); store.set('blank', '1'); persist(); });
 }
 init();
@@ -2344,7 +2436,7 @@ init();
     const rows = [HEAD.join('\t')], r = o => rows.push(HEAD.map(h => cell(o[h])).join('\t'));
     m.tables.forEach(t => r({ Kind: 'Table', Table: t.name, Name: t.name, Type: t.category, Flags: [t.hidden ? 'hidden' : '', t.private ? 'private' : ''].filter(Boolean).join(' '), Description: t.description, Expression: t.calc, Storage: t.storage, Source: t.source }));
     m.columns.forEach(c => r({ Kind: 'Column', Table: c.table, Name: c.name, Type: c.type, Folder: c.folder, Flags: [c.hidden ? 'hidden' : '', c.key ? 'key' : ''].filter(Boolean).join(' '), Description: c.description, Expression: c.expression, Summarize: c.summarize, SortBy: c.sortBy, Hierarchies: c.hierarchies }));
-    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
+    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : '', x.text ? 'text' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
     m.rels.forEach(x => r({ Kind: 'Relationship', Table: x.fromTable, Name: x.fromColumn, Type: x.fromCard + ':' + x.toCard, Flags: x.cross + (x.active ? '' : ' inactive'), ToTable: x.toTable, ToColumn: x.toColumn }));
     if (m.model) r({ Kind: 'Model', Name: m.model.name, Flags: m.model.discourage ? 'discourage-implicit' : '' });
     return rows.join('\n');
@@ -2387,6 +2479,7 @@ init();
             description: c.doc || c.props.description || '', expression: c.value || '', summarize: c.props.summarizeby ? cap(c.props.summarizeby) : num ? 'Default' : 'None', sortBy: unq(c.props.sortbycolumn || ''), hierarchies: (levels[c.name] || []).join(', ') });
         } else if (c.kind === 'measure') {
           m.measures.push({ table: o.name, name: c.name, format: c.props.formatstring || '', folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), dynamic: 'formatstringdefinition' in c.props || c.children.some(x => x.kind === 'formatstringdefinition'),
+            text: /^(imageurl|weburl)$/i.test(unq(c.props.datacategory || '')) || /^string$/i.test(c.props.datatype || ''),
             description: c.doc || c.props.description || '', expression: c.value || '' });
         }
       });
@@ -2401,7 +2494,7 @@ init();
       (t.hierarchies || []).forEach(h => (h.levels || []).forEach(l => { (levels[l.column] = levels[l.column] || []).push(h.name); }));
       m.tables.push({ name: t.name, category: t.dataCategory || '', hidden: !!t.isHidden, private: !!t.isPrivate, description: join(t.description), calc: s.type === 'calculated' ? join(s.expression) : '', storage: cap(p.mode || 'import').replace(/^Directquery$/i, 'DirectQuery'), source: s.type === 'entity' ? (s.expressionSource || '') : '' });
       (t.columns || []).forEach(c => { if (c.type === 'rowNumber') return; const num = /int64|double|decimal/i.test(c.dataType || ''); m.columns.push({ table: t.name, name: c.name, type: TYPES[(c.dataType || '').toLowerCase()] || c.dataType || '', folder: c.displayFolder || '', hidden: !!c.isHidden, key: !!c.isKey, description: join(c.description), expression: c.type === 'calculated' ? join(c.expression) : '', summarize: c.summarizeBy ? cap(c.summarizeBy) : num ? 'Default' : 'None', sortBy: c.sortByColumn || '', hierarchies: (levels[c.name] || []).join(', ') }); });
-      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, description: join(x.description), expression: join(x.expression) }));
+      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, text: /^(imageurl|weburl)$/i.test(x.dataCategory || '') || /^string$/i.test(x.dataType || ''), description: join(x.description), expression: join(x.expression) }));
     });
     (md.relationships || []).forEach(r => m.rels.push({ fromTable: r.fromTable, fromColumn: r.fromColumn, toTable: r.toTable, toColumn: r.toColumn, fromCard: cap(r.fromCardinality || 'many'), toCard: cap(r.toCardinality || 'one'), cross: cap(r.crossFilteringBehavior || 'oneDirection'), active: r.isActive !== false }));
     return m;

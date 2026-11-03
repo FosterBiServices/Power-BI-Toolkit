@@ -1,0 +1,91 @@
+/// Customers: shoppers and business accounts, with segment, city and region.
+table Customers
+
+	/// Key that links to Sales.
+	column CustomerKey
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [CustomerKey]
+
+	/// Customer name: a person for consumers, a company otherwise.
+	column Customer
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Customer]
+
+	/// Consumer, Small Business or Corporate.
+	column Segment
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Segment]
+
+	/// Home city.
+	column City
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [City]
+
+	/// Sales region of the city.
+	column Region
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Region]
+
+	/// When the customer first signed up.
+	column 'Join Date'
+		dataType: dateTime
+		isDataTypeInferred
+		formatString: Short Date
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Join Date]
+
+	partition Customers = calculated
+		mode: import
+		source =
+			-- Customers: shoppers and business accounts, with segment, city and region.
+			VAR num_customers = 3600
+			VAR start_date = DATE( 2023, 1, 1 )
+			VAR seed = 2012
+			RETURN
+			    VAR _Rows =
+			        SELECTCOLUMNS( GENERATESERIES( 1, num_customers, 1 ), "_k", [Value] )
+			    VAR _Step1 =
+			        ADDCOLUMNS(
+			            _Rows,
+			            "CustomerKey", [_k],
+			            "_ni", MOD( ( [_k] * 1201 ) + ( seed * 97 ), 3600 ),
+			            "_c", INT( MOD( SIN( [_k] * 12.9898 + 3 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 25 ),
+			            "Segment", SWITCH( TRUE(), MOD( SIN( [_k] * 12.9898 + 1 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.6, "Consumer", MOD( SIN( [_k] * 12.9898 + 1 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.85, "Small Business", "Corporate" ),
+			            "Join Date", start_date - INT( MOD( SIN( [_k] * 12.9898 + 4 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 1095 )
+			        )
+			    VAR _Step2 =
+			        ADDCOLUMNS(
+			            _Step1,
+			            "Customer", IF( [Segment] = "Consumer", SWITCH( INT( [_ni] / 60 ), 0, "Ava", 1, "Olivia", 2, "Emma", 3, "Sophia", 4, "Isabella", 5, "Mia", 6, "Amelia", 7, "Harper", 8, "Evelyn", 9, "Aria", 10, "Chloe", 11, "Layla", 12, "Nora", 13, "Zoe", 14, "Hannah", 15, "Priya", 16, "Elena", 17, "Grace", 18, "Leah", 19, "Maya", 20, "Ruby", 21, "Clara", 22, "Ines", 23, "Sara", 24, "Lucia", 25, "Amara", 26, "Yara", 27, "Naomi", 28, "Freya", 29, "Mei", 30, "Liam", 31, "Noah", 32, "Mateo", 33, "Lucas", 34, "Ethan", 35, "Aiden", 36, "Leo", 37, "James", 38, "Omar", 39, "Daniel", 40, "Kai", 41, "Samuel", 42, "Ravi", 43, "Diego", 44, "Felix", 45, "Jonah", 46, "Marcus", 47, "Tariq", 48, "Andre", 49, "Victor", 50, "Kenji", 51, "Hugo", 52, "Theo", 53, "Malik", 54, "Oscar", 55, "Elias", 56, "Arjun", 57, "Tomas", 58, "Ivan", "Kwame" ) & " " & SWITCH( MOD( ( MOD( [_ni], 60 ) * 7 ) + INT( [_ni] / 60 ), 60 ), 0, "Smith", 1, "Garcia", 2, "Chen", 3, "Patel", 4, "Johnson", 5, "Nguyen", 6, "Kim", 7, "Lopez", 8, "Brown", 9, "Silva", 10, "Martin", 11, "Rossi", 12, "Novak", 13, "Cohen", 14, "Okafor", 15, "Haddad", 16, "Ivanova", 17, "Larsen", 18, "Moreau", 19, "Tanaka", 20, "Walker", 21, "Hughes", 22, "Reyes", 23, "Fischer", 24, "Kowalski", 25, "Andersen", 26, "Murphy", 27, "Bianchi", 28, "Costa", 29, "Sato", 30, "Wright", 31, "Mensah", 32, "Dubois", 33, "Jensen", 34, "Ortiz", 35, "Shah", 36, "Park", 37, "Nash", 38, "Bennett", 39, "Price", 40, "Ward", 41, "Gray", 42, "Hayes", 43, "Rivera", 44, "Ali", 45, "Byrne", 46, "Clarke", 47, "Doyle", 48, "Ellis", 49, "Grant", 50, "Holt", 51, "Khan", 52, "Lund", 53, "Meyer", 54, "Owens", 55, "Quinn", 56, "Reid", 57, "Stone", 58, "Vargas", "Young" ), SWITCH( INT( MOD( SIN( [_k] * 12.9898 + 10 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 20 ), 0, "Blue", 1, "Summit", 2, "Harbor", 3, "Maple", 4, "Iron", 5, "Silver", 6, "Cedar", 7, "Bright", 8, "Northern", 9, "Golden", 10, "Red", 11, "Pine", 12, "Swift", 13, "Stone", 14, "Clear", 15, "Prime", 16, "River", 17, "Oak", 18, "Crest", "Lakeside" ) & " " & SWITCH( INT( MOD( SIN( [_k] * 12.9898 + 11 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 16 ), 0, "Ridge", 1, "Field", 2, "Works", 3, "Point", 4, "Bay", 5, "Path", 6, "Peak", 7, "Line", 8, "Gate", 9, "Wave", 10, "Brook", 11, "Forge", 12, "Bridge", 13, "Grove", 14, "Hill", "Valley" ) & " " & SWITCH( INT( MOD( SIN( [_k] * 12.9898 + 12 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 12 ), 0, "Supply", 1, "Foods", 2, "Logistics", 3, "Systems", 4, "Partners", 5, "Retail", 6, "Health", 7, "Labs", 8, "Group", 9, "Traders", 10, "Industries", "Services" ) ),
+			            "City", SWITCH( [_c], 0, "Springfield", 1, "Riverton", 2, "Lakewood", 3, "Fairview", 4, "Greenville", 5, "Madison", 6, "Clinton", 7, "Georgetown", 8, "Franklin", 9, "Arlington", 10, "Salem", 11, "Bristol", 12, "Ashland", 13, "Milton", 14, "Oxford", 15, "Dover", 16, "Burlington", 17, "Kingston", 18, "Newport", 19, "Clayton", 20, "Hudson", 21, "Marion", 22, "Auburn", 23, "Dayton", "Glendale" ),
+			            "Region", SWITCH( MOD( [_c], 5 ), 0, "North", 1, "South", 2, "East", 3, "West", "Central" )
+			        )
+			    RETURN
+			        SELECTCOLUMNS(
+			            _Step2,
+			            "CustomerKey", [CustomerKey],
+			            "Customer", [Customer],
+			            "Segment", [Segment],
+			            "City", [City],
+			            "Region", [Region],
+			            "Join Date", [Join Date]
+			        )
+

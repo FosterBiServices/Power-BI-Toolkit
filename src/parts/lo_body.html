@@ -73,7 +73,7 @@
               <input type="file" id="logoFile" class="sr" accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp"><label class="filebtn btn small" for="logoFile" id="logoFileLbl">Add the logo image</label>
               <span id="logoInfo" class="small muted"></span>
               <button type="button" class="linkbtn" id="logoClear" hidden>Remove the image</button>
-              <label class="chk small" id="logoInBgWrap" hidden><input type="checkbox" id="logoInBg"> Also put it in the background image</label>
+              <label class="chk small" id="logoInBgWrap" hidden><input type="checkbox" id="logoInBg"> Draw it on the background image</label>
             </div>
           </div>
           <div class="hcol">
@@ -215,6 +215,7 @@
         <div class="out-card">
           <h3>Background image</h3>
           <div class="thumb" id="bgThumb"></div>
+          <div id="bgLogoNote"></div>
           <div class="btns"><button type="button" class="btn primary" data-dl="bg-png1">Download PNG</button><button type="button" class="btn" data-dl="bg-png2">PNG at 2&times;</button><button type="button" class="btn" data-dl="bg-svg">SVG</button><button type="button" class="btn figma-only" data-copy="bg-svg">Copy for Figma</button></div>
           <p class="note small">In Power BI Desktop: <b>Format page</b> &gt; <b>Canvas background</b> &gt; <b>Image</b>, <b>Image fit: Fit</b>, <b>Transparency 0%</b>. Then turn off each visual&rsquo;s own background so the cards show through. The PNG is the page size you set in Step 1. PNG at 2&times; is twice that, for extra sharpness.</p>
         </div>
@@ -233,6 +234,7 @@
         </ol>
       </div>
       <h3>Positions <span class="muted small">(Format pane &gt; General &gt; Properties: Size and Position)</span></h3>
+      <p class="note small">Rename any visual in the first column: the new name goes into the wireframe, the PowerPoint and Figma layers, and the positions you copy.</p>
       <div class="tablewrap"><table class="pos" id="posTable"></table></div>
       <p class="note small"><b>Inner X, Y, width and height</b>: where to put a visual so it stays inside its card, clear of the rounded corners. Use them when the visual keeps its own background or border; with the visual&rsquo;s background off, the outer position works too.</p>
       <div class="btns"><button type="button" class="btn" data-copy="tsv">Copy positions for Excel</button></div>

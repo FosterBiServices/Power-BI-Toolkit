@@ -175,6 +175,8 @@ body.figma .figma-box{display:flex!important}
 .btns{display:flex;flex-wrap:wrap;gap:8px}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
 table.pos{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface)}
+table.pos input.ren{font:inherit;font-size:13px;width:100%;min-width:140px;padding:3px 6px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink)}
+table.pos input.ren:focus{outline:2px solid var(--accent);outline-offset:0}
 table.pos th,table.pos td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12.5px}
 .apply code{font-family:var(--mono);font-size:12.5px}

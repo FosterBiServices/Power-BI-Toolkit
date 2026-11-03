@@ -60,6 +60,32 @@ const PW = (() => {
     return out;
   }
 
+  /* The owner's way to set types: a list of column-and-type pairs, applied only to the columns that exist, with every
+     other column typed as text, in one Table.TransformColumnTypes. A source column that's missing or renamed doesn't
+     break the refresh. cols: [{ name, type }] from parseColumns; prev: the step it starts from. */
+  const M_TYPE = { 'whole number': 'Int64.Type', number: 'type number', date: 'type date', datetime: 'type datetime', logical: 'type logical', text: 'type text' };
+  function typeMap(cols, prev, culture){
+    const q = n => '"' + n.replace(/"/g, '""') + '"', P = prev || 'PromotedHeaders', I = '    ', I2 = I + I, I3 = I2 + I;
+    const pairs = cols.map(c => I2 + '{' + q(c.name) + ', ' + (M_TYPE[c.type] || 'type text') + '}');
+    return [I + 'TypePairs = {', pairs.join(',\n'), I + '},',
+      I + 'ExistingCols = Table.ColumnNames(' + P + '),',
+      I + '// Keep type rules only for columns that actually exist',
+      I + 'TypePairsExistingOnly = List.Select(TypePairs, each List.Contains(ExistingCols, _{0})),',
+      I + '// Turn the pairs into a lookup record: column name -> type',
+      I + 'ExplicitTypeMap = Record.FromList(', I2 + 'List.Transform(TypePairsExistingOnly, each _{1}),', I2 + 'List.Transform(TypePairsExistingOnly, each _{0})', I + '),',
+      I + '// A type from ExplicitTypeMap where there is one; every other column is text',
+      I + 'AllTypePairs = List.Transform(', I2 + 'ExistingCols,', I2 + '(c) => {c, Record.FieldOrDefault(ExplicitTypeMap, c, type text)}', I + '),',
+      I + '// Apply types in one go',
+      I + 'ChangeTypes = Table.TransformColumnTypes(' + P + ', AllTypePairs' + ((culture || '').trim() ? ', ' + q(culture.trim()) : '') + ')'].join('\n');
+  }
+  // the "each" rule, with examples in the user's own columns when they listed some (a text column for the value example)
+  function eachRule(cols){
+    const q = n => '"' + n.replace(/"/g, '""') + '"', f = n => /^[^\[\]]+$/.test(n) ? '[' + n + ']' : '[#' + q(n) + ']';
+    const txt = (cols.find(c => /text/i.test(c.type || '')) || cols[0] || { name: 'Customer Name' }).name;
+    const row = (cols.find(c => c.name !== txt) || { name: cols.length ? txt : 'First Name' }).name;
+    return 'In value transformations such as Table.TransformColumns, pass the current value with _, for example {' + q(txt) + ', each Text.Upper(_), type text}. '
+      + 'In row-context expressions such as Table.AddColumn and Table.SelectRows, refer to columns by name, for example each ' + f(row) + '.';
+  }
   function prompt(inp){
     const L = [];
     const src = SOURCES.find(s => s[0] === inp.source) || SOURCES[SOURCES.length - 1];
@@ -95,23 +121,32 @@ const PW = (() => {
     L.push('It must work:');
     L.push('- Use only the column names listed above (exact spelling and case) and columns the query itself creates. If you need a column that isn’t listed, don’t guess: say so under QUESTIONS.');
     L.push('- Each step builds on an earlier step, and the query returns its last step after "in".');
-    L.push('- Set the types of the columns the query keeps in one Table.TransformColumnTypes step' + ((inp.culture || '').trim() ? ' with the culture above' : '') + '. Give each new column its type in the fourth argument of Table.AddColumn instead of another type step.');
+    if (inp.typeMap && cols.length) {
+      L.push('- Set the column types with this type map. It is required (the user asked for it), so add it even if the TASK doesn\u2019t mention types. Put it right after the step where the column names are final (after promoting headers or renaming), replace PromotedHeaders with that step\u2019s name, and keep it as it is otherwise: the pairs, the default of type text for any other column, and one Table.TransformColumnTypes. Every later step builds on ChangeTypes. Change a pair\u2019s type only if the TASK says so. Give each newly created column its type in the fourth argument of Table.AddColumn.', '```', typeMap(cols, 'PromotedHeaders', inp.culture), '```');
+    } else L.push('- If the TASK requires changing existing column types, make all such changes in one Table.TransformColumnTypes step' + ((inp.culture || '').trim() ? ' with the culture above' : '') + '. Do not add a type-conversion step when no existing column types need to change. Give each newly created column its type in the fourth argument of Table.AddColumn.');
+    L.push('- Use each correctly for where it is evaluated. ' + eachRule(cols));
     L.push('- Handle nulls and errors only where the request says to expect them. Don’t wrap everything in try … otherwise.');
     L.push('- ' + (!inp.makeParams ? 'Keep the source values as given.' : fromExisting ? 'Keep the existing source step as it is. Don’t type a server, database, file path or URL into any step you add: use an existing parameter, or add a new parameter under PARAMETERS and use its name.' : 'Don’t type a server, database, file path or URL into the query. Use an existing parameter, or add a new parameter under PARAMETERS and use its name.'));
     L.push('It must be easy to maintain:');
     L.push('- Name every step with a single descriptive word, no spaces and no #"..." quoting (PascalCase when it needs two words, for example Source, Filtered, Typed, RecentOrders). Say what the step achieves, not which button made it.');
-    L.push('- Keep columns with Table.SelectColumns and an explicit list, not Table.RemoveColumns, so new source columns don’t flow through and a missing one is caught early.');
+    L.push('- If the TASK requires limiting which columns are retained, use Table.SelectColumns with an explicit list rather than Table.RemoveColumns. Do not add a column-selection step unless the TASK requires changing the columns retained.');
     L.push('- Refer to columns by name, never by position.');
     L.push('- Add a short // comment on the line above a step only when why it’s there isn’t obvious from its name and code. No comments that repeat the code.');
     L.push('It must be short:');
-    L.push('- One step per kind of change: all row conditions in one Table.SelectRows, all renames in one Table.RenameColumns, all types in one Table.TransformColumnTypes.');
+    L.push('- One step per kind of change the TASK needs: all row conditions in one Table.SelectRows, all renames in one Table.RenameColumns, all type changes in one Table.TransformColumnTypes.');
     L.push('- No automatic "Changed Type" or leftover steps, no sort unless asked (row order isn’t kept in the model), no index or buffer steps unless they are needed and explained in a comment.');
-    L.push('- Filter rows and choose columns as early as possible.' + (db ? ' The source is a database: keep every step that can be sent to it (query folding) before any step that can’t, and avoid Table.Buffer, Table.AddIndexColumn and custom functions over rows before the filters.' : ''));
+    L.push('- When the TASK filters rows or limits columns, do it as early as possible.' + (db ? ' The source is a database: keep every step that can be sent to it (query folding) before any step that can’t, and avoid Table.Buffer, Table.AddIndexColumn and custom functions over rows before the filters.' : ''));
     L.push('Formatting (the style of powerqueryformatter.com):');
     L.push('- "let" and "in" on their own lines at the left margin. Each step on its own line, indented 4 spaces, ending with a comma except the last. The step name after "in" indented 4 spaces.');
     L.push('- If a function call doesn’t fit in about 100 characters, put each argument on its own line indented 4 more spaces, with the closing ) on its own line at the indentation of the line that opened it.');
     L.push('- Lists { } and records [ ] that don’t fit on one line: one item per line, the same way. Column-and-type pairs one per line: {"Column", type text}.');
-    L.push('- One space after commas and around = and operators. Spaces only, no tabs, no trailing spaces. Use "each" and [Column] for single-argument functions.');
+    L.push('- One space after commas and around = and operators. Spaces only, no tabs, no trailing spaces.');
+    L.push('', 'FINAL VALIDATION', 'Before producing the answer, silently validate the final M query:');
+    ['It is syntactically valid Power Query M.', 'Every function has the required arguments.', 'Every each expression uses the correct context: _ for the current value or [Column] for row context.',
+      'All parentheses (), braces {}, brackets [], quotes, and commas are correctly paired and positioned.', 'Every step references an existing earlier step.', 'The in expression returns the final step.',
+      'No step was added solely because it appeared in an example or rule when the TASK did not require that operation.', 'No columns, types, values, paths, URLs, parameters, or business rules were invented.',
+      'The query performs everything in TASK and nothing beyond TASK.'].forEach(x => L.push('- ' + x));
+    L.push('If any check fails, correct the query before replying. Do not report an unvalidated query.');
     L.push('', 'REPLY FORMAT (a template: replace the placeholder lines with your answer)');
     L.push('Reply with these blocks only, nothing before or after them:');
     L.push('@@@ QUERY @@@', 'let', '    ...', 'in', '    LastStep', '@@@ END @@@');
@@ -213,5 +248,5 @@ const PW = (() => {
   }
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-  return { SOURCES, DB, parseColumns, parseParams, parseMerges, prompt, parseReply, checks, columnUse };
+  return { SOURCES, DB, typeMap, parseColumns, parseParams, parseMerges, prompt, parseReply, checks, columnUse };
 })();

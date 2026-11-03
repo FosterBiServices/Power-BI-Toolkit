@@ -28,7 +28,11 @@ const SD = (() => {
 
   const X = {};
   X.lit = lit;
-  X.P = name => node(() => name, (r, e) => e.p[name]);
+  // a setting (function parameter). X.pmap renames settings while an industry is built, so two industries
+  // combined in one model each keep their own (num_customers_retail, num_customers_finance)
+  X.pmap = null;
+  X.pname = name => (X.pmap && X.pmap[name]) || name;
+  X.P = name => { const nm = X.pname(name); return node(() => nm, (r, e) => e.p[nm]); };
   X.C = name => node(() => '[' + name + ']', r => r[name], [name]);
   X.blank = () => lit(null);
   // seeded random number from 0 up to 1, from a whole-number key and a stream number (one stream per use)
@@ -218,6 +222,29 @@ const SD = (() => {
   const RANDOM_BODY = '-- One seeded random number from 0 up to 1 for each key and stream (the same inputs always give the same number)\nMOD( SIN( row_key * 12.9898 + stream * 78.233 + seed * 37.719 ) * 43758.5453, 1 )';
   /* model: { tables: [...], rels: [[fromTable, fromCol, toTable, toCol, active]], measures: { table: [...] } }
      opts: { mode: 'udf'|'inline', args: { param: value }, measures: true, measureTable: 'new'|'add', tables: [names to include] } */
+  /* What goes in the script for the ticked tables: their measures and relationships, and what is left out and why.
+     A measure is left out when it reads a table that isn't ticked, or uses a measure that was left out. */
+  function kept(model, tables){
+    const inScript = new Set(tables.map(t => t.name)), out = [];
+    let ms = tables.flatMap(t => (model.measures[t.name] || []).map(m => Object.assign({ folder: t.name }, m)));
+    for (let n = -1; n !== ms.length;) {
+      n = ms.length; const have = new Set(ms.map(m => m.n));
+      ms = ms.filter(m => {
+        const tbl = Array.from(m.x.matchAll(/(?:'([^']+)'|\b([A-Za-z_]\w*))\[/g)).map(r => r[1] || r[2]).find(x => !inScript.has(x));
+        const mea = tbl ? null : Array.from(m.x.matchAll(/(^|[^\w'\]])\[([^\]]+)\]/g)).map(r => r[2]).find(x => !have.has(x));
+        if (tbl || mea) out.push({ n: m.n, folder: m.folder, table: tbl || null, measure: mea || null });
+        return !tbl && !mea;
+      });
+    }
+    const rels = model.rels.filter(r => inScript.has(r[0]) && inScript.has(r[2]));
+    const relsOut = model.rels.filter(r => (inScript.has(r[0]) || inScript.has(r[2])) && !(inScript.has(r[0]) && inScript.has(r[2])));
+    return { ms, rels, out, relsOut };
+  }
+  // what unticking tables leaves out: { measures: [{ n, folder, table, measure }], rels: [[from, col, to, col]] }
+  function leftOut(model, names){
+    const k = kept(model, model.tables.filter(t => names.includes(t.name)));
+    return { measures: k.out, rels: k.relsOut };
+  }
   function script(model, opts){
     const c = { mode: opts.mode, lists: new Set() };
     const tables = model.tables.filter(t => !opts.tables || opts.tables.includes(t.name));
@@ -250,22 +277,16 @@ const SD = (() => {
       else {
         L.push('\t\t\tsource =');
         L.push('\t\t\t\t-- ' + t.desc);
+        // the settings as VARs, chained straight into the body's own VAR _Rows ... RETURN.
+        // No RETURN of their own: a table with no settings would start with a bare RETURN, which Desktop rejects.
         t.params.forEach(p => L.push('\t\t\t\tVAR ' + p[0] + ' = ' + argText(opts.args[p[0]], p[1])));
-        L.push('\t\t\t\tRETURN');
-        bodies[i].split('\n').forEach(l => L.push('\t\t\t\t' + IND + l));
+        bodies[i].split('\n').forEach(l => L.push('\t\t\t\t' + l));
       }
       L.push('');
     });
     // every measure goes in one _Measures table, in a folder named for the table it counts.
     // 'add' puts them in the report's own _Measures (ref keeps what is already there); 'new' creates the table.
-    let ms = opts.measures === false ? [] : tables.flatMap(t => (model.measures[t.name] || []).map(m => Object.assign({ folder: t.name }, m)));
-    // leave out a measure that reads a table that isn't in the script, or a measure that was left out
-    const inScript = new Set(tables.map(t => t.name));
-    for (let n = -1; n !== ms.length;) {
-      n = ms.length; const have = new Set(ms.map(m => m.n));
-      ms = ms.filter(m => Array.from(m.x.matchAll(/(?:'([^']+)'|\b([A-Za-z_]\w*))\[/g)).every(r => inScript.has(r[1] || r[2]))
-        && Array.from(m.x.matchAll(/(^|[^\w'\]])\[([^\]]+)\]/g)).every(r => have.has(r[2])));
-    }
+    const ms = opts.measures === false ? [] : kept(model, tables).ms;
     if (ms.length) {
       if (opts.measureTable === 'add') L.push('\tref table ' + MEASURES);
       else L.push('\t/// Measures for the sample data, in a folder for each table.', '\ttable ' + MEASURES);
@@ -279,8 +300,7 @@ const SD = (() => {
       if (opts.measureTable !== 'add') L.push('\t\tcolumn Value', '\t\t\tdataType: int64', '\t\t\tisDataTypeInferred', '\t\t\tisHidden', '\t\t\tsummarizeBy: none', '\t\t\tisNameInferred', '\t\t\tsourceColumn: [Value]', '',
         '\t\tpartition ' + MEASURES + ' = calculated', '\t\t\tmode: import', '\t\t\tsource = { 1 }', '');
     }
-    const names = new Set(tables.map(t => t.name));
-    model.rels.filter(r => names.has(r[0]) && names.has(r[2])).forEach(r => {
+    kept(model, tables).rels.forEach(r => {
       L.push('\trelationship ' + gid(r.slice(0, 4).join('|')), '\t\tfromColumn: ' + tn(r[0]) + '.' + tn(r[1]), '\t\ttoColumn: ' + tn(r[2]) + '.' + tn(r[3]));
       if (r[4] === false) L.push('\t\tisActive: false');
       L.push('');
@@ -298,5 +318,5 @@ const SD = (() => {
     parts.push(fd(t.fn, fnParams(t), body));
     return 'DEFINE\n' + parts.join('\n\n') + '\n\nEVALUATE\n' + (top ? 'TOPN( ' + top + ', ' + callOf(t, opts.args) + ' )' : callOf(t, opts.args)) + '\n';
   }
-  return Object.assign(X, { PKG, MEASURES, serial, ymd, rand, tableDax, tableRows, script, query, callOf, gid, daxTable, MON });
+  return Object.assign(X, { PKG, MEASURES, serial, ymd, rand, tableDax, tableRows, script, leftOut, query, callOf, gid, daxTable, MON });
 })();

@@ -50,6 +50,14 @@
       <p class="note small">In the Power Query preview, select the table icon at the top left of the grid, then <b>Copy Entire Table</b>, and paste the header and a few rows. Or type the names, one per line. Copilot then uses your exact column names, and the reply is checked against them.</p>
       <textarea id="columns" class="short" spellcheck="false" aria-label="Columns" placeholder="Paste the header row and a few rows, or one column name per line"></textarea>
       <div class="chips" id="colChips"></div>
+      <div id="typeMapBox" hidden>
+        <label class="opts"><span><input type="checkbox" id="typeMap"> Set column types with a type map</span></label>
+        <p class="note small">One list of column-and-type pairs, applied only to the columns that exist, and every other column as text, so a missing or renamed source column doesn&rsquo;t break the refresh. The types come from the rows you pasted: check them, and change any here or in the query. Copilot is told to use it as it is.</p>
+        <details class="extra" id="typeMapView"><summary>See the type map <span class="muted">(or copy it into your own query)</span></summary>
+          <div class="codebox"><div class="codebox-bar"><span class="t">Type map steps: paste after the step where the column names are final</span><span class="r"><button class="btn" type="button" data-copy="typemap">Copy</button></span></div><pre class="short" id="typeMapCode"></pre></div>
+          <p class="note small">Rename <code>PromotedHeaders</code> to the step before it, and add a comma after the step before it if it was the last one.</p>
+        </details>
+      </div>
 
       <details class="extra" id="moreBox">
         <summary>Other queries, parameters and culture <span class="muted">(optional)</span></summary>

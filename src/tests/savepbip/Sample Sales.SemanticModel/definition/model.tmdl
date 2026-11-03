@@ -1,0 +1,30 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	discourageImplicitMeasures
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_QueryOrder = ["_Measures", "Date", "Sales", "Products", "Stores", "Customers", "General Ledger", "Accounts", "Cost Centers", "Invoices", "AR Customers", "Aging Buckets", "Trend Metric"]
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table _Measures
+ref table Date
+ref table Sales
+ref table Products
+ref table Stores
+ref table Customers
+ref table 'General Ledger'
+ref table Accounts
+ref table 'Cost Centers'
+ref table Invoices
+ref table 'AR Customers'
+ref table 'Aging Buckets'
+ref table 'Trend Metric'
+
+ref cultureInfo en-US

@@ -1,0 +1,35 @@
+relationship f1b9d4a2-04b3-40b4-a582-ca920dd12112
+	fromColumn: Sales.CustomerKey
+	toColumn: Customers.CustomerKey
+
+relationship 6bd4e9ad-2e4a-4ab4-accc-5785451f6172
+	fromColumn: Sales.ProductKey
+	toColumn: Products.ProductKey
+
+relationship e5301477-f8d0-49b4-a878-dacd427d6242
+	fromColumn: Sales.StoreKey
+	toColumn: Stores.StoreKey
+
+relationship 4fd3ec35-7b81-46d4-a1ef-f9d3677355d6
+	fromColumn: Sales.'Order Date'
+	toColumn: Date.Date
+
+relationship 5b72c2fc-44b9-46b4-a099-190c42f0e252
+	fromColumn: 'General Ledger'.AccountKey
+	toColumn: Accounts.AccountKey
+
+relationship ab0c70f5-8bc7-40b4-a1ca-3eddbecc9e52
+	fromColumn: 'General Ledger'.CostCenterKey
+	toColumn: 'Cost Centers'.CostCenterKey
+
+relationship 7b3ddd80-04b3-40b4-a9ec-b3200dd12112
+	fromColumn: Invoices.CustomerKey
+	toColumn: 'AR Customers'.CustomerKey
+
+relationship f54896da-37e6-5d0b-a031-81d2e65034e7
+	fromColumn: 'General Ledger'.Date
+	toColumn: Date.Date
+
+relationship dc217798-f692-573c-87bc-e70a49cfb46e
+	fromColumn: Invoices.'Invoice Date'
+	toColumn: Date.Date

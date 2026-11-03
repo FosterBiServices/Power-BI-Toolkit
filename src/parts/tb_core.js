@@ -122,9 +122,12 @@ const TB = (function(){
     const APART = 'Stands apart from your other data colors, so its series is easy to pick out';
     for (const [n, g] of [[3, 10], [2.2, Math.min(7, curD)]]) {
       need = n; gap = g;
-      // 1. a lighter or darker shade of the brand: always goes with it
-      const lighter = dark ? Lb < 0.7 : Lb < 0.5;
-      if (!out.some(x => x.shade)) for (const d of [0.14, 0.2, 0.26, 0.32]) if (add(fromLch(clamp(Lb + (lighter ? d : -d), 0.3, 0.9), Cb * (lighter ? 0.85 : 1), Hb), (lighter ? 'A lighter' : 'A darker') + ' shade of your brand color, so it always goes with it')) { out[out.length - 1].shade = true; break; }
+      // 1. a lighter or darker shade of the brand: always goes with it. Each data color gets a different shade (direction and
+      //    depth turn with its position), so the lists for colors 2, 3, 4... don't all start with the same one
+      const lighter = dark ? Lb < 0.7 : Lb < 0.5, both = Lb > 0.36 && Lb < 0.74;
+      const dirs = both && i % 2 ? [!lighter, lighter] : [lighter, !lighter], steps = [0.14, 0.2, 0.26, 0.32], rot = i % steps.length;
+      const ds = steps.slice(rot).concat(steps.slice(0, rot));
+      if (!out.some(x => x.shade)) outer: for (const up of (both ? dirs : [lighter])) for (const d of ds) if (add(fromLch(clamp(Lb + (up ? d : -d), 0.3, 0.9), Cb * (up ? 0.85 : 1), Hb), (up ? 'A lighter' : 'A darker') + ' shade of your brand color, so it always goes with it')) { out[out.length - 1].shade = true; break outer; }
       // 2. next to the brand on the color wheel
       if (!family(brand) && !out.some(x => x.near)) { const near = [30, -30, 45, -45, 60, -60].map(d => (Hb + d + 360) % 360).filter(inSafe); if (best(near.flatMap(h => Ls.map(L => fromLch(L, Ct, h))), 'Next to your brand color on the color wheel, so the two sit well together')) out[out.length - 1].near = true; }
       // 3. hues that stand apart from everything already in the palette
@@ -135,6 +138,29 @@ const TB = (function(){
       if (out.length >= k) break;
     }
     return out.map(x => ({ hex: x.hex, name: x.name, why: x.why }));
+  }
+
+  /* The main colors of a logo, from its pixels (RGBA, as a canvas gives them): [{ hex, share }] with the biggest first.
+     See-through pixels, the white or grey background and very small specks are left out; close shades count as one color,
+     shown as the most common shade among them. share is that color's part of the logo's colored pixels. */
+  function logoColors(px, max){
+    max = max || 5;
+    const bins = new Map();
+    for (let i = 0; i + 3 < px.length; i += 4) {
+      if (px[i + 3] < 128) continue;
+      const k = (px[i] >> 3) << 10 | (px[i + 1] >> 3) << 5 | px[i + 2] >> 3;
+      const b = bins.get(k) || [0, 0, 0, 0]; b[0]++; b[1] += px[i]; b[2] += px[i + 1]; b[3] += px[i + 2]; bins.set(k, b);
+    }
+    const list = [];
+    // each bin's color is the average of its pixels, so a flat logo color comes back exactly
+    bins.forEach(b => { const n = b[0], h = toHex([b[1] / n / 255, b[2] / n / 255, b[3] / n / 255]); const [L, C] = toLch(h); list.push({ hex: h, n, L, C }); });
+    list.sort((a, b) => b.n - a.n);
+    // the background: near white, or the single most common grey when it covers most of the image
+    const plain = c => (c.L > 0.93 && c.C < 0.04) || c.C < 0.02 && (c.L > 0.85 || c.L < 0.12);
+    const groups = [];
+    list.forEach(c => { if (plain(c)) return; const g = groups.find(x => deltaE(x.hex, c.hex) < 12); if (g) g.n += c.n; else groups.push({ hex: c.hex, n: c.n, C: c.C }); });
+    const total = groups.reduce((a, g) => a + g.n, 0) || 1;
+    return groups.filter(g => g.n / total >= 0.02).sort((a, b) => b.n - a.n).slice(0, max).map(g => ({ hex: g.hex, share: g.n / total, grey: g.C < 0.04 }));
   }
 
   /* Every color the theme uses, derived from a few choices */
@@ -543,7 +569,9 @@ const TB = (function(){
     const close = [];
     for (let i = 0; i < r.dataColors.length; i++) for (let j = i + 1; j < r.dataColors.length; j++) if (deltaE(r.dataColors[i], r.dataColors[j]) < 8) close.push((i + 1) + ' and ' + (j + 1));
     if (close.length) add('warn', 'Some data colors are very alike (colors ' + close.join('; ') + '), so their series will be hard to tell apart.');
-    const fam = r.dataColors.map((c, i) => [i + 1, c, family(c)]).filter(x => x[2]);
+    // brand colors are the person's own choice: only the colors the page suggested are flagged
+    const brand = new Set((o.brandColors || []).map(norm));
+    const fam = r.dataColors.map((c, i) => [i + 1, c, family(c)]).filter(x => x[2] && !brand.has(norm(x[1])));
     if (fam.length) add('info', 'Some data colors look ' + [...new Set(fam.map(x => x[2]))].join(', ') + ' (' + fam.map(x => 'color ' + x[0] + ', ' + x[1]).join('; ') + '). Readers often take green as good, red as bad and amber as a warning, so these can suggest a meaning the data doesn\u2019t have. Fine if they\u2019re your brand colors.');
     if (deltaE(deutan(r.good), deutan(r.bad)) < 12) add('warn', 'Your good and bad colors look almost the same to people with red-green color blindness (about 1 in 12 men). Blue for good and orange for bad is a common safe pair.');
     if (contrast(r.text, r.background) < 4.5) add('warn', 'The text color is hard to read on the ' + (r.visual ? 'visual ' : '') + 'background (' + contrast(r.text, r.background).toFixed(1) + ':1).');
@@ -551,6 +579,6 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { splitCard, stateName, schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, findThemes, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { splitCard, stateName, schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, findThemes, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, logoColors, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/

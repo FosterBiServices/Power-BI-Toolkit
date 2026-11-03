@@ -18,7 +18,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   await p.reload(); console.log('persist goal', (await p.locator('#goal').inputValue()).slice(0, 20), '| banner', await p.locator('#exampleBanner').isVisible());
   // existing mode
   await p.click('text=Build on an existing query'); await p.fill('#existing', 'let\n    Source = Sql.Database("a", "b")\nin\n    Source');
-  console.log('existing:', await p.locator('#existingMsg').innerText(), '| prompt keeps source', /Keep its source step/.test(await p.locator('#pwPromptView').innerText()));
+  console.log('existing:', await p.locator('#existingMsg').innerText(), '| prompt keeps source', /including the source step/.test(await p.locator('#pwPromptView').innerText()));
   await p.setViewportSize({ width: 375, height: 800 }); await p.evaluate(() => localStorage.clear()); await p.reload(); console.log('mobile hscroll', await p.evaluate(() => document.documentElement.scrollWidth > innerWidth));
   console.log('errors', errs); await b.close();
 })();

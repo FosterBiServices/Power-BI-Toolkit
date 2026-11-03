@@ -401,6 +401,8 @@ body.figma .figma-box{display:flex!important}
 .btns{display:flex;flex-wrap:wrap;gap:8px}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
 table.pos{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface)}
+table.pos input.ren{font:inherit;font-size:13px;width:100%;min-width:140px;padding:3px 6px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink)}
+table.pos input.ren:focus{outline:2px solid var(--accent);outline-offset:0}
 table.pos th,table.pos td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12.5px}
 .apply code{font-family:var(--mono);font-size:12.5px}
@@ -489,7 +491,7 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
               <input type="file" id="logoFile" class="sr" accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp"><label class="filebtn btn small" for="logoFile" id="logoFileLbl">Add the logo image</label>
               <span id="logoInfo" class="small muted"></span>
               <button type="button" class="linkbtn" id="logoClear" hidden>Remove the image</button>
-              <label class="chk small" id="logoInBgWrap" hidden><input type="checkbox" id="logoInBg"> Also put it in the background image</label>
+              <label class="chk small" id="logoInBgWrap" hidden><input type="checkbox" id="logoInBg"> Draw it on the background image</label>
             </div>
           </div>
           <div class="hcol">
@@ -631,6 +633,7 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
         <div class="out-card">
           <h3>Background image</h3>
           <div class="thumb" id="bgThumb"></div>
+          <div id="bgLogoNote"></div>
           <div class="btns"><button type="button" class="btn primary" data-dl="bg-png1">Download PNG</button><button type="button" class="btn" data-dl="bg-png2">PNG at 2&times;</button><button type="button" class="btn" data-dl="bg-svg">SVG</button><button type="button" class="btn figma-only" data-copy="bg-svg">Copy for Figma</button></div>
           <p class="note small">In Power BI Desktop: <b>Format page</b> &gt; <b>Canvas background</b> &gt; <b>Image</b>, <b>Image fit: Fit</b>, <b>Transparency 0%</b>. Then turn off each visual&rsquo;s own background so the cards show through. The PNG is the page size you set in Step 1. PNG at 2&times; is twice that, for extra sharpness.</p>
         </div>
@@ -649,6 +652,7 @@ table.pos td.num,table.pos th:nth-child(n+3){text-align:right;font-variant-numer
         </ol>
       </div>
       <h3>Positions <span class="muted small">(Format pane &gt; General &gt; Properties: Size and Position)</span></h3>
+      <p class="note small">Rename any visual in the first column: the new name goes into the wireframe, the PowerPoint and Figma layers, and the positions you copy.</p>
       <div class="tablewrap"><table class="pos" id="posTable"></table></div>
       <p class="note small"><b>Inner X, Y, width and height</b>: where to put a visual so it stays inside its card, clear of the rounded corners. Use them when the visual keeps its own background or border; with the visual&rsquo;s background off, the outer position works too.</p>
       <div class="btns"><button type="button" class="btn" data-copy="tsv">Copy positions for Excel</button></div>
@@ -783,9 +787,12 @@ const TB = (function(){
     const APART = 'Stands apart from your other data colors, so its series is easy to pick out';
     for (const [n, g] of [[3, 10], [2.2, Math.min(7, curD)]]) {
       need = n; gap = g;
-      // 1. a lighter or darker shade of the brand: always goes with it
-      const lighter = dark ? Lb < 0.7 : Lb < 0.5;
-      if (!out.some(x => x.shade)) for (const d of [0.14, 0.2, 0.26, 0.32]) if (add(fromLch(clamp(Lb + (lighter ? d : -d), 0.3, 0.9), Cb * (lighter ? 0.85 : 1), Hb), (lighter ? 'A lighter' : 'A darker') + ' shade of your brand color, so it always goes with it')) { out[out.length - 1].shade = true; break; }
+      // 1. a lighter or darker shade of the brand: always goes with it. Each data color gets a different shade (direction and
+      //    depth turn with its position), so the lists for colors 2, 3, 4... don't all start with the same one
+      const lighter = dark ? Lb < 0.7 : Lb < 0.5, both = Lb > 0.36 && Lb < 0.74;
+      const dirs = both && i % 2 ? [!lighter, lighter] : [lighter, !lighter], steps = [0.14, 0.2, 0.26, 0.32], rot = i % steps.length;
+      const ds = steps.slice(rot).concat(steps.slice(0, rot));
+      if (!out.some(x => x.shade)) outer: for (const up of (both ? dirs : [lighter])) for (const d of ds) if (add(fromLch(clamp(Lb + (up ? d : -d), 0.3, 0.9), Cb * (up ? 0.85 : 1), Hb), (up ? 'A lighter' : 'A darker') + ' shade of your brand color, so it always goes with it')) { out[out.length - 1].shade = true; break outer; }
       // 2. next to the brand on the color wheel
       if (!family(brand) && !out.some(x => x.near)) { const near = [30, -30, 45, -45, 60, -60].map(d => (Hb + d + 360) % 360).filter(inSafe); if (best(near.flatMap(h => Ls.map(L => fromLch(L, Ct, h))), 'Next to your brand color on the color wheel, so the two sit well together')) out[out.length - 1].near = true; }
       // 3. hues that stand apart from everything already in the palette
@@ -796,6 +803,29 @@ const TB = (function(){
       if (out.length >= k) break;
     }
     return out.map(x => ({ hex: x.hex, name: x.name, why: x.why }));
+  }
+
+  /* The main colors of a logo, from its pixels (RGBA, as a canvas gives them): [{ hex, share }] with the biggest first.
+     See-through pixels, the white or grey background and very small specks are left out; close shades count as one color,
+     shown as the most common shade among them. share is that color's part of the logo's colored pixels. */
+  function logoColors(px, max){
+    max = max || 5;
+    const bins = new Map();
+    for (let i = 0; i + 3 < px.length; i += 4) {
+      if (px[i + 3] < 128) continue;
+      const k = (px[i] >> 3) << 10 | (px[i + 1] >> 3) << 5 | px[i + 2] >> 3;
+      const b = bins.get(k) || [0, 0, 0, 0]; b[0]++; b[1] += px[i]; b[2] += px[i + 1]; b[3] += px[i + 2]; bins.set(k, b);
+    }
+    const list = [];
+    // each bin's color is the average of its pixels, so a flat logo color comes back exactly
+    bins.forEach(b => { const n = b[0], h = toHex([b[1] / n / 255, b[2] / n / 255, b[3] / n / 255]); const [L, C] = toLch(h); list.push({ hex: h, n, L, C }); });
+    list.sort((a, b) => b.n - a.n);
+    // the background: near white, or the single most common grey when it covers most of the image
+    const plain = c => (c.L > 0.93 && c.C < 0.04) || c.C < 0.02 && (c.L > 0.85 || c.L < 0.12);
+    const groups = [];
+    list.forEach(c => { if (plain(c)) return; const g = groups.find(x => deltaE(x.hex, c.hex) < 12); if (g) g.n += c.n; else groups.push({ hex: c.hex, n: c.n, C: c.C }); });
+    const total = groups.reduce((a, g) => a + g.n, 0) || 1;
+    return groups.filter(g => g.n / total >= 0.02).sort((a, b) => b.n - a.n).slice(0, max).map(g => ({ hex: g.hex, share: g.n / total, grey: g.C < 0.04 }));
   }
 
   /* Every color the theme uses, derived from a few choices */
@@ -1204,7 +1234,9 @@ const TB = (function(){
     const close = [];
     for (let i = 0; i < r.dataColors.length; i++) for (let j = i + 1; j < r.dataColors.length; j++) if (deltaE(r.dataColors[i], r.dataColors[j]) < 8) close.push((i + 1) + ' and ' + (j + 1));
     if (close.length) add('warn', 'Some data colors are very alike (colors ' + close.join('; ') + '), so their series will be hard to tell apart.');
-    const fam = r.dataColors.map((c, i) => [i + 1, c, family(c)]).filter(x => x[2]);
+    // brand colors are the person's own choice: only the colors the page suggested are flagged
+    const brand = new Set((o.brandColors || []).map(norm));
+    const fam = r.dataColors.map((c, i) => [i + 1, c, family(c)]).filter(x => x[2] && !brand.has(norm(x[1])));
     if (fam.length) add('info', 'Some data colors look ' + [...new Set(fam.map(x => x[2]))].join(', ') + ' (' + fam.map(x => 'color ' + x[0] + ', ' + x[1]).join('; ') + '). Readers often take green as good, red as bad and amber as a warning, so these can suggest a meaning the data doesn\u2019t have. Fine if they\u2019re your brand colors.');
     if (deltaE(deutan(r.good), deutan(r.bad)) < 12) add('warn', 'Your good and bad colors look almost the same to people with red-green color blindness (about 1 in 12 men). Blue for good and orange for bad is a common safe pair.');
     if (contrast(r.text, r.background) < 4.5) add('warn', 'The text color is hard to read on the ' + (r.visual ? 'visual ' : '') + 'background (' + contrast(r.text, r.background).toFixed(1) + ':1).');
@@ -1212,7 +1244,7 @@ const TB = (function(){
     if (r.visual && deltaE(r.visual, r.page) < 2) add('info', 'The visual background is almost the same color as the page, so visuals won\u2019t stand out from it. Pick Transparent, or a color a step lighter or darker than the page.');
     return out;
   }
-  return { splitCard, stateName, schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, findThemes, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
+  return { splitCard, stateName, schemaObjects, schemaTypes, schemaHas, fitValue, cleanCustom, countCustom, readVisuals, readTheme, findThemes, VIS_SETTINGS, VIS_ALL, VIS_GROUPS, TYPE_NAMES, cleanVis, visValue, family, colorName, alternatives, logoColors, norm, hexOk, palette, roles, build, checks, contrast, readable, mix, isDark, deltaE, deutan };
 })();
 /*TB-CORE-END*/
 
@@ -2235,14 +2267,18 @@ const LS = (() => {
       if (lead.fit.overW > 2 && +base.w < 1920) extra.push(mk(lead.id, 'Larger page', fns[lead.id], 'The same layout on a 1920 × 1080 page, so visuals side by side get their width.', { large: true }));
       if (lead.fit.overH > 2) extra.push(mk(lead.id, 'Taller page', fns[lead.id], 'The same layout on a taller page, so every visual shows its categories without squeezing.', { tall: true }));
     }
+    // a layout that changes the page size (taller or larger) never ranks above one that keeps it, and is never the Best fit:
+    // the person chose the page size, so changing it is their call (the card says so)
+    const resized = v => v.tall || v.large;
     const all = order.concat(extra);
-    const ranked = all.filter(fits).concat(extra.filter(v => !fits(v)), order.filter(v => !fits(v)));
+    const ranked = all.filter(v => fits(v) && !resized(v)).concat(all.filter(v => fits(v) && resized(v)), extra.filter(v => !fits(v)), order.filter(v => !fits(v)));
     const seen = new Set(), res = [];
     ranked.forEach(v => { const k = sameShape(v); if (!seen.has(k) && res.length < 4) { seen.add(k); res.push(v); } });
     const tips = p.tips.slice();
     const nVis = p.v30.length + (p.detail ? 1 : 0);
     if (nVis > 7) tips.push(nVis + ' visuals below the KPIs compete for attention. Six or fewer reads best: split the page in two, or move some to tooltips or a drill-through page.');
-    res.forEach((v, i) => { v.recommended = i === 0 && fits(v); v.why = explain(p, v); v.tips = tips;
+    res.forEach((v, i) => { v.recommended = i === 0 && fits(v) && !resized(v); v.why = explain(p, v); v.tips = tips;
+      v.size = +v.cfg.w !== +base.w || +v.cfg.h !== +base.h ? { from: [+base.w, +base.h], to: [+v.cfg.w, +v.cfg.h] } : null;
       const L = LO.layout(v.cfg); v.probs = L.probs; });
     return res;
   }
@@ -2575,7 +2611,8 @@ function renderSuggestions(){
   h += tips.length ? '<div class="sg-tips"><h4>Design tips for your visuals</h4><ul>' + tips.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul></div>' : '';
   h += list.map((v, i) => {
     const L = LO.layout(v.cfg), svg = LR.wireframe(L, v.cfg, col, st, { zones: true, font: state.look.font, ids: false });
-    return '<div class="sg' + (v.recommended ? ' rec' : '') + '"><h4>' + esc(v.name) + (v.recommended ? '<span class="rec-tag">Best fit</span>' : '') + '</h4><p class="blurb">' + esc(v.blurb) + '</p>' + svg
+    return '<div class="sg' + (v.recommended ? ' rec' : '') + '"><h4>' + esc(v.name) + (v.recommended ? '<span class="rec-tag">Best fit</span>' : '') + '</h4><p class="blurb">' + esc(v.blurb) + '</p>'
+      + (v.size ? '<div class="msg warn sg-size">Changes your page from <b>' + v.size.from.join(' &times; ') + '</b> to <b>' + v.size.to.join(' &times; ') + '</b>.</div>' : '') + svg
       + '<ul>' + v.why.map(([z, t]) => '<li><b class="' + (zc[z] || 'zpg') + '">' + z + '</b>' + esc(t) + '</li>').join('') + '</ul>'
       + (v.probs || []).map(p => '<div class="msg ' + p.level + '">' + esc(p.text) + '</div>').join('')
       + '<div class="btns"><button type="button" class="btn' + (v.recommended ? ' primary' : '') + '" data-usesg="' + i + '">Use this layout</button></div></div>';
@@ -2616,14 +2653,32 @@ function renderColors(){
 }
 
 /* ---------- step 4 ---------- */
+// rename a visual from its layout id (g2, g2.1 for a split box, t0, s1, h0, l3, title)
+const canRename = id => id === 'title' || /^[gtshl]\d+(\.\d+)?$/.test(id || '');
+function renameItem(id, v){
+  const c = state.cfg;
+  if (id === 'title') { c.header.title = v; return true; }
+  const m = /^([gtshl])(\d+)(?:\.(\d+))?$/.exec(id || ''); if (!m) return false;
+  if (m[3] != null) { const it = c.items[+m[2]], sub = it && it.sub; if (!sub) return false; sub.items = sub.items || []; while (sub.items.length <= +m[3]) sub.items.push({}); sub.items[+m[3]].title = v; return true; }
+  const keep = state.sel; state.sel = m[1] + m[2]; const sel = selItem(); state.sel = keep;
+  if (!sel) return false; sel.item.title = v; return true;
+}
 function renderOut(){
   const L = state.L, c = state.cfg, col = state.col, st = state.look.style;
   state.out.wf = LR.wireframe(L, c, col, st, { font: state.look.font });
   state.out.bg = LR.background(L, c, col, st, { font: state.look.font });
   state.out.tsv = LO.positionsTsv(L, st);
   $('wfThumb').innerHTML = state.out.wf; $('bgThumb').innerHTML = state.out.bg;
+  // say when the logo isn't in the background, and where to put it instead
+  const lgItem = L.items.find(o => o.logo), lgSet = c.header.logo || {};
+  $('bgLogoNote').innerHTML = lgItem && lgSet.src && !lgSet.inBg ? '<div class="msg info">Your logo isn&rsquo;t in this background. Add it in Desktop as an <b>Image</b> visual at X ' + Math.round(lgItem.x) + ', Y ' + Math.round(lgItem.y) + ', ' + Math.round(lgItem.w) + ' &times; ' + Math.round(lgItem.h) + ', or tick <b>Draw it on the background image</b> under Logo in Step 1.</div>'
+    : lgItem && !lgSet.src ? '<div class="msg info">The logo box is empty in this background: add the logo image under Logo in Step 1, or add an <b>Image</b> visual in Desktop at X ' + Math.round(lgItem.x) + ', Y ' + Math.round(lgItem.y) + '.</div>' : '';
   const rows = state.out.tsv.split('\n').map(r => r.split('\t'));
-  $('posTable').innerHTML = '<thead><tr>' + rows[0].map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + rows.slice(1).map(r => '<tr>' + r.map((v, i) => '<td' + (i > 1 ? ' class="num"' : '') + '>' + esc(v) + '</td>').join('') + '</tr>').join('') + '</tbody>';
+  // the Visual column is editable: rename every visual in one place (the names go into the wireframe, PowerPoint and Figma layers)
+  const ids = L.items.filter(o => !o.band || o.id === 'header' || o.id === 'title').map(o => o.id);
+  $('posTable').innerHTML = '<thead><tr>' + rows[0].map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + rows.slice(1).map((r, k) => '<tr>' + r.map((v, i) => i === 0 && canRename(ids[k])
+    ? '<td><input type="text" class="ren" data-ren="' + esc(ids[k]) + '" value="' + esc(v) + '" aria-label="Name of ' + esc(v) + '" autocomplete="off"></td>'
+    : '<td' + (i > 1 ? ' class="num"' : '') + '>' + esc(v) + '</td>').join('') + '</tr>').join('') + '</tbody>';
 }
 
 const _mctx = document.createElement('canvas').getContext('2d');
@@ -2679,7 +2734,7 @@ function init(){
     if (file.size > 1024 * 1024) { $('logoInfo').textContent = 'That image is over 1 MB. Use a smaller PNG or an SVG.'; $('logoFile').value = ''; return; }
     const rd = new FileReader();
     // stored as PNG or JPEG so Figma and PowerPoint take it; keep the height, set the width from the image's proportions
-    rd.onload = () => LX.readImage(rd.result, 1200).then(im => { const lg = state.cfg.header.logo; lg.src = im.src; lg.ratio = im.w / im.h; lg.w = Math.round(lg.h * lg.ratio); edited(); },
+    rd.onload = () => LX.readImage(rd.result, 1200).then(im => { const lg = state.cfg.header.logo; if (!lg.src) lg.inBg = true; lg.src = im.src; lg.ratio = im.w / im.h; lg.w = Math.round(lg.h * lg.ratio); edited(); },
       err => { $('logoInfo').textContent = err.message; });
     rd.readAsDataURL(file);
   });
@@ -2885,6 +2940,7 @@ function init(){
       else if (b.dataset.dl === 'bg-png1') download(await LX.png(state.out.bg, c.w, c.h, 1), name + ' background.png');
     } catch (err) { const m = document.createElement('div'); m.className = 'msg err'; m.textContent = err.message || String(err); b.closest('.btns').after(m); setTimeout(() => m.remove(), 8000); }
   });
+  $('posTable').addEventListener('change', e => { const t = e.target.closest('[data-ren]'); if (t && renameItem(t.dataset.ren, t.value.trim())) edited({ editor: true }); });
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); });
 }
 init();
@@ -3346,7 +3402,7 @@ init();
     const rows = [HEAD.join('\t')], r = o => rows.push(HEAD.map(h => cell(o[h])).join('\t'));
     m.tables.forEach(t => r({ Kind: 'Table', Table: t.name, Name: t.name, Type: t.category, Flags: [t.hidden ? 'hidden' : '', t.private ? 'private' : ''].filter(Boolean).join(' '), Description: t.description, Expression: t.calc, Storage: t.storage, Source: t.source }));
     m.columns.forEach(c => r({ Kind: 'Column', Table: c.table, Name: c.name, Type: c.type, Folder: c.folder, Flags: [c.hidden ? 'hidden' : '', c.key ? 'key' : ''].filter(Boolean).join(' '), Description: c.description, Expression: c.expression, Summarize: c.summarize, SortBy: c.sortBy, Hierarchies: c.hierarchies }));
-    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
+    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : '', x.text ? 'text' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
     m.rels.forEach(x => r({ Kind: 'Relationship', Table: x.fromTable, Name: x.fromColumn, Type: x.fromCard + ':' + x.toCard, Flags: x.cross + (x.active ? '' : ' inactive'), ToTable: x.toTable, ToColumn: x.toColumn }));
     if (m.model) r({ Kind: 'Model', Name: m.model.name, Flags: m.model.discourage ? 'discourage-implicit' : '' });
     return rows.join('\n');
@@ -3389,6 +3445,7 @@ init();
             description: c.doc || c.props.description || '', expression: c.value || '', summarize: c.props.summarizeby ? cap(c.props.summarizeby) : num ? 'Default' : 'None', sortBy: unq(c.props.sortbycolumn || ''), hierarchies: (levels[c.name] || []).join(', ') });
         } else if (c.kind === 'measure') {
           m.measures.push({ table: o.name, name: c.name, format: c.props.formatstring || '', folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), dynamic: 'formatstringdefinition' in c.props || c.children.some(x => x.kind === 'formatstringdefinition'),
+            text: /^(imageurl|weburl)$/i.test(unq(c.props.datacategory || '')) || /^string$/i.test(c.props.datatype || ''),
             description: c.doc || c.props.description || '', expression: c.value || '' });
         }
       });
@@ -3403,7 +3460,7 @@ init();
       (t.hierarchies || []).forEach(h => (h.levels || []).forEach(l => { (levels[l.column] = levels[l.column] || []).push(h.name); }));
       m.tables.push({ name: t.name, category: t.dataCategory || '', hidden: !!t.isHidden, private: !!t.isPrivate, description: join(t.description), calc: s.type === 'calculated' ? join(s.expression) : '', storage: cap(p.mode || 'import').replace(/^Directquery$/i, 'DirectQuery'), source: s.type === 'entity' ? (s.expressionSource || '') : '' });
       (t.columns || []).forEach(c => { if (c.type === 'rowNumber') return; const num = /int64|double|decimal/i.test(c.dataType || ''); m.columns.push({ table: t.name, name: c.name, type: TYPES[(c.dataType || '').toLowerCase()] || c.dataType || '', folder: c.displayFolder || '', hidden: !!c.isHidden, key: !!c.isKey, description: join(c.description), expression: c.type === 'calculated' ? join(c.expression) : '', summarize: c.summarizeBy ? cap(c.summarizeBy) : num ? 'Default' : 'None', sortBy: c.sortByColumn || '', hierarchies: (levels[c.name] || []).join(', ') }); });
-      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, description: join(x.description), expression: join(x.expression) }));
+      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, text: /^(imageurl|weburl)$/i.test(x.dataCategory || '') || /^string$/i.test(x.dataType || ''), description: join(x.description), expression: join(x.expression) }));
     });
     (md.relationships || []).forEach(r => m.rels.push({ fromTable: r.fromTable, fromColumn: r.fromColumn, toTable: r.toTable, toColumn: r.toColumn, fromCard: cap(r.fromCardinality || 'many'), toCard: cap(r.toCardinality || 'one'), cross: cap(r.crossFilteringBehavior || 'oneDirection'), active: r.isActive !== false }));
     return m;

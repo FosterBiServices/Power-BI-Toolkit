@@ -1,0 +1,41 @@
+/// Days-past-due buckets for the receivables aging chart.
+table 'Aging Buckets'
+
+	column Bucket
+		dataType: string
+		summarizeBy: none
+		sourceColumn: [Bucket]
+		sortByColumn: 'Bucket Order'
+
+	column 'Bucket Order'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: [Bucket Order]
+
+	column 'From Days'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: [From Days]
+
+	column 'To Days'
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: [To Days]
+
+	partition 'Aging Buckets' = calculated
+		mode: import
+		source =
+				DATATABLE(
+				    "Bucket", STRING, "Bucket Order", INTEGER, "From Days", INTEGER, "To Days", INTEGER,
+				    {
+				        { "Not yet due", 1, -100000, 0 },
+				        { "1-30 days", 2, 1, 30 },
+				        { "31-60 days", 3, 31, 60 },
+				        { "61-90 days", 4, 61, 90 },
+				        { "Over 90 days", 5, 91, 100000 }
+				    }
+				)
+

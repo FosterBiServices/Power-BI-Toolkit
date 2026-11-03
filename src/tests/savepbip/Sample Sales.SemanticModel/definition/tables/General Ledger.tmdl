@@ -1,0 +1,109 @@
+/// Monthly amounts by account and cost center, for Actual (start to end date) and Budget (every month of those years).
+table 'General Ledger'
+
+	/// Month end. Links to Date.
+	column Date
+		dataType: dateTime
+		isDataTypeInferred
+		formatString: Short Date
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Date]
+
+	/// Links to Accounts.
+	column AccountKey
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [AccountKey]
+
+	/// Links to Cost Centers.
+	column CostCenterKey
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [CostCenterKey]
+
+	/// Actual or Budget.
+	column Scenario
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Scenario]
+
+	/// Amount for the month, always positive.
+	column Amount
+		dataType: double
+		isDataTypeInferred
+		formatString: #,0
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Amount]
+
+	/// Amount with costs negative, so a sum gives profit.
+	column 'Signed Amount'
+		dataType: double
+		isDataTypeInferred
+		formatString: #,0
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Signed Amount]
+
+	partition 'General Ledger' = calculated
+		mode: import
+		source =
+			-- Monthly amounts by account and cost center, for Actual (start to end date) and Budget (every month of those years).
+			VAR start_date = DATE( 2023, 1, 1 )
+			VAR end_date = DATE( 2026, 9, 30 )
+			VAR seed = 2012
+			RETURN
+			    VAR _Rows =
+			        CROSSJOIN(
+			            SELECTCOLUMNS( GENERATESERIES( 0, ( ( ( YEAR( end_date ) - YEAR( start_date ) ) * 12 ) + 12 ) + -1, 1 ), "_m", [Value] ),
+			            SELECTCOLUMNS( GENERATESERIES( 1, 16, 1 ), "AccountKey", [Value] ),
+			            SELECTCOLUMNS( GENERATESERIES( 1, 8, 1 ), "CostCenterKey", [Value] ),
+			            SELECTCOLUMNS( GENERATESERIES( 1, 2, 1 ), "_s", [Value] )
+			        )
+			    VAR _Step1 =
+			        ADDCOLUMNS(
+			            _Rows,
+			            "Date", EOMONTH( DATE( YEAR( start_date ), 1, 1 ), [_m] ),
+			            "Scenario", IF( [_s] = 1, "Actual", "Budget" ),
+			            "_key", ( ( ( ( ( [_m] * 16 ) + [AccountKey] ) * 8 ) + [CostCenterKey] ) * 2 ) + [_s]
+			        )
+			    VAR _Step2 =
+			        FILTER( _Step1, ( [Scenario] = "Budget" ) || ( ( [Date] >= EOMONTH( start_date, 0 ) ) && ( [Date] <= EOMONTH( end_date, 0 ) ) ) )
+			    VAR _Step3 =
+			        ADDCOLUMNS(
+			            _Step2,
+			            "_base", ( SWITCH( [AccountKey] - 1, 0, 420000, 1, 160000, 2, 150000, 3, 90000, 4, 25000, 5, 120000, 6, 30000, 7, 22000, 8, 28000, 9, 9000, 10, 12000, 11, 6000, 12, 8000, 13, 10000, 14, 4000, 35000 ) * SWITCH( [CostCenterKey] - 1, 0, 0.1, 1, 0.16, 2, 0.14, 3, 0.15, 4, 0.13, 5, 0.14, 6, 0.1, 0.08 ) ) * ( 1 + ( ( 0.06 * [_m] ) / 12 ) ),
+			            "_season", IF( ( [AccountKey] = 8 ) || ( [AccountKey] = 14 ), 1, 1 + ( 0.12 * SIN( ( ( 2 * PI() ) * ( MONTH( [Date] ) - 3 ) ) / 12 ) ) )
+			        )
+			    VAR _Step4 =
+			        ADDCOLUMNS(
+			            _Step3,
+			            "Amount", ROUND( ( [_base] * [_season] ) * IF( [Scenario] = "Budget", 1.01 + ( MOD( SIN( [_key] * 12.9898 + 1 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 0.04 ), 0.88 + ( MOD( SIN( [_key] * 12.9898 + 2 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 0.24 ) ), 0 )
+			        )
+			    VAR _Step5 =
+			        ADDCOLUMNS(
+			            _Step4,
+			            "Signed Amount", [Amount] * SWITCH( [AccountKey] - 1, 0, 1, 1, 1, 2, -1, 3, -1, 4, -1, 5, -1, 6, -1, 7, -1, 8, -1, 9, -1, 10, -1, 11, -1, 12, -1, 13, -1, 14, -1, -1 )
+			        )
+			    RETURN
+			        SELECTCOLUMNS(
+			            _Step5,
+			            "Date", [Date],
+			            "AccountKey", [AccountKey],
+			            "CostCenterKey", [CostCenterKey],
+			            "Scenario", [Scenario],
+			            "Amount", [Amount],
+			            "Signed Amount", [Signed Amount]
+			        )
+

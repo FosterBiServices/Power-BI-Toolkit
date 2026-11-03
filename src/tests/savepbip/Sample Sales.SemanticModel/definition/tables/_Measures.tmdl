@@ -1,0 +1,1302 @@
+/// Every measure in the report, in a folder for each subject.
+table _Measures
+
+	/// Sales after discount.
+	measure 'Total Sales' = SUM( Sales[Sales Amount] )
+		formatString: $#,0
+		displayFolder: Sales
+
+	/// Cost of the units sold.
+	measure 'Total Cost' = SUM( Sales[Cost Amount] )
+		formatString: $#,0
+		displayFolder: Sales
+
+	/// Sales less cost.
+	measure 'Gross Margin' = [Total Sales] - [Total Cost]
+		formatString: $#,0
+		displayFolder: Sales
+
+	/// Gross margin as a share of sales.
+	measure 'Gross Margin %' = DIVIDE( [Gross Margin], [Total Sales] )
+		formatString: 0.0%
+		displayFolder: Sales
+
+	/// Number of orders.
+	measure 'Order Count' = DISTINCTCOUNT( Sales[Order Number] )
+		formatString: #,0
+		displayFolder: Sales
+
+	/// Sales per order.
+	measure 'Average Order Value' = DIVIDE( [Total Sales], [Order Count] )
+		formatString: $#,0.00
+		displayFolder: Sales
+
+	/// Units sold.
+	measure 'Units Sold' = SUM( Sales[Quantity] )
+		formatString: #,0
+		displayFolder: Sales
+
+	/// Customers who bought something.
+	measure 'Active Customers' = DISTINCTCOUNT( Sales[CustomerKey] )
+		formatString: #,0
+		displayFolder: Sales
+
+	/// Actual amount, with costs negative. With no account filter, this is net income.
+	measure Actual = CALCULATE( SUM( 'General Ledger'[Signed Amount] ), 'General Ledger'[Scenario] = "Actual" )
+		formatString: $#,0
+		displayFolder: Financial Statements
+
+	/// Budget amount, with costs negative.
+	measure Budget = CALCULATE( SUM( 'General Ledger'[Signed Amount] ), 'General Ledger'[Scenario] = "Budget" )
+		formatString: $#,0
+		displayFolder: Financial Statements
+
+	/// Actual less budget. Positive is better than budget.
+	measure Variance = [Actual] - [Budget]
+		formatString: +$#,0;-$#,0;$0
+		displayFolder: Financial Statements
+
+	/// Variance as a share of budget.
+	measure 'Variance %' = DIVIDE( [Variance], ABS( [Budget] ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: Financial Statements
+
+	/// Actual revenue.
+	measure Revenue = CALCULATE( [Actual], Accounts[Account Type] = "Revenue" )
+		formatString: $#,0
+		displayFolder: Financial Statements
+
+	/// Revenue less cost of sales.
+	measure 'Gross Profit' = CALCULATE( [Actual], Accounts[Account Type] IN { "Revenue", "Cost of sales" } )
+		formatString: $#,0
+		displayFolder: Financial Statements
+
+	/// Gross profit as a share of revenue.
+	measure 'GL Gross Margin %' = DIVIDE( [Gross Profit], [Revenue] )
+		formatString: 0.0%
+		displayFolder: Financial Statements
+
+	/// Actual operating expenses, as a positive number.
+	measure 'Operating Expenses' = -CALCULATE( [Actual], Accounts[Account Type] = "Operating expense" )
+		formatString: $#,0
+		displayFolder: Financial Statements
+
+	/// Revenue less every cost.
+	measure 'Net Income' = CALCULATE( [Actual], REMOVEFILTERS( Accounts ) )
+		formatString: $#,0
+		displayFolder: Financial Statements
+
+	/// Amount invoiced in the period.
+	measure Invoiced = SUM( Invoices[Amount] )
+		formatString: $#,0
+		displayFolder: Receivables
+
+	/// Average days from invoice to payment, for paid invoices.
+	measure 'Average Days to Pay' = AVERAGE( Invoices[Days to Pay] )
+		formatString: 0.0
+		displayFolder: Receivables
+
+	/// Paid invoices paid by their due date.
+	measure 'Paid On Time %' = DIVIDE( CALCULATE( COUNTROWS( Invoices ), Invoices[Paid Date] <= Invoices[Due Date], NOT ISBLANK( Invoices[Paid Date] ) ), CALCULATE( COUNTROWS( Invoices ), NOT ISBLANK( Invoices[Paid Date] ) ) )
+		formatString: 0.0%
+		displayFolder: Receivables
+
+	/// Quantity times list price, before discount.
+	measure 'Gross Sales' = SUMX( Sales, Sales[Quantity] * Sales[Unit Price] )
+		formatString: $#,0
+		displayFolder: Sales
+
+	/// Price given away as discounts.
+	measure 'Discount Amount' = [Gross Sales] - [Total Sales]
+		formatString: $#,0
+		displayFolder: Sales
+
+	/// Discounts as a share of gross sales.
+	measure 'Discount Rate' = DIVIDE( [Discount Amount], [Gross Sales] )
+		formatString: 0.0%
+		displayFolder: Sales
+
+	/// Sales per unit sold.
+	measure 'Average Selling Price' = DIVIDE( [Total Sales], [Units Sold] )
+		formatString: $#,0.00
+		displayFolder: Sales
+
+	/// Physical stores with sales in the period.
+	measure 'Store Count' = CALCULATE( DISTINCTCOUNT( Sales[StoreKey] ), Stores[Store Type] <> "Online" )
+		formatString: #,0
+		displayFolder: Sales
+
+	/// Average sales of a physical store.
+	measure 'Sales per Store' = DIVIDE( CALCULATE( [Total Sales], Stores[Store Type] <> "Online" ), [Store Count] )
+		formatString: $#,0
+		displayFolder: Sales
+
+	/// Share of the sales shown on the visual.
+	measure 'Sales Share' = DIVIDE( [Total Sales], CALCULATE( [Total Sales], ALLSELECTED() ) )
+		formatString: 0.0%
+		displayFolder: Sales
+
+	/// Products on an average order.
+	measure 'Lines per Order' = DIVIDE( COUNTROWS( Sales ), [Order Count] )
+		formatString: 0.00
+		displayFolder: Sales
+
+	/// Latest month with closed actuals in the General Ledger.
+	measure 'Last Actual Month' =
+			VAR _d = CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() )
+			RETURN
+			    FORMAT( _d, "mmmm yyyy" )
+		displayFolder: Financial Statements
+
+	/// Actual cost of sales, as a positive number.
+	measure 'Cost of Sales' = -CALCULATE( [Actual], Accounts[Account Type] = "Cost of sales" )
+		formatString: $#,0
+		displayFolder: Financial Statements
+
+	/// Gross profit less operating expenses.
+	measure 'Operating Income' = [Gross Profit] - [Operating Expenses]
+		formatString: $#,0
+		displayFolder: Financial Statements
+
+	/// Operating income as a share of revenue.
+	measure 'Operating Margin %' = DIVIDE( [Operating Income], [Revenue] )
+		formatString: 0.0%
+		displayFolder: Financial Statements
+
+	/// Depreciation expense, as a positive number.
+	measure Depreciation = -CALCULATE( [Actual], Accounts[Account] = "Depreciation" )
+		formatString: $#,0
+		displayFolder: Financial Statements
+
+	/// Operating income before depreciation.
+	measure EBITDA = [Operating Income] + [Depreciation]
+		formatString: $#,0
+		displayFolder: Financial Statements
+
+	/// EBITDA as a share of revenue.
+	measure 'EBITDA Margin %' = DIVIDE( [EBITDA], [Revenue] )
+		formatString: 0.0%
+		displayFolder: Financial Statements
+
+	/// Net income as a share of revenue.
+	measure 'Net Margin %' = DIVIDE( [Net Income], [Revenue] )
+		formatString: 0.0%
+		displayFolder: Financial Statements
+
+	/// Budgeted revenue.
+	measure 'Revenue Budget' = CALCULATE( [Budget], Accounts[Account Type] = "Revenue" )
+		formatString: $#,0
+		displayFolder: Budget
+
+	/// Actual revenue less budget, for months with actuals.
+	measure 'Revenue Variance' = [Revenue] - [Revenue Budget]
+		formatString: +$#,0;-$#,0;$0
+		displayFolder: Budget
+
+	/// Actual revenue as a share of the budget for the same closed months.
+	measure 'Budget Attainment %' =
+			VAR _last = CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() )
+			RETURN
+			    DIVIDE( [Revenue], CALCULATE( [Revenue Budget], KEEPFILTERS( 'Date'[Date] <= _last ) ) )
+		formatString: 0.0%
+		displayFolder: Budget
+
+	/// Budgeted net income.
+	measure 'Net Income Budget' = CALCULATE( [Budget], REMOVEFILTERS( Accounts ) )
+		formatString: $#,0
+		displayFolder: Budget
+
+	/// Budgeted operating expenses, as a positive number.
+	measure 'Operating Expenses Budget' = -CALCULATE( [Budget], Accounts[Account Type] = "Operating expense" )
+		formatString: $#,0
+		displayFolder: Budget
+
+	/// Revenue budget for the months that have closed actuals.
+	measure 'Revenue Budget to Date' =
+			VAR _last = CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() )
+			RETURN
+			    CALCULATE( [Revenue Budget], KEEPFILTERS( 'Date'[Date] <= _last ) )
+		formatString: $#,0
+		displayFolder: Budget
+
+	/// Net income budget for the months that have closed actuals.
+	measure 'Net Income Budget to Date' =
+			VAR _last = CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() )
+			RETURN
+			    CALCULATE( [Net Income Budget], KEEPFILTERS( 'Date'[Date] <= _last ) )
+		formatString: $#,0
+		displayFolder: Budget
+
+	/// Operating income budget for the months that have closed actuals.
+	measure 'Operating Income Budget to Date' =
+			VAR _last = CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() )
+			RETURN
+			    CALCULATE( [Budget], Accounts[Account Type] IN { "Revenue", "Cost of sales", "Operating expense" }, KEEPFILTERS( 'Date'[Date] <= _last ) )
+		formatString: $#,0
+		displayFolder: Budget
+
+	/// Operating expense budget for the months that have closed actuals.
+	measure 'Operating Expenses Budget to Date' =
+			VAR _last = CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() )
+			RETURN
+			    CALCULATE( [Operating Expenses Budget], KEEPFILTERS( 'Date'[Date] <= _last ) )
+		formatString: $#,0
+		displayFolder: Budget
+
+	/// Budget less actual operating expenses for closed months. Positive means spending under budget.
+	measure 'Operating Expenses Variance to Date' = [Operating Expenses Budget to Date] - [Operating Expenses]
+		formatString: +$#,0;-$#,0;$0
+		displayFolder: Budget
+
+	/// Operating expenses as a share of revenue.
+	measure 'Operating Expenses % of Revenue' = DIVIDE( [Operating Expenses], [Revenue] )
+		formatString: 0.0%
+		displayFolder: Financial Statements
+
+	/// Budget for the months that have closed actuals, so it compares with Actual.
+	measure 'Budget to Date' =
+			VAR _last = CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() )
+			RETURN
+			    CALCULATE( [Budget], KEEPFILTERS( 'Date'[Date] <= _last ) )
+		formatString: $#,0
+		displayFolder: Budget
+
+	/// Actual less budget for closed months. Positive is better than budget.
+	measure 'Variance to Date' = [Actual] - [Budget to Date]
+		formatString: +#,0;-#,0;0
+		displayFolder: Budget
+
+	/// Variance to date as a share of budget.
+	measure 'Variance to Date %' = DIVIDE( [Variance to Date], ABS( [Budget to Date] ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: Budget
+
+	/// Actuals for closed months plus budget for the months still to come.
+	measure 'Full Year Forecast' =
+			VAR _last = CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() )
+			RETURN
+			    CALCULATE( [Actual], KEEPFILTERS( 'Date'[Date] <= _last ) )
+			        + CALCULATE( [Budget], KEEPFILTERS( 'Date'[Date] > _last ) )
+		formatString: $#,0
+		displayFolder: Budget
+
+	/// Invoiced and not yet paid on the last day of the period (capped at the last closed month).
+	measure 'Open Receivables' =
+			VAR _last = CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() )
+			VAR _Day = MIN( MAX( 'Date'[Date] ), _last )
+			RETURN
+			    IF(
+			        MIN( 'Date'[Date] ) <= _last,
+			        CALCULATE(
+			            SUM( Invoices[Amount] ),
+			            Invoices[Invoice Date] <= _Day,
+			            ISBLANK( Invoices[Paid Date] ) || Invoices[Paid Date] > _Day,
+			            REMOVEFILTERS( 'Date' )
+			        )
+			    )
+		formatString: $#,0
+		displayFolder: Receivables
+
+	/// Open receivables past their due date on the last day of the period.
+	measure 'Overdue Receivables' =
+			VAR _last = CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() )
+			VAR _Day = MIN( MAX( 'Date'[Date] ), _last )
+			RETURN
+			    IF(
+			        MIN( 'Date'[Date] ) <= _last,
+			        CALCULATE(
+			            SUM( Invoices[Amount] ),
+			            Invoices[Invoice Date] <= _Day,
+			            Invoices[Due Date] < _Day,
+			            ISBLANK( Invoices[Paid Date] ) || Invoices[Paid Date] > _Day,
+			            REMOVEFILTERS( 'Date' )
+			        )
+			    )
+		formatString: $#,0
+		displayFolder: Receivables
+
+	/// Share of open receivables that is past due.
+	measure 'Overdue %' = DIVIDE( [Overdue Receivables], [Open Receivables] )
+		formatString: 0.0%
+		displayFolder: Receivables
+
+	/// Days sales outstanding: open receivables over the last 90 days of invoicing, times 90.
+	measure DSO =
+			VAR _Day = MIN( MAX( 'Date'[Date] ), CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() ) )
+			VAR _Billed = CALCULATE( SUM( Invoices[Amount] ), DATESINPERIOD( 'Date'[Date], _Day, -90, DAY ) )
+			RETURN
+			    DIVIDE( [Open Receivables], _Billed ) * 90
+		formatString: 0.0
+		displayFolder: Receivables
+
+	/// Invoices past due and unpaid on the last day of the period.
+	measure 'Overdue Invoices' =
+			VAR _Day = MIN( MAX( 'Date'[Date] ), CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() ) )
+			RETURN
+			    CALCULATE(
+			        COUNTROWS( Invoices ),
+			        Invoices[Invoice Date] <= _Day,
+			        Invoices[Due Date] < _Day,
+			        ISBLANK( Invoices[Paid Date] ) || Invoices[Paid Date] > _Day,
+			        REMOVEFILTERS( 'Date' )
+			    )
+		formatString: #,0
+		displayFolder: Receivables
+
+	/// Open receivables by days past due, for the aging buckets.
+	measure 'Aged Receivables' =
+			VAR _Day = MIN( MAX( 'Date'[Date] ), CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() ) )
+			VAR _Lo = SELECTEDVALUE( 'Aging Buckets'[From Days], 0 )
+			VAR _Hi = SELECTEDVALUE( 'Aging Buckets'[To Days], 100000 )
+			RETURN
+			    IF(
+			        HASONEVALUE( 'Aging Buckets'[Bucket] ),
+			        CALCULATE(
+			            SUM( Invoices[Amount] ),
+			            Invoices[Invoice Date] <= _Day,
+			            ISBLANK( Invoices[Paid Date] ) || Invoices[Paid Date] > _Day,
+			            _Day - Invoices[Due Date] >= _Lo,
+			            _Day - Invoices[Due Date] <= _Hi,
+			            REMOVEFILTERS( 'Date' )
+			        ),
+			        [Open Receivables]
+			    )
+		formatString: $#,0
+		displayFolder: Receivables
+
+	/// Title for the page header.
+	measure 'Report Title' = "Foster Golf Co. · Financial Performance"
+		displayFolder: Report
+
+	/// Shows which month the actuals run to.
+	measure 'As Of Label' = "Actuals through " & [Last Actual Month] & "  ·  Budget FY" & YEAR( CALCULATE( MAX( 'General Ledger'[Date] ), 'General Ledger'[Scenario] = "Actual", REMOVEFILTERS() ) )
+		displayFolder: Report
+
+
+	measure 'Total Sales YTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [Total Sales], DATESYTD ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Total Sales PYC' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [Total Sales], PREVIOUSYEAR ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Total Sales PYTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					IF (
+						LastVisibleDate = EOMONTH ( LastVisibleDate, 0 ),
+						CALCULATE (
+							CALCULATE ( [Total Sales], DATESYTD ( 'Date'[Date] ) ),
+							'Date'[Date] = EOMONTH ( LastVisibleDate, -12 )
+						),
+						CALCULATE (
+							CALCULATE (
+								CALCULATE ( [Total Sales], DATESYTD ( 'Date'[Date] ) ),
+								CALCULATETABLE (
+									DATEADD ( 'Date'[Date], -1, YEAR ),
+									'Date'[DateWithSales] = TRUE
+								)
+							),
+							'Date'[Date] = LastVisibleDate
+						)
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Gross Margin YTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [Gross Margin], DATESYTD ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Gross Margin PYC' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [Gross Margin], PREVIOUSYEAR ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Gross Margin PYTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					IF (
+						LastVisibleDate = EOMONTH ( LastVisibleDate, 0 ),
+						CALCULATE (
+							CALCULATE ( [Gross Margin], DATESYTD ( 'Date'[Date] ) ),
+							'Date'[Date] = EOMONTH ( LastVisibleDate, -12 )
+						),
+						CALCULATE (
+							CALCULATE (
+								CALCULATE ( [Gross Margin], DATESYTD ( 'Date'[Date] ) ),
+								CALCULATETABLE (
+									DATEADD ( 'Date'[Date], -1, YEAR ),
+									'Date'[DateWithSales] = TRUE
+								)
+							),
+							'Date'[Date] = LastVisibleDate
+						)
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Order Count YTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [Order Count], DATESYTD ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: #,0
+		displayFolder: Time Intelligence
+
+	measure 'Order Count PYC' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [Order Count], PREVIOUSYEAR ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: #,0
+		displayFolder: Time Intelligence
+
+	measure 'Order Count PYTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					IF (
+						LastVisibleDate = EOMONTH ( LastVisibleDate, 0 ),
+						CALCULATE (
+							CALCULATE ( [Order Count], DATESYTD ( 'Date'[Date] ) ),
+							'Date'[Date] = EOMONTH ( LastVisibleDate, -12 )
+						),
+						CALCULATE (
+							CALCULATE (
+								CALCULATE ( [Order Count], DATESYTD ( 'Date'[Date] ) ),
+								CALCULATETABLE (
+									DATEADD ( 'Date'[Date], -1, YEAR ),
+									'Date'[DateWithSales] = TRUE
+								)
+							),
+							'Date'[Date] = LastVisibleDate
+						)
+					)
+				)
+			RETURN
+				Result
+		formatString: #,0
+		displayFolder: Time Intelligence
+
+	measure 'Revenue YTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [Revenue], DATESYTD ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Revenue PYC' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [Revenue], PREVIOUSYEAR ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Revenue PYTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					IF (
+						LastVisibleDate = EOMONTH ( LastVisibleDate, 0 ),
+						CALCULATE (
+							CALCULATE ( [Revenue], DATESYTD ( 'Date'[Date] ) ),
+							'Date'[Date] = EOMONTH ( LastVisibleDate, -12 )
+						),
+						CALCULATE (
+							CALCULATE (
+								CALCULATE ( [Revenue], DATESYTD ( 'Date'[Date] ) ),
+								CALCULATETABLE (
+									DATEADD ( 'Date'[Date], -1, YEAR ),
+									'Date'[DateWithSales] = TRUE
+								)
+							),
+							'Date'[Date] = LastVisibleDate
+						)
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Net Income YTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [Net Income], DATESYTD ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Net Income PYC' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [Net Income], PREVIOUSYEAR ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Net Income PYTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					IF (
+						LastVisibleDate = EOMONTH ( LastVisibleDate, 0 ),
+						CALCULATE (
+							CALCULATE ( [Net Income], DATESYTD ( 'Date'[Date] ) ),
+							'Date'[Date] = EOMONTH ( LastVisibleDate, -12 )
+						),
+						CALCULATE (
+							CALCULATE (
+								CALCULATE ( [Net Income], DATESYTD ( 'Date'[Date] ) ),
+								CALCULATETABLE (
+									DATEADD ( 'Date'[Date], -1, YEAR ),
+									'Date'[DateWithSales] = TRUE
+								)
+							),
+							'Date'[Date] = LastVisibleDate
+						)
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Operating Income YTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [Operating Income], DATESYTD ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Operating Income PYC' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [Operating Income], PREVIOUSYEAR ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Operating Income PYTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					IF (
+						LastVisibleDate = EOMONTH ( LastVisibleDate, 0 ),
+						CALCULATE (
+							CALCULATE ( [Operating Income], DATESYTD ( 'Date'[Date] ) ),
+							'Date'[Date] = EOMONTH ( LastVisibleDate, -12 )
+						),
+						CALCULATE (
+							CALCULATE (
+								CALCULATE ( [Operating Income], DATESYTD ( 'Date'[Date] ) ),
+								CALCULATETABLE (
+									DATEADD ( 'Date'[Date], -1, YEAR ),
+									'Date'[DateWithSales] = TRUE
+								)
+							),
+							'Date'[Date] = LastVisibleDate
+						)
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'EBITDA YTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [EBITDA], DATESYTD ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'EBITDA PYC' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					CALCULATE (
+						CALCULATE ( [EBITDA], PREVIOUSYEAR ( 'Date'[Date] ) ),
+						'Date'[Date] = LastVisibleDate
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'EBITDA PYTD' =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR LastVisibleDate = MIN ( MAX ( 'Date'[Date] ), LastDateWithData )
+			VAR Result =
+				IF (
+					[ShowValueForDates],
+					IF (
+						LastVisibleDate = EOMONTH ( LastVisibleDate, 0 ),
+						CALCULATE (
+							CALCULATE ( [EBITDA], DATESYTD ( 'Date'[Date] ) ),
+							'Date'[Date] = EOMONTH ( LastVisibleDate, -12 )
+						),
+						CALCULATE (
+							CALCULATE (
+								CALCULATE ( [EBITDA], DATESYTD ( 'Date'[Date] ) ),
+								CALCULATETABLE (
+									DATEADD ( 'Date'[Date], -1, YEAR ),
+									'Date'[DateWithSales] = TRUE
+								)
+							),
+							'Date'[Date] = LastVisibleDate
+						)
+					)
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Total Sales YOYTD' =
+			VAR ValueCurrentPeriod = [Total Sales YTD]
+			VAR ValuePreviousPeriod = [Total Sales PYTD]
+			VAR Result =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Total Sales YOYTD %' =
+			VAR ValueCurrentPeriod = [Total Sales YTD]
+			VAR ValuePreviousPeriod = [Total Sales PYTD]
+			VAR Growth =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			VAR Result = DIVIDE ( Growth, ValuePreviousPeriod )
+			RETURN
+				Result
+		formatString: 0.0%
+		displayFolder: Time Intelligence
+
+	measure 'Gross Margin YOYTD' =
+			VAR ValueCurrentPeriod = [Gross Margin YTD]
+			VAR ValuePreviousPeriod = [Gross Margin PYTD]
+			VAR Result =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Gross Margin YOYTD %' =
+			VAR ValueCurrentPeriod = [Gross Margin YTD]
+			VAR ValuePreviousPeriod = [Gross Margin PYTD]
+			VAR Growth =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			VAR Result = DIVIDE ( Growth, ValuePreviousPeriod )
+			RETURN
+				Result
+		formatString: 0.0%
+		displayFolder: Time Intelligence
+
+	measure 'Order Count YOYTD' =
+			VAR ValueCurrentPeriod = [Order Count YTD]
+			VAR ValuePreviousPeriod = [Order Count PYTD]
+			VAR Result =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			RETURN
+				Result
+		formatString: #,0
+		displayFolder: Time Intelligence
+
+	measure 'Order Count YOYTD %' =
+			VAR ValueCurrentPeriod = [Order Count YTD]
+			VAR ValuePreviousPeriod = [Order Count PYTD]
+			VAR Growth =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			VAR Result = DIVIDE ( Growth, ValuePreviousPeriod )
+			RETURN
+				Result
+		formatString: 0.0%
+		displayFolder: Time Intelligence
+
+	measure 'Revenue YOYTD' =
+			VAR ValueCurrentPeriod = [Revenue YTD]
+			VAR ValuePreviousPeriod = [Revenue PYTD]
+			VAR Result =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Revenue YOYTD %' =
+			VAR ValueCurrentPeriod = [Revenue YTD]
+			VAR ValuePreviousPeriod = [Revenue PYTD]
+			VAR Growth =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			VAR Result = DIVIDE ( Growth, ValuePreviousPeriod )
+			RETURN
+				Result
+		formatString: 0.0%
+		displayFolder: Time Intelligence
+
+	measure 'Net Income YOYTD' =
+			VAR ValueCurrentPeriod = [Net Income YTD]
+			VAR ValuePreviousPeriod = [Net Income PYTD]
+			VAR Result =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Net Income YOYTD %' =
+			VAR ValueCurrentPeriod = [Net Income YTD]
+			VAR ValuePreviousPeriod = [Net Income PYTD]
+			VAR Growth =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			VAR Result = DIVIDE ( Growth, ValuePreviousPeriod )
+			RETURN
+				Result
+		formatString: 0.0%
+		displayFolder: Time Intelligence
+
+	measure 'Operating Income YOYTD' =
+			VAR ValueCurrentPeriod = [Operating Income YTD]
+			VAR ValuePreviousPeriod = [Operating Income PYTD]
+			VAR Result =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'Operating Income YOYTD %' =
+			VAR ValueCurrentPeriod = [Operating Income YTD]
+			VAR ValuePreviousPeriod = [Operating Income PYTD]
+			VAR Growth =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			VAR Result = DIVIDE ( Growth, ValuePreviousPeriod )
+			RETURN
+				Result
+		formatString: 0.0%
+		displayFolder: Time Intelligence
+
+	measure 'EBITDA YOYTD' =
+			VAR ValueCurrentPeriod = [EBITDA YTD]
+			VAR ValuePreviousPeriod = [EBITDA PYTD]
+			VAR Result =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			RETURN
+				Result
+		formatString: $#,0
+		displayFolder: Time Intelligence
+
+	measure 'EBITDA YOYTD %' =
+			VAR ValueCurrentPeriod = [EBITDA YTD]
+			VAR ValuePreviousPeriod = [EBITDA PYTD]
+			VAR Growth =
+				IF (
+					NOT ISBLANK ( ValueCurrentPeriod ) && NOT ISBLANK ( ValuePreviousPeriod ),
+					ValueCurrentPeriod - ValuePreviousPeriod
+				)
+			VAR Result = DIVIDE ( Growth, ValuePreviousPeriod )
+			RETURN
+				Result
+		formatString: 0.0%
+		displayFolder: Time Intelligence
+
+
+	/// How far Revenue is from its target, as a % of it.
+	measure 'Revenue Var %' =
+			VAR _Value = [Revenue]
+			VAR _Base = [Revenue Budget to Date]
+			RETURN
+				IF ( NOT ISBLANK ( _Value ) && NOT ISBLANK ( _Base ) && _Base <> 0, DIVIDE ( _Value - _Base, ABS ( _Base ) ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: KPI Visuals\Revenue
+
+	/// Good, Neutral or Bad. Within 2% counts as Neutral; higher is better.
+	measure 'Revenue Status' =
+			VAR _Var = [Revenue Var %]
+			VAR _Score = _Var
+			RETURN
+				SWITCH (
+					TRUE (),
+					ISBLANK ( _Var ), BLANK (),
+					_Score >= 0.02 && _Score > 0, "Good",
+					_Score <= -0.02 && _Score < 0, "Bad",
+					"Neutral"
+				)
+		displayFolder: KPI Visuals\Revenue
+
+	/// Text color for the status (conditional formatting: Field value).
+	measure 'Revenue Status Color' =
+			SWITCH (
+				[Revenue Status],
+				"Good", "#006100",
+				"Neutral", "#894D00",
+				"Bad", "#9C0006"
+			)
+		displayFolder: KPI Visuals\Revenue
+
+	/// An arrow and the % vs target, for a card reference label or a table column.
+	measure 'Revenue Status Label' =
+			VAR _Var = [Revenue Var %]
+			VAR _Arrow =
+				SWITCH ( TRUE (), _Var > 0, UNICHAR ( 9650 ), _Var < 0, UNICHAR ( 9660 ), UNICHAR ( 9658 ) )
+			RETURN
+				IF ( NOT ISBLANK ( _Var ), _Arrow & " " & FORMAT ( _Var, "+0.0%;-0.0%;0.0%" ) & " vs target" )
+		displayFolder: KPI Visuals\Revenue
+
+	/// The last 12 periods of Revenue by 'Date'[Month Start], with the last point in status color. Image size 120 x 32.
+	measure 'Revenue Sparkline' =
+			VAR _Data =
+				TOPN (
+					12,
+					FILTER ( ADDCOLUMNS ( VALUES ( 'Date'[Month Start] ), "@v", [Revenue] ), NOT ISBLANK ( [@v] ) ),
+					'Date'[Month Start], DESC
+				)
+			VAR _N = COUNTROWS ( _Data )
+			VAR _Lo = MINX ( _Data, [@v] )
+			VAR _Hi = MAXX ( _Data, [@v] )
+			VAR _Range = IF ( _Hi = _Lo, 1, _Hi - _Lo )
+			VAR _Pts = ADDCOLUMNS ( _Data, "@x", RANKX ( _Data, 'Date'[Month Start], , ASC ) )
+			VAR _Line =
+				CONCATENATEX (
+					_Pts,
+					FORMAT ( 2 + ( [@x] - 1 ) * 116 / MAX ( _N - 1, 1 ), "0.0", "en-US" ) & "," & FORMAT ( 29 - ( [@v] - _Lo ) * 26 / _Range, "0.0", "en-US" ),
+					" ",
+					[@x], ASC
+				)
+			VAR _LastV = MAXX ( FILTER ( _Pts, [@x] = _N ), [@v] )
+			VAR _LastY = 29 - ( _LastV - _Lo ) * 26 / _Range
+			VAR _Color = COALESCE ( [Revenue Status Color], "#01305C" )
+			VAR _Svg =
+				"<svg xmlns='http://www.w3.org/2000/svg' width='120' height='32' viewBox='0 0 120 32'>"
+					& "<polyline points='" & _Line & "' fill='none' stroke='#C5C5C5' stroke-width='1.5' stroke-linejoin='round'/>"
+					& "<circle cx='118' cy='" & FORMAT ( _LastY, "0.0", "en-US" ) & "' r='2.5' fill='" & _Color & "'/>"
+					& "</svg>"
+			RETURN
+				IF ( _N >= 2, "data:image/svg+xml;utf8," & SUBSTITUTE ( _Svg, "#", "%23" ) )
+		dataCategory: ImageUrl
+		displayFolder: KPI Visuals\Revenue
+
+	/// How far Operating Income is from its target, as a % of it.
+	measure 'Operating Income Var %' =
+			VAR _Value = [Operating Income]
+			VAR _Base = [Operating Income Budget to Date]
+			RETURN
+				IF ( NOT ISBLANK ( _Value ) && NOT ISBLANK ( _Base ) && _Base <> 0, DIVIDE ( _Value - _Base, ABS ( _Base ) ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: KPI Visuals\Operating Income
+
+	/// Good, Neutral or Bad. Within 2% counts as Neutral; higher is better.
+	measure 'Operating Income Status' =
+			VAR _Var = [Operating Income Var %]
+			VAR _Score = _Var
+			RETURN
+				SWITCH (
+					TRUE (),
+					ISBLANK ( _Var ), BLANK (),
+					_Score >= 0.02 && _Score > 0, "Good",
+					_Score <= -0.02 && _Score < 0, "Bad",
+					"Neutral"
+				)
+		displayFolder: KPI Visuals\Operating Income
+
+	/// Text color for the status (conditional formatting: Field value).
+	measure 'Operating Income Status Color' =
+			SWITCH (
+				[Operating Income Status],
+				"Good", "#006100",
+				"Neutral", "#894D00",
+				"Bad", "#9C0006"
+			)
+		displayFolder: KPI Visuals\Operating Income
+
+	/// An arrow and the % vs target, for a card reference label or a table column.
+	measure 'Operating Income Status Label' =
+			VAR _Var = [Operating Income Var %]
+			VAR _Arrow =
+				SWITCH ( TRUE (), _Var > 0, UNICHAR ( 9650 ), _Var < 0, UNICHAR ( 9660 ), UNICHAR ( 9658 ) )
+			RETURN
+				IF ( NOT ISBLANK ( _Var ), _Arrow & " " & FORMAT ( _Var, "+0.0%;-0.0%;0.0%" ) & " vs target" )
+		displayFolder: KPI Visuals\Operating Income
+
+	/// The last 12 periods of Operating Income by 'Date'[Month Start], with the last point in status color. Image size 120 x 32.
+	measure 'Operating Income Sparkline' =
+			VAR _Data =
+				TOPN (
+					12,
+					FILTER ( ADDCOLUMNS ( VALUES ( 'Date'[Month Start] ), "@v", [Operating Income] ), NOT ISBLANK ( [@v] ) ),
+					'Date'[Month Start], DESC
+				)
+			VAR _N = COUNTROWS ( _Data )
+			VAR _Lo = MINX ( _Data, [@v] )
+			VAR _Hi = MAXX ( _Data, [@v] )
+			VAR _Range = IF ( _Hi = _Lo, 1, _Hi - _Lo )
+			VAR _Pts = ADDCOLUMNS ( _Data, "@x", RANKX ( _Data, 'Date'[Month Start], , ASC ) )
+			VAR _Line =
+				CONCATENATEX (
+					_Pts,
+					FORMAT ( 2 + ( [@x] - 1 ) * 116 / MAX ( _N - 1, 1 ), "0.0", "en-US" ) & "," & FORMAT ( 29 - ( [@v] - _Lo ) * 26 / _Range, "0.0", "en-US" ),
+					" ",
+					[@x], ASC
+				)
+			VAR _LastV = MAXX ( FILTER ( _Pts, [@x] = _N ), [@v] )
+			VAR _LastY = 29 - ( _LastV - _Lo ) * 26 / _Range
+			VAR _Color = COALESCE ( [Operating Income Status Color], "#01305C" )
+			VAR _Svg =
+				"<svg xmlns='http://www.w3.org/2000/svg' width='120' height='32' viewBox='0 0 120 32'>"
+					& "<polyline points='" & _Line & "' fill='none' stroke='#C5C5C5' stroke-width='1.5' stroke-linejoin='round'/>"
+					& "<circle cx='118' cy='" & FORMAT ( _LastY, "0.0", "en-US" ) & "' r='2.5' fill='" & _Color & "'/>"
+					& "</svg>"
+			RETURN
+				IF ( _N >= 2, "data:image/svg+xml;utf8," & SUBSTITUTE ( _Svg, "#", "%23" ) )
+		dataCategory: ImageUrl
+		displayFolder: KPI Visuals\Operating Income
+
+	/// How far Net Income is from its target, as a % of it.
+	measure 'Net Income Var %' =
+			VAR _Value = [Net Income]
+			VAR _Base = [Net Income Budget to Date]
+			RETURN
+				IF ( NOT ISBLANK ( _Value ) && NOT ISBLANK ( _Base ) && _Base <> 0, DIVIDE ( _Value - _Base, ABS ( _Base ) ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: KPI Visuals\Net Income
+
+	/// Good, Neutral or Bad. Within 2% counts as Neutral; higher is better.
+	measure 'Net Income Status' =
+			VAR _Var = [Net Income Var %]
+			VAR _Score = _Var
+			RETURN
+				SWITCH (
+					TRUE (),
+					ISBLANK ( _Var ), BLANK (),
+					_Score >= 0.02 && _Score > 0, "Good",
+					_Score <= -0.02 && _Score < 0, "Bad",
+					"Neutral"
+				)
+		displayFolder: KPI Visuals\Net Income
+
+	/// Text color for the status (conditional formatting: Field value).
+	measure 'Net Income Status Color' =
+			SWITCH (
+				[Net Income Status],
+				"Good", "#006100",
+				"Neutral", "#894D00",
+				"Bad", "#9C0006"
+			)
+		displayFolder: KPI Visuals\Net Income
+
+	/// An arrow and the % vs target, for a card reference label or a table column.
+	measure 'Net Income Status Label' =
+			VAR _Var = [Net Income Var %]
+			VAR _Arrow =
+				SWITCH ( TRUE (), _Var > 0, UNICHAR ( 9650 ), _Var < 0, UNICHAR ( 9660 ), UNICHAR ( 9658 ) )
+			RETURN
+				IF ( NOT ISBLANK ( _Var ), _Arrow & " " & FORMAT ( _Var, "+0.0%;-0.0%;0.0%" ) & " vs target" )
+		displayFolder: KPI Visuals\Net Income
+
+	/// The last 12 periods of Net Income by 'Date'[Month Start], with the last point in status color. Image size 120 x 32.
+	measure 'Net Income Sparkline' =
+			VAR _Data =
+				TOPN (
+					12,
+					FILTER ( ADDCOLUMNS ( VALUES ( 'Date'[Month Start] ), "@v", [Net Income] ), NOT ISBLANK ( [@v] ) ),
+					'Date'[Month Start], DESC
+				)
+			VAR _N = COUNTROWS ( _Data )
+			VAR _Lo = MINX ( _Data, [@v] )
+			VAR _Hi = MAXX ( _Data, [@v] )
+			VAR _Range = IF ( _Hi = _Lo, 1, _Hi - _Lo )
+			VAR _Pts = ADDCOLUMNS ( _Data, "@x", RANKX ( _Data, 'Date'[Month Start], , ASC ) )
+			VAR _Line =
+				CONCATENATEX (
+					_Pts,
+					FORMAT ( 2 + ( [@x] - 1 ) * 116 / MAX ( _N - 1, 1 ), "0.0", "en-US" ) & "," & FORMAT ( 29 - ( [@v] - _Lo ) * 26 / _Range, "0.0", "en-US" ),
+					" ",
+					[@x], ASC
+				)
+			VAR _LastV = MAXX ( FILTER ( _Pts, [@x] = _N ), [@v] )
+			VAR _LastY = 29 - ( _LastV - _Lo ) * 26 / _Range
+			VAR _Color = COALESCE ( [Net Income Status Color], "#01305C" )
+			VAR _Svg =
+				"<svg xmlns='http://www.w3.org/2000/svg' width='120' height='32' viewBox='0 0 120 32'>"
+					& "<polyline points='" & _Line & "' fill='none' stroke='#C5C5C5' stroke-width='1.5' stroke-linejoin='round'/>"
+					& "<circle cx='118' cy='" & FORMAT ( _LastY, "0.0", "en-US" ) & "' r='2.5' fill='" & _Color & "'/>"
+					& "</svg>"
+			RETURN
+				IF ( _N >= 2, "data:image/svg+xml;utf8," & SUBSTITUTE ( _Svg, "#", "%23" ) )
+		dataCategory: ImageUrl
+		displayFolder: KPI Visuals\Net Income
+
+	/// How far Retail Sales YTD is from last year, as a % of it.
+	measure 'Retail Sales YTD Var %' =
+			VAR _Value = [Total Sales YTD]
+			VAR _Base = [Total Sales PYTD]
+			RETURN
+				IF ( NOT ISBLANK ( _Value ) && NOT ISBLANK ( _Base ) && _Base <> 0, DIVIDE ( _Value - _Base, ABS ( _Base ) ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: KPI Visuals\Retail Sales YTD
+
+	/// Good, Neutral or Bad. Within 2% counts as Neutral; higher is better.
+	measure 'Retail Sales YTD Status' =
+			VAR _Var = [Retail Sales YTD Var %]
+			VAR _Score = _Var
+			RETURN
+				SWITCH (
+					TRUE (),
+					ISBLANK ( _Var ), BLANK (),
+					_Score >= 0.02 && _Score > 0, "Good",
+					_Score <= -0.02 && _Score < 0, "Bad",
+					"Neutral"
+				)
+		displayFolder: KPI Visuals\Retail Sales YTD
+
+	/// Text color for the status (conditional formatting: Field value).
+	measure 'Retail Sales YTD Status Color' =
+			SWITCH (
+				[Retail Sales YTD Status],
+				"Good", "#006100",
+				"Neutral", "#894D00",
+				"Bad", "#9C0006"
+			)
+		displayFolder: KPI Visuals\Retail Sales YTD
+
+	/// An arrow and the % vs last year, for a card reference label or a table column.
+	measure 'Retail Sales YTD Status Label' =
+			VAR _Var = [Retail Sales YTD Var %]
+			VAR _Arrow =
+				SWITCH ( TRUE (), _Var > 0, UNICHAR ( 9650 ), _Var < 0, UNICHAR ( 9660 ), UNICHAR ( 9658 ) )
+			RETURN
+				IF ( NOT ISBLANK ( _Var ), _Arrow & " " & FORMAT ( _Var, "+0.0%;-0.0%;0.0%" ) & " vs last year" )
+		displayFolder: KPI Visuals\Retail Sales YTD
+
+	/// The last 12 periods of Retail Sales YTD by 'Date'[Month Start], with the last point in status color. Image size 120 x 32.
+	measure 'Retail Sales YTD Sparkline' =
+			VAR _Data =
+				TOPN (
+					12,
+					FILTER ( ADDCOLUMNS ( VALUES ( 'Date'[Month Start] ), "@v", [Total Sales YTD] ), NOT ISBLANK ( [@v] ) ),
+					'Date'[Month Start], DESC
+				)
+			VAR _N = COUNTROWS ( _Data )
+			VAR _Lo = MINX ( _Data, [@v] )
+			VAR _Hi = MAXX ( _Data, [@v] )
+			VAR _Range = IF ( _Hi = _Lo, 1, _Hi - _Lo )
+			VAR _Pts = ADDCOLUMNS ( _Data, "@x", RANKX ( _Data, 'Date'[Month Start], , ASC ) )
+			VAR _Line =
+				CONCATENATEX (
+					_Pts,
+					FORMAT ( 2 + ( [@x] - 1 ) * 116 / MAX ( _N - 1, 1 ), "0.0", "en-US" ) & "," & FORMAT ( 29 - ( [@v] - _Lo ) * 26 / _Range, "0.0", "en-US" ),
+					" ",
+					[@x], ASC
+				)
+			VAR _LastV = MAXX ( FILTER ( _Pts, [@x] = _N ), [@v] )
+			VAR _LastY = 29 - ( _LastV - _Lo ) * 26 / _Range
+			VAR _Color = COALESCE ( [Retail Sales YTD Status Color], "#01305C" )
+			VAR _Svg =
+				"<svg xmlns='http://www.w3.org/2000/svg' width='120' height='32' viewBox='0 0 120 32'>"
+					& "<polyline points='" & _Line & "' fill='none' stroke='#C5C5C5' stroke-width='1.5' stroke-linejoin='round'/>"
+					& "<circle cx='118' cy='" & FORMAT ( _LastY, "0.0", "en-US" ) & "' r='2.5' fill='" & _Color & "'/>"
+					& "</svg>"
+			RETURN
+				IF ( _N >= 2, "data:image/svg+xml;utf8," & SUBSTITUTE ( _Svg, "#", "%23" ) )
+		dataCategory: ImageUrl
+		displayFolder: KPI Visuals\Retail Sales YTD
+
+	column Value
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: [Value]
+
+	partition _Measures = calculated
+		mode: import
+		source = { 1 }
+

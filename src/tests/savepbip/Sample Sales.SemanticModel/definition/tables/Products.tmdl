@@ -1,0 +1,81 @@
+/// Products with category, list price and unit cost.
+table Products
+
+	/// Key that links to Sales.
+	column ProductKey
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [ProductKey]
+
+	/// Product name.
+	column Product
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Product]
+
+	/// Electronics, Home, Outdoor or Apparel.
+	column Category
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Category]
+
+	/// Price before discount.
+	column 'List Price'
+		dataType: double
+		isDataTypeInferred
+		formatString: #,0.00
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [List Price]
+
+	/// What one unit costs.
+	column 'Unit Cost'
+		dataType: double
+		isDataTypeInferred
+		formatString: #,0.00
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Unit Cost]
+
+	partition Products = calculated
+		mode: import
+		source =
+			-- Products with category, list price and unit cost.
+			VAR num_products = 192
+			VAR seed = 2012
+			RETURN
+			    VAR _Rows =
+			        SELECTCOLUMNS( GENERATESERIES( 1, num_products, 1 ), "_k", [Value] )
+			    VAR _Step1 =
+			        ADDCOLUMNS(
+			            _Rows,
+			            "ProductKey", [_k],
+			            "_n", MOD( ( [_k] - 1 ) + seed, 16 ),
+			            "_a", MOD( INT( ( [_k] - 1 ) / 16 ) + seed, 12 ),
+			            "List Price", ROUND( SWITCH( INT( MOD( ( [_k] - 1 ) + seed, 16 ) / 4 ), 0, 120, 1, 45, 2, 80, 60 ) * ( 0.6 + ( MOD( SIN( [_k] * 12.9898 + 12 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 1.4 ) ), 2 ),
+			            "Unit Cost", ROUND( ROUND( SWITCH( INT( MOD( ( [_k] - 1 ) + seed, 16 ) / 4 ), 0, 120, 1, 45, 2, 80, 60 ) * ( 0.6 + ( MOD( SIN( [_k] * 12.9898 + 12 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 1.4 ) ), 2 ) * ( 0.45 + ( MOD( SIN( [_k] * 12.9898 + 13 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 0.25 ) ), 2 )
+			        )
+			    VAR _Step2 =
+			        ADDCOLUMNS(
+			            _Step1,
+			            "Product", SWITCH( [_a], 0, "Classic", 1, "Pro", 2, "Lite", 3, "Max", 4, "Eco", 5, "Urban", 6, "Smart", 7, "Travel", 8, "Deluxe", 9, "Mini", 10, "Ultra", "Basic" ) & " " & SWITCH( [_n], 0, "Headphones", 1, "Speaker", 2, "Charger", 3, "Keyboard", 4, "Lamp", 5, "Blanket", 6, "Mug", 7, "Pillow", 8, "Tent", 9, "Backpack", 10, "Water Bottle", 11, "Camp Chair", 12, "Jacket", 13, "Sneakers", 14, "Cap", "Hoodie" ),
+			            "Category", SWITCH( INT( [_n] / 4 ), 0, "Electronics", 1, "Home", 2, "Outdoor", "Apparel" )
+			        )
+			    RETURN
+			        SELECTCOLUMNS(
+			            _Step2,
+			            "ProductKey", [ProductKey],
+			            "Product", [Product],
+			            "Category", [Category],
+			            "List Price", [List Price],
+			            "Unit Cost", [Unit Cost]
+			        )
+
