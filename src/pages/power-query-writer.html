@@ -314,7 +314,18 @@ table.steps td.mono{font-family:var(--mono);font-size:13px;white-space:nowrap}
 ul.qs{margin:4px 0 6px 18px;padding:0}
 a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .codebox-bar .r{display:flex;gap:6px;flex-wrap:wrap}
-@media (max-width:640px){.grid2{grid-template-columns:minmax(0,1fr)}.flist li{grid-template-columns:1fr;gap:4px}table.steps td.mono{white-space:normal;overflow-wrap:anywhere}}
+.recipes{display:flex;flex-direction:column;gap:8px}
+.recipe{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--surface)}
+.recipe>.opts{margin:0}
+.recipe .rbody{display:flex;flex-direction:column;gap:8px;margin:8px 0 2px 24px}
+.recipe .rbody[hidden]{display:none}
+.colpick{display:flex;flex-wrap:wrap;gap:6px}
+.colpick button{font:inherit;font-size:12.5px;padding:3px 9px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--ink);cursor:pointer;max-width:100%;overflow-wrap:anywhere}
+.colpick button[aria-pressed=true]{background:var(--info-soft);border-color:var(--info);color:var(--info);font-weight:600}
+.recipe .row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13.5px}
+.recipe .row input.txt{width:auto;min-width:0;flex:1 1 140px;max-width:240px}
+.recipe select{font:inherit;font-size:13.5px}
+@media (max-width:640px){.recipe .rbody{margin-left:0}.grid2{grid-template-columns:minmax(0,1fr)}.flist li{grid-template-columns:1fr;gap:4px}table.steps td.mono{white-space:normal;overflow-wrap:anywhere}}
 
 </style>
 
@@ -326,7 +337,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>Power Query Writer</h1>
-        <p class="lede">Say what the query should do and get a Copilot prompt that writes it: working first time, easy to maintain and as short as possible, with one-word step names, short comments only where needed, and formatting in the style of powerqueryformatter.com. Then paste Copilot&rsquo;s reply here to check it before it goes into Power BI.</p>
+        <p class="lede">Say what the query should do and get a Copilot prompt that writes it: working first time, easy to maintain and as short as possible, with one-word step names, short comments only where needed, and formatting in the style of powerqueryformatter.com. Common cleaning steps and the column types use reusable functions you add to your file once. Then paste Copilot&rsquo;s reply here to check it before it goes into Power BI.</p>
       </div>
       <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
@@ -377,11 +388,25 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       <div class="chips" id="colChips"></div>
       <div id="typeMapBox" hidden>
         <label class="opts"><span><input type="checkbox" id="typeMap"> Set column types with a type map</span></label>
-        <p class="note small">One list of column-and-type pairs, applied only to the columns that exist, and every other column as text, so a missing or renamed source column doesn&rsquo;t break the refresh. The types come from the rows you pasted: check them, and change any here or in the query. Copilot is told to use it as it is.</p>
-        <details class="extra" id="typeMapView"><summary>See the type map <span class="muted">(or copy it into your own query)</span></summary>
+        <p class="note small">One list of column-and-type pairs, applied only to the columns that exist, and every other column as text, so a missing or renamed source column doesn&rsquo;t break the refresh. The types come from the rows you pasted: check them, and change any here or in the query. Copilot is told to use it as it is. It calls the <code>fxApplyTypes</code> function, so each query needs one short step instead of the whole map.</p>
+        <label class="opts" id="typeHowBox"><span><input type="checkbox" id="typeSteps"> Write the type map as steps in the query instead of calling a function</span></label>
+        <details class="extra" id="typeMapView"><summary>See the type map as steps <span class="muted">(or copy it into your own query)</span></summary>
           <div class="codebox"><div class="codebox-bar"><span class="t">Type map steps: paste after the step where the column names are final</span><span class="r"><button class="btn" type="button" data-copy="typemap">Copy</button></span></div><pre class="short" id="typeMapCode"></pre></div>
           <p class="note small">Rename <code>PromotedHeaders</code> to the step before it, and add a comma after the step before it if it was the last one.</p>
         </details>
+      </div>
+
+      <div id="fxBox" hidden>
+        <h3 class="sub">Cleaning steps <span class="muted">(optional)</span></h3>
+        <p class="note small">Common clean-up done by reusable functions, so each query needs one short step for each and the logic lives in one place. Tick what the data needs and pick the columns. The steps go into the prompt as required steps, and the functions to add to your file are below.</p>
+        <div class="recipes" id="recipes"></div>
+        <div id="fxOut" hidden>
+          <div class="codebox"><div class="codebox-bar"><span class="t">Cleaning and type steps: paste after the step where the column names are final</span><span class="r"><button class="btn" type="button" data-copy="steps">Copy</button></span></div><pre class="short" id="fxStepsCode"></pre></div>
+          <p class="note small">Rename <code>PromotedHeaders</code> to the step before them. Copilot gets these in the prompt, so you only need them to build the query yourself.</p>
+          <h3 class="sub">Functions to add to your file once</h3>
+          <p class="note small">For each one: in Power Query, <b>Home &gt; New Source &gt; Blank Query</b>, then <b>Home &gt; Advanced Editor</b>, paste the code and select <b>Done</b>. Rename the query to the function&rsquo;s name exactly. Every query in the file can then use it. Skip the ones you already have.</p>
+          <div id="fxFns"></div>
+        </div>
       </div>
 
       <details class="extra" id="moreBox">
@@ -393,6 +418,9 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
           <textarea id="params" class="short" spellcheck="false" placeholder="ServerName = &quot;sql-prod&quot;"></textarea>
           <div class="field"><label for="culture">Culture for types and dates <span class="muted">(if the source isn&rsquo;t in your own format, for example en-GB)</span></label><input type="text" id="culture" class="txt" placeholder="for example en-US"></div>
           <label class="opts"><span><input type="checkbox" id="makeParams"> Use parameters for servers, databases, file paths and URLs</span></label>
+          <label class="opts"><span><input type="checkbox" id="haveFx"> The toolkit&rsquo;s fx functions are in my file, so Copilot may use any of them</span></label>
+          <label class="lab" for="myFns">Functions you already have <span class="hint">One per line: name(arguments): what it does. Copilot calls them by name instead of writing its own.</span></label>
+          <textarea id="myFns" class="short" spellcheck="false" placeholder="fxCleanPhone(InputTable, Columns): keeps the digits of phone numbers"></textarea>
         </div>
       </details>
     </div>
@@ -873,6 +901,132 @@ function lineDiff(a, b){
 }
 /*MQ-CORE-END*/
 
+const PWF_CODE = {"fxAddDateTimeFromPairs": "let\n    fxAddDateTimeFromPairs = (InputTable as table, Pairs as list, optional Options as nullable record) as table =>\n        let\n            Opts = if Options = null then [] else Options,\n            KeepOriginal = Record.FieldOrDefault(Opts, \"KeepOriginalColumns\", true),\n            Overwrite = Record.FieldOrDefault(Opts, \"Overwrite\", true),\n            Culture = Record.FieldOrDefault(Opts, \"Culture\", null),\n            // any date/time value, or text in Options[Culture], as a datetime; null when it can't be read\n            ToDateTime = (v as any) as nullable datetime =>\n                if v = null then null\n                else if v is datetime then v\n                else if v is datetimezone then DateTimeZone.RemoveZone(v)\n                else if v is date then DateTime.From(v)\n                else if v is time then #datetime(1899, 12, 30, 0, 0, 0) + (v - #time(0, 0, 0))\n                else if v is text then (try DateTime.FromText(Text.Trim(v), Culture) otherwise null)\n                else (try DateTime.From(v, Culture) otherwise null),\n            SourceCols = List.Transform(Pairs, each _{0}),\n            Missing = List.Difference(SourceCols, Table.ColumnNames(InputTable)),\n            // used by every step after it, so a missing column stops the query with this message\n            Checked = if List.IsEmpty(Missing) then InputTable else error Error.Record(\"Column not found\", \"These columns were not found: \" & Text.Combine(Missing, \", \")),\n            AddPair = (state as table, pair as list) as table =>\n                let\n                    Src = pair{0},\n                    DateName = pair{1} & \" date\",\n                    TimeName = pair{1} & \" time\",\n                    Cleared = if Overwrite then Table.RemoveColumns(state, {DateName, TimeName}, MissingField.Ignore) else state,\n                    // read each value once, then split it\n                    WithDT = Table.AddColumn(Cleared, \"__dt\", (r) => ToDateTime(Record.Field(r, Src)), type nullable datetime),\n                    WithDate = Table.AddColumn(WithDT, DateName, each if [__dt] = null then null else DateTime.Date([__dt]), type nullable date),\n                    WithTime = Table.AddColumn(WithDate, TimeName, each if [__dt] = null then null else DateTime.Time([__dt]), type nullable time)\n                in\n                    Table.RemoveColumns(WithTime, {\"__dt\"}),\n            Added = List.Accumulate(Pairs, Checked, AddPair),\n            // the source columns go last, after the new columns have been read from them\n            Result = if KeepOriginal then Added else Table.RemoveColumns(Added, SourceCols)\n        in\n            Result,\n    Documented = Value.ReplaceType(fxAddDateTimeFromPairs, Value.ReplaceMetadata(Value.Type(fxAddDateTimeFromPairs), [\n        Documentation.Name = \"fxAddDateTimeFromPairs\",\n        Documentation.LongDescription = \"For each {source column, name} pair, adds \"\"<name> date\"\" and \"\"<name> time\"\" columns from a date-time value or text. Values that can't be read become null. Options: KeepOriginalColumns (default true), Overwrite (default true: replaces existing \"\"<name> date\"\"/\"\"<name> time\"\" columns), Culture for reading text, for example \"\"en-US\"\".\",\n        Documentation.Examples = {[Description = \"Split sys_updated_on into a date and a time\", Code = \"fxAddDateTimeFromPairs(Source, {{\"\"sys_updated_on\"\", \"\"Updated\"\"}}, [Culture = \"\"en-US\"\"])\", Result = \"The table with Updated date and Updated time columns added\"]}\n    ]))\nin\n    Documented", "fxApplyTypes": "let\n    fxApplyTypes = (InputTable as table, TypePairs as list, optional Options as nullable record) as table =>\n        let\n            Opts = if Options = null then [] else Options,\n            // the type for any column TypePairs doesn't list; null leaves those columns as they are\n            DefaultType = Record.FieldOrDefault(Opts, \"DefaultType\", type text),\n            Culture = Record.FieldOrDefault(Opts, \"Culture\", null),\n            ExistingCols = Table.ColumnNames(InputTable),\n            // the last pair for a column wins; pairs for columns that aren't in the table are skipped\n            TypeOf = (c as text) => let m = List.Select(TypePairs, each _{0} = c) in if List.IsEmpty(m) then DefaultType else List.Last(m){1},\n            AllPairs = List.Select(List.Transform(ExistingCols, (c) => {c, TypeOf(c)}), each _{1} <> null),\n            Typed = Table.TransformColumnTypes(InputTable, AllPairs, Culture)\n        in\n            Typed,\n    Documented = Value.ReplaceType(fxApplyTypes, Value.ReplaceMetadata(Value.Type(fxApplyTypes), [\n        Documentation.Name = \"fxApplyTypes\",\n        Documentation.LongDescription = \"Sets column types from a list of {column, type} pairs in one step. Pairs for columns the table doesn't have are skipped, so a missing or renamed source column doesn't break the refresh. Every other column gets Options[DefaultType] (type text unless you say otherwise; null leaves them as they are). Options[Culture] reads dates and numbers in that culture, for example \"\"en-GB\"\".\",\n        Documentation.Examples = {[Description = \"Dates and an ID typed; everything else text\", Code = \"fxApplyTypes(PromotedHeaders, {{\"\"CREATE DATE\"\", type date}, {\"\"USER ID\"\", Int64.Type}})\", Result = \"The table with CREATE DATE as date, USER ID as whole number and every other column as text\"]}\n    ]))\nin\n    Documented", "fxDedupe": "let\n    fxDedupe = (InputTable as table, KeyColumns as list, optional Options as nullable record) as table =>\n        let\n            Opts = if Options = null then [] else Options,\n            KeepLast = Record.FieldOrDefault(Opts, \"KeepLast\", false),\n            IgnoreCase = Record.FieldOrDefault(Opts, \"IgnoreCase\", false),\n            Keys = if IgnoreCase then List.Transform(KeyColumns, each {_, Comparer.OrdinalIgnoreCase}) else KeyColumns,\n            // buffered so \"first\" and \"last\" follow the row order the table has here\n            Ordered = Table.Buffer(if KeepLast then Table.ReverseRows(InputTable) else InputTable),\n            Distinct = Table.Distinct(Ordered, Keys),\n            Result = if KeepLast then Table.ReverseRows(Distinct) else Distinct\n        in\n            Result,\n    Documented = Value.ReplaceType(fxDedupe, Value.ReplaceMetadata(Value.Type(fxDedupe), [\n        Documentation.Name = \"fxDedupe\",\n        Documentation.LongDescription = \"Keeps one row for each combination of the key columns: the first one, or the last with Options[KeepLast] = true (in the table's current row order; sort before calling it to choose). Options[IgnoreCase] (default false) treats \"\"ABC\"\" and \"\"abc\"\" as the same key.\",\n        Documentation.Examples = {[Description = \"One row per user, the latest\", Code = \"fxDedupe(SortedByDate, {\"\"USER ID\"\"}, [KeepLast = true])\", Result = \"One row per USER ID\"]}\n    ]))\nin\n    Documented", "fxRemoveBlankRows": "let\n    fxRemoveBlankRows = (InputTable as table) as table =>\n        Table.SelectRows(InputTable, each not List.IsEmpty(List.Select(Record.FieldValues(_), (v) => v <> null and not (v is text and Text.Trim(v) = \"\")))),\n    Documented = Value.ReplaceType(fxRemoveBlankRows, Value.ReplaceMetadata(Value.Type(fxRemoveBlankRows), [\n        Documentation.Name = \"fxRemoveBlankRows\",\n        Documentation.LongDescription = \"Removes rows where every value is null, empty text or only spaces.\",\n        Documentation.Examples = {[Description = \"Drop blank rows\", Code = \"fxRemoveBlankRows(PromotedHeaders)\", Result = \"The table without blank rows\"]}\n    ]))\nin\n    Documented", "fxReplaceNulls": "let\n    fxReplaceNulls = (InputTable as table, Columns as list, Value as any) as table =>\n        let\n            Cols = List.Intersect({Columns, Table.ColumnNames(InputTable)}),\n            Result = Table.ReplaceValue(InputTable, null, Value, Replacer.ReplaceValue, Cols)\n        in\n            Result,\n    Documented = Value.ReplaceType(fxReplaceNulls, Value.ReplaceMetadata(Value.Type(fxReplaceNulls), [\n        Documentation.Name = \"fxReplaceNulls\",\n        Documentation.LongDescription = \"Replaces null with Value in the columns named. Columns the table doesn't have are skipped.\",\n        Documentation.Examples = {[Description = \"Unknown region\", Code = \"fxReplaceNulls(Source, {\"\"Region\"\"}, \"\"Unknown\"\")\", Result = \"Region with Unknown where it was null\"]}\n    ]))\nin\n    Documented", "fxSetCase": "let\n    fxSetCase = (InputTable as table, Columns as list, Case as text) as table =>\n        let\n            Fn = if Case = \"Upper\" then Text.Upper else if Case = \"Lower\" then Text.Lower else if Case = \"Proper\" then Text.Proper\n                else error Error.Record(\"Unknown case\", \"Case is \"\"Upper\"\", \"\"Lower\"\" or \"\"Proper\"\", not \"\"\" & Case & \"\"\".\"),\n            Cols = List.Intersect({Columns, Table.ColumnNames(InputTable)}),\n            Result = Table.TransformColumns(InputTable, List.Transform(Cols, (c) => {c, each if _ is text then Fn(_) else _, Type.TableColumn(Value.Type(InputTable), c)}))\n        in\n            Result,\n    Documented = Value.ReplaceType(fxSetCase, Value.ReplaceMetadata(Value.Type(fxSetCase), [\n        Documentation.Name = \"fxSetCase\",\n        Documentation.LongDescription = \"Upper, lower or proper case for the text in the columns named. Columns the table doesn't have are skipped; values that aren't text are left as they are.\",\n        Documentation.Examples = {[Description = \"Office names in upper case\", Code = \"fxSetCase(Trimmed, {\"\"OFFICE\"\"}, \"\"Upper\"\")\", Result = \"OFFICE values in upper case\"]}\n    ]))\nin\n    Documented", "fxTextToNumber": "let\n    fxTextToNumber = (InputTable as table, Columns as list, optional Options as nullable record) as table =>\n        let\n            Opts = if Options = null then [] else Options,\n            Culture = Record.FieldOrDefault(Opts, \"Culture\", null),\n            WholeNumber = Record.FieldOrDefault(Opts, \"WholeNumber\", false),\n            // \"$1,234.50\", \"(45)\", \"12%\", \" 7 \" -> 1234.5, -45, 0.12, 7; null when it can't be read\n            ToNumber = (v as any) as nullable number =>\n                if v = null then null\n                else if v is number then (if WholeNumber then Number.Round(v, 0, RoundingMode.AwayFromZero) else v)\n                else if v is text then\n                    let\n                        t = Text.Trim(Text.Replace(v, \"#(00A0)\", \" \")),\n                        Negative = Text.StartsWith(t, \"(\") and Text.EndsWith(t, \")\") or Text.StartsWith(t, \"-\"),\n                        Percent = Text.EndsWith(t, \"%\"),\n                        Digits = Text.Remove(t, {\"$\", \"€\", \"£\", \"%\", \"(\", \")\", \" \", \"-\"}),\n                        n = if Digits = \"\" then null else try Number.FromText(Digits, Culture) otherwise null,\n                        Signed = if n = null then null else (if Negative then -n else n) / (if Percent then 100 else 1)\n                    in\n                        if Signed = null then null else if WholeNumber then Number.Round(Signed, 0, RoundingMode.AwayFromZero) else Signed\n                else null,\n            Cols = List.Intersect({Columns, Table.ColumnNames(InputTable)}),\n            Result = Table.TransformColumns(InputTable, List.Transform(Cols, (c) => {c, ToNumber, if WholeNumber then Int64.Type else type nullable number}))\n        in\n            Result,\n    Documented = Value.ReplaceType(fxTextToNumber, Value.ReplaceMetadata(Value.Type(fxTextToNumber), [\n        Documentation.Name = \"fxTextToNumber\",\n        Documentation.LongDescription = \"Turns text in the columns named into numbers, ignoring currency signs, spaces and percent signs: \"\"$1,234.50\"\" is 1234.5, \"\"(45)\"\" is -45 and \"\"12%\"\" is 0.12. Options[Culture] reads the separators of that culture (for example \"\"de-DE\"\" for 1.234,50). Options[WholeNumber] (default false) rounds to whole numbers. Values that can't be read become null.\",\n        Documentation.Examples = {[Description = \"Amounts typed as text\", Code = \"fxTextToNumber(Source, {\"\"Amount\"\"})\", Result = \"Amount as a number\"]}\n    ]))\nin\n    Documented", "fxToDate": "let\n    fxToDate = (InputTable as table, Columns as list, optional Options as nullable record) as table =>\n        let\n            Opts = if Options = null then [] else Options,\n            Culture = Record.FieldOrDefault(Opts, \"Culture\", null),\n            Format = Record.FieldOrDefault(Opts, \"Format\", null),\n            ReadOpts = [Format = Format, Culture = Culture],\n            // dates, date-times, Excel serial numbers and text; null when it can't be read\n            ToDate = (v as any) as nullable date =>\n                if v = null then null\n                else if v is date then v\n                else if v is datetime then DateTime.Date(v)\n                else if v is datetimezone then DateTime.Date(DateTimeZone.RemoveZone(v))\n                else if v is number then (if v >= 1 and v < 2958466 then Date.From(v) else null)\n                else if v is text then\n                    let t = Text.Trim(v)\n                    in\n                        if t = \"\" then null\n                        else try Date.FromText(t, ReadOpts)\n                        otherwise try DateTime.Date(DateTime.FromText(t, ReadOpts))\n                        otherwise try Date.From(Number.FromText(t, \"en-US\"))\n                        otherwise null\n                else null,\n            Cols = List.Intersect({Columns, Table.ColumnNames(InputTable)}),\n            Result = Table.TransformColumns(InputTable, List.Transform(Cols, (c) => {c, ToDate, type nullable date}))\n        in\n            Result,\n    Documented = Value.ReplaceType(fxToDate, Value.ReplaceMetadata(Value.Type(fxToDate), [\n        Documentation.Name = \"fxToDate\",\n        Documentation.LongDescription = \"Turns the columns named into dates: dates, date-times (the time is dropped), Excel serial numbers and text. Text is read in Options[Culture] (for example \"\"en-GB\"\" for day-first dates) or with Options[Format] (for example \"\"yyyyMMdd\"\"). Values that can't be read become null instead of errors.\",\n        Documentation.Examples = {[Description = \"Day-first text dates\", Code = \"fxToDate(Source, {\"\"Order Date\"\", \"\"Ship Date\"\"}, [Culture = \"\"en-GB\"\"])\", Result = \"Order Date and Ship Date as dates\"]}\n    ]))\nin\n    Documented", "fxTrimText": "let\n    fxTrimText = (InputTable as table, optional Columns as nullable list, optional Options as nullable record) as table =>\n        let\n            Opts = if Options = null then [] else Options,\n            Clean = Record.FieldOrDefault(Opts, \"Clean\", true),\n            BlankToNull = Record.FieldOrDefault(Opts, \"BlankToNull\", true),\n            CollapseSpaces = Record.FieldOrDefault(Opts, \"CollapseSpaces\", false),\n            // every column when Columns is null; only text values change, so number and date columns are safe\n            Cols = if Columns = null then Table.ColumnNames(InputTable) else List.Intersect({Columns, Table.ColumnNames(InputTable)}),\n            Tidy = (v as any) as any =>\n                if v is text then\n                    let\n                        NoNbsp = Text.Replace(v, \"#(00A0)\", \" \"),\n                        Cleaned = if Clean then Text.Clean(NoNbsp) else NoNbsp,\n                        Trimmed = Text.Trim(Cleaned),\n                        Collapsed = if CollapseSpaces then Text.Combine(List.Select(Text.Split(Trimmed, \" \"), each _ <> \"\"), \" \") else Trimmed\n                    in\n                        if BlankToNull and Collapsed = \"\" then null else Collapsed\n                else v,\n            // keep each column's type\n            Result = Table.TransformColumns(InputTable, List.Transform(Cols, (c) => {c, Tidy, Type.TableColumn(Value.Type(InputTable), c)}))\n        in\n            Result,\n    Documented = Value.ReplaceType(fxTrimText, Value.ReplaceMetadata(Value.Type(fxTrimText), [\n        Documentation.Name = \"fxTrimText\",\n        Documentation.LongDescription = \"Trims text in the columns named (every column when Columns is null): leading and trailing spaces, non-breaking spaces and, with Options[Clean] (default true), control characters such as line breaks. Empty text becomes null (Options[BlankToNull], default true). Options[CollapseSpaces] (default false) turns runs of spaces inside the text into one. Values that aren't text are left as they are.\",\n        Documentation.Examples = {[Description = \"Tidy every text value\", Code = \"fxTrimText(ChangeTypes)\", Result = \"The table with trimmed text and null for empty text\"]}\n    ]))\nin\n    Documented"};
+/* ---------- Power Query Writer: reusable fx functions and cleaning recipes ----------
+   The functions live in src/fx/*.pq (tested in Power BI Desktop with src/fx/fxTests.pq); build_pw.py puts their code in
+   PWF_CODE. A recipe is a cleaning step that calls one of them. recipeSteps() turns the ticked recipes (and the type map,
+   as a call to fxApplyTypes) into the steps Copilot is told to use as they are. */
+const PWF = (() => {
+  // name, arguments [required, total], the signature shown to Copilot, and what it does (one line)
+  const LIB = [
+    ['fxApplyTypes', 2, 3, 'fxApplyTypes(InputTable as table, TypePairs as list, optional Options as record) as table', 'Sets column types from {column, type} pairs in one step; pairs for missing columns are skipped; every other column is text (Options: DefaultType, null leaves them as they are; Culture).'],
+    ['fxRemoveBlankRows', 1, 1, 'fxRemoveBlankRows(InputTable as table) as table', 'Removes rows where every value is null, empty or only spaces.'],
+    ['fxTrimText', 1, 3, 'fxTrimText(InputTable as table, optional Columns as list, optional Options as record) as table', 'Trims text (every column when Columns is null), removes non-breaking spaces and control characters, empty text becomes null (Options: Clean, BlankToNull, CollapseSpaces).'],
+    ['fxSetCase', 3, 3, 'fxSetCase(InputTable as table, Columns as list, Case as text) as table', 'Upper, lower or proper case for text in the columns named; Case is "Upper", "Lower" or "Proper".'],
+    ['fxToDate', 2, 3, 'fxToDate(InputTable as table, Columns as list, optional Options as record) as table', 'Turns the columns into dates from dates, date-times, Excel serial numbers or text; unreadable values become null (Options: Culture, Format).'],
+    ['fxTextToNumber', 2, 3, 'fxTextToNumber(InputTable as table, Columns as list, optional Options as record) as table', 'Turns text such as "$1,234.50", "(45)" or "12%" into numbers; unreadable values become null (Options: Culture, WholeNumber).'],
+    ['fxAddDateTimeFromPairs', 2, 3, 'fxAddDateTimeFromPairs(InputTable as table, Pairs as list, optional Options as record) as table', 'For each {source column, name} pair adds "<name> date" and "<name> time" columns from a date-time (Options: KeepOriginalColumns, Overwrite, Culture).'],
+    ['fxReplaceNulls', 3, 3, 'fxReplaceNulls(InputTable as table, Columns as list, Value as any) as table', 'Replaces null with Value in the columns named.'],
+    ['fxDedupe', 2, 3, 'fxDedupe(InputTable as table, KeyColumns as list, optional Options as record) as table', 'Keeps one row per key: the first, or the last with KeepLast = true (Options: KeepLast, IgnoreCase).']
+  ].map(([name, min, max, sig, does]) => ({ name, min, max, sig, does, code: (typeof PWF_CODE !== 'undefined' && PWF_CODE[name]) || '' }));
+  const BY = new Map(LIB.map(f => [f.name, f]));
+
+  /* The recipes, in the order their steps run: tidy the text, convert it, then fill gaps; types after that and duplicates last
+     (keys compare once they're typed). cols: does it take columns; all: no columns means every column. */
+  const RECIPES = [
+    { id: 'blank', fx: 'fxRemoveBlankRows', step: 'NoBlankRows', label: 'Remove blank rows', hint: 'Rows where every value is empty.' },
+    { id: 'trim', fx: 'fxTrimText', step: 'Trimmed', label: 'Trim text', hint: 'Spaces at either end, non-breaking spaces and line breaks; empty text becomes null. Pick columns, or none for every column.', cols: true, all: true },
+    { id: 'case', fx: 'fxSetCase', step: 'Cased', label: 'Upper, lower or proper case', cols: true },
+    { id: 'date', fx: 'fxToDate', step: 'Dates', label: 'Convert to dates', hint: 'Text, date-times and Excel serial numbers. Values that can’t be read become empty instead of errors. Uses the culture under Other queries, parameters and culture.', cols: true },
+    { id: 'num', fx: 'fxTextToNumber', step: 'Numbers', label: 'Convert text to numbers', hint: 'Ignores currency signs, spaces and %, and reads (45) as -45.', cols: true },
+    { id: 'split', fx: 'fxAddDateTimeFromPairs', step: 'DateTimes', label: 'Split date-times into date and time columns', hint: 'Adds “Column date” and “Column time” for each column picked. Values that can’t be read become empty. A kept original column stays text.', cols: true },
+    { id: 'nulls', fx: 'fxReplaceNulls', step: 'NullsReplaced', label: 'Replace empty values', cols: true },
+    { id: 'dedupe', fx: 'fxDedupe', step: 'Deduped', label: 'Remove duplicate rows', hint: 'Pick the columns that make a row unique.', cols: true }
+  ];
+  const blankOpts = () => ({ blank: { on: false }, trim: { on: false, cols: [], collapse: false }, case: { on: false, cols: [], how: 'Proper' },
+    date: { on: false, cols: [], format: '' }, num: { on: false, cols: [], whole: false }, split: { on: false, cols: [], keep: true },
+    nulls: { on: false, cols: [], value: '' }, dedupe: { on: false, cols: [], last: false, nocase: false } });
+
+  const q = n => '"' + String(n).replace(/"/g, '""') + '"';
+  const list = cs => '{' + cs.map(q).join(', ') + '}';
+  const rec = o => { const k = Object.keys(o).filter(x => o[x] != null); return k.length ? '[' + k.map(x => x + ' = ' + o[x]).join(', ') + ']' : ''; };
+  // a value typed in the page: a number stays a number, true/false a logical, anything else text
+  const lit = v => { const t = String(v == null ? '' : v).trim(); return /^-?\d+(\.\d+)?$/.test(t) ? t : /^(true|false)$/i.test(t) ? t.toLowerCase() : q(t); };
+  const M_TYPE = { 'whole number': 'Int64.Type', number: 'type number', date: 'type date', datetime: 'type datetime', time: 'type time', logical: 'type logical', text: 'type text' };
+
+  // the ticked recipes that can run (a recipe that needs columns needs at least one picked, except Trim text)
+  function active(fx, cols){
+    const have = new Set((cols || []).map(c => c.name));
+    return RECIPES.map(r => ({ r, o: Object.assign({}, blankOpts()[r.id], (fx || {})[r.id] || {}) }))
+      .map(x => Object.assign(x, { cs: (x.o.cols || []).filter(c => have.has(c)) }))
+      .filter(x => x.o.on && (!x.r.cols || x.r.all || x.cs.length));
+  }
+  // the column types after the recipes: the pasted types, with the converted columns and the new date and time columns
+  function finalTypes(cols, acts){
+    const out = cols.map(c => ({ name: c.name, type: c.type }));
+    const set = (n, t) => { const c = out.find(x => x.name === n); if (c) c.type = t; else out.push({ name: n, type: t }); };
+    acts.forEach(({ r, o, cs }) => {
+      if (r.id === 'date') cs.forEach(c => set(c, 'date'));
+      if (r.id === 'num') cs.forEach(c => set(c, o.whole ? 'whole number' : 'number'));
+      // a kept original stays text: the date and time columns are the typed copies, and typing it again would turn
+      // values that can't be read into errors
+      if (r.id === 'split') { cs.forEach(c => { set(c + ' date', 'date'); set(c + ' time', 'time'); }); cs.forEach(c => { const i = out.findIndex(x => x.name === c); if (i >= 0) { if (o.keep === false) out.splice(i, 1); else out[i].type = 'text'; } }); }
+    });
+    return out;
+  }
+  const typePairs = cols => cols.map(c => ({ name: c.name, m: M_TYPE[c.type] || 'type text' }));
+
+  /* The steps to paste after the step where the column names are final (prev). inp: { fx, columns (parsed), typeMap,
+     typeHow ('fx' or 'steps'), culture }. Returns { code, last, fns: names of the library functions used, pairs } or null. */
+  function recipeSteps(inp, prev){
+    const cols = inp.cols || [], acts = active(inp.fx, cols), P = prev || 'PromotedHeaders', I = '    ', I2 = I + I;
+    const culture = (inp.culture || '').trim(), useTypes = !!inp.typeMap && cols.length > 0;
+    if (!acts.length && !(useTypes && inp.typeHow !== 'steps')) return null;
+    const lines = [], fns = [];
+    let cur = P;
+    const step = (name, expr, fn) => { lines.push(I + name + ' = ' + expr); cur = name; if (fn && !fns.includes(fn)) fns.push(fn); };
+    const before = acts.filter(x => x.r.id !== 'dedupe'), dd = acts.find(x => x.r.id === 'dedupe');
+    before.forEach(({ r, o, cs }) => {
+      const C = culture ? q(culture) : null;
+      if (r.id === 'blank') step(r.step, r.fx + '(' + cur + ')', r.fx);
+      if (r.id === 'trim') { const opt = rec({ CollapseSpaces: o.collapse ? 'true' : null }); step(r.step, r.fx + '(' + cur + (cs.length || opt ? ', ' + (cs.length ? list(cs) : 'null') : '') + (opt ? ', ' + opt : '') + ')', r.fx); }
+      if (r.id === 'case') step(r.step, r.fx + '(' + cur + ', ' + list(cs) + ', ' + q(['Upper', 'Lower', 'Proper'].includes(o.how) ? o.how : 'Proper') + ')', r.fx);
+      if (r.id === 'date') { const opt = rec({ Culture: C, Format: (o.format || '').trim() ? q(o.format.trim()) : null }); step(r.step, r.fx + '(' + cur + ', ' + list(cs) + (opt ? ', ' + opt : '') + ')', r.fx); }
+      if (r.id === 'num') { const opt = rec({ Culture: C, WholeNumber: o.whole ? 'true' : null }); step(r.step, r.fx + '(' + cur + ', ' + list(cs) + (opt ? ', ' + opt : '') + ')', r.fx); }
+      if (r.id === 'split') { const opt = rec({ KeepOriginalColumns: o.keep === false ? 'false' : null, Culture: C }); step(r.step, r.fx + '(' + cur + ', {' + cs.map(c => '{' + q(c) + ', ' + q(c) + '}').join(', ') + '}' + (opt ? ', ' + opt : '') + ')', r.fx); }
+      if (r.id === 'nulls') step(r.step, r.fx + '(' + cur + ', ' + list(cs) + ', ' + ((o.value || '').trim() ? lit(o.value) : '""') + ')', r.fx);
+    });
+    const types = finalTypes(cols, acts), pairs = typePairs(types);
+    let typeCode = '';
+    if (useTypes && inp.typeHow !== 'steps') {
+      // one pair per line; Copilot is told to keep them
+      const body = pairs.map(p => I2 + '{' + q(p.name) + ', ' + p.m + '}').join(',\n');
+      step('ChangeTypes', 'fxApplyTypes(\n' + I2 + cur + ',\n' + I2 + '{\n' + body.replace(/^/gm, I) + '\n' + I2 + '}' + (culture ? ',\n' + I2 + '[Culture = ' + q(culture) + ']' : '') + '\n' + I + ')', 'fxApplyTypes');
+    } else if (useTypes) {
+      // the type map as steps (PW.typeMap), after the cleaning steps
+      typeCode = 'steps'; lines.push('@@TYPEMAP@@'); cur = 'ChangeTypes';
+    }
+    if (dd) { const opt = rec({ KeepLast: dd.o.last ? 'true' : null, IgnoreCase: dd.o.nocase ? 'true' : null }); step(dd.r.step, dd.r.fx + '(' + cur + ', ' + list(dd.cs) + (opt ? ', ' + opt : '') + ')', dd.r.fx); }
+    const prevOfTypes = (() => { const i = lines.indexOf('@@TYPEMAP@@'); return i > 0 ? lines[i - 1].trim().split(' ')[0] : P; })();
+    return { lines, last: cur, fns, pairs, types, typeCode, prevOfTypes };
+  }
+  // the code itself, with the type map steps filled in by PW.typeMap when they are steps
+  function render(rs, typeMapFn){
+    return rs.lines.map(l => l === '@@TYPEMAP@@' ? typeMapFn(rs.types, rs.prevOfTypes) : l).join(',\n');
+  }
+
+  /* Functions the person already has in the file, one per line: "fxName(Arg1, optional Arg2): what it does" (the part after
+     the name is optional). Returns [{ name, min, max, sig, does }]. */
+  function parseMine(text){
+    return (text || '').replace(/\r/g, '').split('\n').map(l => l.trim().replace(/^[-*•]\s*/, '')).filter(Boolean).map(l => {
+      const m = l.match(/^#?"?([A-Za-z_][A-Za-z0-9_.]*)"?\s*(?:\(([^)]*)\))?\s*(?:[:=\-–—]\s*(.*))?$/);
+      if (!m) return null;
+      const args = m[2] == null ? null : m[2].split(',').map(s => s.trim()).filter(Boolean);
+      const opt = args ? args.filter(a => /^optional\b/i.test(a)).length : 0;
+      return { name: m[1], min: args ? args.length - opt : null, max: args ? args.length : null, sig: m[1] + (m[2] != null ? '(' + m[2].trim() + ')' : ''), does: (m[3] || '').trim(), mine: true };
+    }).filter(Boolean);
+  }
+  // every function the query may call by name: the library functions the recipes use (or all of them when the person
+  // has them), and their own
+  function known(inp){
+    const rs = inp.recipes, names = new Set(inp.haveFx ? LIB.map(f => f.name) : (rs ? rs.fns : []));
+    const out = LIB.filter(f => names.has(f.name));
+    parseMine(inp.myFns).forEach(f => { if (!out.some(x => x.name === f.name)) out.push(f); });
+    return out;
+  }
+  return { LIB, BY, RECIPES, blankOpts, active, recipeSteps, render, parseMine, known, M_TYPE };
+})();
+
 
 /* ---------- Power Query Writer: a Copilot prompt that writes a short, maintainable M query, and checks of the reply ----------
    Uses the Power Query Explainer's tokenizer and parser (mTokenize, parseM, healthChecks, paramQuery, blocks, field, cleanReply). */
@@ -938,7 +1092,7 @@ const PW = (() => {
   /* The owner's way to set types: a list of column-and-type pairs, applied only to the columns that exist, with every
      other column typed as text, in one Table.TransformColumnTypes. A source column that's missing or renamed doesn't
      break the refresh. cols: [{ name, type }] from parseColumns; prev: the step it starts from. */
-  const M_TYPE = { 'whole number': 'Int64.Type', number: 'type number', date: 'type date', datetime: 'type datetime', logical: 'type logical', text: 'type text' };
+  const M_TYPE = { 'whole number': 'Int64.Type', number: 'type number', date: 'type date', datetime: 'type datetime', time: 'type time', logical: 'type logical', text: 'type text' };
   function typeMap(cols, prev, culture){
     const q = n => '"' + n.replace(/"/g, '""') + '"', P = prev || 'PromotedHeaders', I = '    ', I2 = I + I, I3 = I2 + I;
     const pairs = cols.map(c => I2 + '{' + q(c.name) + ', ' + (M_TYPE[c.type] || 'type text') + '}');
@@ -961,12 +1115,21 @@ const PW = (() => {
     return 'In value transformations such as Table.TransformColumns, pass the current value with _, for example {' + q(txt) + ', each Text.Upper(_), type text}. '
       + 'In row-context expressions such as Table.AddColumn and Table.SelectRows, refer to columns by name, for example each ' + f(row) + '.';
   }
+  /* The fx side of the inputs: the cleaning recipes and type map as steps (PWF.recipeSteps), their code, and every function
+     the query may call by name (the library functions used, all of them when the person has them, and their own). */
+  function fxInfo(inp){
+    const cols = parseColumns(inp.columns);
+    const rs = typeof PWF === 'undefined' ? null : PWF.recipeSteps({ cols, fx: inp.fx, typeMap: inp.typeMap, typeHow: inp.typeHow, culture: inp.culture }, 'PromotedHeaders');
+    const code = rs ? PWF.render(rs, (c, prev) => typeMap(c, prev, inp.culture)) : '';
+    const known = typeof PWF === 'undefined' ? [] : PWF.known({ recipes: rs, haveFx: inp.haveFx, myFns: inp.myFns });
+    return { cols, rs, code, known };
+  }
   function prompt(inp){
     const L = [];
     const src = SOURCES.find(s => s[0] === inp.source) || SOURCES[SOURCES.length - 1];
     const fromExisting = inp.start === 'existing' && !!(inp.existing || '').trim();
     const db = fromExisting ? !!inp.existingDb : DB.has(inp.source);
-    const cols = parseColumns(inp.columns), params = parseParams(inp.params), merges = parseMerges(inp.merges);
+    const cols = parseColumns(inp.columns), params = parseParams(inp.params), merges = parseMerges(inp.merges), fx = fxInfo(inp);
     L.push('You are an expert in Power Query M. Write one Power Query query for Power BI that does what is asked below.');
     L.push('The query must work first time, be easy for another developer to maintain, and be as short as it can be while still doing everything asked. Leave out anything that isn’t asked for.');
     L.push('', 'TASK (the user’s request: all the query has to do)', (inp.goal || '(not given)').trim());
@@ -991,14 +1154,23 @@ const PW = (() => {
       L.push('', 'PARAMETERS THAT ALREADY EXIST (use them by name instead of typing the value)');
       params.forEach(p => L.push('- ' + p.name + (p.value ? ' = ' + p.value : '')));
     }
+    if (fx.known.length) {
+      L.push('', 'FUNCTIONS THAT ALREADY EXIST (queries in this file: call them by name)');
+      fx.known.forEach(f => L.push('- ' + f.sig + (f.does ? ': ' + f.does : '')));
+    }
     if ((inp.culture || '').trim()) L.push('', 'Culture for types and dates: ' + inp.culture.trim());
     L.push('', 'RULES');
     L.push('It must work:');
     L.push('- Use only the column names listed above (exact spelling and case) and columns the query itself creates. If you need a column that isn’t listed, don’t guess: say so under QUESTIONS.');
     L.push('- Each step builds on an earlier step, and the query returns its last step after "in".');
-    if (inp.typeMap && cols.length) {
+    const typed = inp.typeMap && cols.length, viaFx = fx.rs && fx.rs.fns.includes('fxApplyTypes');
+    if (fx.rs) {
+      L.push('- Clean ' + (typed ? 'and type ' : '') + 'the data with these steps. They are required (the user asked for them), so add them even if the TASK doesn\u2019t mention them. Put them right after the step where the column names are final (after promoting headers or renaming), replace PromotedHeaders with that step\u2019s name, and keep them as they are otherwise: the steps, their order, the column lists' + (typed ? ', the type pairs' + (viaFx ? '' : ', the default of type text for any other column') : '') + ' and the options. Every later step builds on ' + fx.rs.last + '. Change one only if the TASK says so.' + (typed ? ' Give each newly created column its type in the fourth argument of Table.AddColumn.' : ''), '```', fx.code, '```');
+      if (!typed) L.push('- If the TASK requires changing existing column types, make all such changes in one Table.TransformColumnTypes step' + ((inp.culture || '').trim() ? ' with the culture above' : '') + '. Do not add a type-conversion step when no existing column types need to change. Give each newly created column its type in the fourth argument of Table.AddColumn.');
+    } else if (typed) {
       L.push('- Set the column types with this type map. It is required (the user asked for it), so add it even if the TASK doesn\u2019t mention types. Put it right after the step where the column names are final (after promoting headers or renaming), replace PromotedHeaders with that step\u2019s name, and keep it as it is otherwise: the pairs, the default of type text for any other column, and one Table.TransformColumnTypes. Every later step builds on ChangeTypes. Change a pair\u2019s type only if the TASK says so. Give each newly created column its type in the fourth argument of Table.AddColumn.', '```', typeMap(cols, 'PromotedHeaders', inp.culture), '```');
     } else L.push('- If the TASK requires changing existing column types, make all such changes in one Table.TransformColumnTypes step' + ((inp.culture || '').trim() ? ' with the culture above' : '') + '. Do not add a type-conversion step when no existing column types need to change. Give each newly created column its type in the fourth argument of Table.AddColumn.');
+    if (fx.known.length) L.push('- Call the functions under FUNCTIONS THAT ALREADY EXIST by name with the arguments shown. Don\u2019t copy their code into the query or write your own version of them. Use one wherever it does what the TASK needs.');
     L.push('- Use each correctly for where it is evaluated. ' + eachRule(cols));
     L.push('- Handle nulls and errors only where the request says to expect them. Don’t wrap everything in try … otherwise.');
     L.push('- ' + (!inp.makeParams ? 'Keep the source values as given.' : fromExisting ? 'Keep the existing source step as it is. Don’t type a server, database, file path or URL into any step you add: use an existing parameter, or add a new parameter under PARAMETERS and use its name.' : 'Don’t type a server, database, file path or URL into the query. Use an existing parameter, or add a new parameter under PARAMETERS and use its name.'));
@@ -1017,7 +1189,7 @@ const PW = (() => {
     L.push('- Lists { } and records [ ] that don’t fit on one line: one item per line, the same way. Column-and-type pairs one per line: {"Column", type text}.');
     L.push('- One space after commas and around = and operators. Spaces only, no tabs, no trailing spaces.');
     L.push('', 'FINAL VALIDATION', 'Before producing the answer, silently validate the final M query:');
-    VALIDATION.forEach(x => L.push('- ' + x));
+    VALIDATION.concat(fx.known.length ? [FN_CHECK] : []).forEach(x => L.push('- ' + x));
     L.push('If any check fails, correct the query before replying. Do not report an unvalidated query.');
     L.push('', 'REPLY FORMAT (a template: replace the placeholder lines with your answer)');
     L.push('Reply with these blocks only, nothing before or after them:');
@@ -1032,10 +1204,11 @@ const PW = (() => {
     'All parentheses (), braces {}, brackets [], quotes, and commas are correctly paired and positioned.', 'Every step references an existing earlier step.', 'The in expression returns the final step.',
     'No step was added solely because it appeared in an example or rule when the TASK did not require that operation.', 'No columns, types, values, paths, URLs, parameters, or business rules were invented.',
     'The query performs everything in TASK and nothing beyond TASK.'];
+  const FN_CHECK = 'Every function called by name is a Power Query function or is listed under FUNCTIONS THAT ALREADY EXIST.';
   /* The follow-up when the query doesn't work: the error from Desktop (or what's wrong) and the page's findings, the current
      query as the starting point, and change only what the fix needs. The reply comes back in the same format, plus CHANGES. */
   function fixPrompt(inp, reply, findings, problem){
-    const L = [], cols = parseColumns(inp.columns), prob = (problem || '').trim();
+    const L = [], cols = parseColumns(inp.columns), prob = (problem || '').trim(), fx = fxInfo(inp);
     const found = (findings || []).filter(f => f.level === 'err' || f.level === 'warn');
     L.push('You are an expert in Power Query M. The query under STARTING POINT doesn\u2019t work yet. Fix it.');
     L.push('', 'TASK (what to fix)', prob ? 'Fix this problem from Power BI Desktop: ' + prob + (found.length ? '\nAlso fix the problems found when the query was checked, listed under CONTEXT.' : '') : 'Fix the problems found when the query was checked, listed under CONTEXT.');
@@ -1043,15 +1216,16 @@ const PW = (() => {
     if (prob) L.push('', 'ERROR OR PROBLEM IN POWER BI DESKTOP (as the user gave it)', prob);
     if (found.length) { L.push('', 'PROBLEMS FOUND WHEN THE QUERY WAS CHECKED'); found.forEach(f => L.push('- ' + f.title + (f.detail ? ': ' + f.detail.replace(/\s+/g, ' ') : ''))); }
     if (cols.length) { L.push('', 'COLUMNS AVAILABLE AT THE START (exact names)'); cols.forEach(c => L.push('- ' + c.name + (c.type ? ' (' + c.type + ')' : ''))); }
+    if (fx.known.length) { L.push('', 'FUNCTIONS THAT ALREADY EXIST (queries in this file: call them by name)'); fx.known.forEach(f => L.push('- ' + f.sig + (f.does ? ': ' + f.does : ''))); }
     if ((reply.params || []).length) { L.push('', 'PARAMETERS THE QUERY USES'); reply.params.forEach(p => L.push('- ' + p.name + (p.type ? ' (' + p.type + ')' : ''))); }
     L.push('', 'STARTING POINT', 'The current query:', '```', reply.code.trim(), '```');
     L.push('', 'RULES');
-    L.push('- Change only what the fix needs. Keep every other step as it is: its name, its place and its code. Keep the source step, the parameters' + (inp.typeMap ? ', and the type map (TypePairs and the steps after it) unless the problem is in it' : '') + '.');
+    L.push('- Change only what the fix needs. Keep every other step as it is: its name, its place and its code. Keep the source step, the parameters' + (fx.rs ? ', and the cleaning and type steps (' + fx.rs.fns.concat(fx.rs.typeCode ? ['TypePairs'] : []).join(', ') + ') unless the problem is in them' : inp.typeMap ? ', and the type map (TypePairs and the steps after it) unless the problem is in it' : '') + '.' + (fx.known.length ? ' A "wasn\u2019t recognized" error for a function listed under FUNCTIONS THAT ALREADY EXIST means the function query isn\u2019t in the file yet or has another name: say so under QUESTIONS instead of rewriting it.' : ''));
     L.push('- Find the cause before changing anything. Common ones: "The column \u2026 of the table wasn\u2019t found" means a name differs in spelling, spaces or case from the columns above; "We couldn\u2019t convert to Number/Date" or DataFormat.Error means a column is typed as a number or date but holds text or blanks; "The name \u2026 wasn\u2019t recognized" means a misspelled function or step name; "Token Comma expected", "Token Eof expected" or "Token \u2026 expected" mean a missing comma, bracket or quote near that place; "We cannot apply field access to the type \u2026" means [Column] was used where the value is not a row (use _).');
     L.push('- Use each correctly for where it is evaluated: in Table.TransformColumns the current value is _; in Table.AddColumn and Table.SelectRows refer to columns by name, for example each [Column].');
     L.push('- If the error doesn\u2019t say enough to find the cause, give your best fix and say under QUESTIONS what you need to know.');
     L.push('', 'FINAL VALIDATION', 'Before producing the answer, silently validate the final M query:');
-    VALIDATION.concat(['Only the steps the fix needs were changed; every other step is exactly as it was.']).forEach(x => L.push('- ' + x));
+    VALIDATION.concat(fx.known.length ? [FN_CHECK] : [], ['Only the steps the fix needs were changed; every other step is exactly as it was.']).forEach(x => L.push('- ' + x));
     L.push('If any check fails, correct the query before replying. Do not report an unvalidated query.');
     L.push('', 'REPLY FORMAT (a template: replace the placeholder lines with your answer)');
     L.push('Reply with these blocks only, nothing before or after them:');
@@ -1160,7 +1334,7 @@ const PW = (() => {
   }
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-  return { SOURCES, DB, typeMap, fixPrompt, parseColumns, parseParams, parseMerges, prompt, parseReply, checks, columnUse };
+  return { SOURCES, DB, typeMap, fxInfo, fixPrompt, parseColumns, parseParams, parseMerges, prompt, parseReply, checks, columnUse };
 })();
 
 /* ---------- Power Query Writer: deeper checks on Copilot's query (no AI) ----------
@@ -1197,11 +1371,14 @@ const PWL = (() => {
     if (ALIAS[n]) return [ALIAS[n]]; const [lib, f] = n.split('.'), lf = (f || '').toLowerCase(); return Object.keys(ARITY).filter(k => k.startsWith(lib + '.')).map(k => k.split('.')[1]).filter(x => x.toLowerCase().includes(lf.slice(0, 5)) || lf.includes(x.toLowerCase().slice(0, 5))).slice(0, 3).map(x => lib + '.' + x); };
 
   // the calls in the code: { name, args: [[from, to] token ranges], open, close, line }
-  function calls(toks, src){
+  function calls(toks, src, named){
     const out = [], sig = toks.map((t, i) => i).filter(i => toks[i].t !== 'ws' && toks[i].t !== 'comment');
     const S = sig.map(i => toks[i]);
     for (let k = 0; k < S.length - 1; k++) {
-      if (S[k].t !== 'id' || !/^[A-Z][A-Za-z0-9]*\.[A-Z][A-Za-z0-9.]*$/.test(S[k].v) || S[k + 1].v !== '(') continue;
+      // library calls (Table.AddColumn), and calls of functions by name: fx… and the ones the person listed
+      if (S[k].t !== 'id' || S[k + 1].v !== '(' || !(/^[A-Z][A-Za-z0-9]*\.[A-Z][A-Za-z0-9.]*$/.test(S[k].v) || /^fx[A-Z0-9_]/.test(S[k].v) || (named && named.has(S[k].v)))) continue;
+      // a step or variable defined as a function here (Name = (x) => …) is not a call of the library
+      if (k > 0 && S[k - 1].v === '.') continue;
       let d = 0, args = [], start = k + 2, j = k + 1;
       for (; j < S.length; j++) {
         const v = S[j].v;
@@ -1218,16 +1395,20 @@ const PWL = (() => {
   function lint(code, q, inp, cols){
     const out = [], add = (level, title, detail, step) => out.push({ level, title, detail, step });
     const tk = mTokenize(code); if (tk.error) return out;
-    const { calls: cs, S } = calls(tk.toks, code);
+    const fx = PW.fxInfo(inp), named = new Map(fx.known.map(f => [f.name, f]));
+    const { calls: cs, S } = calls(tk.toks, code, named), stepNames = new Set(q.steps.map(s => s.name));
     // 1. functions that don't exist, and argument counts
-    const unknown = [], wrongN = [];
+    const unknown = [], wrongN = [], notListed = [];
     cs.forEach(c => {
       const lib = c.name.split('.')[0];
+      if (named.has(c.name)) { const f = named.get(c.name), n = c.args.length; if (f.min != null && (n < f.min || n > f.max)) wrongN.push(c.name + ' on line ' + c.line + ' has ' + n + ' argument' + (n === 1 ? '' : 's') + '; it takes ' + (f.min === f.max ? f.min : f.min + ' to ' + f.max) + '.'); return; }
+      if (!c.name.includes('.')) { if (!stepNames.has(c.name) && !new RegExp('(^|[^A-Za-z0-9_])' + c.name + '\\s*=\\s*\\(').test(code)) notListed.push(c.name + ' (line ' + c.line + ')'); return; }
       if (ARITY[c.name]) { const [a, b] = ARITY[c.name], n = c.args.length; if (n < a || n > b) wrongN.push(c.name + ' on line ' + c.line + ' has ' + n + ' argument' + (n === 1 ? '' : 's') + '; it takes ' + (a === b ? a : a + ' to ' + b) + '.'); }
       else if (FULL.has(lib) && c.name.split('.').length === 2) unknown.push(c.name + ' (line ' + c.line + ')' + (near(c.name).length ? ', perhaps ' + near(c.name).join(' or ') : ''));
     });
     if (unknown.length) add('err', unknown.length + ' function' + (unknown.length > 1 ? 's that don’t' : ' that doesn’t') + ' exist in Power Query', Array.from(new Set(unknown)).join('; ') + '. Copilot sometimes makes up function names: ask it to use a real function.');
     if (wrongN.length) add('err', 'Wrong number of arguments', Array.from(new Set(wrongN)).join(' '));
+    if (notListed.length) add('warn', 'Calls a function that isn\u2019t listed', Array.from(new Set(notListed)).join('; ') + '. It isn\u2019t a Power Query function or one the page knows you have. If it\u2019s a query in your file, add it under \u201cFunctions you already have\u201d; if not, ask Copilot to use a real function.');
     // 2. each in the wrong context
     const ctx = [];
     cs.forEach(c => {
@@ -1259,15 +1440,34 @@ const PWL = (() => {
     // 5. Table.RemoveColumns that breaks if a column is gone
     cs.filter(c => c.name === 'Table.RemoveColumns' && c.args.length < 3).forEach(c => add('warn', 'Removes columns without MissingField.Ignore', 'Table.RemoveColumns on line ' + c.line + ' fails the refresh if a named column is no longer in the source. Add MissingField.Ignore as the third argument.'));
     // 6. the type map came back as given
-    if (inp.typeMap && cols && cols.length) {
+    // the cleaning steps: every function they use is called
+    if (fx.rs) {
+      // (fxApplyTypes has its own check below)
+      const called = new Set(cs.map(c => c.name)), clean = fx.rs.fns.filter(f => f !== 'fxApplyTypes'), gone = clean.filter(f => !called.has(f));
+      if (gone.length) add('warn', 'Cleaning steps missing', gone.join(', ') + (gone.length > 1 ? ' aren\u2019t' : ' isn\u2019t') + ' called. Copilot was asked to use the cleaning steps as given; ask it to put them back after the step where the column names are final.');
+      else if (clean.length) add('ok', 'Cleaning steps as given', clean.join(', ') + '.');
+    }
+    const want = new Map(((fx.rs ? fx.rs.types : cols) || []).map(c => [c.name, PWF.M_TYPE[c.type] || 'type text']));
+    const pairsIn = text => { const got = new Map(); (text.match(/\{\s*"((?:[^"]|"")*)"\s*,\s*(type\s+[a-z]+|[A-Za-z0-9.]+\.Type)\s*\}/g) || []).forEach(m => { const x = /"((?:[^"]|"")*)"\s*,\s*(.+?)\s*\}$/.exec(m); got.set(x[1].replace(/""/g, '"'), x[2].replace(/\s+/g, ' ')); }); return got; };
+    const diff = got => { const missing = [...want.keys()].filter(n => !got.has(n)), changed = [...want.keys()].filter(n => got.has(n) && got.get(n) !== want.get(n)).map(n => n + ' is ' + got.get(n) + ' (was ' + want.get(n) + ')');
+      return [].concat(missing.length ? ['missing pairs: ' + missing.join(', ')] : [], changed.length ? ['changed types: ' + changed.join('; ')] : []); };
+    if (inp.typeMap && cols && cols.length && fx.rs && fx.rs.fns.includes('fxApplyTypes')) {
+      // the type map as a call to fxApplyTypes: its pairs, and no DefaultType other than text
+      const call = cs.find(c => c.name === 'fxApplyTypes');
+      if (!call) add('warn', 'The type map is missing', 'There\u2019s no fxApplyTypes step. Copilot was asked to set the types with it; ask it to put the ChangeTypes step back.');
+      else {
+        const text = S.slice(call.open, call.close + 1).map(t => t.v).join(' '), got = pairsIn(text);
+        const probs = diff(got).concat(/DefaultType/.test(text) ? ['a DefaultType was added, so other columns aren\u2019t text'] : []);
+        if (probs.length) add('warn', 'The type map was changed', cap2(probs.join('; ')) + '. Check that the TASK asked for it.', 'ChangeTypes');
+        else add('ok', 'Type map as given', got.size + ' column types with fxApplyTypes, text for any other column.');
+      }
+    } else if (inp.typeMap && cols && cols.length) {
       const tp = q.steps.find(s => s.name === 'TypePairs');
       if (!tp) add('warn', 'The type map is missing', 'There’s no TypePairs step. Copilot was asked to use the type map as given; ask it to add it after the step where the column names are final.');
       else {
-        const got = new Map(); (tp.expr.match(/\{\s*"((?:[^"]|"")*)"\s*,\s*(type\s+[a-z]+|[A-Za-z0-9.]+\.Type)\s*\}/g) || []).forEach(m => { const x = /"((?:[^"]|"")*)"\s*,\s*(.+?)\s*\}$/.exec(m); got.set(x[1].replace(/""/g, '"'), x[2].replace(/\s+/g, ' ')); });
-        const want = new Map(cols.map(c => [c.name, ({ 'whole number': 'Int64.Type', number: 'type number', date: 'type date', datetime: 'type datetime', logical: 'type logical' })[c.type] || 'type text']));
-        const missing = [...want.keys()].filter(n => !got.has(n)), changed = [...want.keys()].filter(n => got.has(n) && got.get(n) !== want.get(n)).map(n => n + ' is ' + got.get(n) + ' (was ' + want.get(n) + ')');
+        const got = pairsIn(tp.expr);
         const dflt = q.steps.some(s => /Record\.FieldOrDefault\s*\([^)]*type\s+text\s*\)/.test(s.expr)), one = q.steps.filter(s => s.fn === 'Table.TransformColumnTypes').length === 1 && q.steps.some(s => s.fn === 'Table.TransformColumnTypes' && /AllTypePairs/.test(s.expr));
-        const probs = [].concat(missing.length ? ['missing pairs: ' + missing.join(', ')] : [], changed.length ? ['changed types: ' + changed.join('; ')] : [], dflt ? [] : ['the default of type text for other columns is gone'], one ? [] : ['the types aren’t applied in one Table.TransformColumnTypes with AllTypePairs']);
+        const probs = diff(got).concat(dflt ? [] : ['the default of type text for other columns is gone'], one ? [] : ['the types aren’t applied in one Table.TransformColumnTypes with AllTypePairs']);
         if (probs.length) add('warn', 'The type map was changed', cap2(probs.join('; ')) + '. Check that the TASK asked for it.', 'TypePairs');
         else add('ok', 'Type map as given', got.size + ' column types, text for any other column, applied in one step.');
       }
@@ -1292,25 +1492,27 @@ const PW_EX = {
     '@@@ QUERY @@@',
     'let',
     '    Source = Sql.Database(ServerName, DatabaseName),',
-    '    Lines = Source{[Schema = "dbo", Item = "vSalesLines"]}[Data],',
-    '    // Filter at the source so the database does the work',
-    '    Recent = Table.SelectRows(Lines, each [OrderDate] >= #date(2023, 1, 1) and [Status] <> "Cancelled"),',
-    '    Kept = Table.SelectColumns(',
-    '        Recent,',
-    '        {"OrderNumber", "OrderDate", "CustomerKey", "ProductKey", "Quantity", "NetAmount"}',
-    '    ),',
-    '    Typed = Table.TransformColumnTypes(',
-    '        Kept,',
+    '    SalesLines = Source{[Schema = "dbo", Item = "vSalesLines"]}[Data],',
+    '    ChangeTypes = fxApplyTypes(',
+    '        SalesLines,',
     '        {',
     '            {"OrderNumber", type text},',
     '            {"OrderDate", type date},',
     '            {"CustomerKey", Int64.Type},',
     '            {"ProductKey", Int64.Type},',
     '            {"Quantity", Int64.Type},',
-    '            {"NetAmount", Currency.Type}',
+    '            {"NetAmount", type number},',
+    '            {"Status", type text},',
+    '            {"CreatedBy", type text}',
     '        }',
     '    ),',
-    '    WithYear = Table.AddColumn(Typed, "Year", each Date.Year([OrderDate]), Int64.Type),',
+    '    // Filter early so the database does the work',
+    '    Recent = Table.SelectRows(ChangeTypes, each [OrderDate] >= #date(2023, 1, 1) and [Status] <> "Cancelled"),',
+    '    Kept = Table.SelectColumns(',
+    '        Recent,',
+    '        {"OrderNumber", "OrderDate", "CustomerKey", "ProductKey", "Quantity", "NetAmount"}',
+    '    ),',
+    '    WithYear = Table.AddColumn(Kept, "Year", each Date.Year([OrderDate]), Int64.Type),',
     '    Joined = Table.NestedJoin(WithYear, {"CustomerKey"}, Customers, {"CustomerKey"}, "Customer", JoinKind.LeftOuter),',
     '    Expanded = Table.ExpandTableColumn(Joined, "Customer", {"Region"})',
     'in',
@@ -1318,10 +1520,10 @@ const PW_EX = {
     '@@@ END @@@',
     '@@@ STEPS @@@',
     'Source: Connects to the data warehouse through the server and database parameters.',
-    'Lines: Opens the sales lines view.',
+    'SalesLines: Opens the sales lines view.',
+    'ChangeTypes: Sets the column types with the type map.',
     'Recent: Keeps orders from 2023 onwards that aren’t cancelled.',
     'Kept: Keeps only the six columns the model needs.',
-    'Typed: Sets the type of every kept column.',
     'WithYear: Adds the order year as a whole number.',
     'Joined: Looks up each order’s customer in the Customers query.',
     'Expanded: Brings in the customer’s region.',
@@ -1363,19 +1565,21 @@ function copyText(text, btn){
   try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
 }
 
-const FIELDS = ['goal', 'sourceDetail', 'existing', 'columns', 'merges', 'params', 'culture', 'pwReply', 'pwError'];
-const blank = () => ({ goal: '', start: 'new', source: 'sql', sourceDetail: '', existing: '', columns: '', merges: '', params: '', culture: '', makeParams: true, typeMap: true, pwReply: '', pwError: '' });
+const FIELDS = ['goal', 'sourceDetail', 'existing', 'columns', 'merges', 'params', 'culture', 'myFns', 'pwReply', 'pwError'];
+const blank = () => ({ goal: '', start: 'new', source: 'sql', sourceDetail: '', existing: '', columns: '', merges: '', params: '', culture: '', makeParams: true, typeMap: true, typeHow: 'fx', fx: PWF.blankOpts(), haveFx: false, myFns: '', pwReply: '', pwError: '' });
 const state = { example: false, v: blank(), prompt: '', reply: null };
 
 function inputs(){
   const v = state.v, ex = v.start === 'existing' && v.existing.trim() ? parseM(v.existing) : null;
   return { goal: v.goal, start: v.start, source: v.source, sourceDetail: v.sourceDetail, existing: v.existing, existingDb: ex && !ex.error && sourceInfo(ex).kind === 'database',
-    columns: v.columns, merges: v.merges, params: v.params, culture: v.culture, makeParams: v.makeParams, typeMap: v.typeMap !== false };
+    columns: v.columns, merges: v.merges, params: v.params, culture: v.culture, makeParams: v.makeParams, typeMap: v.typeMap !== false,
+    typeHow: v.typeHow === 'steps' ? 'steps' : 'fx', fx: v.fx, haveFx: !!v.haveFx, myFns: v.myFns };
 }
 function toForm(){
   const v = state.v;
   FIELDS.forEach(k => { $(k).value = v[k] || ''; });
   $('source').value = v.source; $('makeParams').checked = v.makeParams; $('typeMap').checked = v.typeMap !== false;
+  $('typeSteps').checked = v.typeHow === 'steps'; $('haveFx').checked = !!v.haveFx;
   document.querySelectorAll('input[name=start]').forEach(i => { i.checked = i.value === v.start; });
 }
 
@@ -1395,8 +1599,49 @@ function renderCols(){
   $('colChips').innerHTML = cols.length ? cols.map(c => '<span class="chip">' + esc(c.name) + (c.type ? ' <small>' + esc(c.type) + '</small>' : '') + '</span>').join('') + '<span class="muted small">' + cols.length + ' column' + (cols.length === 1 ? '' : 's') + '</span>' : '';
   // the type map: shown once there are columns
   $('typeMapBox').hidden = !cols.length;
+  $('typeHowBox').hidden = state.v.typeMap === false;
+  $('typeMapView').hidden = state.v.typeMap === false || state.v.typeHow !== 'steps';
   $('typeMapCode').textContent = cols.length ? PW.typeMap(cols, 'PromotedHeaders', state.v.culture) : '';
+  $('fxBox').hidden = !cols.length;
+  renderRecipes(cols); renderFx();
 }
+/* ---------- cleaning recipes ---------- */
+const R_OPTS = {
+  trim: o => '<label><input type="checkbox" data-opt="collapse"' + (o.collapse ? ' checked' : '') + '> Also turn runs of spaces inside the text into one</label>',
+  case: o => '<label>Case <select data-opt="how">' + ['Upper', 'Lower', 'Proper'].map(c => '<option' + (o.how === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select></label>',
+  date: o => '<label class="row" style="flex:1 1 220px">Format <input type="text" class="txt" data-opt="format" value="' + esc(o.format || '') + '" placeholder="only if fixed, for example yyyyMMdd"></label>',
+  num: o => '<label><input type="checkbox" data-opt="whole"' + (o.whole ? ' checked' : '') + '> Whole numbers (rounded)</label>',
+  split: o => '<label><input type="checkbox" data-opt="keep"' + (o.keep !== false ? ' checked' : '') + '> Keep the original columns</label>',
+  nulls: o => '<label class="row" style="flex:1 1 220px">Replace with <input type="text" class="txt" data-opt="value" value="' + esc(o.value || '') + '" placeholder="for example Unknown or 0"></label>',
+  dedupe: o => '<label><input type="checkbox" data-opt="last"' + (o.last ? ' checked' : '') + '> Keep the last row instead of the first</label><label><input type="checkbox" data-opt="nocase"' + (o.nocase ? ' checked' : '') + '> Ignore upper and lower case</label>'
+};
+function fxOpt(id){ const all = state.v.fx || (state.v.fx = PWF.blankOpts()); return all[id] || (all[id] = PWF.blankOpts()[id]); }
+function renderRecipes(cols){
+  cols = cols || PW.parseColumns(state.v.columns);
+  $('recipes').innerHTML = PWF.RECIPES.map(r => {
+    const o = fxOpt(r.id), picked = new Set(o.cols || []);
+    const need = r.cols && !r.all && o.on && !cols.some(c => picked.has(c.name));
+    return '<div class="recipe" data-r="' + r.id + '"><label class="opts"><span><input type="checkbox" data-on="' + r.id + '"' + (o.on ? ' checked' : '') + '> ' + esc(r.label) + ' <span class="muted small">' + r.fx + '</span></span></label>'
+      + '<div class="rbody"' + (o.on && (r.cols || R_OPTS[r.id] || r.hint) ? '' : ' hidden') + '>' + (r.hint ? '<p class="note small">' + esc(r.hint) + '</p>' : '')
+      + (r.cols ? '<div class="colpick" role="group" aria-label="Columns for ' + esc(r.label) + '">' + cols.map(c => '<button type="button" data-col="' + esc(c.name) + '" aria-pressed="' + picked.has(c.name) + '">' + esc(c.name) + '</button>').join('') + '</div>' : '')
+      + (R_OPTS[r.id] ? '<div class="row">' + R_OPTS[r.id](o) + '</div>' : '')
+      + (need ? '<div class="msg info">Pick at least one column.</div>' : '') + '</div></div>';
+  }).join('');
+}
+function renderFx(){
+  const f = PW.fxInfo(inputs());
+  state.fxCode = f.code;
+  $('fxOut').hidden = !f.rs;
+  $('fxStepsCode').textContent = f.code;
+  $('fxFns').innerHTML = f.rs ? f.rs.fns.map(n => { const fn = PWF.BY.get(n); return '<details class="extra"><summary><code>' + n + '</code> <span class="muted">' + esc(fn.does) + '</span></summary><div class="codebox"><div class="codebox-bar"><span class="t">Blank query named ' + n + '</span><span class="r"><button class="btn" type="button" data-copyfn="' + n + '">Copy</button></span></div><pre class="short">' + esc(fn.code) + '</pre></div></details>'; }).join('') : '';
+}
+// what a recipe starts with when ticked: the date columns for dates, the date-time columns for splitting
+function recipeDefaults(id, cols){
+  if (id === 'date') return cols.filter(c => c.type === 'date').map(c => c.name);
+  if (id === 'split') return cols.filter(c => c.type === 'datetime').map(c => c.name);
+  return [];
+}
+function fxChanged(redraw){ if (redraw) renderRecipes(); renderFx(); renderPrompt(); renderReply(); persist(); }
 function renderPrompt(){
   const v = state.v;
   state.prompt = v.goal.trim() ? PW.prompt(inputs()) : '';
@@ -1454,7 +1699,7 @@ function resetAll(){ state.v = blank(); setExample(false); toForm(); $('moreBox'
 function init(){
   $('source').innerHTML = PW.SOURCES.map(s => '<option value="' + s[0] + '">' + esc(s[1]) + '</option>').join('');
   let saved = null; try { saved = JSON.parse(store.get('v') || 'null'); } catch (e) {}
-  if (saved) state.v = Object.assign(blank(), saved);
+  if (saved) { const b = blank(); state.v = Object.assign(b, saved); const fx = PWF.blankOpts(); Object.keys(fx).forEach(k => Object.assign(fx[k], (saved.fx || {})[k] || {})); state.v.fx = fx; }
   else if (store.get('blank') !== '1') { state.v = Object.assign(blank(), { goal: PW_EX.goal, start: PW_EX.start, source: PW_EX.source, sourceDetail: PW_EX.sourceDetail, columns: PW_EX.columns, merges: PW_EX.merges, params: PW_EX.params, culture: PW_EX.culture, makeParams: PW_EX.makeParams, pwReply: PW_EX.reply }); setExample(true); }
   toForm(); renderAll();
 
@@ -1463,12 +1708,29 @@ function init(){
     if (state.example) { const val = SF_SUITE.ownText($(k).value, state.v[k] || ''); leaveExample(); state.v[k] = val; $(k).value = val; }
     else state.v[k] = $(k).value;
     try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
-    if (k === 'pwReply' || k === 'pwError') renderReply(); else if (k === 'columns' || k === 'culture') { renderCols(); renderPrompt(); renderReply(); } else if (k === 'existing') { renderStart(); renderPrompt(); } else { renderPrompt(); if (k === 'params' || k === 'merges') renderReply(); }
+    if (k === 'pwReply' || k === 'pwError') renderReply(); else if (k === 'columns' || k === 'culture') { renderCols(); renderPrompt(); renderReply(); } else if (k === 'existing') { renderStart(); renderPrompt(); } else { renderPrompt(); if (k === 'params' || k === 'merges' || k === 'myFns') renderReply(); }
     persist();
   }));
   $('source').addEventListener('change', () => { leaveExample(); state.v.source = $('source').value; renderStart(); renderPrompt(); persist(); });
   $('makeParams').addEventListener('change', () => { state.v.makeParams = $('makeParams').checked; renderPrompt(); persist(); });
-  $('typeMap').addEventListener('change', () => { state.v.typeMap = $('typeMap').checked; renderPrompt(); persist(); });
+  $('typeMap').addEventListener('change', () => { state.v.typeMap = $('typeMap').checked; renderCols(); renderPrompt(); renderReply(); persist(); });
+  $('typeSteps').addEventListener('change', () => { state.v.typeHow = $('typeSteps').checked ? 'steps' : 'fx'; renderCols(); renderPrompt(); renderReply(); persist(); });
+  $('haveFx').addEventListener('change', () => { state.v.haveFx = $('haveFx').checked; renderPrompt(); renderReply(); persist(); });
+  $('recipes').addEventListener('change', e => {
+    const t = e.target, box = t.closest('.recipe'); if (!box) return;
+    const id = box.dataset.r, o = fxOpt(id);
+    if (t.dataset.on) { o.on = t.checked; if (o.on && !(o.cols || []).length) o.cols = recipeDefaults(id, PW.parseColumns(state.v.columns)); fxChanged(true); }
+    else if (t.dataset.opt) { o[t.dataset.opt] = t.type === 'checkbox' ? t.checked : t.value; fxChanged(t.tagName === 'SELECT' ? false : t.type === 'checkbox'); }
+  });
+  $('recipes').addEventListener('input', e => { const t = e.target, box = t.closest('.recipe'); if (!box || !t.dataset.opt || t.type === 'checkbox') return; fxOpt(box.dataset.r)[t.dataset.opt] = t.value; fxChanged(false); });
+  $('recipes').addEventListener('click', e => {
+    const b = e.target.closest('button[data-col]'), box = b && b.closest('.recipe'); if (!box) return;
+    const o = fxOpt(box.dataset.r), n = b.dataset.col, cs = new Set(o.cols || []);
+    if (cs.has(n)) cs.delete(n); else cs.add(n);
+    o.cols = PW.parseColumns(state.v.columns).map(c => c.name).filter(c => cs.has(c));
+    fxChanged(true);
+    const again = document.querySelector('.recipe[data-r="' + box.dataset.r + '"] button[data-col="' + CSS.escape(n) + '"]'); if (again) again.focus();
+  });
   document.querySelectorAll('input[name=start]').forEach(i => i.addEventListener('change', () => { leaveExample(); state.v.start = i.value; toForm(); renderAll(); persist(); }));
   document.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
@@ -1476,6 +1738,8 @@ function init(){
     else if (b.dataset.copy === 'query' && state.reply) copyText(state.reply.code, b);
     else if (b.dataset.copy === 'fix' && state.fix) copyText(state.fix, b);
     else if (b.dataset.copy === 'typemap') copyText($('typeMapCode').textContent, b);
+    else if (b.dataset.copy === 'steps' && state.fxCode) copyText(state.fxCode, b);
+    else if (b.dataset.copyfn && PWF.BY.get(b.dataset.copyfn)) copyText(PWF.BY.get(b.dataset.copyfn).code, b);
     else if (b.dataset.copyparam != null && state.reply) copyText(paramQuery(state.reply.params[+b.dataset.copyparam]), b);
   });
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); $('goal').focus(); });

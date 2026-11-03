@@ -6,7 +6,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('http://localhost:8765/power-query-writer.html'); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(300);
   const cols = 'CREATE DATE\tACTUAL BEGIN DATE\tACTUAL END DATE\tUSER ID\tSTATE ID\tOFFICE\tSERVICE\tCOMPLETION STATUS\tPROGRAM\tCOMMENTS\n2024-01-05\t2024-01-08\t2024-03-01\t1001\tA12\tNorth\tTraining\tComplete\tWIOA\tok';
-  await p.fill('#goal', 'Keep completed services from 2024 on, add Duration Days, remove COMMENTS.'); await p.fill('#columns', cols);
+  await p.fill('#goal', 'Keep completed services from 2024 on, add Duration Days, remove COMMENTS.'); await p.fill('#columns', cols); await p.check('#typeSteps');
   const reply = fs.readFileSync(__dirname + '/pw_reply_copilot.txt', 'utf8');
   await p.fill('#pwReply', reply); await p.waitForTimeout(300);
   let f = await p.evaluate(() => ({ shown: !$('fixBox').hidden, msg: $('fixMsg').textContent, t: state.fix }));

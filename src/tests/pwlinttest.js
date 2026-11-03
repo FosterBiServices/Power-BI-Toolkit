@@ -7,7 +7,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('http://localhost:8765/power-query-writer.html'); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(300);
   const cols = 'CREATE DATE\tACTUAL BEGIN DATE\tACTUAL END DATE\tUSER ID\tSTATE ID\tOFFICE\tSERVICE\tCOMPLETION STATUS\tPROGRAM\tCOMMENTS\n2024-01-05\t2024-01-08\t2024-03-01\t1001\tA12\tNorth\tTraining\tComplete\tWIOA\tok';
-  const run = (reply, typeMap) => p.evaluate(([c, r, tm]) => { const inp = Object.assign({}, inputs(), { columns: c, typeMap: tm, makeParams: true }); const x = PW.parseReply(r); return PW.checks(x.code, inp).list.map(k => k.level + ' | ' + k.title + (k.level === 'ok' ? '' : ' | ' + (k.detail || '').slice(0, 150))); }, [cols, reply, typeMap]);
+  const run = (reply, typeMap) => p.evaluate(([c, r, tm]) => { const inp = Object.assign({}, inputs(), { columns: c, typeMap: tm, typeHow: 'steps', makeParams: true }); const x = PW.parseReply(r); return PW.checks(x.code, inp).list.map(k => k.level + ' | ' + k.title + (k.level === 'ok' ? '' : ' | ' + (k.detail || '').slice(0, 150))); }, [cols, reply, typeMap]);
   const good = fs.readFileSync(__dirname + '/pw_reply_copilot.txt', 'utf8');
   console.log('Copilot reply:\n  ' + (await run(good, true)).join('\n  '));
   const bad = good.replace('Table.SelectRows(', 'Table.FilterRows(')

@@ -32,11 +32,14 @@ const PWL = (() => {
     if (ALIAS[n]) return [ALIAS[n]]; const [lib, f] = n.split('.'), lf = (f || '').toLowerCase(); return Object.keys(ARITY).filter(k => k.startsWith(lib + '.')).map(k => k.split('.')[1]).filter(x => x.toLowerCase().includes(lf.slice(0, 5)) || lf.includes(x.toLowerCase().slice(0, 5))).slice(0, 3).map(x => lib + '.' + x); };
 
   // the calls in the code: { name, args: [[from, to] token ranges], open, close, line }
-  function calls(toks, src){
+  function calls(toks, src, named){
     const out = [], sig = toks.map((t, i) => i).filter(i => toks[i].t !== 'ws' && toks[i].t !== 'comment');
     const S = sig.map(i => toks[i]);
     for (let k = 0; k < S.length - 1; k++) {
-      if (S[k].t !== 'id' || !/^[A-Z][A-Za-z0-9]*\.[A-Z][A-Za-z0-9.]*$/.test(S[k].v) || S[k + 1].v !== '(') continue;
+      // library calls (Table.AddColumn), and calls of functions by name: fx… and the ones the person listed
+      if (S[k].t !== 'id' || S[k + 1].v !== '(' || !(/^[A-Z][A-Za-z0-9]*\.[A-Z][A-Za-z0-9.]*$/.test(S[k].v) || /^fx[A-Z0-9_]/.test(S[k].v) || (named && named.has(S[k].v)))) continue;
+      // a step or variable defined as a function here (Name = (x) => …) is not a call of the library
+      if (k > 0 && S[k - 1].v === '.') continue;
       let d = 0, args = [], start = k + 2, j = k + 1;
       for (; j < S.length; j++) {
         const v = S[j].v;
@@ -53,16 +56,20 @@ const PWL = (() => {
   function lint(code, q, inp, cols){
     const out = [], add = (level, title, detail, step) => out.push({ level, title, detail, step });
     const tk = mTokenize(code); if (tk.error) return out;
-    const { calls: cs, S } = calls(tk.toks, code);
+    const fx = PW.fxInfo(inp), named = new Map(fx.known.map(f => [f.name, f]));
+    const { calls: cs, S } = calls(tk.toks, code, named), stepNames = new Set(q.steps.map(s => s.name));
     // 1. functions that don't exist, and argument counts
-    const unknown = [], wrongN = [];
+    const unknown = [], wrongN = [], notListed = [];
     cs.forEach(c => {
       const lib = c.name.split('.')[0];
+      if (named.has(c.name)) { const f = named.get(c.name), n = c.args.length; if (f.min != null && (n < f.min || n > f.max)) wrongN.push(c.name + ' on line ' + c.line + ' has ' + n + ' argument' + (n === 1 ? '' : 's') + '; it takes ' + (f.min === f.max ? f.min : f.min + ' to ' + f.max) + '.'); return; }
+      if (!c.name.includes('.')) { if (!stepNames.has(c.name) && !new RegExp('(^|[^A-Za-z0-9_])' + c.name + '\\s*=\\s*\\(').test(code)) notListed.push(c.name + ' (line ' + c.line + ')'); return; }
       if (ARITY[c.name]) { const [a, b] = ARITY[c.name], n = c.args.length; if (n < a || n > b) wrongN.push(c.name + ' on line ' + c.line + ' has ' + n + ' argument' + (n === 1 ? '' : 's') + '; it takes ' + (a === b ? a : a + ' to ' + b) + '.'); }
       else if (FULL.has(lib) && c.name.split('.').length === 2) unknown.push(c.name + ' (line ' + c.line + ')' + (near(c.name).length ? ', perhaps ' + near(c.name).join(' or ') : ''));
     });
     if (unknown.length) add('err', unknown.length + ' function' + (unknown.length > 1 ? 's that don’t' : ' that doesn’t') + ' exist in Power Query', Array.from(new Set(unknown)).join('; ') + '. Copilot sometimes makes up function names: ask it to use a real function.');
     if (wrongN.length) add('err', 'Wrong number of arguments', Array.from(new Set(wrongN)).join(' '));
+    if (notListed.length) add('warn', 'Calls a function that isn\u2019t listed', Array.from(new Set(notListed)).join('; ') + '. It isn\u2019t a Power Query function or one the page knows you have. If it\u2019s a query in your file, add it under \u201cFunctions you already have\u201d; if not, ask Copilot to use a real function.');
     // 2. each in the wrong context
     const ctx = [];
     cs.forEach(c => {
@@ -94,15 +101,34 @@ const PWL = (() => {
     // 5. Table.RemoveColumns that breaks if a column is gone
     cs.filter(c => c.name === 'Table.RemoveColumns' && c.args.length < 3).forEach(c => add('warn', 'Removes columns without MissingField.Ignore', 'Table.RemoveColumns on line ' + c.line + ' fails the refresh if a named column is no longer in the source. Add MissingField.Ignore as the third argument.'));
     // 6. the type map came back as given
-    if (inp.typeMap && cols && cols.length) {
+    // the cleaning steps: every function they use is called
+    if (fx.rs) {
+      // (fxApplyTypes has its own check below)
+      const called = new Set(cs.map(c => c.name)), clean = fx.rs.fns.filter(f => f !== 'fxApplyTypes'), gone = clean.filter(f => !called.has(f));
+      if (gone.length) add('warn', 'Cleaning steps missing', gone.join(', ') + (gone.length > 1 ? ' aren\u2019t' : ' isn\u2019t') + ' called. Copilot was asked to use the cleaning steps as given; ask it to put them back after the step where the column names are final.');
+      else if (clean.length) add('ok', 'Cleaning steps as given', clean.join(', ') + '.');
+    }
+    const want = new Map(((fx.rs ? fx.rs.types : cols) || []).map(c => [c.name, PWF.M_TYPE[c.type] || 'type text']));
+    const pairsIn = text => { const got = new Map(); (text.match(/\{\s*"((?:[^"]|"")*)"\s*,\s*(type\s+[a-z]+|[A-Za-z0-9.]+\.Type)\s*\}/g) || []).forEach(m => { const x = /"((?:[^"]|"")*)"\s*,\s*(.+?)\s*\}$/.exec(m); got.set(x[1].replace(/""/g, '"'), x[2].replace(/\s+/g, ' ')); }); return got; };
+    const diff = got => { const missing = [...want.keys()].filter(n => !got.has(n)), changed = [...want.keys()].filter(n => got.has(n) && got.get(n) !== want.get(n)).map(n => n + ' is ' + got.get(n) + ' (was ' + want.get(n) + ')');
+      return [].concat(missing.length ? ['missing pairs: ' + missing.join(', ')] : [], changed.length ? ['changed types: ' + changed.join('; ')] : []); };
+    if (inp.typeMap && cols && cols.length && fx.rs && fx.rs.fns.includes('fxApplyTypes')) {
+      // the type map as a call to fxApplyTypes: its pairs, and no DefaultType other than text
+      const call = cs.find(c => c.name === 'fxApplyTypes');
+      if (!call) add('warn', 'The type map is missing', 'There\u2019s no fxApplyTypes step. Copilot was asked to set the types with it; ask it to put the ChangeTypes step back.');
+      else {
+        const text = S.slice(call.open, call.close + 1).map(t => t.v).join(' '), got = pairsIn(text);
+        const probs = diff(got).concat(/DefaultType/.test(text) ? ['a DefaultType was added, so other columns aren\u2019t text'] : []);
+        if (probs.length) add('warn', 'The type map was changed', cap2(probs.join('; ')) + '. Check that the TASK asked for it.', 'ChangeTypes');
+        else add('ok', 'Type map as given', got.size + ' column types with fxApplyTypes, text for any other column.');
+      }
+    } else if (inp.typeMap && cols && cols.length) {
       const tp = q.steps.find(s => s.name === 'TypePairs');
       if (!tp) add('warn', 'The type map is missing', 'There’s no TypePairs step. Copilot was asked to use the type map as given; ask it to add it after the step where the column names are final.');
       else {
-        const got = new Map(); (tp.expr.match(/\{\s*"((?:[^"]|"")*)"\s*,\s*(type\s+[a-z]+|[A-Za-z0-9.]+\.Type)\s*\}/g) || []).forEach(m => { const x = /"((?:[^"]|"")*)"\s*,\s*(.+?)\s*\}$/.exec(m); got.set(x[1].replace(/""/g, '"'), x[2].replace(/\s+/g, ' ')); });
-        const want = new Map(cols.map(c => [c.name, ({ 'whole number': 'Int64.Type', number: 'type number', date: 'type date', datetime: 'type datetime', logical: 'type logical' })[c.type] || 'type text']));
-        const missing = [...want.keys()].filter(n => !got.has(n)), changed = [...want.keys()].filter(n => got.has(n) && got.get(n) !== want.get(n)).map(n => n + ' is ' + got.get(n) + ' (was ' + want.get(n) + ')');
+        const got = pairsIn(tp.expr);
         const dflt = q.steps.some(s => /Record\.FieldOrDefault\s*\([^)]*type\s+text\s*\)/.test(s.expr)), one = q.steps.filter(s => s.fn === 'Table.TransformColumnTypes').length === 1 && q.steps.some(s => s.fn === 'Table.TransformColumnTypes' && /AllTypePairs/.test(s.expr));
-        const probs = [].concat(missing.length ? ['missing pairs: ' + missing.join(', ')] : [], changed.length ? ['changed types: ' + changed.join('; ')] : [], dflt ? [] : ['the default of type text for other columns is gone'], one ? [] : ['the types aren’t applied in one Table.TransformColumnTypes with AllTypePairs']);
+        const probs = diff(got).concat(dflt ? [] : ['the default of type text for other columns is gone'], one ? [] : ['the types aren’t applied in one Table.TransformColumnTypes with AllTypePairs']);
         if (probs.length) add('warn', 'The type map was changed', cap2(probs.join('; ')) + '. Check that the TASK asked for it.', 'TypePairs');
         else add('ok', 'Type map as given', got.size + ' column types, text for any other column, applied in one step.');
       }

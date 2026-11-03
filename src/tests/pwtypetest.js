@@ -10,6 +10,8 @@ const { chromium } = require('playwright');
   await p.fill('#columns', 'CREATE DATE\tUSER ID\tSTATE ID\tOFFICE\tCOMPLETION STATUS\n2024-01-05\t1001\tA12\tNorth\tComplete\n2024-02-11\t1002\tB07\tSouth\tOpen');
   await p.waitForTimeout(150);
   console.log('ticked by default', await p.isChecked('#typeMap'));
+  console.log('function by default', !(await p.isChecked('#typeSteps')), '| prompt calls fxApplyTypes', await p.evaluate(() => /ChangeTypes = fxApplyTypes\(/.test(state.prompt) && /FUNCTIONS THAT ALREADY EXIST[\s\S]*fxApplyTypes\(InputTable/.test(state.prompt)));
+  await p.check('#typeSteps'); await p.waitForTimeout(100);
   console.log('type map:\n' + await p.evaluate(() => $('typeMapCode').textContent));
   const pr = await p.evaluate(() => state.prompt);
   console.log('prompt: required type map', /Set the column types with this type map\. It is required/.test(pr), '| pairs in prompt', /\{"USER ID", Int64\.Type\}/.test(pr), '| conditional rule absent', !/If the TASK requires changing existing column types/.test(pr));

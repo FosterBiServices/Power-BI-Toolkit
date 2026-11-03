@@ -63,7 +63,7 @@ const PW = (() => {
   /* The owner's way to set types: a list of column-and-type pairs, applied only to the columns that exist, with every
      other column typed as text, in one Table.TransformColumnTypes. A source column that's missing or renamed doesn't
      break the refresh. cols: [{ name, type }] from parseColumns; prev: the step it starts from. */
-  const M_TYPE = { 'whole number': 'Int64.Type', number: 'type number', date: 'type date', datetime: 'type datetime', logical: 'type logical', text: 'type text' };
+  const M_TYPE = { 'whole number': 'Int64.Type', number: 'type number', date: 'type date', datetime: 'type datetime', time: 'type time', logical: 'type logical', text: 'type text' };
   function typeMap(cols, prev, culture){
     const q = n => '"' + n.replace(/"/g, '""') + '"', P = prev || 'PromotedHeaders', I = '    ', I2 = I + I, I3 = I2 + I;
     const pairs = cols.map(c => I2 + '{' + q(c.name) + ', ' + (M_TYPE[c.type] || 'type text') + '}');
@@ -86,12 +86,21 @@ const PW = (() => {
     return 'In value transformations such as Table.TransformColumns, pass the current value with _, for example {' + q(txt) + ', each Text.Upper(_), type text}. '
       + 'In row-context expressions such as Table.AddColumn and Table.SelectRows, refer to columns by name, for example each ' + f(row) + '.';
   }
+  /* The fx side of the inputs: the cleaning recipes and type map as steps (PWF.recipeSteps), their code, and every function
+     the query may call by name (the library functions used, all of them when the person has them, and their own). */
+  function fxInfo(inp){
+    const cols = parseColumns(inp.columns);
+    const rs = typeof PWF === 'undefined' ? null : PWF.recipeSteps({ cols, fx: inp.fx, typeMap: inp.typeMap, typeHow: inp.typeHow, culture: inp.culture }, 'PromotedHeaders');
+    const code = rs ? PWF.render(rs, (c, prev) => typeMap(c, prev, inp.culture)) : '';
+    const known = typeof PWF === 'undefined' ? [] : PWF.known({ recipes: rs, haveFx: inp.haveFx, myFns: inp.myFns });
+    return { cols, rs, code, known };
+  }
   function prompt(inp){
     const L = [];
     const src = SOURCES.find(s => s[0] === inp.source) || SOURCES[SOURCES.length - 1];
     const fromExisting = inp.start === 'existing' && !!(inp.existing || '').trim();
     const db = fromExisting ? !!inp.existingDb : DB.has(inp.source);
-    const cols = parseColumns(inp.columns), params = parseParams(inp.params), merges = parseMerges(inp.merges);
+    const cols = parseColumns(inp.columns), params = parseParams(inp.params), merges = parseMerges(inp.merges), fx = fxInfo(inp);
     L.push('You are an expert in Power Query M. Write one Power Query query for Power BI that does what is asked below.');
     L.push('The query must work first time, be easy for another developer to maintain, and be as short as it can be while still doing everything asked. Leave out anything that isn’t asked for.');
     L.push('', 'TASK (the user’s request: all the query has to do)', (inp.goal || '(not given)').trim());
@@ -116,14 +125,23 @@ const PW = (() => {
       L.push('', 'PARAMETERS THAT ALREADY EXIST (use them by name instead of typing the value)');
       params.forEach(p => L.push('- ' + p.name + (p.value ? ' = ' + p.value : '')));
     }
+    if (fx.known.length) {
+      L.push('', 'FUNCTIONS THAT ALREADY EXIST (queries in this file: call them by name)');
+      fx.known.forEach(f => L.push('- ' + f.sig + (f.does ? ': ' + f.does : '')));
+    }
     if ((inp.culture || '').trim()) L.push('', 'Culture for types and dates: ' + inp.culture.trim());
     L.push('', 'RULES');
     L.push('It must work:');
     L.push('- Use only the column names listed above (exact spelling and case) and columns the query itself creates. If you need a column that isn’t listed, don’t guess: say so under QUESTIONS.');
     L.push('- Each step builds on an earlier step, and the query returns its last step after "in".');
-    if (inp.typeMap && cols.length) {
+    const typed = inp.typeMap && cols.length, viaFx = fx.rs && fx.rs.fns.includes('fxApplyTypes');
+    if (fx.rs) {
+      L.push('- Clean ' + (typed ? 'and type ' : '') + 'the data with these steps. They are required (the user asked for them), so add them even if the TASK doesn\u2019t mention them. Put them right after the step where the column names are final (after promoting headers or renaming), replace PromotedHeaders with that step\u2019s name, and keep them as they are otherwise: the steps, their order, the column lists' + (typed ? ', the type pairs' + (viaFx ? '' : ', the default of type text for any other column') : '') + ' and the options. Every later step builds on ' + fx.rs.last + '. Change one only if the TASK says so.' + (typed ? ' Give each newly created column its type in the fourth argument of Table.AddColumn.' : ''), '```', fx.code, '```');
+      if (!typed) L.push('- If the TASK requires changing existing column types, make all such changes in one Table.TransformColumnTypes step' + ((inp.culture || '').trim() ? ' with the culture above' : '') + '. Do not add a type-conversion step when no existing column types need to change. Give each newly created column its type in the fourth argument of Table.AddColumn.');
+    } else if (typed) {
       L.push('- Set the column types with this type map. It is required (the user asked for it), so add it even if the TASK doesn\u2019t mention types. Put it right after the step where the column names are final (after promoting headers or renaming), replace PromotedHeaders with that step\u2019s name, and keep it as it is otherwise: the pairs, the default of type text for any other column, and one Table.TransformColumnTypes. Every later step builds on ChangeTypes. Change a pair\u2019s type only if the TASK says so. Give each newly created column its type in the fourth argument of Table.AddColumn.', '```', typeMap(cols, 'PromotedHeaders', inp.culture), '```');
     } else L.push('- If the TASK requires changing existing column types, make all such changes in one Table.TransformColumnTypes step' + ((inp.culture || '').trim() ? ' with the culture above' : '') + '. Do not add a type-conversion step when no existing column types need to change. Give each newly created column its type in the fourth argument of Table.AddColumn.');
+    if (fx.known.length) L.push('- Call the functions under FUNCTIONS THAT ALREADY EXIST by name with the arguments shown. Don\u2019t copy their code into the query or write your own version of them. Use one wherever it does what the TASK needs.');
     L.push('- Use each correctly for where it is evaluated. ' + eachRule(cols));
     L.push('- Handle nulls and errors only where the request says to expect them. Don’t wrap everything in try … otherwise.');
     L.push('- ' + (!inp.makeParams ? 'Keep the source values as given.' : fromExisting ? 'Keep the existing source step as it is. Don’t type a server, database, file path or URL into any step you add: use an existing parameter, or add a new parameter under PARAMETERS and use its name.' : 'Don’t type a server, database, file path or URL into the query. Use an existing parameter, or add a new parameter under PARAMETERS and use its name.'));
@@ -142,7 +160,7 @@ const PW = (() => {
     L.push('- Lists { } and records [ ] that don’t fit on one line: one item per line, the same way. Column-and-type pairs one per line: {"Column", type text}.');
     L.push('- One space after commas and around = and operators. Spaces only, no tabs, no trailing spaces.');
     L.push('', 'FINAL VALIDATION', 'Before producing the answer, silently validate the final M query:');
-    VALIDATION.forEach(x => L.push('- ' + x));
+    VALIDATION.concat(fx.known.length ? [FN_CHECK] : []).forEach(x => L.push('- ' + x));
     L.push('If any check fails, correct the query before replying. Do not report an unvalidated query.');
     L.push('', 'REPLY FORMAT (a template: replace the placeholder lines with your answer)');
     L.push('Reply with these blocks only, nothing before or after them:');
@@ -157,10 +175,11 @@ const PW = (() => {
     'All parentheses (), braces {}, brackets [], quotes, and commas are correctly paired and positioned.', 'Every step references an existing earlier step.', 'The in expression returns the final step.',
     'No step was added solely because it appeared in an example or rule when the TASK did not require that operation.', 'No columns, types, values, paths, URLs, parameters, or business rules were invented.',
     'The query performs everything in TASK and nothing beyond TASK.'];
+  const FN_CHECK = 'Every function called by name is a Power Query function or is listed under FUNCTIONS THAT ALREADY EXIST.';
   /* The follow-up when the query doesn't work: the error from Desktop (or what's wrong) and the page's findings, the current
      query as the starting point, and change only what the fix needs. The reply comes back in the same format, plus CHANGES. */
   function fixPrompt(inp, reply, findings, problem){
-    const L = [], cols = parseColumns(inp.columns), prob = (problem || '').trim();
+    const L = [], cols = parseColumns(inp.columns), prob = (problem || '').trim(), fx = fxInfo(inp);
     const found = (findings || []).filter(f => f.level === 'err' || f.level === 'warn');
     L.push('You are an expert in Power Query M. The query under STARTING POINT doesn\u2019t work yet. Fix it.');
     L.push('', 'TASK (what to fix)', prob ? 'Fix this problem from Power BI Desktop: ' + prob + (found.length ? '\nAlso fix the problems found when the query was checked, listed under CONTEXT.' : '') : 'Fix the problems found when the query was checked, listed under CONTEXT.');
@@ -168,15 +187,16 @@ const PW = (() => {
     if (prob) L.push('', 'ERROR OR PROBLEM IN POWER BI DESKTOP (as the user gave it)', prob);
     if (found.length) { L.push('', 'PROBLEMS FOUND WHEN THE QUERY WAS CHECKED'); found.forEach(f => L.push('- ' + f.title + (f.detail ? ': ' + f.detail.replace(/\s+/g, ' ') : ''))); }
     if (cols.length) { L.push('', 'COLUMNS AVAILABLE AT THE START (exact names)'); cols.forEach(c => L.push('- ' + c.name + (c.type ? ' (' + c.type + ')' : ''))); }
+    if (fx.known.length) { L.push('', 'FUNCTIONS THAT ALREADY EXIST (queries in this file: call them by name)'); fx.known.forEach(f => L.push('- ' + f.sig + (f.does ? ': ' + f.does : ''))); }
     if ((reply.params || []).length) { L.push('', 'PARAMETERS THE QUERY USES'); reply.params.forEach(p => L.push('- ' + p.name + (p.type ? ' (' + p.type + ')' : ''))); }
     L.push('', 'STARTING POINT', 'The current query:', '```', reply.code.trim(), '```');
     L.push('', 'RULES');
-    L.push('- Change only what the fix needs. Keep every other step as it is: its name, its place and its code. Keep the source step, the parameters' + (inp.typeMap ? ', and the type map (TypePairs and the steps after it) unless the problem is in it' : '') + '.');
+    L.push('- Change only what the fix needs. Keep every other step as it is: its name, its place and its code. Keep the source step, the parameters' + (fx.rs ? ', and the cleaning and type steps (' + fx.rs.fns.concat(fx.rs.typeCode ? ['TypePairs'] : []).join(', ') + ') unless the problem is in them' : inp.typeMap ? ', and the type map (TypePairs and the steps after it) unless the problem is in it' : '') + '.' + (fx.known.length ? ' A "wasn\u2019t recognized" error for a function listed under FUNCTIONS THAT ALREADY EXIST means the function query isn\u2019t in the file yet or has another name: say so under QUESTIONS instead of rewriting it.' : ''));
     L.push('- Find the cause before changing anything. Common ones: "The column \u2026 of the table wasn\u2019t found" means a name differs in spelling, spaces or case from the columns above; "We couldn\u2019t convert to Number/Date" or DataFormat.Error means a column is typed as a number or date but holds text or blanks; "The name \u2026 wasn\u2019t recognized" means a misspelled function or step name; "Token Comma expected", "Token Eof expected" or "Token \u2026 expected" mean a missing comma, bracket or quote near that place; "We cannot apply field access to the type \u2026" means [Column] was used where the value is not a row (use _).');
     L.push('- Use each correctly for where it is evaluated: in Table.TransformColumns the current value is _; in Table.AddColumn and Table.SelectRows refer to columns by name, for example each [Column].');
     L.push('- If the error doesn\u2019t say enough to find the cause, give your best fix and say under QUESTIONS what you need to know.');
     L.push('', 'FINAL VALIDATION', 'Before producing the answer, silently validate the final M query:');
-    VALIDATION.concat(['Only the steps the fix needs were changed; every other step is exactly as it was.']).forEach(x => L.push('- ' + x));
+    VALIDATION.concat(fx.known.length ? [FN_CHECK] : [], ['Only the steps the fix needs were changed; every other step is exactly as it was.']).forEach(x => L.push('- ' + x));
     L.push('If any check fails, correct the query before replying. Do not report an unvalidated query.');
     L.push('', 'REPLY FORMAT (a template: replace the placeholder lines with your answer)');
     L.push('Reply with these blocks only, nothing before or after them:');
@@ -285,5 +305,5 @@ const PW = (() => {
   }
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-  return { SOURCES, DB, typeMap, fixPrompt, parseColumns, parseParams, parseMerges, prompt, parseReply, checks, columnUse };
+  return { SOURCES, DB, typeMap, fxInfo, fixPrompt, parseColumns, parseParams, parseMerges, prompt, parseReply, checks, columnUse };
 })();

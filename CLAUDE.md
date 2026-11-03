@@ -272,6 +272,21 @@ pairs whose columns exist, every other column text, one Table.TransformColumnTyp
 and Step 2 shows it to copy. Types come from the pasted rows (whole number -> Int64.Type, number, date, datetime, logical,
 otherwise text). Unticked, the rule is the conditional one (a type step only when the TASK changes types). Check: `pwtypetest.js`.
 
+Power Query Writer fx functions (`src/fx/*.pq`): fxApplyTypes (the type map as a function), fxRemoveBlankRows, fxTrimText,
+fxSetCase, fxToDate, fxTextToNumber, fxAddDateTimeFromPairs (the owner's own, fixed), fxReplaceNulls, fxDedupe. Each is a
+blank query with Documentation metadata and an optional Options record. build_pw.py puts their code in `PWF_CODE`.
+`src/fx/fxTests.pq` is the Desktop test (46 checks on messy rows): create the nine functions as queries, load fxTests as a
+table and every Pass must be true. Change a function only with that test run again in Desktop.
+Recipes (`src/parts/pw_fx.js`, `PWF`): Step 2 "Cleaning steps" ticks recipes and picks columns (dates and date-times come
+picked); `PWF.recipeSteps` writes the calling steps in a fixed order (blank rows, trim, case, dates, numbers, split, empty
+values, types, duplicates last) and the type pairs after them (converted columns typed, new "X date"/"X time" columns added,
+a kept split original stays text). The type map calls fxApplyTypes by default; "Write the type map as steps" gives the
+inline TypePairs version after the recipes. The prompt lists FUNCTIONS THAT ALREADY EXIST (the ones used, all nine when
+"The toolkit's fx functions are in my file" is ticked, and the person's own from "Functions you already have", one per
+line: `name(args): what it does`), requires the steps as given, and adds a FINAL VALIDATION line for calls by name. The
+page shows each function used, to add once. Checks: calls of listed functions with argument counts, an fx call that isn't
+listed, recipe steps missing, the fxApplyTypes pairs. Check: `pwfxtest.js` (the full chain also passed in Desktop).
+
 Power Query Writer reply checks (`src/parts/pw_lint.js`, `PWL.lint`, added to pw_core in build_pw.py): functions that don't
 exist (Table, List, Text, Record and Duration are listed in full; `ALIAS` maps names Copilot invents, such as Table.FilterRows,
 to the real one) and argument counts (`ARITY`, about 350 functions); `[Column]` inside Table.TransformColumns and
