@@ -42,6 +42,10 @@ const { chromium } = require('playwright');
   console.log('listed as mine:', (await lst()).filter(x => /^(Fix|Check)/.test(x)).join(' / ') || 'nothing to fix', '| in prompt', /^- fxCleanPhone\(InputTable, Columns\): keeps the digits$/m.test(await p.evaluate(() => state.prompt)));
   await p.fill('#pwReply', wrap(q.replace('fxSetCase(Trimmed, {"OFFICE"}, "Upper")', 'fxSetCase(Trimmed, {"OFFICE"})'))); await p.waitForTimeout(250);
   console.log('wrong argument count:', await p.evaluate(() => Array.from(document.querySelectorAll('#checkList li')).map(x => x.textContent).filter(t => /Wrong number/.test(t)).join('').slice(0, 140)));
+  // Copilot wrote column names with square brackets inside the quotes (a real reply): an error, since the functions skip it silently
+  await p.fill('#pwReply', wrap(q.replace('fxSetCase(Trimmed, {"OFFICE"}, "Upper")', 'fxSetCase(Trimmed, { "[OFFICE", "[NOTES]" }, "Upper")'))); await p.waitForTimeout(250);
+  console.log('bracketed names:', await p.evaluate(() => Array.from(document.querySelectorAll('#checkList li')).map(x => x.textContent).filter(t => /square brackets/.test(t)).join('').slice(0, 220)));
+  console.log('prompt says no brackets', /Give column names as a list of text in double quotes with no square brackets, for example \{"CREATE DATE", "USER ID"\}, not \{"\[CREATE DATE\]", "\[USER ID\]"\}/.test(await p.evaluate(() => state.prompt)));
   // the fix prompt keeps the cleaning steps
   await p.fill('#pwError', "Expression.Error: The import fxTrimText matches no exports."); await p.waitForTimeout(200);
   const fx = await p.evaluate(() => state.fix);

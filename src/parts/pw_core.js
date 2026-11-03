@@ -95,6 +95,11 @@ const PW = (() => {
     const known = typeof PWF === 'undefined' ? [] : PWF.known({ recipes: rs, haveFx: inp.haveFx, myFns: inp.myFns });
     return { cols, rs, code, known };
   }
+  // {"First Name", "Last Name"} from the person's own columns when there are some
+  function colListExample(cols){
+    const n = cols.slice(0, 2).map(c => c.name);
+    return '{' + (n.length ? n : ['First Name', 'Last Name']).map(x => '"' + x.replace(/"/g, '""') + '"').join(', ') + '}';
+  }
   function prompt(inp){
     const L = [];
     const src = SOURCES.find(s => s[0] === inp.source) || SOURCES[SOURCES.length - 1];
@@ -141,7 +146,7 @@ const PW = (() => {
     } else if (typed) {
       L.push('- Set the column types with this type map. It is required (the user asked for it), so add it even if the TASK doesn\u2019t mention types. Put it right after the step where the column names are final (after promoting headers or renaming), replace PromotedHeaders with that step\u2019s name, and keep it as it is otherwise: the pairs, the default of type text for any other column, and one Table.TransformColumnTypes. Every later step builds on ChangeTypes. Change a pair\u2019s type only if the TASK says so. Give each newly created column its type in the fourth argument of Table.AddColumn.', '```', typeMap(cols, 'PromotedHeaders', inp.culture), '```');
     } else L.push('- If the TASK requires changing existing column types, make all such changes in one Table.TransformColumnTypes step' + ((inp.culture || '').trim() ? ' with the culture above' : '') + '. Do not add a type-conversion step when no existing column types need to change. Give each newly created column its type in the fourth argument of Table.AddColumn.');
-    if (fx.known.length) L.push('- Call the functions under FUNCTIONS THAT ALREADY EXIST by name with the arguments shown. Don\u2019t copy their code into the query or write your own version of them. Use one wherever it does what the TASK needs.');
+    if (fx.known.length) L.push('- Call the functions under FUNCTIONS THAT ALREADY EXIST by name with the arguments shown. Don\u2019t copy their code into the query or write your own version of them. Use one wherever it does what the TASK needs. Give column names as a list of text in double quotes with no square brackets, for example ' + colListExample(cols) + ', not {' + colListExample(cols).slice(1, -1).replace(/"([^"]*)"/g, '"[$1]"') + '}. A name these functions don\u2019t find is skipped without an error, so a wrong name silently does nothing.');
     L.push('- Use each correctly for where it is evaluated. ' + eachRule(cols));
     L.push('- Handle nulls and errors only where the request says to expect them. Don’t wrap everything in try … otherwise.');
     L.push('- ' + (!inp.makeParams ? 'Keep the source values as given.' : fromExisting ? 'Keep the existing source step as it is. Don’t type a server, database, file path or URL into any step you add: use an existing parameter, or add a new parameter under PARAMETERS and use its name.' : 'Don’t type a server, database, file path or URL into the query. Use an existing parameter, or add a new parameter under PARAMETERS and use its name.'));
@@ -192,7 +197,7 @@ const PW = (() => {
     L.push('', 'STARTING POINT', 'The current query:', '```', reply.code.trim(), '```');
     L.push('', 'RULES');
     L.push('- Change only what the fix needs. Keep every other step as it is: its name, its place and its code. Keep the source step, the parameters' + (fx.rs ? ', and the cleaning and type steps (' + fx.rs.fns.concat(fx.rs.typeCode ? ['TypePairs'] : []).join(', ') + ') unless the problem is in them' : inp.typeMap ? ', and the type map (TypePairs and the steps after it) unless the problem is in it' : '') + '.' + (fx.known.length ? ' A "wasn\u2019t recognized" error for a function listed under FUNCTIONS THAT ALREADY EXIST means the function query isn\u2019t in the file yet or has another name: say so under QUESTIONS instead of rewriting it.' : ''));
-    L.push('- Find the cause before changing anything. Common ones: "The column \u2026 of the table wasn\u2019t found" means a name differs in spelling, spaces or case from the columns above; "We couldn\u2019t convert to Number/Date" or DataFormat.Error means a column is typed as a number or date but holds text or blanks; "The name \u2026 wasn\u2019t recognized" means a misspelled function or step name; "Token Comma expected", "Token Eof expected" or "Token \u2026 expected" mean a missing comma, bracket or quote near that place; "We cannot apply field access to the type \u2026" means [Column] was used where the value is not a row (use _).');
+    L.push('- Find the cause before changing anything. Common ones: "The column \u2026 of the table wasn\u2019t found" means a name differs in spelling, spaces or case from the columns above; "We couldn\u2019t convert to Number/Date" or DataFormat.Error means a column is typed as a number or date but holds text or blanks; "The name \u2026 wasn\u2019t recognized" means a misspelled function or step name; "Token Comma expected", "Token Eof expected" or "Token \u2026 expected" mean a missing comma, bracket or quote near that place; "We cannot apply field access to the type \u2026" means [Column] was used where the value is not a row (use _); a column name in a list written with square brackets, such as {"[First Name]"}, names a column that doesn\u2019t exist: write {"First Name"}.');
     L.push('- Use each correctly for where it is evaluated: in Table.TransformColumns the current value is _; in Table.AddColumn and Table.SelectRows refer to columns by name, for example each [Column].');
     L.push('- If the error doesn\u2019t say enough to find the cause, give your best fix and say under QUESTIONS what you need to know.');
     L.push('', 'FINAL VALIDATION', 'Before producing the answer, silently validate the final M query:');

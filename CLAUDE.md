@@ -285,7 +285,9 @@ inline TypePairs version after the recipes. The prompt lists FUNCTIONS THAT ALRE
 "The toolkit's fx functions are in my file" is ticked, and the person's own from "Functions you already have", one per
 line: `name(args): what it does`), requires the steps as given, and adds a FINAL VALIDATION line for calls by name. The
 page shows each function used, to add once. Checks: calls of listed functions with argument counts, an fx call that isn't
-listed, recipe steps missing, the fxApplyTypes pairs. Check: `pwfxtest.js` (the full chain also passed in Desktop).
+listed, recipe steps missing, the fxApplyTypes pairs, and column names written with square brackets inside quotes
+("[First Name]", from a real Copilot reply: the functions skip a name they don't find, so it silently does nothing; the
+prompt now says to give names as quoted text without brackets). Check: `pwfxtest.js` (the full chain also passed in Desktop).
 
 Power Query Writer reply checks (`src/parts/pw_lint.js`, `PWL.lint`, added to pw_core in build_pw.py): functions that don't
 exist (Table, List, Text, Record and Duration are listed in full; `ALIAS` maps names Copilot invents, such as Table.FilterRows,

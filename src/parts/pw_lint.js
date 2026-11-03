@@ -69,6 +69,10 @@ const PWL = (() => {
     });
     if (unknown.length) add('err', unknown.length + ' function' + (unknown.length > 1 ? 's that don’t' : ' that doesn’t') + ' exist in Power Query', Array.from(new Set(unknown)).join('; ') + '. Copilot sometimes makes up function names: ask it to use a real function.');
     if (wrongN.length) add('err', 'Wrong number of arguments', Array.from(new Set(wrongN)).join(' '));
+    // column names written with square brackets inside quotes: "[First Name]" names a column that doesn't exist
+    const bracketed = [];
+    cs.forEach(c => { for (let k = c.open + 1; k < c.close; k++) { const t = S[k]; if (t.t !== 'str') continue; const v = t.v.slice(1, -1).replace(/""/g, '"'); if (/^\s*\[|\]\s*$/.test(v) && v.length < 120) bracketed.push('"' + v + '" in ' + c.name + ' (line ' + c.line + ')'); } });
+    if (bracketed.length) add('err', 'Column names with square brackets', Array.from(new Set(bracketed)).join('; ') + '. In a list of column names, write the name in quotes without brackets, for example "' + bracketed[0].replace(/^"\s*\[?([^"\]]*)\]?\s*".*$/, '$1') + '". With the brackets the column isn\u2019t found' + (cs.some(c => /^fx/.test(c.name)) ? ', and the fx functions skip it without an error, so the step silently does nothing.' : '.'));
     if (notListed.length) add('warn', 'Calls a function that isn\u2019t listed', Array.from(new Set(notListed)).join('; ') + '. It isn\u2019t a Power Query function or one the page knows you have. If it\u2019s a query in your file, add it under \u201cFunctions you already have\u201d; if not, ask Copilot to use a real function.');
     // 2. each in the wrong context
     const ctx = [];
