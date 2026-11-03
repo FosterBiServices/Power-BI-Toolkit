@@ -4,69 +4,23 @@ const ML = (() => {
   const low = s => (s || '').toLowerCase();
   const NUMERIC = /^(int64|integer|whole number|double|decimal|decimal number|fixed decimal number|currency|number)$/i;
 
-  // Parse the export, keeping the extra columns the linter uses
+  // The shared reader (readModel in builder_core) keeps every export column the linter uses.
+  // Private tables stay in; a calculated table's DAX is read as its expression.
   function parse(text){
-    const res = { tables: [], columns: [], measures: [], rels: [], model: null, has: {}, error: null };
-    const lines = (text || '').replace(/\r/g, '').split('\n');
-    let h = -1, map = {};
-    for (let i = 0; i < Math.min(lines.length, 15); i++) {
-      const cells = lines[i].split('\t').map(c => low(unquoteCell(c.trim())).replace(/^.*\[|\]$/g, ''));
-      if (cells.includes('kind') && cells.includes('table') && cells.includes('name')) { h = i; cells.forEach((c, j) => { map[c] = j; }); break; }
-    }
-    if (h < 0) { res.error = 'The header row (Kind, Table, Name…) wasn’t found. Run the export query below, select Copy above the results grid, and paste here.'; return res; }
-    res.has = { summarize: 'summarize' in map, sortBy: 'sortby' in map, hierarchies: 'hierarchies' in map };
-    const get = (c, k) => map[k] === undefined ? '' : restore(unquoteCell((c[map[k]] || '').trim()));
-    let modelRow = false, measureFlagsSeen = false;
-    for (let i = h + 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue;
-      const c = lines[i].split('\t'), kind = low(get(c, 'kind')), table = get(c, 'table'), name = get(c, 'name'), flags = low(get(c, 'flags'));
-      if (/^(localdatetable_|datetabletemplate_)/i.test(table)) continue;
-      if (kind === 'table') res.tables.push({ name, hidden: /\bhidden\b/.test(flags), category: get(c, 'type'), expression: get(c, 'expression') });
-      else if (kind === 'column') {
-        if (/^RowNumber-/i.test(name)) continue;
-        res.columns.push({ table, name, dataType: get(c, 'type'), folder: get(c, 'folder'), hidden: /\bhidden\b/.test(flags), key: /\bkey\b/.test(flags),
-          expression: get(c, 'expression'), summarize: get(c, 'summarize'), sortBy: get(c, 'sortby'), hierarchies: get(c, 'hierarchies') });
-      } else if (kind === 'measure') {
-        if (/text|dynamic-format/.test(flags)) measureFlagsSeen = true;
-        res.measures.push({ table, name, formatString: get(c, 'type'), folder: get(c, 'folder'), hidden: /\bhidden\b/.test(flags),
-          text: /\btext\b/.test(flags), dynamicFormat: /dynamic-format/.test(flags), expression: get(c, 'expression') });
-      } else if (kind === 'relationship') {
-        res.rels.push({ fromTable: table, fromColumn: name, toTable: get(c, 'totable'), toColumn: get(c, 'tocolumn'), card: get(c, 'type'),
-          both: /both/.test(flags), inactive: /inactive/.test(flags) });
-      } else if (kind === 'model') { modelRow = true; res.model = { name, discourage: /discourage-implicit/.test(flags) }; }
-    }
-    res.has.model = modelRow;
-    res.has.upgraded = res.has.summarize && modelRow;
-    if (!res.tables.length && !res.columns.length && !res.measures.length) res.error = 'No tables, columns or measures were found under the header row.';
+    const res = readModel(text);
+    if (!('model' in res.has)) res.error = 'The header row (Kind, Table, Name…) wasn’t found. Run the export query below, select Copy above the results grid, and paste here.';
+    else if (res.error) res.error = 'No tables, columns or measures were found under the header row.';
+    res.tables.forEach(t => { t.expression = t.calc; });
     return res;
   }
 
-  /* Column references in DAX: 'Table'[Col], Table[Col], or bare [Col] */
-  // blank out comments and string literals in one pass, so "--" or "//" inside a string (a URL, say)
-  // doesn't hide the rest of the line, and a name inside a string isn't read as a reference
-  function stripDaxText(e){
-    const s = e || ''; let out = '', i = 0;
-    while (i < s.length) {
-      const c = s[i], n = s[i + 1];
-      if (c === '"') { let j = i + 1; while (j < s.length) { if (s[j] === '"') { if (s[j + 1] === '"') { j += 2; continue; } break; } j++; } out += '""'; i = j + 1; continue; }
-      if (c === "'") { let j = i + 1; while (j < s.length) { if (s[j] === "'") { if (s[j + 1] === "'") { j += 2; continue; } break; } j++; } out += s.slice(i, j + 1); i = j + 1; continue; }
-      if (c === '[') { const j = s.indexOf(']', i + 1); let k = j; while (k >= 0 && s[k + 1] === ']') k = s.indexOf(']', k + 2); if (k < 0) { out += s.slice(i); break; } out += s.slice(i, k + 1); i = k + 1; continue; }
-      if ((c === '/' && n === '/') || (c === '-' && n === '-')) { const j = s.indexOf('\n', i); out += ' '; i = j < 0 ? s.length : j; continue; }
-      if (c === '/' && n === '*') { const j = s.indexOf('*/', i + 2); out += ' '; i = j < 0 ? s.length : j + 2; continue; }
-      out += c; i++;
-    }
-    return out;
-  }
+  // Column references in DAX: 'Table'[Col], Table[Col], or bare [Col] (stripDaxText and daxRefs are in builder_core)
+  const refs = daxRefs;
+
   // names that appear only as text (inside a string or comment): worth a look before deleting
   function textMentions(m, name){
     const needle = low(name), re = new RegExp('(^|[^\\w])' + needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\w])(?!\\s*\\()', 'i');
     return m.measures.filter(x => low(x.name) !== needle && re.test((x.expression || '').replace(/\[(?:[^\]]|\]\])*\]/g, '[]').replace(/'(?:[^']|'')*'/g, "''")) && !refs(x.expression).some(r => low(r.col) === needle)).map(x => x.name);
-  }
-  function refs(expr){
-    const out = [], re = /(?:'((?:[^']|'')+)'|([A-Za-z_À-￿][\w.À-￿]*))?\s*\[((?:[^\]]|\]\])+)\]/g;
-    const s = stripDaxText(expr); let m;
-    while ((m = re.exec(s))) out.push({ table: m[1] ? m[1].replace(/''/g, "'") : m[2] || '', col: m[3].replace(/\]\]/g, ']') });
-    return out;
   }
   const key = (t, c) => low(t) + '\u0001' + low(c);
 

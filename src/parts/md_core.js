@@ -580,41 +580,25 @@ var MD = (function () {
   }
 
   /* ---------- the toolkit's shared model export (INFO.VIEW) ---------- */
+  // read with the toolkit's shared reader (readModel in builder_core), keeping auto date tables for "show auto"
   function projectFromExport(text, modelName) {
-    const lines = String(text || '').replace(/\r/g, '').split('\n');
-    const unq = s => { s = s.trim(); if (s.length >= 2 && s[0] === '"' && s[s.length - 1] === '"') s = s.slice(1, -1).replace(/""/g, '"'); return s; };
-    const restore = s => s.split('↵').join('\n');
-    let map = null; const project = newProject({ name: modelName || 'Model', source: 'export', semantic_root: '', report_root: null, compatibility_level: 'Not in the export', culture: 'Not in the export' });
-    const rows = [];
-    for (const l of lines) {
-      if (!l.trim()) continue;
-      const c = l.split('\t');
-      if (!map) {
-        const low = c.map(x => unq(x).toLowerCase().replace(/^.*\[|\]$/g, ''));
-        if (low.includes('kind') && low.includes('table') && low.includes('name')) { map = {}; low.forEach((k, i) => { map[k] = i; }); }
-        continue;
-      }
-      const g = k => (map[k] === undefined ? '' : restore(unq(c[map[k]] || '')));
-      rows.push({ kind: g('kind').toLowerCase(), table: g('table'), name: g('name'), type: g('type'), folder: g('folder'), flags: g('flags').toLowerCase(), description: g('description'), expression: g('expression'), totable: g('totable'), tocolumn: g('tocolumn'), storage: g('storage'), source: g('source') });
-    }
-    if (!map) throw new ProjectError('The header row (Kind, Table, Name…) wasn’t found. Paste the results of the toolkit export query, with headers.');
-    const hidden = f => /\bhidden\b/.test(f);
-    for (const r of rows) if (r.kind === 'table') {
-      const t = setdefault(project.tables, r.table || r.name, Table(r.table || r.name));
-      t.description = r.description; t.is_hidden = hidden(r.flags);
+    const m = readModel(text, { keepAuto: true });
+    if (!('model' in m.has)) throw new ProjectError('The header row (Kind, Table, Name…) wasn’t found. Paste the results of the toolkit export query, with headers.');
+    const project = newProject({ name: modelName || 'Model', source: 'export', semantic_root: '', report_root: null, compatibility_level: 'Not in the export', culture: 'Not in the export' });
+    for (const r of m.tables) {
+      const t = setdefault(project.tables, r.name, Table(r.name));
+      t.description = r.description; t.is_hidden = r.hidden;
       if (r.storage || r.source) t.partitions.push({ name: t.name, mode: r.storage || '', source_type: r.source ? 'Remote model' : 'Not in export', expression: '', source_kind: r.source ? 'Remote semantic model (' + r.source + ')' : 'Not in export', source_file: '', line_number: 0 });
     }
-    for (const r of rows) {
-      if (r.kind === 'column') setdefault(project.tables, r.table, Table(r.table)).columns.push({ name: r.name, data_type: r.type, format_string: '', description: r.description, summarize_by: '', sort_by: '', source_column: '', is_hidden: hidden(r.flags), is_key: /\bkey\b/.test(r.flags), expression: r.expression });
-      else if (r.kind === 'measure') {
-        const [colRefs, br] = measureReferences(r.expression);
-        setdefault(project.tables, r.table, Table(r.table)).measures.push({ name: r.name, expression: r.expression, format_string: r.type, display_folder: r.folder, description: r.description, is_hidden: hidden(r.flags), column_refs: colRefs, measure_refs: br.filter(x => cf(x) !== cf(r.name)) });
-      } else if (r.kind === 'relationship') {
-        const [fc, tc] = (r.type || 'many:one').split(':');
-        const crossRaw = r.flags.replace(/\binactive\b/, '').trim();
-        project.relationships.push({ name: r.table + '[' + r.name + '] → ' + r.totable + '[' + r.tocolumn + ']', from_table: r.table, from_column: r.name, to_table: r.totable, to_column: r.tocolumn,
-          from_cardinality: cf(fc || 'many'), to_cardinality: cf(tc || 'one'), cross_filtering: /both/.test(crossRaw) ? 'bothDirections' : /automatic/.test(crossRaw) ? 'automatic' : 'oneDirection', is_active: !/\binactive\b/.test(r.flags) });
-      }
+    for (const r of m.columns) setdefault(project.tables, r.table, Table(r.table)).columns.push({ name: r.name, data_type: r.dataType, format_string: '', description: r.description, summarize_by: '', sort_by: '', source_column: '', is_hidden: r.hidden, is_key: r.key, expression: r.expression });
+    for (const r of m.measures) {
+      const [colRefs, br] = measureReferences(r.expression);
+      setdefault(project.tables, r.table, Table(r.table)).measures.push({ name: r.name, expression: r.expression, format_string: r.formatString, display_folder: r.folder, description: r.description, is_hidden: r.hidden, column_refs: colRefs, measure_refs: br.filter(x => cf(x) !== cf(r.name)) });
+    }
+    for (const r of m.rels) {
+      const crossRaw = r.flags.filter(f => f !== 'inactive').join(' ');
+      project.relationships.push({ name: r.fromTable + '[' + r.fromColumn + '] → ' + r.toTable + '[' + r.toColumn + ']', from_table: r.fromTable, from_column: r.fromColumn, to_table: r.toTable, to_column: r.toColumn,
+        from_cardinality: cf((r.card || 'many:one').split(':')[0] || 'many'), to_cardinality: cf((r.card || 'many:one').split(':')[1] || 'one'), cross_filtering: /both/.test(crossRaw) ? 'bothDirections' : /automatic/.test(crossRaw) ? 'automatic' : 'oneDirection', is_active: !r.inactive });
     }
     return project;
   }
@@ -715,8 +699,6 @@ var MD = (function () {
   }
 
   /* ---------- v26_lineage.py ---------- */
-  const MEASURE_TOKEN = /(?<![\p{L}\p{N}_'])\[([^\]]+)\]/gu;
-  const QUALIFIED_COLUMN = /(?:'((?:''|[^'])+)'|([A-Za-z_][\p{L}\p{N}_ ]*))\s*\[([^\]]+)\]/gu;
   function buildLineage(project, tables) {
     const nodes = new Map(), nameIndex = new Map();
     for (const t of tables) for (const m of t.measures) {
@@ -726,9 +708,12 @@ var MD = (function () {
     }
     for (const n of nodes.values()) {
       const colNames = new Set();
-      for (const m of n.expression.matchAll(QUALIFIED_COLUMN)) { const tn = (m[1] || m[2] || '').replace(/''/g, "'").trim(), cn = m[3].trim(); n.cols.add(tn + '[' + cn + ']'); colNames.add(cf(cn)); }
-      for (const m of n.expression.matchAll(MEASURE_TOKEN)) {
-        const cand = m[1].trim(); if (colNames.has(cf(cand))) continue;
+      // references read by the toolkit's shared scanner (daxRefs in builder_core): strings and comments are skipped
+      const refs = daxRefs(n.expression);
+      for (const r of refs) if (r.table) { const tn = r.table.trim(), cn = r.col.trim(); n.cols.add(tn + '[' + cn + ']'); colNames.add(cf(cn)); }
+      for (const r of refs) {
+        if (r.table) continue;
+        const cand = r.col.trim(); if (colNames.has(cf(cand))) continue;
         const hits = nameIndex.get(cf(cand)) || [];
         if (hits.length === 1 && hits[0] !== n.key) n.deps.add(hits[0]);
         else if (hits.length !== 1) n.unresolved.add(cand);
