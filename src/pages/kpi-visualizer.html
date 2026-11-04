@@ -3192,6 +3192,12 @@ function chosenOption(){
   const r = kvRanked(k), pick = r.find(x => x.o.id === state.cfg.option && x.ok);
   return (pick || r[0]).o;
 }
+// Context lines that can't show yet: everything but fixed text needs its column or measure first
+function ctxMissing(kpis){
+  const miss = [];
+  kpis.forEach(x => (x.ctx || []).forEach((c, j) => { if (c && c.kind !== 'text' && !(c.ref || '').trim()) { const d = kvCtxKind(c); miss.push(esc(kvName(x)) + ', context ' + (j + 1) + ' (' + esc(d.name.charAt(0).toLowerCase() + d.name.slice(1)) + '): fill in &ldquo;' + esc(d.ref) + '&rdquo;, for example ' + esc(d.ph)); } }));
+  return miss.length ? '<div class="msg warn">Context isn&rsquo;t on these cards yet. ' + miss.join('; ') + '. Until then it&rsquo;s left out of the cards and the DAX.</div>' : '';
+}
 // The previews use the card colors from Step 4
 function inkVars(el){ const P = kvInk(state.cfg); ['bg', 'text', 'muted', 'track'].forEach(x => el.style.setProperty('--kv-' + x, P[x])); }
 // Row layouts the KPIs can use: bullet charts only when a KPI has a target
@@ -3204,7 +3210,7 @@ function renderOptions(){
   if (!state.kpis.length) { $('options').innerHTML = '<p class="note">Add a KPI in Step 2 to see the options.</p>'; $('sampleMsg').innerHTML = ''; return; }
   const chosen = chosenOption();
   const sample = row ? state.kpis.some(x => kvNums(x).sample) : kvNums(k).sample;
-  $('sampleMsg').innerHTML = sample ? '<div class="msg info">Some preview numbers are made up because none were typed. Add yours under &ldquo;Numbers for the preview&rdquo; in Step 2.</div>' : '';
+  $('sampleMsg').innerHTML = (sample ? '<div class="msg info">Some preview numbers are made up because none were typed. Add yours under &ldquo;Numbers for the preview&rdquo; in Step 2.</div>' : '') + ctxMissing(row ? state.kpis : [k]);
   $('s3note').textContent = row ? 'Each layout shows all your KPIs. Pick one to see how to build it.' : 'Ways that fit what you want readers to get come first. Pick one to see how to build it.';
   if (row) {
     $('options').innerHTML = rowOptions().map(o => '<article class="kv-opt wide' + (o === chosen ? ' on' : '') + '">'
