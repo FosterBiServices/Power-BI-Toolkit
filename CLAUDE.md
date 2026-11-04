@@ -277,8 +277,9 @@ otherwise text). Unticked, the rule is the conditional one (a type step only whe
 
 Power Query Writer fx functions (`src/fx/*.pq`): fxApplyTypes (the type map as a function), fxRemoveBlankRows, fxTrimText,
 fxSetCase, fxToDate, fxTextToNumber, fxAddDateTimeFromPairs (the owner's own, fixed), fxReplaceNulls, fxDedupe. Each is a
-blank query with Documentation metadata and an optional Options record. build_pw.py puts their code in `PWF_CODE`.
-`src/fx/fxTests.pq` is the Desktop test (46 checks on messy rows): create the nine functions as queries, load fxTests as a
+blank query: comment lines saying what it does and an example, then the function itself (no Documentation
+metadata wrapper, so pasting it into a blank query's Advanced Editor needs no edits), with an optional Options record. build_pw.py puts their code in `PWF_CODE`.
+`src/fx/fxTests.pq` is the Desktop test (45 checks on messy rows): create the nine functions as queries, load fxTests as a
 table and every Pass must be true. Change a function only with that test run again in Desktop.
 Recipes (`src/parts/pw_fx.js`, `PWF`): Step 2 "Cleaning steps" ticks recipes and picks columns (dates and date-times come
 picked); `PWF.recipeSteps` writes the calling steps in a fixed order (blank rows, trim, case, dates, numbers, split, empty

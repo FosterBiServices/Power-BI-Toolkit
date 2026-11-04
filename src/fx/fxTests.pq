@@ -87,8 +87,7 @@ let
         T("DateTime: unreadable to null", DT{2}[When date], null),
         T("DateTime: KeepOriginalColumns false", {List.Contains(Table.ColumnNames(DTDrop), "WHEN"), DTDrop{0}[When date]}, {false, #date(2024, 1, 5)}),
         T("DateTime: Overwrite twice", Table.ColumnCount(DTTwice), Table.ColumnCount(DT)),
-        T("DateTime: missing column message", try DTMissing[Error][Message] otherwise "", "These columns were not found: NOPE"),
-        T("Docs: name in metadata", Value.Metadata(Value.Type(fxTrimText))[Documentation.Name], "fxTrimText")
+        T("DateTime: missing column message", try DTMissing[Error][Message] otherwise "", "These columns were not found: NOPE")
     },
     Out = #table(type table [Test = text, Pass = logical, Actual = text, Expected = text], Results)
 in

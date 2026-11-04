@@ -68,7 +68,13 @@
           <div class="codebox"><div class="codebox-bar"><span class="t">Cleaning and type steps: paste after the step where the column names are final</span><span class="r"><button class="btn" type="button" data-copy="steps">Copy</button></span></div><pre class="short" id="fxStepsCode"></pre></div>
           <p class="note small">Rename <code>PromotedHeaders</code> to the step before them. Copilot gets these in the prompt, so you only need them to build the query yourself.</p>
           <h3 class="sub">Functions to add to your file once</h3>
-          <p class="note small">For each one: in Power Query, <b>Home &gt; New Source &gt; Blank Query</b>, then <b>Home &gt; Advanced Editor</b>, paste the code and select <b>Done</b>. Rename the query to the function&rsquo;s name exactly. Every query in the file can then use it. Skip the ones you already have.</p>
+          <p class="note small">For each one, in Power Query:</p>
+          <ol class="note small">
+            <li><b>Home &gt; New Source &gt; Blank Query</b>.</li>
+            <li><b>Home &gt; Advanced Editor</b>. Select everything already there, paste the code over it and select <b>Done</b>. The query then shows <b>Enter Parameters</b> and an <b>Invoke</b> button.</li>
+            <li>Rename the query to the function&rsquo;s name exactly.</li>
+          </ol>
+          <p class="note small">Don&rsquo;t paste the code into the list of queries on the left: Power Query turns pasted text there into a table. Every query in the file can use the functions once they&rsquo;re added. Skip the ones you already have.</p>
           <div id="fxFns"></div>
         </div>
       </div>
