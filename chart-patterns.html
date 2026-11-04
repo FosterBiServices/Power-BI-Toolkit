@@ -614,6 +614,8 @@ function dateTablesOf(model){ return model.tables.filter(isMarkedDateTable).conc
    cols     the export's column names (lower case), for tools that tell an older export query from a newer one
    has      which optional export columns came with it (summarize, sortBy, hierarchies, storage, source, model, upgraded) */
 const AUTO_DATE_TABLE = /^(localdatetable_|datetabletemplate_)/i;
+// The export query's columns, in its order (used when a paste has no header row)
+const EXPORT_COLS = ['kind', 'table', 'name', 'type', 'folder', 'flags', 'description', 'expression', 'totable', 'tocolumn', 'summarize', 'sortby', 'hierarchies', 'storage', 'source'];
 function readModel(text, opts){
   const keepAuto = !!(opts && opts.keepAuto);
   const res = { tables: [], columns: [], measures: [], rels: [], model: null, has: {}, error: null, skipped: 0 };
@@ -627,7 +629,18 @@ function readModel(text, opts){
       hIdx = i; cells.forEach((c, j) => { map[c] = j; }); break;
     }
   }
+  // No header row (cells copied from the grid without it): rows that start with a kind the export makes
+  // are read in the export query's own column order.
   if (hIdx < 0) {
+    const body = lines.filter(l => l.trim()), kinds = /^"?(table|column|measure|relationship|model)"?$/i;
+    const rowLike = body.filter(l => { const c = l.split('\t'); return c.length >= 8 && kinds.test(c[0].trim()); }).length;
+    if (body.length && rowLike >= Math.max(1, body.length * 0.8)) {
+      const width = Math.max(...body.map(l => l.split('\t').length));
+      EXPORT_COLS.forEach((c, j) => { if (j < width) map[c] = j; });
+      hIdx = -1; res.noHeader = true;
+    }
+  }
+  if (hIdx < 0 && !res.noHeader) {
     res.error = 'The header row (Kind, Table, Name…) wasn’t found. Use the Copy button above the results grid so the column names come along, and make sure the query from Step 1 is the one you ran.';
     return res;
   }
@@ -2181,6 +2194,7 @@ init();
   // source: 'pbip' when the rows were read from a PBIP folder (every tool then opens on that folder)
   S.set = (text, name, source) => {
     try {
+      text = S.withHeader(text);
       const prev = S.get();
       if (prev && prev.text && prev.text.trim() !== (text || '').trim()) keep(prev);
       localStorage.setItem(KEY, JSON.stringify({ text, name: name !== undefined ? name : (prev ? prev.name || '' : ''), savedAt: Date.now(), source: source || '' }));
@@ -2206,11 +2220,23 @@ init();
   };
   S.clear = () => { try { localStorage.removeItem(KEY); } catch (e) {} };
   // Header row (Kind, Table, Name) plus at least one row
-  S.looksLikeExport = t => {
+  const hasHeader = t => {
     const lines = (t || '').replace(/\r/g, '').split('\n');
     const h = lines.slice(0, 15).findIndex(l => { const c = l.toLowerCase().split('\t').map(x => x.replace(/^"|"$/g, '').replace(/^.*\[|\]$/g, '').trim()); return c.includes('kind') && c.includes('table') && c.includes('name'); });
     return h >= 0 && lines.slice(h + 1).some(l => l.trim());
   };
+  // The export query's columns in its order. Rows copied from the results grid without the header row
+  // get it put back, so everything that reads the saved export finds its columns.
+  const EXPORT_HEAD = ['Kind', 'Table', 'Name', 'Type', 'Folder', 'Flags', 'Description', 'Expression', 'ToTable', 'ToColumn', 'Summarize', 'SortBy', 'Hierarchies', 'Storage', 'Source'];
+  S.withHeader = t => {
+    if (!t || hasHeader(t)) return t;
+    const body = t.replace(/\r/g, '').split('\n').filter(l => l.trim());
+    const rows = body.filter(l => { const c = l.split('\t'); return c.length >= 8 && /^"?(table|column|measure|relationship|model)"?$/i.test(c[0].trim()); }).length;
+    if (!body.length || rows < body.length * 0.8) return t;
+    const width = Math.min(EXPORT_HEAD.length, Math.max(...body.map(l => l.split('\t').length)));
+    return EXPORT_HEAD.slice(0, width).join('\t') + '\n' + t;
+  };
+  S.looksLikeExport = t => hasHeader(S.withHeader(t));
   S.counts = t => {
     const lines = (t || '').replace(/\r/g, '').split('\n');
     const out = { table: 0, column: 0, measure: 0, relationship: 0 };

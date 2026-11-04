@@ -630,7 +630,7 @@ function kvRowPreview(id, kpis, cfg){
   return '<div class="kv-strip">' + kpis.map(k => {
     const L = kvLook(k, cfg), P = L.P, sc = L.st ? L.c.text : P.text;
     const img = id === 'rspark' ? kvSvgSpark(L.n, sc, P) : id === 'rbullet' && L.h.target ? kvSvgBullet(L.n, sc, P) : '';
-    return kvCardHtml(k, L, img ? '<div class="kv-svg">' + img + '</div>' : '', { refs: kvLabelHtml(L, true), right: kvRight(cfg) });
+    return kvCardHtml(k, L, img ? '<div class="kv-svg">' + img + '</div>' : '', { refs: kvLabelHtml(L, true) + kvCtxHtml(k), right: kvRight(cfg) });
   }).join('') + '</div>';
 }
 
@@ -760,7 +760,7 @@ function kvOptionMeasures(id, k, cfg){
   const svgId = { rspark: 'spark', rbullet: 'bullet' }[id] || id;
   const needStatus = h.base && !['card', 'kpi', 'slope', 'ctxlabel', 'ctxsub', 'ctxtip'].includes(id);
   if (needStatus) out.push(...kvStatusMeasures(k, cfg).filter(m => !/ Status Fill$/.test(m.name) || id === 'rtable' || id === 'html'));
-  if (['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html'].includes(id)) kvCtx(k).slice(0, KV_CTX_MAX).forEach((c, i) => out.push(kvCtxMeasure(k, c, i)));
+  if (['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html', 'rcards', 'rspark', 'rbullet'].includes(id)) kvCtx(k).slice(0, KV_CTX_MAX).forEach((c, i) => out.push(kvCtxMeasure(k, c, i)));
   if (['ctxlabel', 'ctxsub', 'ctxtip'].includes(id)) return out;
   if (id === 'html') { out.push(kvHtmlMeasure(k, cfg)); return out; }
   if (KV_DESIGNS[id]) { if (id === 'ddetail') kvCtx(k).slice(0, KV_CTX_MAX).forEach((c, i) => out.push(kvCtxMeasure(k, c, i))); out.push(kvDesignMeasure(id, k, cfg)); return out; }
@@ -853,7 +853,7 @@ function kvChecks(kpis, cfg, optionId, model){
   const out = [], add = (level, text) => out.push({ level, text });
   if (!kpis.length) { add('info', 'Add a KPI in Step 2.'); return out; }
   kpis.forEach((k, i) => { if (!(k.measure || '').trim()) add('err', 'KPI ' + (i + 1) + (k.label ? ' (' + k.label + ')' : '') + ' has no measure. Type the measure’s name so the DAX can use it.'); });
-  const usesCtx = ['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html', 'ddetail'].includes(optionId);
+  const usesCtx = ['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html', 'ddetail', 'rcards', 'rspark', 'rbullet'].includes(optionId);
   if (usesCtx) kpis.forEach(k => (k.ctx || []).forEach((c, j) => {
     const d = kvCtxKind(c), r = (c.ref || '').trim(), where = kvName(k) + ', context ' + (j + 1);
     if (c.kind !== 'text' && !r) add('warn', where + ' has no ' + d.ref.toLowerCase() + ' yet, so it’s left out.');

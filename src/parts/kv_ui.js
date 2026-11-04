@@ -187,6 +187,12 @@ function chosenOption(){
   const r = kvRanked(k), pick = r.find(x => x.o.id === state.cfg.option && x.ok);
   return (pick || r[0]).o;
 }
+// Context lines that can't show yet: everything but fixed text needs its column or measure first
+function ctxMissing(kpis){
+  const miss = [];
+  kpis.forEach(x => (x.ctx || []).forEach((c, j) => { if (c && c.kind !== 'text' && !(c.ref || '').trim()) { const d = kvCtxKind(c); miss.push(esc(kvName(x)) + ', context ' + (j + 1) + ' (' + esc(d.name.charAt(0).toLowerCase() + d.name.slice(1)) + '): fill in &ldquo;' + esc(d.ref) + '&rdquo;, for example ' + esc(d.ph)); } }));
+  return miss.length ? '<div class="msg warn">Context isn&rsquo;t on these cards yet. ' + miss.join('; ') + '. Until then it&rsquo;s left out of the cards and the DAX.</div>' : '';
+}
 // The previews use the card colors from Step 4
 function inkVars(el){ const P = kvInk(state.cfg); ['bg', 'text', 'muted', 'track'].forEach(x => el.style.setProperty('--kv-' + x, P[x])); }
 // Row layouts the KPIs can use: bullet charts only when a KPI has a target
@@ -199,7 +205,7 @@ function renderOptions(){
   if (!state.kpis.length) { $('options').innerHTML = '<p class="note">Add a KPI in Step 2 to see the options.</p>'; $('sampleMsg').innerHTML = ''; return; }
   const chosen = chosenOption();
   const sample = row ? state.kpis.some(x => kvNums(x).sample) : kvNums(k).sample;
-  $('sampleMsg').innerHTML = sample ? '<div class="msg info">Some preview numbers are made up because none were typed. Add yours under &ldquo;Numbers for the preview&rdquo; in Step 2.</div>' : '';
+  $('sampleMsg').innerHTML = (sample ? '<div class="msg info">Some preview numbers are made up because none were typed. Add yours under &ldquo;Numbers for the preview&rdquo; in Step 2.</div>' : '') + ctxMissing(row ? state.kpis : [k]);
   $('s3note').textContent = row ? 'Each layout shows all your KPIs. Pick one to see how to build it.' : 'Ways that fit what you want readers to get come first. Pick one to see how to build it.';
   if (row) {
     $('options').innerHTML = rowOptions().map(o => '<article class="kv-opt wide' + (o === chosen ? ' on' : '') + '">'
@@ -434,11 +440,13 @@ function kvOptionSteps(id, kpis, cfg){
     case 'rcards': case 'rspark': case 'rbullet': {
       const pic = id === 'rspark' ? 'Sparkline' : id === 'rbullet' ? 'Bullet' : '';
       G.push({ title: 'Add the visual', steps: [newCard, 'Drag each KPI measure into the <b>Data</b> field well, in this order: ' + kpis.map(x => '<b>' + esc(kvRef(x.measure)) + '</b>').join(', ') + '. One card visual shows a card for each.', FP('Visual &gt; Layout') + ': set the arrangement to a single row with ' + kpis.length + ' cards (max tiles), and the gap between them.'] });
-      const each = kpis.map(x => { const st = status(x), hasPic = pic && (pic !== 'Bullet' || kvHas(x).target); if (!st && !hasPic) return ''; return '<b>' + esc(kvRef(x.measure)) + '</b>: ' + [st ? 'reference label ' + B(kvMName(x, 'Status Label')) + ', its color from ' + B(kvMName(x, 'Status Color')) : '', hasPic ? 'image ' + B(kvMName(x, pic)) : ''].filter(Boolean).join('; ') + '.'; }).filter(Boolean);
+      const ctxOf = x => kvCtx(x).slice(0, KV_CTX_MAX).map((c, j) => B(kvCtxName(x, j)));
+      const each = kpis.map(x => { const st = status(x), hasPic = pic && (pic !== 'Bullet' || kvHas(x).target), cx = ctxOf(x); if (!st && !hasPic && !cx.length) return ''; return '<b>' + esc(kvRef(x.measure)) + '</b>: ' + [st ? 'reference label ' + B(kvMName(x, 'Status Label')) + ', its color from ' + B(kvMName(x, 'Status Color')) : '', cx.length ? 'context label' + (cx.length > 1 ? 's ' : ' ') + cx.join(' and ') : '', hasPic ? 'image ' + B(kvMName(x, pic)) : ''].filter(Boolean).join('; ') + '.'; }).filter(Boolean);
       const steps = [callout + ' Leave &ldquo;Apply settings to&rdquo; on <b>All</b> for this, so every card matches.',
         'At the top of the Visual tab, set <b>Apply settings to</b> (Series) to one KPI at a time. Then:'];
       if (each.length) steps.push('<ul>' + each.map(x => '<li>' + x + '</li>').join('') + '</ul>');
-      steps.push('For each one, ' + FP('Visual &gt; Reference labels') + ': add a label and pick its Status Label; for the value color, select <b>fx</b>, Format style <b>Field value</b>, and pick its Status Color. Leave the label background off; it would fill the whole label area.');
+      if (kpis.some(status)) steps.push('For each one, ' + FP('Visual &gt; Reference labels') + ': add a label and pick its Status Label; for the value color, select <b>fx</b>, Format style <b>Field value</b>, and pick its Status Color. Leave the label background off; it would fill the whole label area.');
+      if (kpis.some(x => kvCtx(x).length)) steps.push('For each context label, ' + FP('Visual &gt; Reference labels') + ': add ' + (kpis.some(status) ? 'another' : 'a') + ' label and pick the context measure. Turn its title off and make its value your label color (' + kvInk(cfg).muted + '): it&rsquo;s context, not good or bad.');
       if (right) steps.push(...rightSteps.map(x => x + ' Keep &ldquo;Apply settings to&rdquo; on <b>All</b> for this.'));
       if (pic) steps.push('And ' + FP('Visual &gt; Images') + ': turn images on, set Image type to <b>Image URL</b>, select <b>fx</b> &gt; Field value and pick its ' + pic + ' measure. Position <b>Bottom</b>.' + (id === 'rbullet' ? ' KPIs without a target get no bullet.' : ''));
       G.push({ title: 'Format it', tip, steps });
@@ -461,7 +469,7 @@ function kvOptionSteps(id, kpis, cfg){
 // Options whose setup uses the card's reference labels, so they can go to the right of the value
 function usesRef(id, kpis, cfg){
   if (['cardvar', 'ctxlabel'].includes(id)) return true;
-  return ['core', 'bullet', 'progress', 'spark', 'varbar', 'waffle', 'rcards', 'rspark', 'rbullet'].includes(id) && kpis.some(x => kvHas(x).base && (x.measure || '').trim());
+  return ['core', 'bullet', 'progress', 'spark', 'varbar', 'waffle', 'rcards', 'rspark', 'rbullet'].includes(id) && kpis.some(x => (kvHas(x).base || (['rcards', 'rspark', 'rbullet'].includes(id) && kvHas(x).ctx)) && (x.measure || '').trim());
 }
 function renderBuild(){
   const o = chosenOption(), row = state.cfg.mode === 'row';

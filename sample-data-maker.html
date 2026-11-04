@@ -2017,6 +2017,7 @@ init();
   // source: 'pbip' when the rows were read from a PBIP folder (every tool then opens on that folder)
   S.set = (text, name, source) => {
     try {
+      text = S.withHeader(text);
       const prev = S.get();
       if (prev && prev.text && prev.text.trim() !== (text || '').trim()) keep(prev);
       localStorage.setItem(KEY, JSON.stringify({ text, name: name !== undefined ? name : (prev ? prev.name || '' : ''), savedAt: Date.now(), source: source || '' }));
@@ -2042,11 +2043,23 @@ init();
   };
   S.clear = () => { try { localStorage.removeItem(KEY); } catch (e) {} };
   // Header row (Kind, Table, Name) plus at least one row
-  S.looksLikeExport = t => {
+  const hasHeader = t => {
     const lines = (t || '').replace(/\r/g, '').split('\n');
     const h = lines.slice(0, 15).findIndex(l => { const c = l.toLowerCase().split('\t').map(x => x.replace(/^"|"$/g, '').replace(/^.*\[|\]$/g, '').trim()); return c.includes('kind') && c.includes('table') && c.includes('name'); });
     return h >= 0 && lines.slice(h + 1).some(l => l.trim());
   };
+  // The export query's columns in its order. Rows copied from the results grid without the header row
+  // get it put back, so everything that reads the saved export finds its columns.
+  const EXPORT_HEAD = ['Kind', 'Table', 'Name', 'Type', 'Folder', 'Flags', 'Description', 'Expression', 'ToTable', 'ToColumn', 'Summarize', 'SortBy', 'Hierarchies', 'Storage', 'Source'];
+  S.withHeader = t => {
+    if (!t || hasHeader(t)) return t;
+    const body = t.replace(/\r/g, '').split('\n').filter(l => l.trim());
+    const rows = body.filter(l => { const c = l.split('\t'); return c.length >= 8 && /^"?(table|column|measure|relationship|model)"?$/i.test(c[0].trim()); }).length;
+    if (!body.length || rows < body.length * 0.8) return t;
+    const width = Math.min(EXPORT_HEAD.length, Math.max(...body.map(l => l.split('\t').length)));
+    return EXPORT_HEAD.slice(0, width).join('\t') + '\n' + t;
+  };
+  S.looksLikeExport = t => hasHeader(S.withHeader(t));
   S.counts = t => {
     const lines = (t || '').replace(/\r/g, '').split('\n');
     const out = { table: 0, column: 0, measure: 0, relationship: 0 };
