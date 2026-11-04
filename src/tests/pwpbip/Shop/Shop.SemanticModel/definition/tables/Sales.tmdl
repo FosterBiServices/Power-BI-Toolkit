@@ -1,0 +1,52 @@
+table Sales
+	lineageTag: s0
+
+	measure 'Total Sales' = SUM(Sales[Amount])
+		lineageTag: s9
+
+	column 'Order ID'
+		dataType: string
+		lineageTag: s1
+		summarizeBy: none
+		sourceColumn: Order ID
+
+	column 'Order Date'
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: s2
+		summarizeBy: none
+		sourceColumn: Order Date
+
+	column Quantity
+		dataType: int64
+		formatString: 0
+		lineageTag: s3
+		summarizeBy: sum
+		sourceColumn: Quantity
+
+	column Amount
+		dataType: double
+		lineageTag: s4
+		summarizeBy: sum
+		sourceColumn: Amount
+
+	column 'Customer Key'
+		dataType: int64
+		formatString: 0
+		lineageTag: s5
+		summarizeBy: none
+		sourceColumn: Customer Key
+
+	column 'Amount Band' = IF(Sales[Amount] > 100, "High", "Low")
+		dataType: string
+		lineageTag: s6
+		summarizeBy: none
+
+	partition Sales = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("sql-prod", "SalesDW"),
+				    Lines = Source{[Schema = "dbo", Item = "SalesLines"]}[Data]
+				in
+				    Lines

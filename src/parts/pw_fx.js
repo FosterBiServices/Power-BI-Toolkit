@@ -120,5 +120,23 @@ const PWF = (() => {
     parseMine(inp.myFns).forEach(f => { if (!out.some(x => x.name === f.name)) out.push(f); });
     return out;
   }
-  return { LIB, BY, RECIPES, blankOpts, active, recipeSteps, render, parseMine, known, M_TYPE };
+  /* A TMDL view script that adds the functions named as queries (shared expressions), in one paste.
+     The comment lines at the top of each function become its description; the code goes three tabs in, deeper
+     than the expression's own line, as Desktop writes it in expressions.tmdl. */
+  function tmdl(names){
+    const fns = names.map(n => BY.get(n)).filter(f => f && f.code);
+    if (!fns.length) return '';
+    const L = ['createOrReplace', ''];
+    fns.forEach(f => {
+      const lines = f.code.replace(/\r/g, '').split('\n'), head = [];
+      while (lines.length && /^\s*\/\//.test(lines[0])) head.push(lines.shift().replace(/^\s*\/\/\s?/, ''));
+      const desc = head.filter(l => !/^Example:/.test(l)).join(' ').replace(new RegExp('^' + f.name + ':\\s*'), '').replace(/\s+/g, ' ').trim();
+      if (desc) L.push('\t/// ' + desc);
+      L.push('\texpression ' + f.name + ' =');
+      lines.forEach(l => L.push(l.trim() ? '\t\t\t' + l : ''));
+      L.push('');
+    });
+    return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  }
+  return { LIB, BY, RECIPES, blankOpts, active, recipeSteps, render, parseMine, known, M_TYPE, tmdl };
 })();

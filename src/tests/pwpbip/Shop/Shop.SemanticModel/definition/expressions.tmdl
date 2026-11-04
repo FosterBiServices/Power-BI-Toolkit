@@ -1,0 +1,11 @@
+expression fxCleanPhone =
+		(InputTable as table, Columns as list) as table => InputTable
+	lineageTag: e1
+
+	annotation PBI_ResultType = Function
+
+expression fxApplyTypes =
+		(InputTable as table, TypePairs as list, optional Options as nullable record) as table => InputTable
+	lineageTag: e2
+
+	annotation PBI_ResultType = Function
