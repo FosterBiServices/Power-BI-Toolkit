@@ -94,7 +94,7 @@ function renderFx(){
   state.fxCode = f.code;
   $('fxOut').hidden = !f.rs;
   $('fxStepsCode').textContent = f.code;
-  $('fxFns').innerHTML = f.rs ? f.rs.fns.map(n => { const fn = PWF.BY.get(n); return '<details class="extra"><summary><code>' + n + '</code> <span class="muted">' + esc(fn.does) + '</span></summary><div class="codebox"><div class="codebox-bar"><span class="t">Blank query named ' + n + '</span><span class="r"><button class="btn" type="button" data-copyfn="' + n + '">Copy</button></span></div><pre class="short">' + esc(fn.code) + '</pre></div></details>'; }).join('') : '';
+  $('fxFns').innerHTML = f.rs ? f.rs.fns.map(n => { const fn = PWF.BY.get(n); return '<details class="extra"><summary><code>' + n + '</code> <span class="muted">' + esc(fn.does) + '</span></summary><div class="codebox"><div class="codebox-bar"><span class="t">Blank query &gt; Advanced Editor, then rename it ' + n + '</span><span class="r"><button class="btn" type="button" data-copyfn="' + n + '">Copy</button></span></div><pre class="short">' + esc(fn.code) + '</pre></div></details>'; }).join('') : '';
 }
 // what a recipe starts with when ticked: the date columns for dates, the date-time columns for splitting
 function recipeDefaults(id, cols){
