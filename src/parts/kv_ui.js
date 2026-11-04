@@ -440,11 +440,13 @@ function kvOptionSteps(id, kpis, cfg){
     case 'rcards': case 'rspark': case 'rbullet': {
       const pic = id === 'rspark' ? 'Sparkline' : id === 'rbullet' ? 'Bullet' : '';
       G.push({ title: 'Add the visual', steps: [newCard, 'Drag each KPI measure into the <b>Data</b> field well, in this order: ' + kpis.map(x => '<b>' + esc(kvRef(x.measure)) + '</b>').join(', ') + '. One card visual shows a card for each.', FP('Visual &gt; Layout') + ': set the arrangement to a single row with ' + kpis.length + ' cards (max tiles), and the gap between them.'] });
-      const each = kpis.map(x => { const st = status(x), hasPic = pic && (pic !== 'Bullet' || kvHas(x).target); if (!st && !hasPic) return ''; return '<b>' + esc(kvRef(x.measure)) + '</b>: ' + [st ? 'reference label ' + B(kvMName(x, 'Status Label')) + ', its color from ' + B(kvMName(x, 'Status Color')) : '', hasPic ? 'image ' + B(kvMName(x, pic)) : ''].filter(Boolean).join('; ') + '.'; }).filter(Boolean);
+      const ctxOf = x => kvCtx(x).slice(0, KV_CTX_MAX).map((c, j) => B(kvCtxName(x, j)));
+      const each = kpis.map(x => { const st = status(x), hasPic = pic && (pic !== 'Bullet' || kvHas(x).target), cx = ctxOf(x); if (!st && !hasPic && !cx.length) return ''; return '<b>' + esc(kvRef(x.measure)) + '</b>: ' + [st ? 'reference label ' + B(kvMName(x, 'Status Label')) + ', its color from ' + B(kvMName(x, 'Status Color')) : '', cx.length ? 'context label' + (cx.length > 1 ? 's ' : ' ') + cx.join(' and ') : '', hasPic ? 'image ' + B(kvMName(x, pic)) : ''].filter(Boolean).join('; ') + '.'; }).filter(Boolean);
       const steps = [callout + ' Leave &ldquo;Apply settings to&rdquo; on <b>All</b> for this, so every card matches.',
         'At the top of the Visual tab, set <b>Apply settings to</b> (Series) to one KPI at a time. Then:'];
       if (each.length) steps.push('<ul>' + each.map(x => '<li>' + x + '</li>').join('') + '</ul>');
-      steps.push('For each one, ' + FP('Visual &gt; Reference labels') + ': add a label and pick its Status Label; for the value color, select <b>fx</b>, Format style <b>Field value</b>, and pick its Status Color. Leave the label background off; it would fill the whole label area.');
+      if (kpis.some(status)) steps.push('For each one, ' + FP('Visual &gt; Reference labels') + ': add a label and pick its Status Label; for the value color, select <b>fx</b>, Format style <b>Field value</b>, and pick its Status Color. Leave the label background off; it would fill the whole label area.');
+      if (kpis.some(x => kvCtx(x).length)) steps.push('For each context label, ' + FP('Visual &gt; Reference labels') + ': add ' + (kpis.some(status) ? 'another' : 'a') + ' label and pick the context measure. Turn its title off and make its value your label color (' + kvInk(cfg).muted + '): it&rsquo;s context, not good or bad.');
       if (right) steps.push(...rightSteps.map(x => x + ' Keep &ldquo;Apply settings to&rdquo; on <b>All</b> for this.'));
       if (pic) steps.push('And ' + FP('Visual &gt; Images') + ': turn images on, set Image type to <b>Image URL</b>, select <b>fx</b> &gt; Field value and pick its ' + pic + ' measure. Position <b>Bottom</b>.' + (id === 'rbullet' ? ' KPIs without a target get no bullet.' : ''));
       G.push({ title: 'Format it', tip, steps });
@@ -467,7 +469,7 @@ function kvOptionSteps(id, kpis, cfg){
 // Options whose setup uses the card's reference labels, so they can go to the right of the value
 function usesRef(id, kpis, cfg){
   if (['cardvar', 'ctxlabel'].includes(id)) return true;
-  return ['core', 'bullet', 'progress', 'spark', 'varbar', 'waffle', 'rcards', 'rspark', 'rbullet'].includes(id) && kpis.some(x => kvHas(x).base && (x.measure || '').trim());
+  return ['core', 'bullet', 'progress', 'spark', 'varbar', 'waffle', 'rcards', 'rspark', 'rbullet'].includes(id) && kpis.some(x => (kvHas(x).base || (['rcards', 'rspark', 'rbullet'].includes(id) && kvHas(x).ctx)) && (x.measure || '').trim());
 }
 function renderBuild(){
   const o = chosenOption(), row = state.cfg.mode === 'row';

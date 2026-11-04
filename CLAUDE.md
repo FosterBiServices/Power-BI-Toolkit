@@ -134,6 +134,9 @@ Things to know:
 - Shared export in `localStorage['sfpbi.shared.model']`. `S.get()`, `S.set()`, `S.clear()`.
   `S.set` keeps the replaced export in `sfpbi.shared.model.history` (up to 5; `S.history()`,
   `S.clearHistory()`), which Model Compare uses as the "before".
+- A paste with no header row (cells copied from the grid without the column names) is read in the export query's
+  column order when its rows start with a kind the export makes (`EXPORT_COLS` in builder_core, `S.withHeader` in
+  suite.js, which puts the header back before saving). Check: `headerlesstest.js`.
 - `S.hook(cfg)` fills a tool's model box from the shared export and saves edits back.
   With `connect: { step, none, exportOnly, lede, retitle }` it also adds the **Connect your
   model** choice (PBIP folder, Model export, optionally No model) to the step whose h2 has id

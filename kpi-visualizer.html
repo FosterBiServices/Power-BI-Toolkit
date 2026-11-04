@@ -713,6 +713,8 @@ function dateTablesOf(model){ return model.tables.filter(isMarkedDateTable).conc
    cols     the export's column names (lower case), for tools that tell an older export query from a newer one
    has      which optional export columns came with it (summarize, sortBy, hierarchies, storage, source, model, upgraded) */
 const AUTO_DATE_TABLE = /^(localdatetable_|datetabletemplate_)/i;
+// The export query's columns, in its order (used when a paste has no header row)
+const EXPORT_COLS = ['kind', 'table', 'name', 'type', 'folder', 'flags', 'description', 'expression', 'totable', 'tocolumn', 'summarize', 'sortby', 'hierarchies', 'storage', 'source'];
 function readModel(text, opts){
   const keepAuto = !!(opts && opts.keepAuto);
   const res = { tables: [], columns: [], measures: [], rels: [], model: null, has: {}, error: null, skipped: 0 };
@@ -726,7 +728,18 @@ function readModel(text, opts){
       hIdx = i; cells.forEach((c, j) => { map[c] = j; }); break;
     }
   }
+  // No header row (cells copied from the grid without it): rows that start with a kind the export makes
+  // are read in the export query's own column order.
   if (hIdx < 0) {
+    const body = lines.filter(l => l.trim()), kinds = /^"?(table|column|measure|relationship|model)"?$/i;
+    const rowLike = body.filter(l => { const c = l.split('\t'); return c.length >= 8 && kinds.test(c[0].trim()); }).length;
+    if (body.length && rowLike >= Math.max(1, body.length * 0.8)) {
+      const width = Math.max(...body.map(l => l.split('\t').length));
+      EXPORT_COLS.forEach((c, j) => { if (j < width) map[c] = j; });
+      hIdx = -1; res.noHeader = true;
+    }
+  }
+  if (hIdx < 0 && !res.noHeader) {
     res.error = 'The header row (Kind, Table, Name…) wasn’t found. Use the Copy button above the results grid so the column names come along, and make sure the query from Step 1 is the one you ran.';
     return res;
   }
@@ -2285,7 +2298,7 @@ function kvRowPreview(id, kpis, cfg){
   return '<div class="kv-strip">' + kpis.map(k => {
     const L = kvLook(k, cfg), P = L.P, sc = L.st ? L.c.text : P.text;
     const img = id === 'rspark' ? kvSvgSpark(L.n, sc, P) : id === 'rbullet' && L.h.target ? kvSvgBullet(L.n, sc, P) : '';
-    return kvCardHtml(k, L, img ? '<div class="kv-svg">' + img + '</div>' : '', { refs: kvLabelHtml(L, true), right: kvRight(cfg) });
+    return kvCardHtml(k, L, img ? '<div class="kv-svg">' + img + '</div>' : '', { refs: kvLabelHtml(L, true) + kvCtxHtml(k), right: kvRight(cfg) });
   }).join('') + '</div>';
 }
 
@@ -2415,7 +2428,7 @@ function kvOptionMeasures(id, k, cfg){
   const svgId = { rspark: 'spark', rbullet: 'bullet' }[id] || id;
   const needStatus = h.base && !['card', 'kpi', 'slope', 'ctxlabel', 'ctxsub', 'ctxtip'].includes(id);
   if (needStatus) out.push(...kvStatusMeasures(k, cfg).filter(m => !/ Status Fill$/.test(m.name) || id === 'rtable' || id === 'html'));
-  if (['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html'].includes(id)) kvCtx(k).slice(0, KV_CTX_MAX).forEach((c, i) => out.push(kvCtxMeasure(k, c, i)));
+  if (['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html', 'rcards', 'rspark', 'rbullet'].includes(id)) kvCtx(k).slice(0, KV_CTX_MAX).forEach((c, i) => out.push(kvCtxMeasure(k, c, i)));
   if (['ctxlabel', 'ctxsub', 'ctxtip'].includes(id)) return out;
   if (id === 'html') { out.push(kvHtmlMeasure(k, cfg)); return out; }
   if (KV_DESIGNS[id]) { if (id === 'ddetail') kvCtx(k).slice(0, KV_CTX_MAX).forEach((c, i) => out.push(kvCtxMeasure(k, c, i))); out.push(kvDesignMeasure(id, k, cfg)); return out; }
@@ -2508,7 +2521,7 @@ function kvChecks(kpis, cfg, optionId, model){
   const out = [], add = (level, text) => out.push({ level, text });
   if (!kpis.length) { add('info', 'Add a KPI in Step 2.'); return out; }
   kpis.forEach((k, i) => { if (!(k.measure || '').trim()) add('err', 'KPI ' + (i + 1) + (k.label ? ' (' + k.label + ')' : '') + ' has no measure. Type the measure’s name so the DAX can use it.'); });
-  const usesCtx = ['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html', 'ddetail'].includes(optionId);
+  const usesCtx = ['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html', 'ddetail', 'rcards', 'rspark', 'rbullet'].includes(optionId);
   if (usesCtx) kpis.forEach(k => (k.ctx || []).forEach((c, j) => {
     const d = kvCtxKind(c), r = (c.ref || '').trim(), where = kvName(k) + ', context ' + (j + 1);
     if (c.kind !== 'text' && !r) add('warn', where + ' has no ' + d.ref.toLowerCase() + ' yet, so it’s left out.');
@@ -3496,11 +3509,13 @@ function kvOptionSteps(id, kpis, cfg){
     case 'rcards': case 'rspark': case 'rbullet': {
       const pic = id === 'rspark' ? 'Sparkline' : id === 'rbullet' ? 'Bullet' : '';
       G.push({ title: 'Add the visual', steps: [newCard, 'Drag each KPI measure into the <b>Data</b> field well, in this order: ' + kpis.map(x => '<b>' + esc(kvRef(x.measure)) + '</b>').join(', ') + '. One card visual shows a card for each.', FP('Visual &gt; Layout') + ': set the arrangement to a single row with ' + kpis.length + ' cards (max tiles), and the gap between them.'] });
-      const each = kpis.map(x => { const st = status(x), hasPic = pic && (pic !== 'Bullet' || kvHas(x).target); if (!st && !hasPic) return ''; return '<b>' + esc(kvRef(x.measure)) + '</b>: ' + [st ? 'reference label ' + B(kvMName(x, 'Status Label')) + ', its color from ' + B(kvMName(x, 'Status Color')) : '', hasPic ? 'image ' + B(kvMName(x, pic)) : ''].filter(Boolean).join('; ') + '.'; }).filter(Boolean);
+      const ctxOf = x => kvCtx(x).slice(0, KV_CTX_MAX).map((c, j) => B(kvCtxName(x, j)));
+      const each = kpis.map(x => { const st = status(x), hasPic = pic && (pic !== 'Bullet' || kvHas(x).target), cx = ctxOf(x); if (!st && !hasPic && !cx.length) return ''; return '<b>' + esc(kvRef(x.measure)) + '</b>: ' + [st ? 'reference label ' + B(kvMName(x, 'Status Label')) + ', its color from ' + B(kvMName(x, 'Status Color')) : '', cx.length ? 'context label' + (cx.length > 1 ? 's ' : ' ') + cx.join(' and ') : '', hasPic ? 'image ' + B(kvMName(x, pic)) : ''].filter(Boolean).join('; ') + '.'; }).filter(Boolean);
       const steps = [callout + ' Leave &ldquo;Apply settings to&rdquo; on <b>All</b> for this, so every card matches.',
         'At the top of the Visual tab, set <b>Apply settings to</b> (Series) to one KPI at a time. Then:'];
       if (each.length) steps.push('<ul>' + each.map(x => '<li>' + x + '</li>').join('') + '</ul>');
-      steps.push('For each one, ' + FP('Visual &gt; Reference labels') + ': add a label and pick its Status Label; for the value color, select <b>fx</b>, Format style <b>Field value</b>, and pick its Status Color. Leave the label background off; it would fill the whole label area.');
+      if (kpis.some(status)) steps.push('For each one, ' + FP('Visual &gt; Reference labels') + ': add a label and pick its Status Label; for the value color, select <b>fx</b>, Format style <b>Field value</b>, and pick its Status Color. Leave the label background off; it would fill the whole label area.');
+      if (kpis.some(x => kvCtx(x).length)) steps.push('For each context label, ' + FP('Visual &gt; Reference labels') + ': add ' + (kpis.some(status) ? 'another' : 'a') + ' label and pick the context measure. Turn its title off and make its value your label color (' + kvInk(cfg).muted + '): it&rsquo;s context, not good or bad.');
       if (right) steps.push(...rightSteps.map(x => x + ' Keep &ldquo;Apply settings to&rdquo; on <b>All</b> for this.'));
       if (pic) steps.push('And ' + FP('Visual &gt; Images') + ': turn images on, set Image type to <b>Image URL</b>, select <b>fx</b> &gt; Field value and pick its ' + pic + ' measure. Position <b>Bottom</b>.' + (id === 'rbullet' ? ' KPIs without a target get no bullet.' : ''));
       G.push({ title: 'Format it', tip, steps });
@@ -3523,7 +3538,7 @@ function kvOptionSteps(id, kpis, cfg){
 // Options whose setup uses the card's reference labels, so they can go to the right of the value
 function usesRef(id, kpis, cfg){
   if (['cardvar', 'ctxlabel'].includes(id)) return true;
-  return ['core', 'bullet', 'progress', 'spark', 'varbar', 'waffle', 'rcards', 'rspark', 'rbullet'].includes(id) && kpis.some(x => kvHas(x).base && (x.measure || '').trim());
+  return ['core', 'bullet', 'progress', 'spark', 'varbar', 'waffle', 'rcards', 'rspark', 'rbullet'].includes(id) && kpis.some(x => (kvHas(x).base || (['rcards', 'rspark', 'rbullet'].includes(id) && kvHas(x).ctx)) && (x.measure || '').trim());
 }
 function renderBuild(){
   const o = chosenOption(), row = state.cfg.mode === 'row';
@@ -3760,6 +3775,7 @@ init();
   // source: 'pbip' when the rows were read from a PBIP folder (every tool then opens on that folder)
   S.set = (text, name, source) => {
     try {
+      text = S.withHeader(text);
       const prev = S.get();
       if (prev && prev.text && prev.text.trim() !== (text || '').trim()) keep(prev);
       localStorage.setItem(KEY, JSON.stringify({ text, name: name !== undefined ? name : (prev ? prev.name || '' : ''), savedAt: Date.now(), source: source || '' }));
@@ -3785,11 +3801,23 @@ init();
   };
   S.clear = () => { try { localStorage.removeItem(KEY); } catch (e) {} };
   // Header row (Kind, Table, Name) plus at least one row
-  S.looksLikeExport = t => {
+  const hasHeader = t => {
     const lines = (t || '').replace(/\r/g, '').split('\n');
     const h = lines.slice(0, 15).findIndex(l => { const c = l.toLowerCase().split('\t').map(x => x.replace(/^"|"$/g, '').replace(/^.*\[|\]$/g, '').trim()); return c.includes('kind') && c.includes('table') && c.includes('name'); });
     return h >= 0 && lines.slice(h + 1).some(l => l.trim());
   };
+  // The export query's columns in its order. Rows copied from the results grid without the header row
+  // get it put back, so everything that reads the saved export finds its columns.
+  const EXPORT_HEAD = ['Kind', 'Table', 'Name', 'Type', 'Folder', 'Flags', 'Description', 'Expression', 'ToTable', 'ToColumn', 'Summarize', 'SortBy', 'Hierarchies', 'Storage', 'Source'];
+  S.withHeader = t => {
+    if (!t || hasHeader(t)) return t;
+    const body = t.replace(/\r/g, '').split('\n').filter(l => l.trim());
+    const rows = body.filter(l => { const c = l.split('\t'); return c.length >= 8 && /^"?(table|column|measure|relationship|model)"?$/i.test(c[0].trim()); }).length;
+    if (!body.length || rows < body.length * 0.8) return t;
+    const width = Math.min(EXPORT_HEAD.length, Math.max(...body.map(l => l.split('\t').length)));
+    return EXPORT_HEAD.slice(0, width).join('\t') + '\n' + t;
+  };
+  S.looksLikeExport = t => hasHeader(S.withHeader(t));
   S.counts = t => {
     const lines = (t || '').replace(/\r/g, '').split('\n');
     const out = { table: 0, column: 0, measure: 0, relationship: 0 };
