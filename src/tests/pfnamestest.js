@@ -28,7 +28,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   await p.evaluate(v => { const t = document.getElementById('modelInput'); t.value = v; t.dispatchEvent(new Event('input', { bubbles: true })); }, rows.concat(extra).join('\n')); await p.waitForTimeout(300);
   const has = async () => { const pr = await p.textContent('#insPromptView'); const fl = await p.textContent('#flags'); return 'prompt: Page Selector ' + pr.includes('Page Selector') + ', Show Row ' + pr.includes('[Show Row]') + ' | flags PAGE_SIZE ' + fl.includes('PAGE_SIZE'); };
   console.log('before leaving out ->', await has());
-  await p.click('#skipBox summary').catch(() => {});
+  console.log('leave-out box open', await p.evaluate(() => document.getElementById('skipBox').open), '(expect true)');
   await p.click('[data-skipt="Page Selector"]'); await p.waitForTimeout(200);
   console.log('hint', await p.textContent('#skipHint'));
   await p.click('#skipUsing'); await p.waitForTimeout(200);
@@ -39,6 +39,11 @@ const { chromium } = require('playwright'); const fs = require('fs');
   // put the table back
   await p.click('[data-skipt="Page Selector"]'); await p.waitForTimeout(200);
   console.log('put back ->', await has(), '(expect Page Selector true, Show Row false: still left out by name)');
+  // leave a table out straight from a list
+  await p.click('details.flag[data-f=cryptic] summary').catch(() => {});
+  if (!(await p.evaluate(() => document.querySelector('details.flag[data-f=cryptic]').open))) await p.click('details.flag[data-f=cryptic] summary');
+  await p.click('[data-qskipt="Page Selector"]'); await p.waitForTimeout(200);
+  console.log('left out from the list ->', await has(), '(expect Page Selector false, PAGE_SIZE false)');
   // measures: where to describe them
   console.log('measure note:', await p.textContent('#measureNote'));
   await p.click('#tabDesc'); console.log('descriptions tab:', await p.textContent('#dMeasureNote'), '| link', await p.getAttribute('#dMeasureNote a', 'href'));

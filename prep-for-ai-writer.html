@@ -369,6 +369,7 @@ textarea.edit{font-family:var(--sans);font-size:14px;line-height:1.55;min-height
     .skipin .lab{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500}
     .skipin .lab .hint{font-weight:400;color:var(--muted)}
     .chip.out[aria-pressed="true"]{background:var(--surface-2);border-color:var(--muted);color:var(--muted);text-decoration:line-through}
+    .qskip{font-size:12px;margin-left:6px;white-space:nowrap}
     .flag-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
     details.flag .facts{display:flex;flex-wrap:wrap;gap:8px;margin:0 12px 10px}
     details.flag .renin{display:flex;flex-direction:column;gap:12px;margin:0 12px 12px}
@@ -390,7 +391,7 @@ textarea.edit{font-family:var(--sans);font-size:14px;line-height:1.55;min-height
       </div>
       <textarea id="modelInput" class="big" spellcheck="false" aria-label="Query results" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
       <div id="modelMsg"></div>
-      <details class="skipbox" id="skipBox" hidden>
+      <details class="skipbox" id="skipBox" open hidden>
         <summary><b>Leave out helper tables and measures</b> <span class="muted" id="skipSum"></span></summary>
         <div class="skipin">
           <p class="note small">Paging, sorting, formatting and other helper tables and measures report users never ask about. What you leave out here is skipped by the checks below, both prompts and every list on this page. Your model doesn&rsquo;t change.</p>
@@ -510,8 +511,28 @@ textarea.edit{font-family:var(--sans);font-size:14px;line-height:1.55;min-height
               <li>In Power BI Desktop, select <b>Prep data for AI</b> on the Home ribbon (in the service, it's on the semantic model's ribbon).</li>
               <li>Open the <b>Add AI instructions</b> tab, paste, and select <b>Apply</b>.</li>
               <li>In Desktop, close and reopen the Copilot pane so it picks up the new instructions, then ask it a few real questions to test.</li>
-              <li>Optional: for the fields that matter most, also paste their synonyms into <b>Model view &gt; Properties &gt; Synonyms</b>. <b>Copy synonyms as table</b> gives you the list.</li>
+              <li>No <b>Prep data for AI</b> (it needs Fabric)? Add the synonyms to the model below instead; Copilot and Q&amp;A both read them.</li>
             </ol>
+          </div>
+          <div class="apply" id="cultBox">
+            <h3>Add the synonyms to the model</h3>
+            <p class="small">Synonyms are saved in the model&rsquo;s culture (its <span class="mono">linguisticMetadata</span>), so they work without Fabric. The page adds the ticked synonyms above to a script of your culture and keeps every term already there.</p>
+            <ol>
+              <li>In Power BI Desktop, open <b>TMDL view</b>. In the Data pane&rsquo;s <b>Model</b> tab, open <b>Cultures</b>, drag <b>en-US</b> into an empty tab (or right-click it &gt; <b>Script TMDL</b> &gt; <b>To clipboard</b>).</li>
+              <li>Copy the whole script and paste it here. A PBIP folder&rsquo;s <span class="mono">definition/cultures/en-US.tmdl</span> works too.</li>
+            </ol>
+            <textarea id="cultIn" class="mid" spellcheck="false" aria-label="TMDL script of your culture" placeholder="createOrReplace&#10;&#10;&#9;cultureInfo en-US&#10;&#10;&#9;&#9;linguisticMetadata = {&quot;Version&quot;:&quot;4.1.0&quot;, ..."></textarea>
+            <div id="cultMsg"></div>
+            <div id="cultOut" hidden style="display:flex;flex-direction:column;gap:12px">
+              <div class="codebox">
+                <div class="codebox-bar"><span class="t">Culture script with your synonyms</span><span class="r"><button class="btn primary" type="button" data-copy="cult">Copy script</button></span></div>
+                <pre class="short" id="cultView" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+              </div>
+              <ol>
+                <li>Paste the script into a new TMDL view tab and select <b>Preview</b>. Only the culture should change. If anything else does, don&rsquo;t apply.</li>
+                <li>Select <b>Apply</b>, then check a field&rsquo;s synonyms in <b>Model view &gt; Properties &gt; Synonyms</b>.</li>
+              </ol>
+            </div>
           </div>
         </div>
       </div>
@@ -2146,6 +2167,68 @@ function renameSteps(pairs){
   return [...by.entries()].map(([table, ps]) => ({ table, count: ps.length,
     formula: '= Table.RenameColumns(#"Previous step", {' + ps.map(p => '{' + mText(p.from) + ', ' + mText(p.to) + '}').join(', ') + '}, MissingField.Ignore)' }));
 }
+/* ---- synonyms into the model's culture (linguisticMetadata), through TMDL view ---- */
+// Reads a culture script (TMDL view's Script TMDL of a culture, or a PBIP folder's cultures/xx-XX.tmdl)
+function cultureParse(script){
+  const lines = (script || '').replace(/\r/g, '').split('\n');
+  const i = lines.findIndex(l => /^\s*linguisticMetadata\s*=/.test(l));
+  if (i < 0) return { error: 'No linguisticMetadata was found. In TMDL view, script the culture itself (Model tab > Cultures > en-US), not a table.' };
+  let text = lines[i].replace(/^\s*linguisticMetadata\s*=\s*/, ''), meta = null, j = i;
+  try { meta = JSON.parse(text); } catch (e) {
+    for (j = i + 1; j < lines.length && !/^\s*contentType\s*:/.test(lines[j]); j++) { text += '\n' + lines[j]; try { meta = JSON.parse(text); break; } catch (e2) {} }
+  }
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return { error: 'The linguisticMetadata isn’t complete JSON. Copy the whole script from the TMDL view tab and paste all of it.' };
+  const ci = (script.match(/cultureInfo\s+('?)([^'\s]+)\1/) || [])[2] || '';
+  return { lines, start: i, end: Math.min(j, lines.length - 1), indent: lines[i].match(/^\s*/)[0], meta, culture: ci };
+}
+// Adds synonyms to the matching entities. rows: [{ obj: { kind, table, name }, terms: [] }]. Existing terms are kept;
+// a term Power BI only suggested is accepted. Fields with no entity get one. Returns the new metadata and what changed.
+function cultureMerge(meta, rows, now){
+  const m = JSON.parse(JSON.stringify(meta));
+  if (!m.Entities || typeof m.Entities !== 'object' || Array.isArray(m.Entities)) m.Entities = {};
+  const stamp = now || new Date().toISOString();
+  const keyOf = (table, prop) => Object.keys(m.Entities).find(k => {
+    const b = ((m.Entities[k] || {}).Definition || {}).Binding || {};
+    return lc(b.ConceptualEntity) === lc(table) && (prop ? lc(b.ConceptualProperty) === lc(prop) : !b.ConceptualProperty);
+  });
+  const report = [];
+  rows.forEach(r => {
+    const o = r.obj; if (!o) return;
+    const prop = o.kind === 'table' ? '' : o.name;
+    let key = keyOf(o.table, prop), created = false;
+    if (!key) {
+      const base = (o.table + (prop ? '.' + prop : '')).toLowerCase().replace(/[^a-z0-9.]+/g, '_').replace(/^_+|_+$/g, '') || 'field';
+      key = base; for (let n = 2; m.Entities[key]; n++) key = base + '_' + n;
+      m.Entities[key] = { Definition: { Binding: prop ? { ConceptualEntity: o.table, ConceptualProperty: prop } : { ConceptualEntity: o.table } }, State: 'Generated', Terms: [{ [lc(prop || o.table)]: { State: 'Generated' } }] };
+      created = true;
+    }
+    const e = m.Entities[key];
+    if (!Array.isArray(e.Terms)) e.Terms = [];
+    const added = [], had = [], accepted = [];
+    r.terms.forEach(t => {
+      const term = String(t).trim(); if (!term) return;
+      const idx = e.Terms.findIndex(x => x && typeof x === 'object' && Object.keys(x).some(k => lc(k) === lc(term)));
+      if (idx >= 0) {
+        const k = Object.keys(e.Terms[idx]).find(k2 => lc(k2) === lc(term)), v = e.Terms[idx][k] || {};
+        if (v.State === 'Suggested' || v.State === 'Deleted') { e.Terms[idx] = { [k]: { LastModified: stamp } }; accepted.push(term); } else had.push(term);
+        return;
+      }
+      let at = e.Terms.findIndex(x => x && typeof x === 'object' && Object.values(x).some(v => v && v.State === 'Suggested'));
+      if (at < 0) at = e.Terms.length;
+      e.Terms.splice(at, 0, { [term]: { LastModified: stamp } }); added.push(term);
+    });
+    report.push({ ref: r.ref || o.ref, key, created, added, accepted, had });
+  });
+  return { meta: m, report };
+}
+// The culture script with the new metadata, ready for a TMDL view tab (createOrReplace added when missing)
+function cultureScript(parsed, meta){
+  const L = parsed.lines.slice();
+  L.splice(parsed.start, parsed.end - parsed.start + 1, parsed.indent + 'linguisticMetadata = ' + JSON.stringify(meta));
+  let out = L.join('\n').replace(/\s+$/, '');
+  if (!/^\s*createOrReplace\b/m.test(out)) out = 'createOrReplace\n\n' + out.split('\n').map(l => l.trim() ? '\t' + l : l).join('\n');
+  return out + '\n';
+}
 /*PREP-CORE-END*/
 
 /* ---------- example data ---------- */
@@ -2214,6 +2297,11 @@ const EX_TMDL = ['createOrReplace', '', '\ttable Customer', '\t\tlineageTag: 3f7
  '\t\tcolumn Segment', '\t\t\tdataType: string', '\t\t\tlineageTag: 3f7c2e1a-0000-4000-8000-000000000005', '\t\t\tsummarizeBy: none', '\t\t\tsourceColumn: Segment', '',
  '\t\tpartition Customer = m', '\t\t\tmode: import', '\t\t\tsource =', '\t\t\t\tlet', '\t\t\t\t    Source = Sql.Database("sql01", "Retail"),', '\t\t\t\t    Customer = Source{[Schema="dbo",Item="Customer"]}[Data]', '\t\t\t\tin', '\t\t\t\t    Customer'].join('\n');
 
+const EX_CULT = ['createOrReplace', '', '\tcultureInfo en-US', '', '\t\tlinguisticMetadata = ' + JSON.stringify({ Version: '4.1.0', Language: 'en-US', Entities: {
+  'customer.region': { Definition: { Binding: { ConceptualEntity: 'Customer', ConceptualProperty: 'Region' } }, State: 'Generated', Terms: [{ region: { State: 'Generated' } }, { territory: { Type: 'Noun', State: 'Suggested', Source: { Agent: 'Thesaurus' }, Weight: 0.5 } }] },
+  'entity__measure.total_sales': { Definition: { Binding: { ConceptualEntity: '_Measures', ConceptualProperty: 'Total Sales' } }, State: 'Generated', Terms: [{ 'total sales': { State: 'Generated' } }, { sales: { State: 'Generated', Weight: 0.97 } }] },
+  'product.category': { Definition: { Binding: { ConceptualEntity: 'Product', ConceptualProperty: 'Category' } }, State: 'Generated', Terms: [{ category: { State: 'Generated' } }] } } }), '\t\t\tcontentType: json', ''].join('\n');
+
 /* ---------- state + UI ---------- */
 const $ = id => document.getElementById(id);
 const store = {
@@ -2227,7 +2315,8 @@ const state = {
   biz: blankBiz(), insTables: null,
   insReply: '', insEdit: null, synEdits: {}, synOff: [], addTerms: true,
   dTables: null, dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '',
-  out: { insPrompt: '', final: '', synTsv: '', descPrompt: '', tmdl: '' }
+  cult: '',
+  out: { insPrompt: '', final: '', synTsv: '', descPrompt: '', tmdl: '', cult: '' }
 };
 
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
@@ -2250,7 +2339,7 @@ function copyText(text, btn){
 }
 function setExample(on){ state.example = on; $('exampleBanner').hidden = !on; }
 function leaveExample(){ if (state.example) { setExample(false); persist(); } }
-const PERSIST = ['skip', 'renames', 'renameOff', 'biz', 'insTables', 'insReply', 'insEdit', 'synEdits', 'synOff', 'addTerms', 'dTables', 'dCollected', 'dEdits', 'dExcluded', 'tmdl', 'tab'];
+const PERSIST = ['skip', 'renames', 'renameOff', 'biz', 'insTables', 'insReply', 'insEdit', 'synEdits', 'synOff', 'addTerms', 'dTables', 'dCollected', 'dEdits', 'dExcluded', 'tmdl', 'cult', 'tab'];
 function persist(){
   if (state.example) return;
   store.set('model', $('modelInput').value);
@@ -2278,11 +2367,14 @@ function renderModel(){
       + '<div class="cov-bar"><span style="width:' + pct + '%"></span></div></div>';
   };
   $('meters').innerHTML = meter('visible tables', rd.coverage.tables) + meter('visible columns', rd.coverage.columns) + meter('visible measures', rd.coverage.measures);
+  const fItem = ref => { const o = resolveRef(m, ref); return { text: ref, tables: o && o.kind === 'column' ? [o.table] : [], measure: o && o.kind === 'measure' ? o.name : '' }; };
   const flag = (id, title, items, hint) => items.length ? '<details class="flag" data-f="' + id + '"' + (openFlags.has(id) ? ' open' : '') + '><summary><b>' + items.length + '</b> ' + title + '</summary><p class="note small">' + hint + '</p>'
-    + '<div class="facts"><button type="button" class="btn small" data-flagcopy="' + id + '" title="Copies every item as rows you can paste into Excel">Copy list</button></div><ul>' + items.slice(0, 60).map(x => '<li class="mono">' + esc(x) + '</li>').join('') + (items.length > 60 ? '<li>…and ' + (items.length - 60) + ' more</li>' : '') + '</ul></details>' : '';
-  $('flags').innerHTML = flag('shared', 'column names shared by several tables', rd.shared.map(s => '[' + s.name + '] in ' + s.tables.join(', ')), 'Copilot can mix these up. The instructions prompt asks Copilot to explain them; renaming them is even better.')
-    + flag('cryptic', 'cryptic or technical names', rd.cryptic, 'Codes, abbreviations and underscores are hard for Copilot to match to everyday words. The prompt asks for terminology and synonyms for these.')
-    + flag('keys', 'visible ID or key columns', rd.keys, 'Consider hiding these, or leaving them out of the AI data schema (Prep data for AI > Simplify the data schema).')
+    + '<div class="facts"><button type="button" class="btn small" data-flagcopy="' + id + '" title="Copies every item as rows you can paste into Excel">Copy list</button></div><ul>' + items.slice(0, 60).map(x => '<li><span class="mono">' + esc(x.text) + '</span>'
+      + (x.measure ? ' <button type="button" class="linkbtn qskip" data-qskipm="' + esc(x.measure) + '">leave out</button>'
+        : x.tables.map(t => ' <button type="button" class="linkbtn qskip" data-qskipt="' + esc(t) + '" title="Leave the whole ' + esc(t) + ' table out of this page">leave out ' + esc(x.tables.length > 1 ? t : 'table') + '</button>').join('')) + '</li>').join('') + (items.length > 60 ? '<li>…and ' + (items.length - 60) + ' more</li>' : '') + '</ul></details>' : '';
+  $('flags').innerHTML = flag('shared', 'column names shared by several tables', rd.shared.map(s => ({ text: '[' + s.name + '] in ' + s.tables.join(', '), tables: s.tables })), 'Copilot can mix these up. The instructions prompt asks Copilot to explain them; renaming them is even better.')
+    + flag('cryptic', 'cryptic or technical names', rd.cryptic.map(fItem), 'Codes, abbreviations and underscores are hard for Copilot to match to everyday words. The prompt asks for terminology and synonyms for these.')
+    + flag('keys', 'visible ID or key columns', rd.keys.map(fItem), 'Consider hiding these in the Data pane, so Copilot doesn\u2019t offer them as answers.')
     || '<p class="note small">No shared, cryptic or visible key column names found.</p>';
   $('flagActions').innerHTML = state.readyRows.length ? '<button type="button" class="btn small" id="readyCsv">Download the lists for Excel</button><span class="note small">Every name above in one spreadsheet, with a suggested name and a column for yours.</span>' : '';
   $('ready').hidden = false;
@@ -2445,7 +2537,28 @@ function renderFinal(){
   $('finalCount').classList.toggle('over', n > AI_LIMIT);
   const checks = base.split('\n').filter(l => /^\s*[-*]?\s*CHECK\s*:/i.test(l));
   $('checkList').innerHTML = checks.length ? '<div class="msg warn"><b>Confirm ' + checks.length + ' line' + (checks.length > 1 ? 's' : '') + ' Copilot wasn’t sure about</b>, then delete the “CHECK:” label or the whole line. <button type="button" class="btn small" id="insExportChecks">Export them to check</button><ul>' + checks.map(c => '<li>' + esc(c.replace(/^\s*[-*]?\s*CHECK\s*:\s*/i, '')) + '</li>').join('') + '</ul></div>' : '';
+  renderCulture(rows);
   $('finalMsg').innerHTML = n > AI_LIMIT ? '<div class="msg err">That’s ' + (n - AI_LIMIT).toLocaleString() + ' characters over the 10,000 limit. Shorten the instructions or untick some synonyms.</div>' : '';
+}
+
+function renderCulture(rows){
+  state.out.cult = ''; $('cultOut').hidden = true; $('cultMsg').innerHTML = '';
+  const src = state.cult || '';
+  const use = (rows || []).filter(r => r.obj && r.terms.length);
+  if (!src.trim()) { $('cultMsg').innerHTML = use.length ? '<p class="note small">' + use.length + ' field' + (use.length === 1 ? '' : 's') + ' with synonyms ready.</p>' : ''; return; }
+  const p = cultureParse(src);
+  if (p.error) { $('cultMsg').innerHTML = '<div class="msg err">' + esc(p.error) + '</div>'; return; }
+  if (!use.length) { $('cultMsg').innerHTML = '<div class="msg info">Tick some synonyms above first.</div>'; return; }
+  const res = cultureMerge(p.meta, use);
+  const n = k => res.report.reduce((a, r) => a + r[k].length, 0), made = res.report.filter(r => r.created);
+  if (!n('added') && !n('accepted')) { $('cultMsg').innerHTML = '<div class="msg ok">Every synonym is already in this culture. Nothing to apply.</div>'; return; }
+  state.out.cult = cultureScript(p, res.meta);
+  let msg = '<div class="msg ok">Added ' + n('added') + ' synonym' + (n('added') === 1 ? '' : 's') + (n('accepted') ? ', and kept ' + n('accepted') + ' that Power BI had only suggested' : '') + (n('had') ? '. ' + n('had') + ' were already there' : '') + '.</div>';
+  if (made.length) msg += '<div class="msg info">' + made.length + ' field' + (made.length === 1 ? ' wasn’t' : 's weren’t') + ' in the culture yet, so ' + (made.length === 1 ? 'it gets' : 'they get') + ' a new entry: ' + esc(made.slice(0, 8).map(r => r.ref).join(', ')) + (made.length > 8 ? ' and ' + (made.length - 8) + ' more' : '') + '.</div>';
+  if (p.culture && !/^en(-|$)/i.test(p.culture)) msg += '<div class="msg warn">This is the ' + esc(p.culture) + ' culture. Synonyms are matched to the words of its language.</div>';
+  $('cultMsg').innerHTML = msg;
+  $('cultView').textContent = state.out.cult.length > 4000 ? state.out.cult.slice(0, 4000) + ' …' : state.out.cult;
+  $('cultOut').hidden = false;
 }
 
 /* ---- descriptions tab ---- */
@@ -2609,6 +2722,7 @@ function init(){
     Object.keys(EX_BIZ).forEach(k => { if (JSON.stringify(state.biz[k]) === JSON.stringify(EX_BIZ[k]) && (EX_BIZ[k] || '').length) state.biz[k] = Array.isArray(EX_BIZ[k]) ? [] : ''; });
     if (state.insReply === EX_INS_REPLY) { state.insReply = ''; state.insEdit = null; state.synEdits = {}; state.synOff = []; }
     if (state.tmdl === EX_TMDL) state.tmdl = '';
+    if (typeof state.cult !== 'string' || state.cult === EX_CULT) state.cult = '';
     EX_DESC_ITEMS.forEach(it => { const k = objKey(it.kind, it.table, it.column); if (state.dCollected[k] && state.dCollected[k].description === it.description) { delete state.dCollected[k]; delete state.dEdits[k]; } });
     pruneToModel();
     setExample(false);
@@ -2618,10 +2732,12 @@ function init(){
     state.insReply = EX_INS_REPLY;
     EX_DESC_ITEMS.forEach(it => { state.dCollected[objKey(it.kind, it.table, it.column)] = it; });
     state.tmdl = EX_TMDL;
+    state.cult = EX_CULT;
     setExample(true);
   }
   $('insReply').value = state.insReply || '';
   $('tmdlIn').value = state.tmdl || '';
+  $('cultIn').value = state.cult || '';
   $('addTerms').checked = state.addTerms !== false;
   setTab(state.tab || 'ins');
   renderAll();
@@ -2631,8 +2747,8 @@ function init(){
   // anything of your own replaces every piece of example content; only what you typed stays
   const dropExample = () => {
     if (!state.example) return;
-    Object.assign(state, { skip: { tables: [], measures: [], folders: [] }, renames: {}, renameOff: [], biz: blankBiz(), insReply: '', insEdit: null, synEdits: {}, synOff: [], dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '' });
-    $('insReply').value = ''; $('tmdlIn').value = ''; $('dReply').value = '';
+    Object.assign(state, { skip: { tables: [], measures: [], folders: [] }, renames: {}, renameOff: [], biz: blankBiz(), insReply: '', insEdit: null, synEdits: {}, synOff: [], dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '', cult: '' });
+    $('insReply').value = ''; $('cultIn').value = ''; $('tmdlIn').value = ''; $('dReply').value = '';
     if ($('modelInput').value === EX_MODEL) $('modelInput').value = '';
     leaveExample(); state.insTables = null; state.dTables = null; pruneToModel(); renderAll();
   };
@@ -2691,6 +2807,14 @@ function init(){
   });
   // readiness lists: copy one, or download them all
   $('flags').addEventListener('click', e => {
+    const q = e.target.closest('[data-qskipt],[data-qskipm]');
+    if (q) {
+      leaveExample();
+      const s = skipNorm();
+      if (q.dataset.qskipt) { if (!s.tables.some(x => lc(x) === lc(q.dataset.qskipt))) s.tables.push(q.dataset.qskipt); }
+      else if (!s.measures.includes(q.dataset.qskipm)) s.measures.push(q.dataset.qskipm);
+      skipChanged(); return;
+    }
     const b = e.target.closest('[data-flagcopy]'); if (!b) return;
     const issue = { shared: 'Shared name', cryptic: 'Cryptic name', keys: 'Visible key' }[b.dataset.flagcopy];
     const rows = (state.readyRows || []).filter(r => r.issue === issue);
@@ -2719,6 +2843,7 @@ function init(){
   // instructions reply + editing
   $('insReply').addEventListener('input', () => { leaveExample(); state.insReply = $('insReply').value; state.insEdit = null; state.synEdits = {}; state.synOff = []; renderInsResult(); persist(); });
   $('insEdit').addEventListener('input', () => { state.insEdit = $('insEdit').value; renderFinal(); persist(); });
+  $('cultIn').addEventListener('input', () => { leaveExample(); state.cult = $('cultIn').value; renderFinal(); persist(); });
   $('addTerms').addEventListener('change', () => { state.addTerms = $('addTerms').checked; renderFinal(); persist(); });
   $('synBody').addEventListener('input', e => {
     const inp = e.target.closest('[data-act=terms]'); if (!inp) return;
@@ -2773,8 +2898,8 @@ function init(){
   $('dClearReview').addEventListener('click', () => { leaveExample(); state.dCollected = {}; state.dEdits = {}; state.dExcluded = []; state.dLast = null; renderDPrompt(); renderDReview(); persist(); });
   $('tmdlIn').addEventListener('input', () => { leaveExample(); state.tmdl = $('tmdlIn').value; renderTmdl(); persist(); });
   $('clearAll').addEventListener('click', () => {
-    Object.assign(state, { skip: { tables: [], measures: [], folders: [] }, renames: {}, renameOff: [], biz: blankBiz(), insTables: null, insReply: '', insEdit: null, synEdits: {}, synOff: [], dTables: null, dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '' });
-    ['modelInput', 'insReply', 'tmdlIn', 'dReply'].forEach(id => { $(id).value = ''; });
+    Object.assign(state, { skip: { tables: [], measures: [], folders: [] }, renames: {}, renameOff: [], biz: blankBiz(), insTables: null, insReply: '', insEdit: null, synEdits: {}, synOff: [], dTables: null, dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '', cult: '' });
+    ['modelInput', 'insReply', 'tmdlIn', 'cultIn', 'dReply'].forEach(id => { $(id).value = ''; });
     setExample(false); renderAll(); persist(); $('modelInput').focus();
   });
   document.addEventListener('click', e => {
@@ -2795,8 +2920,8 @@ init();
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !box.hidden) { show(false); btn.focus(); } });
   $('clearYes').addEventListener('click', () => {
     try { Object.keys(localStorage).filter(k => k.startsWith(PREFIX)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
-  Object.assign(state, { skip: { tables: [], measures: [], folders: [] }, renames: {}, renameOff: [], biz: blankBiz(), insTables: null, insReply: '', insEdit: null, synEdits: {}, synOff: [], addTerms: true, dTables: null, dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '', tab: 'ins' });
-  ['modelInput', 'insReply', 'tmdlIn', 'dReply'].forEach(id => { $(id).value = ''; });
+  Object.assign(state, { skip: { tables: [], measures: [], folders: [] }, renames: {}, renameOff: [], biz: blankBiz(), insTables: null, insReply: '', insEdit: null, synEdits: {}, synOff: [], addTerms: true, dTables: null, dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '', cult: '', tab: 'ins' });
+  ['modelInput', 'insReply', 'tmdlIn', 'cultIn', 'dReply'].forEach(id => { $(id).value = ''; });
   $('addTerms').checked = true; $('dHidden').checked = false; $('dRewrite').checked = false; $('dBatch').value = '40';
   setExample(false); setTab('ins'); renderAll();
     try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {}
