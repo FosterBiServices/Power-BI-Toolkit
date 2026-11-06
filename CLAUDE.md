@@ -361,6 +361,14 @@ Model Linter skips measures that return text (labels, SVG images, HTML) in the f
 them, a PBIP folder's Image URL and Web URL measures are flagged by suite.js, and `ML.returnsText` reads the expression
 for the rest. A date column on the one side of a relationship (Date[Date]) isn't a visible key; on the many side it's info.
 
+Prep for AI Writer (for people without Fabric's Prep data for AI Copilot): Step 2's **Leave out helper tables and measures**
+(`state.skip`: tables, measures, display folders; `leaveOut(model, skip)`) removes them from the whole page (readiness checks,
+both prompts, every list), and offers to leave out the measures that use a left-out table (a paging table's measures). Each
+readiness list has **Copy list** (rows for Excel) and **Download the lists for Excel** saves them all as one CSV with a suggested
+name. **Columns to rename in Power Query** lists cryptic and shared-name columns with a suggested name (`friendlyName`, `ABBR`)
+and writes one `Table.RenameColumns(#"Previous step", ..., MissingField.Ignore)` step per table; calculated columns are left to
+the Data pane. Measures without a description point to Measure Describer (Step 2 and the descriptions tab). Check: `pfnamestest.js`.
+
 Checked on a real model in Power BI Desktop 2.158 (Oct 2026): the About This Report data
 sources query, the Model Linter dependencies query, the shared export, and Model Compare on a
 before/after change. Power Query Writer gave a working query from Copilot on a real

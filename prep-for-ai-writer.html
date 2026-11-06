@@ -362,6 +362,24 @@ textarea.edit{font-family:var(--sans);font-size:14px;line-height:1.55;min-height
     </div>
   </section>
 
+  <style>
+    .skipbox{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+    .skipbox summary{cursor:pointer;padding:8px 12px;font-size:14px}
+    .skipin{display:flex;flex-direction:column;gap:10px;padding:0 12px 12px}
+    .skipin .lab{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500}
+    .skipin .lab .hint{font-weight:400;color:var(--muted)}
+    .chip.out[aria-pressed="true"]{background:var(--surface-2);border-color:var(--muted);color:var(--muted);text-decoration:line-through}
+    .flag-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    details.flag .facts{display:flex;flex-wrap:wrap;gap:8px;margin:0 12px 10px}
+    details.flag .renin{display:flex;flex-direction:column;gap:12px;margin:0 12px 12px}
+    details.flag .renin ul,details.flag .renin p,details.flag .renin ol{margin:0}
+    details.flag .renin ol{padding-left:1.3em;font-size:13.5px;columns:auto}
+    .review.ren input[type=text]{width:100%;font-family:var(--sans);font-size:14px}
+    .review.ren td.nm{min-width:150px}
+    .review.ren .sub.calc{color:var(--warn)}
+    .ren-code{display:flex;flex-direction:column;gap:10px}
+  </style>
+
   <!-- STEP 2 -->
   <section class="step" aria-labelledby="s2">
     <div class="step-num">Step<b>2</b></div>
@@ -372,9 +390,22 @@ textarea.edit{font-family:var(--sans);font-size:14px;line-height:1.55;min-height
       </div>
       <textarea id="modelInput" class="big" spellcheck="false" aria-label="Query results" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
       <div id="modelMsg"></div>
+      <details class="skipbox" id="skipBox" hidden>
+        <summary><b>Leave out helper tables and measures</b> <span class="muted" id="skipSum"></span></summary>
+        <div class="skipin">
+          <p class="note small">Paging, sorting, formatting and other helper tables and measures report users never ask about. What you leave out here is skipped by the checks below, both prompts and every list on this page. Your model doesn&rsquo;t change.</p>
+          <div class="lab"><span>Tables <span class="hint">Select a table to leave it out, with its columns and measures.</span></span><div class="chips" id="skipTables"></div></div>
+          <div id="skipHint"></div>
+          <div class="lab"><span>Measures and display folders</span><div class="tchips" id="skipChips"></div>
+            <div class="addrow"><select id="skipAdd" aria-label="Measure or display folder to leave out"></select><button type="button" class="btn" id="skipAddBtn">Leave out</button></div></div>
+        </div>
+      </details>
       <div id="ready" class="ready" hidden>
         <div class="meters" id="meters"></div>
+        <div id="measureNote"></div>
         <div class="flags" id="flags"></div>
+        <div class="flag-actions" id="flagActions"></div>
+        <div id="renameWrap"></div>
       </div>
     </div>
   </section>
@@ -421,7 +452,7 @@ textarea.edit{font-family:var(--sans);font-size:14px;line-height:1.55;min-height
             <button type="button" class="linkbtn" id="tAll">Select all</button>
             <button type="button" class="linkbtn" id="tNone">Clear</button>
           </div>
-          <p class="note small" id="tNote">Hidden tables are left out. Clear helper and technical tables so the prompt stays focused.</p>
+          <p class="note small" id="tNote">Hidden tables, and anything left out in Step 2, aren&rsquo;t listed. Clear other tables here to keep this prompt short.</p>
           <div class="chips" id="tableChips"></div>
         </div>
       </div>
@@ -494,8 +525,9 @@ textarea.edit{font-family:var(--sans);font-size:14px;line-height:1.55;min-height
       <div class="step-body">
         <div class="step-head">
           <h2 id="d3">Choose tables and copy the prompt</h2>
-          <p>Copilot uses table and column descriptions when it searches the model and writes DAX. Measures are covered by the Measure Describer.</p>
+          <p>Copilot uses table and column descriptions when it searches the model and writes DAX.</p>
         </div>
+        <div id="dMeasureNote"></div>
         <div class="filters">
           <label class="chk"><input type="checkbox" id="dHidden"> Include hidden columns</label>
           <label class="chk"><input type="checkbox" id="dRewrite"> Rewrite existing descriptions</label>
@@ -2027,6 +2059,93 @@ function applyDescriptionsToTmdl(script, descs){
   const missing = [...descs.keys()].filter(k => !applied.has(k));
   return { script: out.join('\n'), applied: applied.size, missing, tables: tablesSeen };
 }
+/* ---- leave helper tables and measures out of the whole page ---- */
+// skip: { tables: [], measures: [], folders: [] }. Returns the model without them (the export itself is untouched).
+function leaveOut(model, skip){
+  const s = skip || {};
+  const t = new Set((s.tables || []).map(lc)), ms = new Set((s.measures || []).map(lc)), fs = new Set((s.folders || []).map(lc));
+  if (!t.size && !ms.size && !fs.size) return model;
+  const inFolder = f => { const k = lc(f); return !!k && [...fs].some(x => k === x || k.startsWith(x + '\\') || k.startsWith(x + '/')); };
+  return Object.assign({}, model, {
+    tables: model.tables.filter(x => !t.has(lc(x.name))),
+    columns: model.columns.filter(c => !t.has(lc(c.table))),
+    measures: model.measures.filter(x => !t.has(lc(x.table)) && !ms.has(lc(x.name)) && !inFolder(x.folder)),
+    rels: model.rels.filter(r => !t.has(lc(r.fromTable)) && !t.has(lc(r.toTable)))
+  });
+}
+// measures still in that use a left-out table (a paging table's measures, say)
+function measuresUsingSkipped(full, skip){
+  const t = new Set(((skip || {}).tables || []).map(lc));
+  if (!t.size) return [];
+  const kept = leaveOut(full, skip).measures;
+  return kept.filter(m => [...tableRefs(m.expression, full)].some(x => t.has(lc(x)))).map(m => m.name);
+}
+
+/* ---- the readiness lists as rows, for Copy and the spreadsheet ---- */
+function readinessRows(model, rd){
+  rd = rd || readiness(model);
+  const rows = [];
+  const col = ref => { const o = resolveRef(model, ref); return o || { table: '', name: ref, kind: '' }; };
+  rd.shared.forEach(s => s.tables.forEach(t => rows.push({ issue: 'Shared name', table: t, name: s.name, kind: 'column', detail: 'Also in ' + s.tables.filter(x => x !== t).join(', ') })));
+  rd.cryptic.forEach(r => { const o = col(r); rows.push({ issue: 'Cryptic name', table: o.table, name: o.name, kind: o.kind, detail: '' }); });
+  rd.keys.forEach(r => { const o = col(r); rows.push({ issue: 'Visible key', table: o.table, name: o.name, kind: o.kind, detail: 'Consider hiding it' }); });
+  return rows;
+}
+
+/* ---- friendlier names, and the Power Query step that renames columns ---- */
+const ABBR = { CD: 'Code', CDE: 'Code', STS: 'Status', STAT: 'Status', AMT: 'Amount', QTY: 'Quantity', DT: 'Date', DTE: 'Date', DTTM: 'Date Time',
+  NBR: 'Number', NUM: 'Number', NO: 'Number', DESC: 'Description', DSC: 'Description', NM: 'Name', NAM: 'Name', CUST: 'Customer', CUS: 'Customer',
+  PROD: 'Product', PRD: 'Product', ORD: 'Order', TXN: 'Transaction', TRX: 'Transaction', TRANS: 'Transaction', CNT: 'Count', PCT: 'Percent',
+  PERC: 'Percent', YR: 'Year', MTH: 'Month', MO: 'Month', MON: 'Month', WK: 'Week', QTR: 'Quarter', DY: 'Day', TS: 'Timestamp', FLG: 'Flag',
+  IND: 'Indicator', ADDR: 'Address', CTRY: 'Country', CNTRY: 'Country', EMP: 'Employee', DEPT: 'Department', ACCT: 'Account', ACC: 'Account',
+  BAL: 'Balance', CURR: 'Currency', CCY: 'Currency', REV: 'Revenue', SLS: 'Sales', INV: 'Invoice', LOC: 'Location', REG: 'Region', RGN: 'Region',
+  CAT: 'Category', TYP: 'Type', GRP: 'Group', AVG: 'Average', TOT: 'Total', TTL: 'Total', PRC: 'Price', PRICE: 'Price', DISC: 'Discount',
+  SUPP: 'Supplier', VEND: 'Vendor', WH: 'Warehouse', WHSE: 'Warehouse', CRT: 'Created', CRTD: 'Created', UPD: 'Updated', UPDT: 'Updated',
+  MGR: 'Manager', SEG: 'Segment', CHNL: 'Channel', CHN: 'Channel', ST: 'State', CTY: 'City', ZIP: 'Zip', SRC: 'Source', TGT: 'Target', ID: 'ID',
+  KEY: 'Key', SK: 'Key', UID: 'ID', SKU: 'SKU', YTD: 'YTD', MTD: 'MTD', QTD: 'QTD', PY: 'PY', LY: 'LY', KPI: 'KPI', US: 'US', UK: 'UK', EU: 'EU' };
+function friendlyName(name){
+  const s = String(name || '').replace(/^_+/, '');
+  const words = s.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').replace(/([A-Za-z])(\d)/g, '$1 $2').split(/[\s_\-.]+/).filter(Boolean);
+  const out = words.map(w => {
+    const u = w.toUpperCase();
+    if (ABBR[u]) return ABBR[u];
+    if (/^\d+$/.test(w)) return w;
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  });
+  return out.filter((w, i) => i === 0 || w !== out[i - 1]).join(' ') || String(name || '');
+}
+// Columns worth renaming: cryptic names, and names shared by several tables (prefixed with the table)
+function renameCandidates(model, rd){
+  rd = rd || readiness(model);
+  const out = new Map();
+  const add = (c, why, suggest) => {
+    const k = lc(c.table) + '|' + lc(c.name);
+    if (out.has(k)) { const o = out.get(k); o.why.push(why); return; }
+    const hit = (expr, home) => daxRefs(expr || '').some(r => lc(r.col) === lc(c.name) && (r.table ? lc(r.table) === lc(c.table) : lc(home) === lc(c.table)));
+    const uses = model.measures.filter(m => hit(m.expression, '')).length + model.columns.filter(x => x.expression && hit(x.expression, x.table)).length;
+    out.set(k, { key: k, table: c.table, name: c.name, why: [why], suggest, calculated: !!(c.expression || '').trim(), uses });
+  };
+  rd.cryptic.forEach(ref => {
+    const o = resolveRef(model, ref); if (!o || o.kind !== 'column') return;
+    const c = model.columns.find(x => lc(x.table) === lc(o.table) && lc(x.name) === lc(o.name)); if (c) add(c, 'cryptic', friendlyName(c.name));
+  });
+  rd.shared.forEach(s => s.tables.forEach(t => {
+    const c = model.columns.find(x => lc(x.table) === lc(t) && lc(x.name) === lc(s.name)); if (!c) return;
+    const base = out.has(lc(t) + '|' + lc(s.name)) ? out.get(lc(t) + '|' + lc(s.name)).suggest : friendlyName(c.name);
+    const sug = lc(base).startsWith(lc(t)) ? base : t + ' ' + base;
+    if (out.has(lc(t) + '|' + lc(s.name))) { const o = out.get(lc(t) + '|' + lc(s.name)); o.why.push('shared'); o.suggest = sug; }
+    else add(c, 'shared', sug);
+  }));
+  return [...out.values()];
+}
+const mText = s => '"' + String(s).replace(/"/g, '""') + '"';
+// One Table.RenameColumns step per table. pairs: [{ table, from, to }]
+function renameSteps(pairs){
+  const by = new Map();
+  pairs.filter(p => p.to && p.to !== p.from).forEach(p => { if (!by.has(p.table)) by.set(p.table, []); by.get(p.table).push(p); });
+  return [...by.entries()].map(([table, ps]) => ({ table, count: ps.length,
+    formula: '= Table.RenameColumns(#"Previous step", {' + ps.map(p => '{' + mText(p.from) + ', ' + mText(p.to) + '}').join(', ') + '}, MissingField.Ignore)' }));
+}
 /*PREP-CORE-END*/
 
 /* ---------- example data ---------- */
@@ -2103,7 +2222,8 @@ const store = {
 };
 const blankBiz = () => ({ about: '', users: '', fiscal: '', period: '', key: [], lower: [], terms: '', avoid: '', other: '' });
 const state = {
-  model: null, example: false, tab: 'ins',
+  model: null, full: null, example: false, tab: 'ins',
+  skip: { tables: [], measures: [], folders: [] }, renames: {}, renameOff: [],
   biz: blankBiz(), insTables: null,
   insReply: '', insEdit: null, synEdits: {}, synOff: [], addTerms: true,
   dTables: null, dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '',
@@ -2130,7 +2250,7 @@ function copyText(text, btn){
 }
 function setExample(on){ state.example = on; $('exampleBanner').hidden = !on; }
 function leaveExample(){ if (state.example) { setExample(false); persist(); } }
-const PERSIST = ['biz', 'insTables', 'insReply', 'insEdit', 'synEdits', 'synOff', 'addTerms', 'dTables', 'dCollected', 'dEdits', 'dExcluded', 'tmdl', 'tab'];
+const PERSIST = ['skip', 'renames', 'renameOff', 'biz', 'insTables', 'insReply', 'insEdit', 'synEdits', 'synOff', 'addTerms', 'dTables', 'dCollected', 'dEdits', 'dExcluded', 'tmdl', 'tab'];
 function persist(){
   if (state.example) return;
   store.set('model', $('modelInput').value);
@@ -2140,25 +2260,118 @@ function persist(){
 
 /* ---- model + readiness ---- */
 function renderModel(){
-  const m = parseModel($('modelInput').value);
+  const full = parseModel($('modelInput').value);
+  state.full = full;
+  const m = full.error ? full : leaveOut(full, skipNorm());
   state.model = m;
   $('modelMsg').innerHTML = '';
   $('ready').hidden = true;
-  if (m.error) { $('modelMsg').innerHTML = '<div class="msg err">' + esc(m.error) + '</div>'; return; }
-  if (!m.tables.length) return;
+  renderSkip();
+  if (m.error) { $('modelMsg').innerHTML = '<div class="msg err">' + esc(m.error) + '</div>'; renderMeasureNotes(); return; }
+  if (!m.tables.length) { renderMeasureNotes(); return; }
   const rd = readiness(m);
+  state.readyRows = readinessRows(m, rd);
+  const openFlags = new Set([...document.querySelectorAll('#flags details[open]')].map(d => d.dataset.f));
   const meter = (label, [d, n]) => {
     const pct = n ? Math.round(100 * d / n) : 0;
     return '<div class="meter"><div class="mhead"><span class="mpct">' + (n ? pct + '%' : '—') + '</span><span class="mlabel">' + label + ' described</span><span class="mcount">' + d + ' of ' + n + '</span></div>'
       + '<div class="cov-bar"><span style="width:' + pct + '%"></span></div></div>';
   };
   $('meters').innerHTML = meter('visible tables', rd.coverage.tables) + meter('visible columns', rd.coverage.columns) + meter('visible measures', rd.coverage.measures);
-  const flag = (title, items, hint) => items.length ? '<details class="flag"><summary><b>' + items.length + '</b> ' + title + '</summary><p class="note small">' + hint + '</p><ul>' + items.slice(0, 60).map(x => '<li class="mono">' + esc(x) + '</li>').join('') + (items.length > 60 ? '<li>…and ' + (items.length - 60) + ' more</li>' : '') + '</ul></details>' : '';
-  $('flags').innerHTML = flag('column names shared by several tables', rd.shared.map(s => '[' + s.name + '] in ' + s.tables.join(', ')), 'Copilot can mix these up. The instructions prompt asks Copilot to explain them; renaming them is even better.')
-    + flag('cryptic or technical names', rd.cryptic, 'Codes, abbreviations and underscores are hard for Copilot to match to everyday words. The prompt asks for terminology and synonyms for these.')
-    + flag('visible ID or key columns', rd.keys, 'Consider hiding these, or leaving them out of the AI data schema (Prep data for AI > Simplify the data schema).')
+  const flag = (id, title, items, hint) => items.length ? '<details class="flag" data-f="' + id + '"' + (openFlags.has(id) ? ' open' : '') + '><summary><b>' + items.length + '</b> ' + title + '</summary><p class="note small">' + hint + '</p>'
+    + '<div class="facts"><button type="button" class="btn small" data-flagcopy="' + id + '" title="Copies every item as rows you can paste into Excel">Copy list</button></div><ul>' + items.slice(0, 60).map(x => '<li class="mono">' + esc(x) + '</li>').join('') + (items.length > 60 ? '<li>…and ' + (items.length - 60) + ' more</li>' : '') + '</ul></details>' : '';
+  $('flags').innerHTML = flag('shared', 'column names shared by several tables', rd.shared.map(s => '[' + s.name + '] in ' + s.tables.join(', ')), 'Copilot can mix these up. The instructions prompt asks Copilot to explain them; renaming them is even better.')
+    + flag('cryptic', 'cryptic or technical names', rd.cryptic, 'Codes, abbreviations and underscores are hard for Copilot to match to everyday words. The prompt asks for terminology and synonyms for these.')
+    + flag('keys', 'visible ID or key columns', rd.keys, 'Consider hiding these, or leaving them out of the AI data schema (Prep data for AI > Simplify the data schema).')
     || '<p class="note small">No shared, cryptic or visible key column names found.</p>';
+  $('flagActions').innerHTML = state.readyRows.length ? '<button type="button" class="btn small" id="readyCsv">Download the lists for Excel</button><span class="note small">Every name above in one spreadsheet, with a suggested name and a column for yours.</span>' : '';
   $('ready').hidden = false;
+  renderMeasureNotes();
+  renderRename();
+}
+function skipNorm(){
+  const s = state.skip && typeof state.skip === 'object' ? state.skip : {};
+  const arr = v => Array.isArray(v) ? v.filter(x => typeof x === 'string') : [];
+  state.skip = { tables: arr(s.tables), measures: arr(s.measures), folders: arr(s.folders) };
+  return state.skip;
+}
+function skipCount(){ const s = skipNorm(); return s.tables.length + s.measures.length + s.folders.length; }
+function renderSkip(){
+  const f = state.full, box = $('skipBox');
+  if (!f || f.error || !f.tables.length) { box.hidden = true; return; }
+  box.hidden = false;
+  const s = skipNorm(), has = (list, n) => list.some(x => lc(x) === lc(n));
+  const m = state.model;
+  const tl = f.tables.filter(t => !t.hidden || has(s.tables, t.name));
+  $('skipTables').innerHTML = tl.map(t => {
+    const nc = f.columns.filter(c => lc(c.table) === lc(t.name) && !c.hidden).length, nm = f.measures.filter(x => lc(x.table) === lc(t.name)).length;
+    return '<button type="button" class="chip out" data-skipt="' + esc(t.name) + '" aria-pressed="' + has(s.tables, t.name) + '">' + esc(t.name)
+      + '<small>' + [nc ? nc + ' cols' : '', nm ? nm + ' measures' : ''].filter(Boolean).join(', ') + '</small></button>';
+  }).join('');
+  $('skipChips').innerHTML = s.folders.map(n => '<span class="tchip">Folder: ' + esc(n) + '<button type="button" data-skiprm="f" data-n="' + esc(n) + '" aria-label="Put back folder ' + esc(n) + '">×</button></span>').join('')
+    + s.measures.map(n => '<span class="tchip">' + esc(bracket(n)) + '<button type="button" data-skiprm="m" data-n="' + esc(n) + '" aria-label="Put back ' + esc(n) + '">×</button></span>').join('')
+    || '<span class="note small">None left out</span>';
+  const folders = [...new Set(m.measures.map(x => (x.folder || '').split(/[\\/]/)[0].trim()).filter(Boolean))].sort();
+  const count = fo => m.measures.filter(x => lc((x.folder || '').split(/[\\/]/)[0].trim()) === lc(fo)).length;
+  $('skipAdd').innerHTML = '<option value="">Choose a measure or folder…</option>'
+    + (folders.length ? '<optgroup label="Display folders">' + folders.map(fo => '<option value="f|' + esc(fo) + '">' + esc(fo) + ' (' + count(fo) + ')</option>').join('') + '</optgroup>' : '')
+    + (m.measures.length ? '<optgroup label="Measures">' + m.measures.map(x => '<option value="m|' + esc(x.name) + '">' + esc(x.name) + '</option>').join('') + '</optgroup>' : '');
+  const using = measuresUsingSkipped(f, s);
+  $('skipHint').innerHTML = using.length ? '<div class="msg info">' + using.length + ' measure' + (using.length === 1 ? ' uses' : 's use') + ' the tables you left out: ' + esc(using.slice(0, 8).map(bracket).join(', ')) + (using.length > 8 ? ' and ' + (using.length - 8) + ' more' : '') + '. <button type="button" class="btn small" id="skipUsing">Leave ' + (using.length === 1 ? 'it' : 'them') + ' out too</button></div>' : '';
+  const n = skipCount(), lt = f.tables.length - m.tables.length, lm = f.measures.length - m.measures.length;
+  $('skipSum').textContent = n ? '(' + [lt ? lt + ' table' + (lt === 1 ? '' : 's') : '', lm ? lm + ' measure' + (lm === 1 ? '' : 's') : ''].filter(Boolean).join(', ') + ' left out)' : '';
+  if (n && !state.skipOpened) { box.open = true; state.skipOpened = true; }
+}
+// Measure descriptions are written by Measure Describer; say so where people look for them
+function renderMeasureNotes(){
+  const m = state.model;
+  const none = m && !m.error ? visibleMeasures(m).filter(x => !(x.description || '').trim() && !/html|svg/i.test(x.name)) : [];
+  const skipped = skipNorm().measures.length + skipNorm().folders.length + skipNorm().tables.length;
+  const link = '<a href="measure-describer.html">Measure Describer</a>';
+  $('measureNote').innerHTML = none.length ? '<p class="note small"><b>' + none.length + ' measure' + (none.length === 1 ? ' has' : 's have') + ' no description.</b> This page describes tables and columns; ' + link + ' writes measure descriptions with Copilot, from this same model.</p>' : '';
+  $('dMeasureNote').innerHTML = none.length ? '<div class="msg info"><b>Measures:</b> ' + none.length + ' visible measure' + (none.length === 1 ? ' has' : 's have') + ' no description. Describe them in ' + link + '; it opens on this same model.' + (skipped ? ' Untick the helper measures you left out here, since it has its own list.' : '') + '</div>' : '';
+}
+
+/* ---- rename columns in Power Query ---- */
+function renameRows(){
+  const m = state.model; if (!m || m.error || !m.tables.length) return [];
+  const ed = state.renames && typeof state.renames === 'object' && !Array.isArray(state.renames) ? state.renames : (state.renames = {});
+  const off = Array.isArray(state.renameOff) ? state.renameOff : (state.renameOff = []);
+  return renameCandidates(m).map(r => Object.assign(r, { to: typeof ed[r.key] === 'string' ? ed[r.key] : r.suggest, on: !r.calculated && !off.includes(r.key) }));
+}
+function renderRename(){
+  const rows = renameRows(), wrap = $('renameWrap');
+  if (!rows.length) { wrap.innerHTML = ''; return; }
+  const old = wrap.querySelector('details'), open = old ? old.open : false;
+  const why = r => [r.why.includes('cryptic') ? 'cryptic name' : '', r.why.includes('shared') ? 'name in other tables too' : '', r.uses ? 'used in ' + r.uses + ' DAX formula' + (r.uses === 1 ? '' : 's') : ''].filter(Boolean).join(' · ');
+  wrap.innerHTML = '<details class="flag" id="renameBox"' + (open ? ' open' : '') + '><summary><b>' + rows.length + '</b> column' + (rows.length === 1 ? '' : 's') + ' to rename in Power Query</summary><div class="renin">'
+    + '<p class="note small">A clear name helps Copilot more than any instruction. Check each new name (it&rsquo;s only a suggestion), untick the ones to keep, and copy the Power Query step for each table.</p>'
+    + '<div class="tablewrap"><table class="review ren"><thead><tr><th class="ck"><span class="sr">Rename</span></th><th>Column</th><th>New name</th></tr></thead><tbody id="renBody">'
+    + rows.map(r => '<tr data-k="' + esc(r.key) + '"><td class="ck"><input type="checkbox" data-act="on"' + (r.on ? ' checked' : '') + (r.calculated ? ' disabled' : '') + ' aria-label="Rename ' + esc(r.table + ' ' + r.name) + '"></td>'
+      + '<td class="nm">' + esc(qName(r.table) + bracket(r.name)) + '<div class="sub">' + esc(why(r)) + '</div>' + (r.calculated ? '<div class="sub calc">Calculated column: rename it in the Data pane instead.</div>' : '') + '</td>'
+      + '<td><input type="text" data-act="to" value="' + esc(r.to) + '" aria-label="New name for ' + esc(r.table + ' ' + r.name) + '"' + (r.calculated ? ' disabled' : '') + '></td></tr>').join('')
+    + '</tbody></table></div>'
+    + '<div class="facts" style="margin:0"><button type="button" class="btn small" data-copy="renTsv" title="Table, current name and new name, to paste into Excel">Copy as table</button></div>'
+    + '<div class="ren-code" id="renCode"></div>'
+    + '<div class="apply"><h3>Add the step in Power Query</h3><ol>'
+    + '<li>In Power BI Desktop, select <b>Transform data</b>, then the query with the table&rsquo;s name.</li>'
+    + '<li>Under <b>Applied steps</b>, select the last step and note its name.</li>'
+    + '<li>Select <b>fx</b> next to the formula bar to add a step. Paste the step over what&rsquo;s there and change <span class="mono">#"Previous step"</span> to the name of the last step, for example <span class="mono">#"Changed Type"</span>.</li>'
+    + '<li>Select <b>Close &amp; Apply</b>, then check the measures and visuals that use a renamed column, since they may still use the old name. Run the export again so this page sees the new names.</li>'
+    + '</ol><p class="note small">A column already renamed in the Data pane has its old name in Power Query, so its pair is skipped (<span class="mono">MissingField.Ignore</span>). Prefer not to touch Power Query? Double-click a field in the Data pane to rename it there.</p></div>'
+    + '</div></details>';
+  renderRenameCode();
+}
+function renderRenameCode(){
+  const rows = renameRows().filter(r => r.on && r.to.trim() && r.to.trim() !== r.name);
+  const steps = renameSteps(rows.map(r => ({ table: r.table, from: r.name, to: r.to.trim() })));
+  state.out.renTsv = ['Table\tCurrent name\tNew name\tWhy'].concat(renameRows().filter(r => r.on).map(r => [r.table, r.name, r.to.trim(), r.why.join(', ')].join('\t'))).join('\n');
+  Object.keys(state.out).filter(k => /^ren\d+$/.test(k)).forEach(k => delete state.out[k]);
+  const dup = rows.filter((r, i) => rows.some((x, j) => j !== i && lc(x.table) === lc(r.table) && lc(x.to.trim()) === lc(r.to.trim())) || state.model.columns.some(c => lc(c.table) === lc(r.table) && lc(c.name) === lc(r.to.trim()) && lc(c.name) !== lc(r.name)));
+  const el = $('renCode'); if (!el) return;
+  el.innerHTML = (dup.length ? '<div class="msg err">Two columns in one table can&rsquo;t share a name: ' + esc([...new Set(dup.map(r => qName(r.table) + bracket(r.to.trim())))].join(', ')) + '. Change one of them.</div>' : '')
+    + (steps.length ? steps.map((st, i) => { state.out['ren' + i] = st.formula; return '<div class="codebox"><div class="codebox-bar"><span class="t">' + esc(st.table) + ' &middot; ' + st.count + ' column' + (st.count === 1 ? '' : 's') + '</span><span class="r"><button class="btn primary" type="button" data-copy="ren' + i + '">Copy step</button></span></div><pre style="white-space:pre-wrap;overflow-wrap:anywhere">' + esc(st.formula) + '</pre></div>'; }).join('')
+      : '<p class="note small">Tick a column with a new name to get its step.</p>');
 }
 
 /* ---- tabs ---- */
@@ -2389,6 +2602,9 @@ function init(){
     $('modelInput').value = saved;
     try { const o = JSON.parse(store.get('state') || '{}') || {}; PERSIST.forEach(k => { if (o[k] !== undefined) state[k] = o[k]; }); } catch (e) {}
     state.biz = Object.assign(blankBiz(), state.biz || {});
+    skipNorm();
+    if (!state.renames || typeof state.renames !== 'object' || Array.isArray(state.renames)) state.renames = {};
+    if (!Array.isArray(state.renameOff)) state.renameOff = [];
     // clean up example content that earlier versions left behind in saved work
     Object.keys(EX_BIZ).forEach(k => { if (JSON.stringify(state.biz[k]) === JSON.stringify(EX_BIZ[k]) && (EX_BIZ[k] || '').length) state.biz[k] = Array.isArray(EX_BIZ[k]) ? [] : ''; });
     if (state.insReply === EX_INS_REPLY) { state.insReply = ''; state.insEdit = null; state.synEdits = {}; state.synOff = []; }
@@ -2415,7 +2631,7 @@ function init(){
   // anything of your own replaces every piece of example content; only what you typed stays
   const dropExample = () => {
     if (!state.example) return;
-    Object.assign(state, { biz: blankBiz(), insReply: '', insEdit: null, synEdits: {}, synOff: [], dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '' });
+    Object.assign(state, { skip: { tables: [], measures: [], folders: [] }, renames: {}, renameOff: [], biz: blankBiz(), insReply: '', insEdit: null, synEdits: {}, synOff: [], dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '' });
     $('insReply').value = ''; $('tmdlIn').value = ''; $('dReply').value = '';
     if ($('modelInput').value === EX_MODEL) $('modelInput').value = '';
     leaveExample(); state.insTables = null; state.dTables = null; pruneToModel(); renderAll();
@@ -2441,6 +2657,62 @@ function init(){
     state.insTables = state.insTables.includes(n) ? state.insTables.filter(x => x !== n) : state.insTables.concat(n);
     b.setAttribute('aria-pressed', state.insTables.includes(n));
     renderInsPrompt(); persist();
+  });
+  // leave out helper tables and measures
+  const skipChanged = () => { state.dLast = null; renderAll(); persist(); };
+  $('skipTables').addEventListener('click', e => {
+    const b = e.target.closest('[data-skipt]'); if (!b) return;
+    leaveExample();
+    const s = skipNorm(), n = b.dataset.skipt, out = s.tables.some(x => lc(x) === lc(n));
+    s.tables = out ? s.tables.filter(x => lc(x) !== lc(n)) : s.tables.concat(n);
+    if (out) [state.insTables, state.dTables].forEach(list => { if (Array.isArray(list) && !list.includes(n)) list.push(n); });
+    skipChanged();
+  });
+  $('skipAddBtn').addEventListener('click', () => {
+    const v = $('skipAdd').value; if (!v) return;
+    leaveExample();
+    const s = skipNorm(), n = v.slice(2);
+    if (v[0] === 'f') { if (!s.folders.includes(n)) s.folders.push(n); } else if (!s.measures.includes(n)) s.measures.push(n);
+    skipChanged();
+  });
+  $('skipChips').addEventListener('click', e => {
+    const b = e.target.closest('[data-skiprm]'); if (!b) return;
+    leaveExample();
+    const s = skipNorm(), k = b.dataset.skiprm === 'f' ? 'folders' : 'measures';
+    s[k] = s[k].filter(x => x !== b.dataset.n);
+    skipChanged();
+  });
+  $('skipHint').addEventListener('click', e => {
+    if (!e.target.closest('#skipUsing')) return;
+    leaveExample();
+    const s = skipNorm();
+    measuresUsingSkipped(state.full, s).forEach(n => { if (!s.measures.includes(n)) s.measures.push(n); });
+    skipChanged();
+  });
+  // readiness lists: copy one, or download them all
+  $('flags').addEventListener('click', e => {
+    const b = e.target.closest('[data-flagcopy]'); if (!b) return;
+    const issue = { shared: 'Shared name', cryptic: 'Cryptic name', keys: 'Visible key' }[b.dataset.flagcopy];
+    const rows = (state.readyRows || []).filter(r => r.issue === issue);
+    copyText(['Table\tName\tKind\tDetail'].concat(rows.map(r => [r.table, r.name, r.kind, r.detail].join('\t'))).join('\n'), b);
+  });
+  $('flagActions').addEventListener('click', e => {
+    if (!e.target.closest('#readyCsv') || !state.model) return;
+    const sug = new Map(renameRows().map(r => [r.key, r.to]));
+    const rows = (state.readyRows || []).map(r => [r.issue, r.table, r.name, r.kind, r.detail,
+      r.kind === 'column' ? (sug.get(lc(r.table) + '|' + lc(r.name)) || '') : r.issue === 'Cryptic name' ? friendlyName(r.name) : '', '']);
+    saveCsv('Names to review.csv', [['Issue', 'Table', 'Name', 'Kind', 'Detail', 'Suggested name', 'Your name']].concat(rows));
+  });
+  // rename in Power Query
+  $('renameWrap').addEventListener('input', e => {
+    const inp = e.target.closest('[data-act=to]'); if (!inp) return;
+    state.renames[inp.closest('tr').dataset.k] = inp.value; renderRenameCode(); persist();
+  });
+  $('renameWrap').addEventListener('change', e => {
+    const cb = e.target.closest('[data-act=on]'); if (!cb) return;
+    const k = cb.closest('tr').dataset.k;
+    state.renameOff = state.renameOff.filter(x => x !== k).concat(cb.checked ? [] : [k]);
+    renderRenameCode(); persist();
   });
   $('tAll').addEventListener('click', () => { if (!state.model) return; leaveExample(); state.insTables = visibleTables(state.model).map(t => t.name); renderTableChips(); renderInsPrompt(); persist(); });
   $('tNone').addEventListener('click', () => { leaveExample(); state.insTables = []; renderTableChips(); renderInsPrompt(); persist(); });
@@ -2501,7 +2773,7 @@ function init(){
   $('dClearReview').addEventListener('click', () => { leaveExample(); state.dCollected = {}; state.dEdits = {}; state.dExcluded = []; state.dLast = null; renderDPrompt(); renderDReview(); persist(); });
   $('tmdlIn').addEventListener('input', () => { leaveExample(); state.tmdl = $('tmdlIn').value; renderTmdl(); persist(); });
   $('clearAll').addEventListener('click', () => {
-    Object.assign(state, { biz: blankBiz(), insTables: null, insReply: '', insEdit: null, synEdits: {}, synOff: [], dTables: null, dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '' });
+    Object.assign(state, { skip: { tables: [], measures: [], folders: [] }, renames: {}, renameOff: [], biz: blankBiz(), insTables: null, insReply: '', insEdit: null, synEdits: {}, synOff: [], dTables: null, dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '' });
     ['modelInput', 'insReply', 'tmdlIn', 'dReply'].forEach(id => { $(id).value = ''; });
     setExample(false); renderAll(); persist(); $('modelInput').focus();
   });
@@ -2523,7 +2795,7 @@ init();
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !box.hidden) { show(false); btn.focus(); } });
   $('clearYes').addEventListener('click', () => {
     try { Object.keys(localStorage).filter(k => k.startsWith(PREFIX)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
-  Object.assign(state, { biz: blankBiz(), insTables: null, insReply: '', insEdit: null, synEdits: {}, synOff: [], addTerms: true, dTables: null, dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '', tab: 'ins' });
+  Object.assign(state, { skip: { tables: [], measures: [], folders: [] }, renames: {}, renameOff: [], biz: blankBiz(), insTables: null, insReply: '', insEdit: null, synEdits: {}, synOff: [], addTerms: true, dTables: null, dCollected: {}, dEdits: {}, dExcluded: [], dLast: null, tmdl: '', tab: 'ins' });
   ['modelInput', 'insReply', 'tmdlIn', 'dReply'].forEach(id => { $(id).value = ''; });
   $('addTerms').checked = true; $('dHidden').checked = false; $('dRewrite').checked = false; $('dBatch').value = '40';
   setExample(false); setTab('ins'); renderAll();
