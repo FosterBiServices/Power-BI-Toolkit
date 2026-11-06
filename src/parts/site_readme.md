@@ -1,6 +1,8 @@
+<img src="src/brand/foster-bi-logo-services.svg" alt="Foster BI Services" height="60">
+
 # SF Power BI Toolkit
 
-Browser-based tools for building, documenting and checking Power BI semantic models, with or without Copilot.
+By Foster BI Services. Browser-based tools for building, documenting and checking Power BI semantic models, with or without Copilot.
 
 **Open the toolkit:** https://fosterbiservices.github.io/Power-BI-Toolkit/
 

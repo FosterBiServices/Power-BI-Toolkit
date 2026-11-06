@@ -130,7 +130,7 @@ function exportProject(){
 }
 
 /* ---------- output ---------- */
-const DOC_CSS = MD.CSS.replace(/#1a3a5c/g, '#003F88').replace(/#c89632/g, '#F5A800');
+const DOC_CSS = MD.CSS.replace(/#1a3a5c/g, '#0A2D5A').replace(/#c89632/g, '#F2A900');
 function currentProject(){
   if (state.tab === 'export') { const r = exportProject(); return r; }
   return { project: state.project, error: state.projectError };

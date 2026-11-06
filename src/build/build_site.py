@@ -1,4 +1,4 @@
-import os
+import os, base64
 from _env import open, S, P, ROOT
 from query_patch import upgrade
 # Writes the published files straight into the repo root. It only overwrites the page files
@@ -87,10 +87,11 @@ css=L(7,217)+'''
 #homeClearConfirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .btn.danger{background:var(--err);border-color:var(--err);color:#fff}
 .btn.danger:hover{filter:brightness(1.08);color:#fff}
+.brandbar img.home-logo{display:block;align-self:flex-start;width:auto;height:52px;max-width:100%;border-radius:0;box-shadow:none;margin-bottom:10px}
+@media (max-width:520px){.brandbar img.home-logo{height:40px;width:auto}}
 '''
-logo=p[318]
-body=open(S+'home_body.html').read(); ui=open(S+'home_ui.js').read()
-src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+logo+'\n'+body+'\n<script>\ndocument.body.dataset.home = "1";\n'+core+'\n'+suite+'\n'+ui+'</script>\n'
+body=open(S+'home_body.html').read().replace('@@HOMELOGO@@','data:image/svg+xml;base64,'+base64.b64encode(open(os.path.join(S,'..','brand','foster-bi-logo-services-white.svg'),'rb').read()).decode()); ui=open(S+'home_ui.js').read()
+src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+body+'\n<script>\ndocument.body.dataset.home = "1";\n'+core+'\n'+suite+'\n'+ui+'</script>\n'
 open(OUT+'/index.html','w').write(upgrade(wrap(src)).replace('// KPI Measure Builder: model export', '// SF Power BI Toolkit: model export'))
 open(OUT+'/.nojekyll','w').write('')
 open(OUT+'/README.md','w').write(open(S+'site_readme.md').read())
