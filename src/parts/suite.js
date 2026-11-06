@@ -1,6 +1,6 @@
 
 /*SUITE-START*/
-/* ---------- SF Power BI Toolkit: one model export shared by every page on the site ---------- */
+/* ---------- Foster BI Toolkit: one model export shared by every page on the site ---------- */
 (function(){
   const KEY = 'sfpbi.shared.model';
   const HOME = 'index.html';

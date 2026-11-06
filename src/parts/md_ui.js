@@ -130,7 +130,7 @@ function exportProject(){
 }
 
 /* ---------- output ---------- */
-const DOC_CSS = MD.CSS.replace(/#1a3a5c/g, '#003F88').replace(/#c89632/g, '#F5A800');
+const DOC_CSS = MD.CSS.replace(/#1a3a5c/g, '#0A2D5A').replace(/#c89632/g, '#F2A900');
 function currentProject(){
   if (state.tab === 'export') { const r = exportProject(); return r; }
   return { project: state.project, error: state.projectError };
@@ -162,7 +162,7 @@ function render(){
   if (!project) { state.html = ''; $('outWait').className = 'msg ' + (error ? 'err' : 'info'); $('outWait').innerHTML = error ? 'Fix the problem in Step 1 to see the document.' : 'Choose a project folder or paste a model export in Step 1.'; return; }
   const note = project.source === 'export' ? 'Documented from the model export, so Power Query, data sources and report pages aren’t included.' : '';
   const today = new Date(); const date = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-  state.html = MD.generateHtml(project, o, { css: DOC_CSS, footer: 'Generated locally with the SF Power BI Toolkit · Model Documenter.', note, date });
+  state.html = MD.generateHtml(project, o, { css: DOC_CSS, footer: 'Generated locally with the Foster BI Toolkit · Model Documenter.', note, date });
   state.fileName = MD.defaultFilename(project, o).replace(/[<>:"\/\\|?*\x00-\x1f]/g, '-');
   $('fileName').textContent = state.fileName;
   const tables = MD.scopeTables(project, o);

@@ -1,4 +1,4 @@
-import os
+import os, base64
 from _env import open, S, P, ROOT
 from query_patch import upgrade
 # Writes the published files straight into the repo root. It only overwrites the page files
@@ -34,7 +34,7 @@ for name,hook in HOOKS.items():
     src=open(P+name+'.html').read()
     k=src.rindex('</script>')
     src=src[:k]+suite+('\n'+hook+'\n' if hook else '')+src[k:]
-    open(OUT+'/'+name+'.html','w').write(upgrade(wrap(src)).replace('// KPI Measure Builder: model export', '// SF Power BI Toolkit: model export'))
+    open(OUT+'/'+name+'.html','w').write(upgrade(wrap(src)).replace('// KPI Measure Builder: model export', '// Foster BI Toolkit: model export'))
 # Sheet Recon: a finished page (added in another chat); only the shared suite is refreshed
 _sr=open(P+'sheet-recon.html').read()
 open(OUT+'/sheet-recon.html','w').write(upgrade(_sr.replace('@@SUITE@@', suite.rstrip('\n').lstrip('\n'))))
@@ -43,7 +43,7 @@ p=open(P+'prep-for-ai-writer.html').read().split('\n')
 if p[3].startswith('<link rel=\"icon\"'): p = p[:2] + [p[2] + '\n' + p[3]] + p[4:]
 L=lambda a,b:'\n'.join(p[a-1:b])
 core=open(S+'builder_core.js').read()
-head='<title>SF Power BI Toolkit</title>\n<meta name="description" content="Power BI tools for building and checking models with or without Copilot. Export your model once and every tool uses it.">\n'+L(3,6)
+head='<title>Foster BI Toolkit</title>\n<meta name="description" content="Power BI tools for building and checking models with or without Copilot. Export your model once and every tool uses it.">\n'+L(3,6)
 css=L(7,217)+'''
 .saved{display:flex;flex-direction:column;gap:10px;border:1px solid color-mix(in srgb,var(--ok) 35%,transparent);background:var(--ok-soft);border-radius:10px;padding:12px 14px}
 .saved[hidden]{display:none!important}
@@ -87,11 +87,12 @@ css=L(7,217)+'''
 #homeClearConfirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .btn.danger{background:var(--err);border-color:var(--err);color:#fff}
 .btn.danger:hover{filter:brightness(1.08);color:#fff}
+.brandbar img.home-logo{display:block;align-self:flex-start;width:auto;height:52px;max-width:100%;border-radius:0;box-shadow:none;margin-bottom:10px}
+@media (max-width:520px){.brandbar img.home-logo{height:40px;width:auto}}
 '''
-logo=p[318]
-body=open(S+'home_body.html').read(); ui=open(S+'home_ui.js').read()
-src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+logo+'\n'+body+'\n<script>\ndocument.body.dataset.home = "1";\n'+core+'\n'+suite+'\n'+ui+'</script>\n'
-open(OUT+'/index.html','w').write(upgrade(wrap(src)).replace('// KPI Measure Builder: model export', '// SF Power BI Toolkit: model export'))
+body=open(S+'home_body.html').read().replace('@@HOMELOGO@@','data:image/svg+xml;base64,'+base64.b64encode(open(os.path.join(S,'..','brand','foster-bi-logo-services-white.svg'),'rb').read()).decode()); ui=open(S+'home_ui.js').read()
+src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+body+'\n<script>\ndocument.body.dataset.home = "1";\n'+core+'\n'+suite+'\n'+ui+'</script>\n'
+open(OUT+'/index.html','w').write(upgrade(wrap(src)).replace('// KPI Measure Builder: model export', '// Foster BI Toolkit: model export'))
 open(OUT+'/.nojekyll','w').write('')
 open(OUT+'/README.md','w').write(open(S+'site_readme.md').read())
 print('Built', len(HOOKS)+2, 'pages and README.md into', OUT)
