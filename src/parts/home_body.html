@@ -9,8 +9,28 @@
   <div class="msg warn disc-top" role="note"><b>Check everything before you use it.</b> AI can make mistakes, and generated output can be wrong. The toolkit is provided as is, without warranty, and you use it at your own risk. <a href="#disclaimer">Read the full disclaimer</a>.</div>
 
   <details class="connect" id="connectBox">
-    <summary><span class="cn-title" id="connectTitle">Connect your model once</span><span class="cn-sub" id="connectSub">Tools marked <span class="tag exp">Uses your model</span> read it. Export it once here and every tool picks it up. The rest work without it.</span></summary>
+    <summary><span class="cn-title" id="connectTitle">Connect your model once</span><span class="cn-sub" id="connectSub">Tools marked <span class="tag exp">Uses your model</span> read it. Connect it once here and every tool picks it up. The rest work without it.</span></summary>
     <div class="connect-body">
+      <div class="sc-choose" id="homeChoose" role="radiogroup" aria-label="How to connect your model">
+        <button type="button" role="radio" aria-checked="false" data-hc="pbip"><span class="tn">PBIP folder</span><span class="td">Your report saved as a Power BI Project. The model and report pages are read straight from the folder.</span></button>
+        <button type="button" role="radio" aria-checked="false" data-hc="export"><span class="tn">Model export</span><span class="td">Run one DAX query in DAX query view and paste the results.</span></button>
+      </div>
+
+      <section class="step" aria-labelledby="h0s" id="homePbip" hidden>
+        <div class="step-num">Step<b>1</b></div>
+        <div class="step-body">
+          <div class="step-head">
+            <h2 id="h0s">Choose your PBIP folder</h2>
+            <p>The folder with your <b>.pbip</b> file (in Power BI Desktop: <b>File &gt; Save as &gt; Power BI project files</b>). Every tool then uses its model, and the tools that check report pages, theme files or Power Query read them from the same folder, so you don&rsquo;t pick it again.</p>
+          </div>
+          <div class="sc-row"><button type="button" class="btn primary" id="homePick">Choose a PBIP folder</button><button type="button" class="btn" id="homeAgain" hidden>Read it again</button><span class="small muted">or drop the project folder below. The files are read in this page and never uploaded.</span></div>
+          <div class="sc-drop" id="homeDrop">Drop the project folder here</div>
+          <input type="file" id="homeFolder" webkitdirectory multiple hidden>
+          <div id="homePbipMsg" role="status"></div>
+        </div>
+      </section>
+
+      <div class="hc-export" id="homeExport" hidden>
       <section class="step" aria-labelledby="h1s">
         <div class="step-num">Step<b>1</b></div>
         <div class="step-body">
@@ -41,15 +61,16 @@
           <div class="field"><label for="modelName">Model name <span class="muted">(optional, shown in each tool)</span></label><input type="text" id="modelName" placeholder="Sales model" autocomplete="off"></div>
           <textarea id="exportInput" class="big" spellcheck="false" aria-label="Model export" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
           <div id="saveMsg"></div>
-          <div class="saved" id="saved" hidden>
-            <div class="saved-head"><span class="saved-title">&#10003; Saved model export</span><span id="savedWhen" class="muted"></span></div>
-            <div class="stats" id="savedStats"></div>
-            <p class="note small" id="savedHist" hidden></p>
-            <div class="reply-actions"><button type="button" class="btn" id="clearSaved">Remove the saved export</button></div>
-          </div>
         </div>
       </section>
-      <p class="note">Saved your report as a Power BI Project (PBIP)? You can skip the export: choose <b>PBIP folder</b> in any tool&rsquo;s <b>Connect your model</b> step, and every other tool picks it up too.</p>
+      </div>
+      <div class="saved" id="saved" hidden>
+        <div class="saved-head"><span class="saved-title" id="savedTitle">&#10003; Saved model export</span><span id="savedWhen" class="muted"></span></div>
+        <div class="stats" id="savedStats"></div>
+        <p class="note small" id="savedHist" hidden></p>
+        <div class="reply-actions"><button type="button" class="btn" id="clearSaved">Remove the saved model</button></div>
+      </div>
+      <p class="note">You can also connect inside any tool, in its <b>Connect your model</b> step. Whichever way you connect, every other tool picks it up.</p>
     </div>
   </details>
 
@@ -59,8 +80,8 @@
     <h2>Good to know</h2>
     <ul>
       <li><b>Nothing leaves your browser.</b> The pages don&rsquo;t send data anywhere. Prompts only reach Copilot when you paste them yourself.</li>
-      <li><b>Where the export is kept:</b> in this browser&rsquo;s storage for this site, so it&rsquo;s there next time on this computer, but not on another computer or in another browser.</li>
-      <li><b>One export at a time.</b> Pasting a model export into any tool also replaces the saved one, so every tool stays on the same model.</li>
+      <li><b>Where the model is kept:</b> in this browser&rsquo;s storage for this site, so it&rsquo;s there next time on this computer, but not on another computer or in another browser. A PBIP folder&rsquo;s files are kept the same way (as text, never uploaded); after you change the model in Desktop, choose <b>Read it again</b>.</li>
+      <li><b>One model at a time.</b> Reading a PBIP folder or pasting a model export, here or in any tool, replaces the saved one, so every tool stays on the same model.</li>
       <li><b>Each tool keeps its own work</b> (requests, replies, settings). Its <b>Clear entries</b> button empties that tool only, and the saved export stays until you remove it here. To empty every tool and remove the saved export at once, choose <b>Clear all pages</b> there or below.</li>
       <li><b>The Power Query Explainer</b> reads Power Query code, so its whole-model mode has its own export query. The <b>Date Table Generator</b> fills its date-column list from the saved export.</li>
       <li><b>The Model Documenter</b> uses the saved export for a quick document, or reads a PBIP project folder in the browser for the full one (Power Query, sources and report pages). The folder&rsquo;s files are read on the page and never uploaded.</li>

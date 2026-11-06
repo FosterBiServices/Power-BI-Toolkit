@@ -40,18 +40,47 @@ function renderSaved(){
   // (a paste keeps it open, so the confirmation stays in view)
   if (wasSaved === undefined || (wasSaved && !v)) $('connectBox').open = !v;
   wasSaved = !!v;
-  if (!v) { $('connectTitle').textContent = 'Connect your model once'; $('connectSub').innerHTML = 'Tools marked ' + TAG.exp + ' read it. Export it once here and every tool picks it up. The rest work without it.'; return; }
+  if (!v) { $('connectTitle').textContent = 'Connect your model once'; $('connectSub').innerHTML = 'Tools marked ' + TAG.exp + ' read it. Connect a PBIP folder or paste the model export once here, and every tool picks it up. The rest work without it.'; $('homeAgain').hidden = true; renderChoice(); return; }
+  const pb = v.source === 'pbip';
+  if (pb && !choice) choice = 'pbip';
+  if (!pb && !choice) choice = 'export';
+  renderChoice();
+  $('savedTitle').innerHTML = '&#10003; ' + (pb ? 'Connected PBIP folder' : 'Saved model export');
+  $('clearSaved').textContent = pb ? 'Disconnect the folder' : 'Remove the saved export';
+  SF_SUITE.pbipAgainHandle().then(h => { $('homeAgain').hidden = !h; });
   const m = parseModel(v.text);
   $('connectTitle').innerHTML = '&#10003; Connected: ' + esc(v.name || 'your model');
   $('connectSub').textContent = m.tables.length + ' tables, ' + m.measures.length + ' measures, ' + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + new Date(v.savedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) + '. Every tool marked Uses your model reads it. Open to replace or remove it.';
   const d = new Date(v.savedAt);
   $('savedWhen').textContent = (v.name ? v.name + ' · ' : '') + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   $('savedStats').innerHTML = '<span class="stat"><b>' + m.tables.length + '</b> tables</span><span class="stat"><b>' + m.columns.length + '</b> columns</span><span class="stat"><b>' + m.measures.length + '</b> measures</span><span class="stat"><b>' + m.rels.length + '</b> relationships</span>' + (m.composite ? '<span class="stat remote">Composite model</span>' : '');
-  if (!$('modelName').value) $('modelName').value = v.name || '';
+  if (!$('modelName').value && !pb) $('modelName').value = v.name || '';
   const h = SF_SUITE.history ? SF_SUITE.history().length : 0;
   $('savedHist').hidden = !h;
   $('savedHist').innerHTML = h ? h + ' earlier export' + (h === 1 ? ' is' : 's are') + ' kept too, so <a href="model-compare.html">Model Compare</a> can show what changed. Saving a new export keeps the one it replaces.' : '';
 }
+// PBIP folder or model export: which one the connect box shows (remembered; a saved model picks its own)
+let choice = '';
+try { choice = localStorage.getItem('sfpbi.home.connect') || ''; } catch (e) {}
+function renderChoice(){
+  document.querySelectorAll('#homeChoose [data-hc]').forEach(b => b.setAttribute('aria-checked', b.dataset.hc === choice));
+  $('homePbip').hidden = choice !== 'pbip';
+  $('homeExport').hidden = choice !== 'export';
+}
+function choose(v){ choice = v; try { localStorage.setItem('sfpbi.home.connect', v); } catch (e) {} renderChoice(); }
+async function readFolder(r){
+  if (!r || r.cancel) return;
+  if (r.notFolder) { $('homePbipMsg').innerHTML = msg('warn', 'Drop the project <b>folder</b>, not a file inside it.'); return; }
+  $('homePbipMsg').innerHTML = msg('info', 'Reading &ldquo;' + esc(r.root) + '&rdquo;&hellip;');
+  const res = await SF_SUITE.pbipShare(r.root, r.list, r.handle);
+  if (res.error) { $('homePbipMsg').innerHTML = msg('err', esc(res.error)); return; }
+  $('homePbipMsg').innerHTML = res.shared
+    ? msg('ok', '&#10003; Read <b>' + esc(res.name) + '</b>: ' + res.tables + ' tables, ' + res.measures + ' measures. Open any tool below and it&rsquo;s already connected.' + (res.others.length ? ' This folder has more models (' + esc(res.others.join(', ')) + '); choose that project&rsquo;s own folder to use one of them.' : ''))
+    : msg('err', 'This model is too large to save in the browser (the limit is about 5 MB). Connect it in each tool instead.');
+  $('saveMsg').innerHTML = ''; $('modelName').value = '';
+  renderSaved();
+}
+const folderFail = e => { $('homePbipMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc((e && e.message) || e)); };
 function renderTools(){
   // a model tag first (needed, optional or not needed), then the Copilot tag
   const modelTag = t => t.tags.includes('files') ? 'files' : !t.free ? 'exp' : t.tags.some(x => x === 'exp' || x === 'dates' || x === 'opt') ? 'opt' : 'free';
@@ -74,13 +103,34 @@ function init(){
   $('queryView').textContent = DAX_QUERY;
   $('copyQuery').addEventListener('click', e => copyText(DAX_QUERY, e.currentTarget));
   $('exportInput').addEventListener('input', save);
-  $('modelName').addEventListener('input', () => { const v = SF_SUITE.get(); if (v) { SF_SUITE.set(v.text, $('modelName').value.trim()); renderSaved(); } });
-  $('clearSaved').addEventListener('click', () => { SF_SUITE.clear(); $('modelName').value = ''; $('saveMsg').innerHTML = msg('info', 'The saved export is removed. Each tool keeps its own copy until you clear that tool.'); renderSaved(); });
+  $('modelName').addEventListener('input', () => { const v = SF_SUITE.get(); if (v && v.source !== 'pbip') { SF_SUITE.set(v.text, $('modelName').value.trim()); renderSaved(); } });
+  $('clearSaved').addEventListener('click', () => {
+    const pb = (SF_SUITE.get() || {}).source === 'pbip';
+    SF_SUITE.clear(); $('modelName').value = ''; $('homePbipMsg').innerHTML = '';
+    $(pb ? 'homePbipMsg' : 'saveMsg').innerHTML = msg('info', (pb ? 'The folder is disconnected.' : 'The saved export is removed.') + ' Each tool keeps its own copy until you clear that tool.');
+    renderSaved();
+  });
+  $('homeChoose').addEventListener('click', e => { const b = e.target.closest('[data-hc]'); if (b) choose(b.dataset.hc); });
+  $('homePick').addEventListener('click', async () => {
+    let r; try { r = await SF_SUITE.pbipPick('sf-home'); } catch (e) { folderFail(e); return; }
+    if (!r) { $('homeFolder').click(); return; }
+    try { await readFolder(r); } catch (e) { folderFail(e); }
+  });
+  $('homeAgain').addEventListener('click', async () => {
+    try { const r = await SF_SUITE.pbipReadAgain(); if (!r) { $('homeAgain').hidden = true; return; } await readFolder(r); }
+    catch (e) { $('homePbipMsg').innerHTML = msg('warn', 'The folder couldn&rsquo;t be read again (it may have moved). Choose it again.'); $('homeAgain').hidden = true; }
+  });
+  $('homeFolder').addEventListener('change', async () => { try { await readFolder(SF_SUITE.pbipFromInput($('homeFolder'))); } catch (e) { folderFail(e); } $('homeFolder').value = ''; });
+  const drop = $('homeDrop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
+  drop.addEventListener('drop', async e => { e.preventDefault(); try { await readFolder(await SF_SUITE.pbipFromDrop(e)); } catch (err) { folderFail(err); } });
   window.addEventListener('storage', renderSaved);
   const showClear = on => { $('homeClearConfirm').hidden = !on; $('homeClearAll').hidden = on; $('homeClearAll').setAttribute('aria-expanded', on); if (on) { $('homeClearDone').textContent = ''; $('homeClearNo').focus(); } };
   $('homeClearAll').addEventListener('click', () => showClear(true));
   $('homeClearNo').addEventListener('click', () => { showClear(false); $('homeClearAll').focus(); });
-  $('homeClearYes').addEventListener('click', () => { SF_SUITE.clearAll(); $('modelName').value = ''; $('exportInput').value = ''; $('saveMsg').innerHTML = ''; renderSaved(); showClear(false); $('homeClearDone').textContent = 'Every tool is empty and the saved export is removed.'; });
+  $('homeClearYes').addEventListener('click', () => { SF_SUITE.clearAll(); choice = ''; $('modelName').value = ''; $('exportInput').value = ''; $('saveMsg').innerHTML = ''; $('homePbipMsg').innerHTML = ''; renderSaved(); showClear(false); $('homeClearDone').textContent = 'Every tool is empty and the saved export is removed.'; });
+  const v0 = SF_SUITE.get(); if (v0) choice = v0.source === 'pbip' ? 'pbip' : 'export';
   renderTools(); renderSaved();
 }
 init();
