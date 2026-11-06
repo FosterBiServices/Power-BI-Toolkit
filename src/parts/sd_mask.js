@@ -10,7 +10,7 @@ const SDM = (() => {
   const STREET_END = ['Street', 'Avenue', 'Road', 'Lane', 'Drive', 'Court', 'Way', 'Place'];
   const TREATS = [
     ['keep', 'Keep as is'], ['id', 'Fake ID (same shape)'], ['person', 'Person name'], ['company', 'Company name'], ['email', 'Email'], ['phone', 'Phone'],
-    ['city', 'City'], ['address', 'Street address'], ['label', 'Numbered labels'], ['scale', 'Scale numbers'], ['date', 'Shift dates'], ['blank', 'Blank it out']];
+    ['city', 'City'], ['address', 'Street address'], ['label', 'Numbered labels'], ['scale', 'Scale numbers'], ['date', 'Shift dates'], ['blank', 'Blank it out'], ['drop', 'Remove column']];
   const TREAT_NAME = Object.fromEntries(TREATS);
 
   /* seeded hashing and random numbers */
@@ -138,7 +138,7 @@ const SDM = (() => {
   }
 
   /* ---------- fake values ---------- */
-  function makeFaker(seed){
+  function makeFaker(seed, names){
     const seen = {}, used = {};
     const once = (kind, key, make) => {
       const m = seen[kind] = seen[kind] || new Map(); if (m.has(key)) return m.get(key);
@@ -148,8 +148,21 @@ const SDM = (() => {
     };
     const caseLike = (orig, v) => orig === orig.toUpperCase() && /[A-Z]/.test(orig) ? v.toUpperCase() : orig === orig.toLowerCase() && /[a-z]/.test(orig) ? v.toLowerCase() : v;
     const F = {};
+    // TV and movie characters: the n-th person gets the n-th character, COACH names first, each list in an order
+    // the seed shuffles; once every character is used, first and last names are mixed
+    const ch = SD.chars(); let pn = 0, order = null;
+    const charAt = j => {
+      if (!order) {
+        const r = rng(seed + '|chars'), shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const x = Math.floor(r() * (i + 1)); [a[i], a[x]] = [a[x], a[i]]; } return a; };
+        order = shuffle(Array.from({ length: ch.nc }, (v, i) => i)).concat(shuffle(Array.from({ length: ch.n - ch.nc }, (v, i) => ch.nc + i)));
+      }
+      return order[j];
+    };
     F.person = orig => once('person', orig.trim().toLowerCase(), (r, i) => {
-      const f = pickOf(r, L.FirstName), l = pickOf(r, L.LastName), mid = i > 60 ? ' ' + String.fromCharCode(65 + Math.floor(r() * 26)) + '.' : '';
+      let f, l;
+      if (names === 'made') { f = pickOf(r, L.FirstName); l = pickOf(r, L.LastName); }
+      else { const j = pn++; if (j < ch.n) { const x = charAt(j); f = ch.first[x]; l = ch.last[x]; } else { f = pickOf(r, ch.first); l = pickOf(r, ch.last); } }
+      const mid = i > 60 ? ' ' + String.fromCharCode(65 + Math.floor(r() * 26)) + '.' : '';
       const s = orig.trim();
       const v = /,/.test(s) ? l + ', ' + f + mid : !/\s/.test(s) ? f + (i > 60 ? ' ' + l : '') : f + mid + ' ' + l;
       return caseLike(s, v);
@@ -186,14 +199,15 @@ const SDM = (() => {
   // settings: { seed, treats: { tableId: [treat per column] }, links: [{a:[t,c], b:[t,c]}] }
   function dateShift(seed){ const r = rng(seed + '|dates'); const w = 1 + Math.floor(r() * 8); return (r() < 0.5 ? -1 : 1) * w * 7; }
   function run(tables, settings){
-    const seed = String(settings.seed), F = makeFaker(seed), g = groups(tables, settings.links || []);
+    const seed = String(settings.seed), F = makeFaker(seed, settings.names), g = groups(tables, settings.links || []);
     const shift = dateShift(seed);
     // the treatment of a group is the first one in it that changes anything
     const gTreat = {};
-    tables.forEach(t => t.headers.forEach((h, c) => { const id = g[t.id + ':' + c], tr = settings.treats[t.id][c]; if (!gTreat[id] || (gTreat[id] === 'keep' && tr !== 'keep')) gTreat[id] = tr; }));
+    // (a removed column is only left out of its own table: it doesn't decide what its linked columns become)
+    tables.forEach(t => t.headers.forEach((h, c) => { const id = g[t.id + ':' + c], tr = settings.treats[t.id][c]; if (tr === 'drop') return; if (!gTreat[id] || (gTreat[id] === 'keep' && tr !== 'keep')) gTreat[id] = tr; }));
     // group facts: shared prefix for IDs, order of first appearance and a header for labels
     const gVals = {}, gHead = {};
-    tables.forEach(t => t.headers.forEach((h, c) => { const id = g[t.id + ':' + c]; if (!gHead[id]) gHead[id] = String(h || 'Item').replace(/[\s_\-]*(id|key|code|name|no)$/i, '').trim() || String(h); const arr = gVals[id] = gVals[id] || []; t.rows.forEach(r => { const x = r[c]; if (x && x.k !== 'empty') arr.push(x); }); }));
+    tables.forEach(t => t.headers.forEach((h, c) => { const id = g[t.id + ':' + c]; if (settings.treats[t.id][c] === 'drop') return; if (!gHead[id]) gHead[id] = String(h || 'Item').replace(/[\s_\-]*(id|key|code|name|no)$/i, '').trim() || String(h); const arr = gVals[id] = gVals[id] || []; t.rows.forEach(r => { const x = r[c]; if (x && x.k !== 'empty') arr.push(x); }); }));
     const gPrefix = {}, gOrder = {};
     Object.keys(gVals).forEach(id => {
       if (gTreat[id] === 'id') gPrefix[id] = sharedPrefix(gVals[id].map(x => x.k === 'num' ? null : textOf(x)).filter(x => x !== null).concat(gVals[id].some(x => x.k === 'num') ? [0] : []));
@@ -232,7 +246,10 @@ const SDM = (() => {
           }
         });
       });
-      return Object.assign({}, t, { rows });
+      // removed columns are left out of the result (headers, rows and column widths)
+      const on = t.headers.map((h, c) => settings.treats[t.id][c] !== 'drop');
+      if (on.every(Boolean)) return Object.assign({}, t, { rows });
+      return Object.assign({}, t, { headers: t.headers.filter((h, c) => on[c]), rows: rows.map(r => r.filter((x, c) => on[c])), cols: t.cols ? Array.from({ length: t.headers.length }, (x, c) => t.cols[c]).filter((x, c) => on[c]) : t.cols });
     });
     return { tables: out, shift, treat: gTreat, groups: g };
   }

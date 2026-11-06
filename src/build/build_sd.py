@@ -2,7 +2,7 @@ from _env import open, S, P, ROOT
 p=open(P+'prep-for-ai-writer.html').read().split('\n')
 if p[3].startswith('<link rel="icon"'): p = p[:2] + [p[2] + '\n' + p[3]] + p[4:]
 L=lambda a,b:'\n'.join(p[a-1:b])
-core=open(S+'sd_core.js').read(); ind=open(S+'sd_ind.js').read(); mask=open(S+'sd_mask.js').read(); ex=open(S+'sd_ex.js').read(); ui=open(S+'sd_ui.js').read(); body=open(S+'sd_body.html').read()
+core=open(S+'sd_names.js', encoding='utf-8').read()+'\n'+open(S+'sd_core.js').read(); ind=open(S+'sd_ind.js').read(); mask=open(S+'sd_mask.js').read(); ex=open(S+'sd_ex.js').read(); ui=open(S+'sd_ui.js').read(); body=open(S+'sd_body.html').read()
 head='<title>Sample Data Maker</title>\n<meta name="description" content="Mask Excel and CSV files so names, IDs, numbers and dates are fake but links between sheets and files still match, or make an industry sample model for Power BI as DAX functions.">\n'+L(3,6)+'\n<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>'
 css=L(7,217)+'\n'+L(303,312)+'''
 /* ---------- Sample Data Maker ---------- */

@@ -6,7 +6,7 @@ const SD_IND = (() => {
   const k = C('_k');
   const S = P('start_date'), E = P('end_date');
   const dateIn = (key, s, skew) => add(S, int(mul(skew === 1 ? R(key, s) : pow(R(key, s), skew), days())));
-  const person = ix => cat(firstOf(ix), ' ', lastOf(ix));
+  const person = ix => SD.person(ix);
   const REGIONS = ['North', 'South', 'East', 'West', 'Central'];
   const seedP = ['seed', 'INT64'];
   const n = name => [SD.pname(name), 'INT64'];
@@ -116,7 +116,7 @@ const SD_IND = (() => {
         meta: [key('DepartmentKey', 'Key that links to Employees.'), col('Department', 'text', 'Department name.'), col('Division', 'text', 'Commercial, Operations, Technology or Corporate.')] },
       { name: 'Employees', fn: PKG + '.HR.Employees', params: [n('num_employees'), ...dts, seedP], desc: 'Everyone employed since well before the start date: department, job, pay, hire and termination dates, and why they left.',
         stages: [{ series: P('num_employees') }, { cols: [['EmployeeKey', k], ['Employee Number', cat('E', pad(add(10000, k), '00000'))], ['_ni', nameIndex(k)],
-          ['Employee', person(C('_ni'))], ['Gender', iff(lt(int(div(C('_ni'), 60)), 30), 'Female', 'Male')],
+          ['Employee', person(C('_ni'))], ['Gender', SD.gender(C('_ni'))],
           ['DepartmentKey', wpick([[1, 20], [2, 8], [3, 18], [4, 20], [5, 16], [6, 6], [7, 6], [8, 6]], R(k, 1))],
           ['_lv', wpick([[1, 45], [2, 25], [3, 15], [4, 10], [5, 5]], R(k, 2))], ['Job Level', at(LEVELS, sub(C('_lv'), 1))],
           ['Job Title', iff(ge(C('_lv'), 4), cat(C('Job Level'), ', ', at(DEPTS, sub(C('DepartmentKey'), 1))), iff(eq(C('_lv'), 1), at(ROLES, sub(C('DepartmentKey'), 1)), cat(C('Job Level'), ' ', at(ROLES, sub(C('DepartmentKey'), 1)))))],
@@ -148,7 +148,7 @@ const SD_IND = (() => {
       { name: 'Requisitions', fn: PKG + '.HR.Requisitions', params: [n('num_requisitions'), ...dts, seedP], desc: 'Job openings: department, job, recruiter, when each opened and closed, and how long it took to fill.',
         stages: [{ series: P('num_requisitions') }, { cols: reqCols() }, { cols: [['RequisitionKey', k], ['Requisition ID', cat('REQ-', pad(add(1000, k), '0000'))],
           ['DepartmentKey', C('_rd')], ['Job Level', at(LEVELS, sub(C('_rl'), 1))], ['Job Title', jobTitle(C('_rl'), C('_rd'))],
-          ['Recruiter', person(nameIndex(add(3500, mod(k, 6))))], ['Opened Date', C('_open')], ['Status', C('_status')], ['Closed Date', C('_close')],
+          ['Recruiter', person(nameIndex(add(mod(k, 6), 1), 3499))], ['Opened Date', C('_open')], ['Status', C('_status')], ['Closed Date', C('_close')],
           ['Days to Fill', iff(eq(C('_status'), 'Filled'), C('_d'), blank())]] }],
         meta: [key('RequisitionKey', 'Key that links to Applications.'), col('Requisition ID', 'text', 'Job opening number.'), key('DepartmentKey', 'Links to Departments.'),
           col('Job Level', 'text', 'Associate, Senior, Lead, Manager or Director.'), col('Job Title', 'text', 'Job being hired for.'), col('Recruiter', 'text', 'Recruiter who owns the opening.'),
@@ -285,14 +285,14 @@ const SD_IND = (() => {
     tables: [
       { name: 'Patients', fn: PKG + '.Health.Patients', params: [n('num_patients'), ['end_date', 'DATETIME'], seedP], desc: 'Patients with age band, gender, insurance and city.',
         stages: [{ series: P('num_patients') }, { cols: [['PatientKey', k], ['MRN', cat('MRN', pad(add(100000, k), '000000'))], ['_ni', nameIndex(k)], ['Patient', person(C('_ni'))],
-          ['Gender', iff(lt(int(div(C('_ni'), 60)), 30), 'Female', 'Male')], ['_age', int(mul(pow(R(k, 1), 0.9), 92))],
+          ['Gender', SD.gender(C('_ni'))], ['_age', int(mul(pow(R(k, 1), 0.9), 92))],
           ['Birth Date', add(date(sub(year(E), C('_age')), 1, 1), int(mul(R(k, 2), 365)))],
           ['Age Band', iff(lt(C('_age'), 18), '0-17', iff(lt(C('_age'), 35), '18-34', iff(lt(C('_age'), 50), '35-49', iff(lt(C('_age'), 65), '50-64', '65+'))))],
           ['Insurance', wpick([['Commercial', 45], ['Medicare', 25], ['Medicaid', 18], ['Self-pay', 7], ['Other', 5]], R(k, 3))], ['City', pick('City', R(k, 4))]] }],
         meta: [key('PatientKey', 'Key that links to Encounters.'), col('MRN', 'text', 'Medical record number.'), col('Patient', 'text', 'Full name.'), col('Gender', 'text', 'Female or Male.'),
           col('Birth Date', 'date', 'Date of birth.'), col('Age Band', 'text', 'Age at the end date: 0-17, 18-34, 35-49, 50-64 or 65+.'), col('Insurance', 'text', 'Who pays: Commercial, Medicare, Medicaid, Self-pay or Other.'), col('City', 'text', 'Home city.')] },
       { name: 'Providers', fn: PKG + '.Health.Providers', params: [n('num_providers'), seedP], desc: 'Doctors and their specialty.',
-        stages: [{ series: P('num_providers') }, { cols: [['ProviderKey', k], ['_ni', nameIndex(add(k, 1800))], ['Provider', cat('Dr. ', person(C('_ni')))], ['Specialty', specOf(k)]] }],
+        stages: [{ series: P('num_providers') }, { cols: [['ProviderKey', k], ['_ni', nameIndex(k, 1800)], ['Provider', cat('Dr. ', person(C('_ni')))], ['Specialty', specOf(k)]] }],
         meta: [key('ProviderKey', 'Key that links to Encounters.'), col('Provider', 'text', 'Doctor’s name.'), col('Specialty', 'text', 'Medical specialty.')] },
       { name: 'Encounters', fn: PKG + '.Health.Encounters', params: [n('num_encounters'), ...dts, n('num_patients'), n('num_providers'), seedP], desc: 'Visits and hospital stays: type, length of stay, readmission, wait time, charges, payments and satisfaction.',
         stages: [{ series: P('num_encounters') }, { cols: [['Encounter ID', cat('ENC', pad(k, '0000000'))], ['PatientKey', add(int(mul(pow(R(k, 1), 1.2), P('num_patients'))), 1)],
@@ -374,7 +374,7 @@ const SD_IND = (() => {
           ['Plan', wpick([['Basic', 45], ['Standard', 35], ['Premium', 20]], R(k, 2))], ['Region', pick(REGIONS, R(k, 3))]] }],
         meta: [key('CustomerKey', 'Key that links to Tickets.'), col('Customer', 'text', 'Company name.'), col('Segment', 'text', 'Enterprise, Mid-market or Small business.'), col('Plan', 'text', 'Basic, Standard or Premium.'), col('Region', 'text', 'Sales region.')] },
       { name: 'Agents', fn: PKG + '.Service.Agents', params: [n('num_agents'), ['end_date', 'DATETIME'], seedP], desc: 'Support agents with team, location and hire date.',
-        stages: [{ series: P('num_agents') }, { cols: [['AgentKey', k], ['_ni', nameIndex(add(k, 900))], ['Agent', person(C('_ni'))], ['Team', at(TEAMS, mod(sub(k, 1), 4))],
+        stages: [{ series: P('num_agents') }, { cols: [['AgentKey', k], ['_ni', nameIndex(k, 900)], ['Agent', person(C('_ni'))], ['Team', at(TEAMS, mod(sub(k, 1), 4))],
           ['Location', wpick([['Office', 60], ['Remote', 40]], R(k, 1))], ['Hire Date', sub(E, int(mul(R(k, 2), 2500)))]] }],
         meta: [key('AgentKey', 'Key that links to Tickets.'), col('Agent', 'text', 'Full name.'), col('Team', 'text', 'Billing, Technical, Accounts or General.'), col('Location', 'text', 'Office or Remote.'), col('Hire Date', 'date', 'First day as an agent.')] },
       { name: 'Tickets', fn: PKG + '.Service.Tickets', params: [n('num_tickets'), ...dts, n('num_customers'), n('num_agents'), seedP], desc: 'Support tickets: channel, category, priority, response and resolution times, SLA, satisfaction and status at the end date.',

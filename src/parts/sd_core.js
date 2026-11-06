@@ -106,9 +106,52 @@ const SD = (() => {
   X.LISTS = LISTS;
   const LIST_DESC = { FirstName: 'first names', LastName: 'last names', City: 'city names', CompanyA: 'first words of a company name', CompanyB: 'second words of a company name', CompanyC: 'last words of a company name' };
   // a person's name that no other key in the table shares (up to 3,600 keys): first, last and the first-name position
-  X.nameIndex = k => X.mod(X.add(X.mul(lift(k), 1201), X.mul(X.P('seed'), 97)), 3600);
   X.firstOf = ix => X.at(LISTS.FirstName, X.int(X.div(ix, 60)));
   X.lastOf = ix => X.at(LISTS.LastName, X.mod(X.add(X.mul(X.mod(ix, 60), 7), X.int(X.div(ix, 60))), 60));
+
+  /* People's names: TV and movie characters (SD_NAMES, the default) or made-up ones (FirstName and LastName above).
+     The page sets X.names before an industry is built. A name index from 0 to n - 1 is one character each: keys
+     1, 2, 3... take the COACH names first (in an order the seed shuffles), then the MEMBER names. Past n, an index
+     puts one character's first name with another's last name. The names are one text each in the DAX (PATHITEM). */
+  X.names = 'chars';
+  let chars = null;
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+  const coprime = n => [11, 13, 17, 19, 23, 29, 31, 37, 41, 43].find(a => gcd(a, n) === 1) || 1;
+  X.chars = () => {
+    if (!chars) {
+      const all = SD_NAMES.COACH.concat(SD_NAMES.MEMBER);
+      chars = { n: all.length, nc: SD_NAMES.COACH.length, first: all.map(x => x[0]), last: all.map(x => x[1]), fem: all.map(x => x[2] ? 'F' : 'M').join('') };
+    }
+    return chars;
+  };
+  const CHAR_NAME = PKG + '.Character.Name', CHAR_GENDER = PKG + '.Character.Gender';
+  const nameDax = (x, ch) => 'PATHITEM( ' + q(ch.first.join('|')) + ', MOD( ' + x + ', ' + ch.n + ' ) + 1 ) & " " & PATHITEM( ' + q(ch.last.join('|')) + ', MOD( ' + x + ' + INT( ' + x + ' / ' + ch.n + ' ), ' + ch.n + ' ) + 1 )';
+  const genderDax = (x, ch) => 'IF( MID( ' + q(ch.fem) + ', MOD( ' + x + ', ' + ch.n + ' ) + 1, 1 ) = "F", "Female", "Male" )';
+  // the name index of a whole-number key; off gives another set of people (providers, agents) for the same keys
+  X.nameIndex = (k, off) => {
+    k = lift(k); off = off || 0;
+    if (X.names !== 'chars') return X.mod(X.add(X.mul(off ? X.add(k, off) : k, 1201), X.mul(X.P('seed'), 97)), 3600);
+    const ch = X.chars(), nm = ch.n - ch.nc, p = X.sub(k, 1);
+    const plus = x => off ? X.add(x, off) : x;
+    const coach = X.mod(plus(X.add(X.mul(p, coprime(ch.nc)), X.mul(X.P('seed'), 7))), ch.nc);
+    const member = X.add(ch.nc, X.mod(plus(X.add(X.mul(X.sub(p, ch.nc), coprime(nm)), X.mul(X.P('seed'), 13))), nm));
+    return X.iff(X.lt(p, ch.nc), coach, X.iff(X.lt(p, ch.n), member, p));
+  };
+  X.person = ix => {
+    if (X.names !== 'chars') return X.cat(X.firstOf(ix), ' ', X.lastOf(ix));
+    ix = lift(ix); const ch = X.chars();
+    return node(c => { if (c.mode === 'udf') { c.chars = true; return CHAR_NAME + '( ' + ix.d(c) + ' )'; } return nameDax(wrap(ix, c), ch); },
+      (r, e) => { const v = Math.floor(nz(ix.f(r, e))); return ch.first[v % ch.n] + ' ' + ch.last[(v + Math.floor(v / ch.n)) % ch.n]; }, ix.refs, true);
+  };
+  X.gender = ix => {
+    if (X.names !== 'chars') return X.iff(X.lt(X.int(X.div(ix, 60)), 30), 'Female', 'Male');
+    ix = lift(ix); const ch = X.chars();
+    return node(c => { if (c.mode === 'udf') { c.chars = true; return CHAR_GENDER + '( ' + ix.d(c) + ' )'; } return genderDax(wrap(ix, c), ch); },
+      (r, e) => ch.fem[Math.floor(nz(ix.f(r, e))) % ch.n] === 'F' ? 'Female' : 'Male', ix.refs);
+  };
+  const CHAR_FNS = () => { const ch = X.chars(); return [
+    [CHAR_NAME, 'A TV or movie character\'s name for a name index: 0 to ' + (ch.n - 1) + ' is one character each, higher numbers mix first and last names.', 'name_index', '-- names from TV shows and movies\n' + nameDax('name_index', ch)],
+    [CHAR_GENDER, 'Female or Male, for the character a name index gives.', 'name_index', genderDax('name_index', ch)]]; };
   X.company = (k, s) => X.cat(X.pick('CompanyA', X.R(k, s)), ' ', X.pick('CompanyB', X.R(k, s + 1)), ' ', X.pick('CompanyC', X.R(k, s + 2)));
   X.days = () => X.add(X.int(X.sub(X.P('end_date'), X.P('start_date'))), 1);
 
@@ -256,6 +299,7 @@ const SD = (() => {
         const items = LISTS[n];
         L.push(...fnBlock(PKG + '.List.' + n, 'Picks one of ' + items.length + ' ' + LIST_DESC[n] + ' from a random number from 0 up to 1.', 'r', 'SWITCH(\n' + IND + 'INT( r * ' + items.length + ' ),\n' + items.slice(0, -1).map((v, i) => IND + i + ', ' + q(v) + ',').join('\n') + '\n' + IND + q(items[items.length - 1]) + '\n)'));
       });
+      if (c.chars) CHAR_FNS().forEach(f => L.push(...fnBlock(...f)));
       tables.forEach((t, i) => L.push(...fnBlock(t.fn, t.desc, fnParams(t), bodies[i])));
     }
     tables.forEach((t, i) => {
@@ -315,6 +359,7 @@ const SD = (() => {
     const fd = (name, params, b) => 'FUNCTION ' + name + ' = (' + (params ? ' ' + params + ' ' : '') + ') =>\n' + b.split('\n').map(l => IND + l).join('\n');
     const parts = [fd(FN_RANDOM, 'row_key, stream, seed', RANDOM_BODY)];
     Array.from(c.lists).sort().forEach(n => parts.push(fd(PKG + '.List.' + n, 'r', 'SWITCH( INT( r * ' + LISTS[n].length + ' ), ' + LISTS[n].slice(0, -1).map((v, i) => i + ', ' + q(v)).join(', ') + ', ' + q(LISTS[n][LISTS[n].length - 1]) + ' )')));
+    if (c.chars) CHAR_FNS().forEach(f => parts.push(fd(f[0], f[2], f[3])));
     parts.push(fd(t.fn, fnParams(t), body));
     return 'DEFINE\n' + parts.join('\n\n') + '\n\nEVALUATE\n' + (top ? 'TOPN( ' + top + ', ' + callOf(t, opts.args) + ' )' : callOf(t, opts.args)) + '\n';
   }
