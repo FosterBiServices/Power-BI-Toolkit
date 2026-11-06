@@ -378,6 +378,11 @@ whose Binding matches (ConceptualEntity = table, or a measure's home table; Conc
 term Power BI only suggested, keeps every other term, and adds an entity for a field that has none. `cultureScript` puts the JSON
 back on its line and adds `createOrReplace` when missing. Desktop's JSON round-trips unchanged through JSON.parse/stringify
 (checked on a real culture). Check: `pfculturetest.js`.
+Synonyms the model already has are checked too: the culture pasted in Step 5, or else the PBIP folder's `cultures/*.tmdl` from
+`S.pbipStored()` (`state.pbipCult`, read on load and on a model change, never saved). `cultureHas` (every term except Suggested)
+drops Copilot's repeats from each review row (a row with nothing new is "In model", unticked), and `modelSynonyms` (terms with
+no State: the ones someone added) goes into the prompt as CONTEXT so Copilot doesn't repeat them. Check: `pfpbipculturetest.js`
+(fixture `src/tests/pfpbip/`).
 
 Checked on a real model in Power BI Desktop 2.158 (Oct 2026): the About This Report data
 sources query, the Model Linter dependencies query, the shared export, and Model Compare on a

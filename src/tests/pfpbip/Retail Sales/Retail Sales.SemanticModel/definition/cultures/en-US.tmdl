@@ -1,0 +1,5 @@
+cultureInfo en-US
+
+	linguisticMetadata = {"Version":"4.1.0","Language":"en-US","Entities":{"customer.region":{"Definition":{"Binding":{"ConceptualEntity":"Customer","ConceptualProperty":"Region"}},"State":"Generated","Terms":[{"region":{"State":"Generated"}},{"territory":{"LastModified":"2026-11-01T10:00:00.000Z"}},{"area":{"Type":"Noun","State":"Suggested","Source":{"Agent":"Thesaurus"},"Weight":0.5}}]},"entity__measure.total_sales":{"Definition":{"Binding":{"ConceptualEntity":"_Measures","ConceptualProperty":"Total Sales"}},"State":"Generated","Terms":[{"total sales":{"State":"Generated"}},{"revenue":{"LastModified":"2026-11-01T10:00:00.000Z"}}]}}}
+		contentType: json
+

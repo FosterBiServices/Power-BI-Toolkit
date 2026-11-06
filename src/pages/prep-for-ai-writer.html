@@ -486,6 +486,7 @@ textarea.edit{font-family:var(--sans);font-size:14px;line-height:1.55;min-height
           <div>
             <div class="review-head"><h3>Synonyms <span class="muted" id="synCount"></span></h3>
               <label class="chk small"><input type="checkbox" id="addTerms" checked> Add a Synonyms section to the instructions</label></div>
+            <div id="synNote"></div>
             <div class="tablewrap">
               <table class="review syn">
                 <thead><tr><th class="ck"><span class="sr">Include</span></th><th>Field</th><th>Synonyms <span class="muted">(comma separated)</span></th><th>Status</th></tr></thead>
@@ -1818,6 +1819,8 @@ function instructionsPrompt(model, biz, opts){
   rd.shared.filter(s => s.tables.some(t => tset.has(lc(t)))).forEach(s => flagged.push('Column name [' + s.name + '] appears in ' + s.tables.map(qName).join(', ')));
   rd.cryptic.slice(0, 40).forEach(r => flagged.push(r + ' has a cryptic or technical name'));
   if (flagged.length) { L.push(''); L.push('## CONTEXT: fields likely to confuse Copilot (explain these in Terminology)'); flagged.forEach(f => L.push('- ' + f)); }
+  const have = (o.have || []).filter(h => tset.has(lc(h.table))).slice(0, 80);
+  if (have.length) { L.push(''); L.push('## CONTEXT: synonyms already in the model (do not repeat them; give only new synonyms, and leave out a field that needs none)'); have.forEach(h => L.push('- ' + h.ref + ' = ' + h.terms.join('; '))); }
 
   L.push('');
   L.push('## CONTEXT: model');
@@ -1872,15 +1875,20 @@ function parsePrep(text){
   return { instructions, synonyms, error: ins === null && !synonyms.length ? 'No @@@ INSTRUCTIONS @@@ or @@@ SYNONYMS @@@ block was found. Make sure Copilot answered inside one code block, and paste its whole answer.' : null };
 }
 
-function checkSynonyms(list, model){
+function checkSynonyms(list, model, meta){
   const owner = new Map();
   const rows = list.map(s => {
     const obj = resolveRef(model, s.ref);
     const name = obj ? obj.name : '';
-    const terms = s.terms.filter(t => lc(t) !== lc(name));
-    return { ref: obj ? obj.ref : s.ref, obj, terms, notes: [], status: obj ? 'ok' : 'err' };
+    let terms = s.terms.filter(t => lc(t) !== lc(name)), existing = [];
+    if (meta && obj) { const has = cultureHas(meta, obj); existing = terms.filter(t => has.has(lc(t))); terms = terms.filter(t => !has.has(lc(t))); }
+    return { ref: obj ? obj.ref : s.ref, obj, terms, existing, notes: [], status: obj ? 'ok' : 'err' };
   });
-  rows.forEach(r => { if (!r.obj) r.notes.push('Not a field in the model export.'); });
+  rows.forEach(r => {
+    if (!r.obj) r.notes.push('Not a field in the model export.');
+    else if (r.existing.length && !r.terms.length) { r.status = 'same'; r.notes.push('Already in your model: ' + r.existing.join(', ') + '. Nothing to add.'); }
+    else if (r.existing.length) r.notes.push('Already in your model, left out: ' + r.existing.join(', ') + '.');
+  });
   rows.forEach(r => r.terms.forEach(t => { const k = lc(t); if (!owner.has(k)) owner.set(k, []); owner.get(k).push(r); }));
   for (const [term, rs] of owner) if (rs.length > 1) rs.forEach(r => { if (r.status === 'ok') r.status = 'warn'; r.notes.push('“' + term + '” is also given for ' + rs.filter(x => x !== r).map(x => x.ref).join(', ') + '. A term can only mean one thing.'); });
   return rows;
@@ -2117,6 +2125,29 @@ function renameSteps(pairs){
     formula: '= Table.RenameColumns(#"Previous step", {' + ps.map(p => '{' + mText(p.from) + ', ' + mText(p.to) + '}').join(', ') + '}, MissingField.Ignore)' }));
 }
 /* ---- synonyms into the model's culture (linguisticMetadata), through TMDL view ---- */
+function cultureEntity(meta, table, prop){
+  const ents = meta && meta.Entities && typeof meta.Entities === 'object' ? meta.Entities : {};
+  const k = Object.keys(ents).find(k2 => { const b = ((ents[k2] || {}).Definition || {}).Binding || {}; return lc(b.ConceptualEntity) === lc(table) && (prop ? lc(b.ConceptualProperty) === lc(prop) : !b.ConceptualProperty); });
+  return k ? ents[k] : null;
+}
+const termList = e => (e && Array.isArray(e.Terms) ? e.Terms : []).map(t => t && typeof t === 'object' && !Array.isArray(t) ? Object.entries(t)[0] : null).filter(x => x && x[1] && typeof x[1] === 'object');
+// Terms the model already uses for a field (lower case): every term except ones Power BI only suggested
+function cultureHas(meta, obj){
+  const e = cultureEntity(meta, obj.table, obj.kind === 'table' ? '' : obj.name);
+  return new Set(termList(e).filter(([, v]) => v.State !== 'Suggested' && v.State !== 'Deleted').map(([t]) => lc(t)));
+}
+// Synonyms someone added (no State, as Desktop saves a typed synonym), per field in the model
+function modelSynonyms(model, meta){
+  const out = [];
+  Object.values(meta && meta.Entities && typeof meta.Entities === 'object' ? meta.Entities : {}).forEach(e => {
+    const b = ((e || {}).Definition || {}).Binding || {}; if (typeof b.ConceptualEntity !== 'string') return;
+    const o = resolveRef(model, qName(b.ConceptualEntity) + (b.ConceptualProperty ? bracket(String(b.ConceptualProperty)) : ''));
+    if (!o) return;
+    const terms = termList(e).filter(([t, v]) => !v.State && lc(t) !== lc(o.name)).map(([t]) => t);
+    if (terms.length) out.push({ ref: o.ref, table: o.table, terms });
+  });
+  return out;
+}
 // Reads a culture script (TMDL view's Script TMDL of a culture, or a PBIP folder's cultures/xx-XX.tmdl)
 function cultureParse(script){
   const lines = (script || '').replace(/\r/g, '').split('\n');
@@ -2249,7 +2280,7 @@ const EX_TMDL = ['createOrReplace', '', '\ttable Customer', '\t\tlineageTag: 3f7
 const EX_CULT = ['createOrReplace', '', '\tcultureInfo en-US', '', '\t\tlinguisticMetadata = ' + JSON.stringify({ Version: '4.1.0', Language: 'en-US', Entities: {
   'customer.region': { Definition: { Binding: { ConceptualEntity: 'Customer', ConceptualProperty: 'Region' } }, State: 'Generated', Terms: [{ region: { State: 'Generated' } }, { territory: { Type: 'Noun', State: 'Suggested', Source: { Agent: 'Thesaurus' }, Weight: 0.5 } }] },
   'entity__measure.total_sales': { Definition: { Binding: { ConceptualEntity: '_Measures', ConceptualProperty: 'Total Sales' } }, State: 'Generated', Terms: [{ 'total sales': { State: 'Generated' } }, { sales: { State: 'Generated', Weight: 0.97 } }] },
-  'product.category': { Definition: { Binding: { ConceptualEntity: 'Product', ConceptualProperty: 'Category' } }, State: 'Generated', Terms: [{ category: { State: 'Generated' } }] } } }), '\t\t\tcontentType: json', ''].join('\n');
+  'product.category': { Definition: { Binding: { ConceptualEntity: 'Product', ConceptualProperty: 'Category' } }, State: 'Generated', Terms: [{ category: { State: 'Generated' } }, { department: { LastModified: '2026-01-15T10:00:00.000Z' } }] } } }), '\t\t\tcontentType: json', ''].join('\n');
 
 /* ---------- state + UI ---------- */
 const $ = id => document.getElementById(id);
@@ -2442,7 +2473,8 @@ function renderTableChips(){
 }
 function renderInsPrompt(){
   const m = state.model || parseModel('');
-  state.out.insPrompt = m.tables.length ? instructionsPrompt(m, state.biz, { tables: state.insTables }) : '';
+  const meta = cultMeta();
+  state.out.insPrompt = m.tables.length ? instructionsPrompt(m, state.biz, { tables: state.insTables, have: meta ? modelSynonyms(m, meta) : [] }) : '';
   $('insPromptView').textContent = state.out.insPrompt || 'Paste your model export in Step 2 to build the prompt.';
   const n = state.out.insPrompt.length;
   $('insCount').textContent = n ? n.toLocaleString() + ' characters' : '';
@@ -2455,7 +2487,23 @@ function synRows(){
     const e = state.synEdits[lc(s.ref)];
     return { ref: s.ref, terms: e !== undefined ? e.split(',').map(x => x.trim()).filter(Boolean) : s.terms };
   });
-  return checkSynonyms(base, m).map((r, i) => Object.assign(r, { key: lc(base[i].ref), on: r.status !== 'err' && !state.synOff.includes(lc(base[i].ref)) }));
+  return checkSynonyms(base, m, cultMeta()).map((r, i) => Object.assign(r, { key: lc(base[i].ref), on: r.status !== 'err' && r.status !== 'same' && !state.synOff.includes(lc(base[i].ref)) }))
+    .sort((a, b) => (a.status === 'same') - (b.status === 'same'));
+}
+// The model's culture: pasted in Step 5, or read from the PBIP folder the model came from
+let cultCache = { t: null, p: null };
+function cultSource(){ return (state.cult || '').trim() ? state.cult : (state.pbipCult || ''); }
+function cultParsed(){ const t = cultSource(); if (t !== cultCache.t) cultCache = { t, p: t.trim() ? cultureParse(t) : null }; return cultCache.p && !cultCache.p.error ? cultCache.p : null; }
+function cultMeta(){ const p = cultParsed(); return p ? p.meta : null; }
+async function loadPbipCulture(){
+  let text = '';
+  try {
+    const d = window.SF_SUITE && SF_SUITE.pbipStored ? await SF_SUITE.pbipStored() : null;
+    const f = d && d.list.find(x => /\.SemanticModel\/definition\/cultures\/en-US\.tmdl$/i.test(x.path)) || d && d.list.find(x => /\.SemanticModel\/definition\/cultures\/[^/]+\.tmdl$/i.test(x.path));
+    if (f) text = await f.file.text();
+  } catch (e) {}
+  if (text === (state.pbipCult || '')) return;
+  state.pbipCult = text; renderInsPrompt(); renderInsResult();
 }
 function renderInsResult(){
   const pr = parsePrep(state.insReply);
@@ -2466,12 +2514,15 @@ function renderInsResult(){
   $('insWork').hidden = false;
   if (document.activeElement !== $('insEdit')) $('insEdit').value = state.insEdit !== null ? state.insEdit : pr.instructions;
   const rows = synRows();
-  $('synCount').textContent = '(' + rows.length + ' field' + (rows.length === 1 ? '' : 's') + ')';
-  $('synBody').innerHTML = rows.length ? rows.map(r => '<tr data-k="' + esc(r.key) + '"><td class="ck"><input type="checkbox" data-act="on"' + (r.on ? ' checked' : '') + (r.status === 'err' ? ' disabled' : '') + ' aria-label="Include ' + esc(r.ref) + '"></td>'
+  const nSame = rows.filter(r => r.status === 'same').length;
+  $('synCount').textContent = '(' + rows.length + ' field' + (rows.length === 1 ? '' : 's') + (nSame ? ', ' + nSame + ' already in your model' : '') + ')';
+  $('synBody').innerHTML = rows.length ? rows.map(r => '<tr data-k="' + esc(r.key) + '"><td class="ck"><input type="checkbox" data-act="on"' + (r.on ? ' checked' : '') + (r.status === 'err' || r.status === 'same' ? ' disabled' : '') + ' aria-label="Include ' + esc(r.ref) + '"></td>'
     + '<td class="nm">' + esc(r.ref) + (r.obj ? '<div class="sub">' + r.obj.kind + '</div>' : '') + '</td>'
     + '<td><input type="text" data-act="terms" value="' + esc(r.terms.join(', ')) + '" aria-label="Synonyms for ' + esc(r.ref) + '"' + (r.status === 'err' ? ' disabled' : '') + '>' + (r.notes.length ? '<ul>' + r.notes.map(n => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '') + '</td>'
-    + '<td><span class="pill ' + (r.status === 'ok' ? 'new' : r.status) + '">' + (r.status === 'ok' ? 'OK' : r.status === 'warn' ? 'Check' : 'Can’t use') + '</span></td></tr>').join('')
+    + '<td><span class="pill ' + (r.status === 'ok' ? 'new' : r.status) + '">' + (r.status === 'ok' ? 'OK' : r.status === 'warn' ? 'Check' : r.status === 'same' ? 'In model' : 'Can’t use') + '</span></td></tr>').join('')
     : '<tr><td colspan="4" class="muted">Copilot’s reply had no synonyms.</td></tr>';
+  $('synNote').innerHTML = cultMeta() ? '<p class="note small">Checked against the synonyms already in your model' + ((state.cult || '').trim() ? ' (the culture pasted below)' : ' (from your PBIP folder)') + '. Ones it already has are left out.</p>'
+    : '<p class="note small">Paste your culture below (or connect a PBIP folder) and the page leaves out synonyms your model already has.</p>';
   renderFinal();
 }
 function renderFinal(){
@@ -2492,19 +2543,21 @@ function renderFinal(){
 
 function renderCulture(rows){
   state.out.cult = ''; $('cultOut').hidden = true; $('cultMsg').innerHTML = '';
-  const src = state.cult || '';
+  const src = cultSource(), fromPbip = !(state.cult || '').trim() && !!src.trim();
   const use = (rows || []).filter(r => r.obj && r.terms.length);
   if (!src.trim()) { $('cultMsg').innerHTML = use.length ? '<p class="note small">' + use.length + ' field' + (use.length === 1 ? '' : 's') + ' with synonyms ready.</p>' : ''; return; }
   const p = cultureParse(src);
   if (p.error) { $('cultMsg').innerHTML = '<div class="msg err">' + esc(p.error) + '</div>'; return; }
-  if (!use.length) { $('cultMsg').innerHTML = '<div class="msg info">Tick some synonyms above first.</div>'; return; }
+  if (!use.length) { const all = synRows(); $('cultMsg').innerHTML = all.length && all.some(r => r.status === 'same') && all.every(r => r.status === 'same' || r.status === 'err') ? '<div class="msg ok">Your model already has every synonym in Copilot&rsquo;s reply. Nothing to apply.</div>' : '<div class="msg info">Tick some synonyms above first.</div>'; return; }
   const res = cultureMerge(p.meta, use);
   const n = k => res.report.reduce((a, r) => a + r[k].length, 0), made = res.report.filter(r => r.created);
-  if (!n('added') && !n('accepted')) { $('cultMsg').innerHTML = '<div class="msg ok">Every synonym is already in this culture. Nothing to apply.</div>'; return; }
+  if (!n('added') && !n('accepted')) { $('cultMsg').innerHTML = '<div class="msg ok">Every synonym is already in your model. Nothing to apply.</div>'; return; }
   state.out.cult = cultureScript(p, res.meta);
-  let msg = '<div class="msg ok">Added ' + n('added') + ' synonym' + (n('added') === 1 ? '' : 's') + (n('accepted') ? ', and kept ' + n('accepted') + ' that Power BI had only suggested' : '') + (n('had') ? '. ' + n('had') + ' were already there' : '') + '.</div>';
+  const parts = [n('added') ? 'Adds ' + n('added') + ' synonym' + (n('added') === 1 ? '' : 's') : '', n('accepted') ? (n('added') ? 'accepts ' : 'Accepts ') + n('accepted') + ' synonym' + (n('accepted') === 1 ? '' : 's') + ' Power BI had only suggested' : ''].filter(Boolean);
+  let msg = '<div class="msg ok">' + parts.join(' and ') + '.</div>';
   if (made.length) msg += '<div class="msg info">' + made.length + ' field' + (made.length === 1 ? ' wasn’t' : 's weren’t') + ' in the culture yet, so ' + (made.length === 1 ? 'it gets' : 'they get') + ' a new entry: ' + esc(made.slice(0, 8).map(r => r.ref).join(', ')) + (made.length > 8 ? ' and ' + (made.length - 8) + ' more' : '') + '.</div>';
   if (p.culture && !/^en(-|$)/i.test(p.culture)) msg += '<div class="msg warn">This is the ' + esc(p.culture) + ' culture. Synonyms are matched to the words of its language.</div>';
+  if (fromPbip) msg += '<div class="msg info">Made from the culture in your PBIP folder as it was last saved. Save the report in Desktop first, or paste the culture from TMDL view above to use the open model.</div>';
   $('cultMsg').innerHTML = msg;
   $('cultView').textContent = state.out.cult.length > 4000 ? state.out.cult.slice(0, 4000) + ' …' : state.out.cult;
   $('cultOut').hidden = false;
@@ -2690,6 +2743,8 @@ function init(){
   $('addTerms').checked = state.addTerms !== false;
   setTab(state.tab || 'ins');
   renderAll();
+  // the shared suite (and the PBIP folder's files) load after this script
+  if (document.readyState === 'complete') loadPbipCulture(); else window.addEventListener('load', loadPbipCulture);
 
   $('tabIns').addEventListener('click', () => { setTab('ins'); persist(); });
   $('tabDesc').addEventListener('click', () => { setTab('desc'); persist(); });
@@ -2705,7 +2760,7 @@ function init(){
     if (state.example) $('modelInput').value = SF_SUITE.ownText($('modelInput').value, EX_MODEL);
     dropExample(); state.insTables = null; state.dTables = null;
     pruneToModel();
-    renderAll(); persist();
+    renderAll(); persist(); loadPbipCulture();
   });
   // business questionnaire
   document.querySelectorAll('[data-b]').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => { const v = state.example && el.tagName !== 'SELECT' ? SF_SUITE.ownText(el.value, String(state.biz[el.dataset.b] || '')) : el.value; dropExample(); state.biz[el.dataset.b] = v; el.value = v; renderInsPrompt(); persist(); }));
@@ -2792,7 +2847,7 @@ function init(){
   // instructions reply + editing
   $('insReply').addEventListener('input', () => { leaveExample(); state.insReply = $('insReply').value; state.insEdit = null; state.synEdits = {}; state.synOff = []; renderInsResult(); persist(); });
   $('insEdit').addEventListener('input', () => { state.insEdit = $('insEdit').value; renderFinal(); persist(); });
-  $('cultIn').addEventListener('input', () => { leaveExample(); state.cult = $('cultIn').value; renderFinal(); persist(); });
+  $('cultIn').addEventListener('input', () => { leaveExample(); state.cult = $('cultIn').value; renderInsPrompt(); renderInsResult(); persist(); });
   $('addTerms').addEventListener('change', () => { state.addTerms = $('addTerms').checked; renderFinal(); persist(); });
   $('synBody').addEventListener('input', e => {
     const inp = e.target.closest('[data-act=terms]'); if (!inp) return;
