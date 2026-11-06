@@ -1,4 +1,4 @@
-# SF Power BI Toolkit
+# Foster BI Toolkit
 
 Single-file HTML tools for Power BI developers, published with GitHub Pages at
 https://fosterbiservices.github.io/Power-BI-Toolkit/ . People are already testing it, so
@@ -35,6 +35,12 @@ prompt the user takes to Copilot, then check the reply pasted back. Nothing call
 - Tools that read the model use the **shared model export**: one DAX query the user runs once
   in DAX query view. It's saved on the home page and every tool picks it up (see suite.js).
 - Home link and **Switch tool** menu on every page (added by suite.js).
+- **Branding: Foster BI Services** (the product is "Foster BI Toolkit", renamed from SF Power BI Toolkit in Nov 2026; the repo and link stay Power-BI-Toolkit). Logo files are in `src/brand/`
+  (from the owner's logo redesign, content-credential metadata stripped). Colors: navy `#0A2D5A` (`--brand`, `--band`,
+  light `--accent`), gold `#F2A900` (`--gold`, dark `--accent`), dark gold `#B07A00` (the logo's SERVICES). Tool pages show
+  the square icon in the banner and as the favicon; the home page shows the white full logo (`@@HOMELOGO@@` in
+  home_body.html, filled by build_site.py from `src/brand/foster-bi-logo-services-white.svg`). Every banner has a faint grid of
+  rounded squares on the right, fading to the left (as on the Foster BI site header), in the `.brandbar` background. The old SF shield is gone.
 - The disclaimer on the home page stays.
 - No green, red or amber in **suggested colors** (palettes, themes, wireframes); they read as
   good, bad and warning. UI status colors for ok, error and warning are fine. KPI Visualizer's
@@ -153,6 +159,13 @@ Things to know:
   A folder read in any tool is saved as the shared export with `source: 'pbip'`, so every other tool
   opens on it (unless it chose No model or its own export). The folder picker's handle is kept in
   IndexedDB (`sfpbi`, store `h`, key `pbip`) for the **Read it again** button.
+  `S.pbipShare(root, list, handle)` does the reading for every pick: it also keeps the folder's files
+  (model and report, as text) in the same store under key `pbipFiles`, stamped with the export's `savedAt`.
+  `S.pbipStored()` returns them while the shared export is still that read. So a folder read in any tool
+  reaches the report pages too: report pages send the stored files as `sf-pbip-folder` once per read
+  (`<prefix>repFrom`, so Remove report pages sticks), and Model Documenter (`window.mdSuite` in its HOOKS
+  line) opens its folder tab on them, and shares a folder chosen on its own page the same way. Every
+  page's folder walk reads `.json`, `.pbir` and `.pbip` too and doesn't skip `.Report` folders.
 - Home link and Switch tool menu, grouped by `S.GROUPS` (Design the report, Shape the data, Build the
   model, Check it, Explain it: the order a report gets built). `S.TOOLS` is the flat list made from it.
   The home page shows the same groups, under a **Connect your model once** box (the export query and

@@ -1,0 +1,1 @@
+{"name": "v1", "visual": {"visualType": "card", "query": {"queryState": {"Values": {"projections": [{"field": {"Measure": {"Expression": {"SourceRef": {"Entity": "_Measures"}}, "Property": "Total Sales"}}}]}}}}}

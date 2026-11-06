@@ -82,13 +82,14 @@ function walkEntry(entry, prefix, out){
     next();
   });
 }
-async function loadFolder(root, list){
+// o.keepTab: a folder read in another tool, while this page was left on the export tab on purpose
+async function loadFolder(root, list, o = {}){
   $('folderMsg').innerHTML = msg('info', 'Reading &ldquo;' + esc(root) + '&rdquo;&hellip;');
   const { files, seen, other } = await readList(list);
   if (state.example) setExample(false);
   state.files = files; state.root = root; state.lastRoot = root; state.readInfo = { seen, count: files.size, other };
   try { store.del('blank'); } catch (e) {}
-  setTab('folder');
+  if (!o.keepTab) setTab('folder');
   pickProjects();
   persist();
 }
@@ -130,7 +131,7 @@ function exportProject(){
 }
 
 /* ---------- output ---------- */
-const DOC_CSS = MD.CSS.replace(/#1a3a5c/g, '#003F88').replace(/#c89632/g, '#F5A800');
+const DOC_CSS = MD.CSS.replace(/#1a3a5c/g, '#0A2D5A').replace(/#c89632/g, '#F2A900');
 function currentProject(){
   if (state.tab === 'export') { const r = exportProject(); return r; }
   return { project: state.project, error: state.projectError };
@@ -162,7 +163,7 @@ function render(){
   if (!project) { state.html = ''; $('outWait').className = 'msg ' + (error ? 'err' : 'info'); $('outWait').innerHTML = error ? 'Fix the problem in Step 1 to see the document.' : 'Choose a project folder or paste a model export in Step 1.'; return; }
   const note = project.source === 'export' ? 'Documented from the model export, so Power Query, data sources and report pages aren’t included.' : '';
   const today = new Date(); const date = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-  state.html = MD.generateHtml(project, o, { css: DOC_CSS, footer: 'Generated locally with the SF Power BI Toolkit · Model Documenter.', note, date });
+  state.html = MD.generateHtml(project, o, { css: DOC_CSS, footer: 'Generated locally with the Foster BI Toolkit · Model Documenter.', note, date });
   state.fileName = MD.defaultFilename(project, o).replace(/[<>:"\/\\|?*\x00-\x1f]/g, '-');
   $('fileName').textContent = state.fileName;
   const tables = MD.scopeTables(project, o);
@@ -205,20 +206,20 @@ function init(){
   else if (store.get('blank') !== '1' && !s.root) loadExample();
   else { setTab(s.tab || 'folder'); render(); }
 
-  $('tabFolder').addEventListener('click', () => { setTab('folder'); render(); persist(); });
-  $('tabExport').addEventListener('click', () => { setTab('export'); render(); persist(); });
+  $('tabFolder').addEventListener('click', () => { setTab('folder'); store.set('userTab', 'folder'); render(); persist(); });
+  $('tabExport').addEventListener('click', () => { setTab('export'); store.set('userTab', 'export'); render(); persist(); });
   $('pickFolder').addEventListener('click', async () => {
     if (window.showDirectoryPicker) {
       let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-model-documenter', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; $('folderInput').click(); return; }
       const list = []; try { await walkHandle(dir, dir.name, list); } catch (e) { $('folderMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(e.message || e)); return; }
-      try { await loadFolder(dir.name, list); } catch (err) { $('folderMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
+      try { await loadFolder(dir.name, list); share(dir.name, list, dir); } catch (err) { $('folderMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
     } else $('folderInput').click();
   });
   $('folderInput').addEventListener('change', async e => {
     const fl = [...e.target.files]; if (!fl.length) return;
     const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
     const list = fl.filter(f => !(f.webkitRelativePath || '').split('/').some(seg => SKIP_DIRS.has(seg))).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }));
-    try { await loadFolder(root, list); }
+    try { await loadFolder(root, list); share(root, list); }
     catch (err) { $('folderMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
     e.target.value = '';
   });
@@ -230,7 +231,8 @@ function init(){
     const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
     if (!item || !item.isDirectory) { $('folderMsg').innerHTML = msg('warn', 'Drop the project <b>folder</b>, not a file inside it.'); return; }
     const list = []; await walkEntry(item, '', list);
-    try { await loadFolder(item.name, list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file }))); } catch (err) { $('folderMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
+    const l2 = list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file }));
+    try { await loadFolder(item.name, l2); share(item.name, l2); } catch (err) { $('folderMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
   });
   $('projPick').addEventListener('change', () => { state.choice = $('projPick').value; loadChoice(); });
   $('exInput').addEventListener('input', () => {
@@ -260,6 +262,18 @@ function init(){
   document.addEventListener('click', e => { const b = e.target.closest('[data-copy=export]'); if (b) copyText(DAX_QUERY, b); });
 }
 init();
+// The folder is shared: chosen here, its model becomes every tool's model and the other PBIP tools get its report
+// pages; read in another tool, this page opens on it (unless it was cleared since)
+function share(root, list, handle){
+  if (!window.SF_SUITE || !SF_SUITE.pbipShare || !state.project) return;
+  SF_SUITE.pbipShare(root, list, handle).then(r => { if (r && r.shared) store.set('shared', String(SF_SUITE.get().savedAt)); }).catch(() => {});
+}
+window.mdSuite = async S => {
+  const d = S.pbipStored ? await S.pbipStored() : null; if (!d) return;
+  if (state.files && !state.example && store.get('shared') === String(d.savedAt)) return;
+  if (store.get('blank') === '1' && d.savedAt <= (+store.get('blankAt') || Infinity)) return;
+  try { await loadFolder(d.root, d.list, { keepTab: store.get('userTab') === 'export' }); store.set('shared', String(d.savedAt)); } catch (e) {}
+};
 
 /* ---------- Clear entries ---------- */
 (function(){
