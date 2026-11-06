@@ -9,16 +9,42 @@
       <span id="clearMsg"><b>Clear all entries?</b> This empties the request, source details, columns, parameters and Copilot&rsquo;s reply, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
       <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
     </div>
-    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Describe your query in Step 1 to start again.</div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Describe your query in Step 2 to start again.</div>
     <div class="banner" id="exampleBanner" hidden>
-      <span><strong>Example loaded.</strong> A sales lines query from a SQL data warehouse, with Copilot&rsquo;s reply already checked. Type your own request in Step 1 to start yours.</span>
+      <span><strong>Example loaded.</strong> A sales lines query from a SQL data warehouse, with Copilot&rsquo;s reply already checked. Type your own request in Step 2 to start yours.</span>
       <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
     </div>
   </header>
 
   <!-- STEP 1 -->
-  <section class="step" aria-labelledby="s1">
+  <section class="step" aria-labelledby="s0">
     <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s0">Connect your model</h2>
+        <p>Optional.</p>
+      </div>
+      <details class="extra" id="modelBox">
+        <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+        <div class="extra-body">
+          <ol class="how">
+            <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+            <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+          </ol>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+            <pre class="short" id="exportView"></pre>
+          </div>
+          <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+        </div>
+      </details>
+      <div id="modelMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>2</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s1">What should the query do?</h2>
@@ -28,9 +54,9 @@
     </div>
   </section>
 
-  <!-- STEP 2 -->
+  <!-- STEP 3 -->
   <section class="step" aria-labelledby="s2">
-    <div class="step-num">Step<b>2</b></div>
+    <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s2">Where the data comes from</h2>
@@ -42,6 +68,8 @@
         <div class="field"><label for="sourceDetail">Details</label><input type="text" id="sourceDetail" class="txt"></div>
       </div>
       <div id="existingBox" hidden>
+        <div class="field" id="pickBox" hidden><label for="pickTable">The table in your model</label><select id="pickTable"></select></div>
+        <div id="pickMsg"></div>
         <textarea id="existing" class="mid" spellcheck="false" aria-label="Existing query" placeholder="Paste the query from the Advanced Editor (Home > Advanced Editor), starting with let"></textarea>
         <div id="existingMsg"></div>
       </div>
@@ -68,14 +96,20 @@
           <div class="codebox"><div class="codebox-bar"><span class="t">Cleaning and type steps: paste after the step where the column names are final</span><span class="r"><button class="btn" type="button" data-copy="steps">Copy</button></span></div><pre class="short" id="fxStepsCode"></pre></div>
           <p class="note small">Rename <code>PromotedHeaders</code> to the step before them. Copilot gets these in the prompt, so you only need them to build the query yourself.</p>
           <h3 class="sub">Functions to add to your file once</h3>
-          <p class="note small">For each one, in Power Query:</p>
+          <div id="fxHave"></div>
+          <div id="fxTmdlBox">
+            <p class="note small">All at once: in Power BI Desktop, open <b>TMDL view</b>, paste this script and select <b>Apply</b>. Each function is added as a query.</p>
+            <div class="codebox"><div class="codebox-bar"><span class="t">TMDL script: the functions</span><span class="r"><button class="btn primary" type="button" data-copy="fxtmdl">Copy script</button></span></div><pre class="short" id="fxTmdl"></pre></div>
+          </div>
+          <details class="extra" id="fxOneBox"><summary>Or one at a time in Power Query <span class="muted">(each function&rsquo;s code)</span></summary><div class="extra-body">
           <ol class="note small">
             <li><b>Home &gt; New Source &gt; Blank Query</b>.</li>
             <li><b>Home &gt; Advanced Editor</b>. Select everything already there, paste the code over it and select <b>Done</b>. The query then shows <b>Enter Parameters</b> and an <b>Invoke</b> button.</li>
             <li>Rename the query to the function&rsquo;s name exactly.</li>
           </ol>
-          <p class="note small">Don&rsquo;t paste the code into the list of queries on the left: Power Query turns pasted text there into a table. Every query in the file can use the functions once they&rsquo;re added. Skip the ones you already have.</p>
+          <p class="note small">Don&rsquo;t paste the code into the list of queries on the left: Power Query turns pasted text there into a table.</p>
           <div id="fxFns"></div>
+          </div></details>
         </div>
       </div>
 
@@ -83,6 +117,7 @@
         <summary>Other queries, parameters and culture <span class="muted">(optional)</span></summary>
         <div class="extra-body">
           <label class="lab" for="merges">Other queries it may merge or append with <span class="hint">One per line: Query name: column, column</span></label>
+          <div class="field" id="mergePickBox" hidden><label for="mergePick">Add a table from your model</label><select id="mergePick"></select></div>
           <textarea id="merges" class="short" spellcheck="false" placeholder="Customers: CustomerKey, CustomerName, Region"></textarea>
           <label class="lab" for="params">Parameters that already exist <span class="hint">One per line: Name = value</span></label>
           <textarea id="params" class="short" spellcheck="false" placeholder="ServerName = &quot;sql-prod&quot;"></textarea>
@@ -96,9 +131,9 @@
     </div>
   </section>
 
-  <!-- STEP 3 -->
+  <!-- STEP 4 -->
   <section class="step" aria-labelledby="s3">
-    <div class="step-num">Step<b>3</b></div>
+    <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">Send the prompt to Copilot</h2>
@@ -112,9 +147,9 @@
     </div>
   </section>
 
-  <!-- STEP 4 -->
+  <!-- STEP 5 -->
   <section class="step" aria-labelledby="s4">
-    <div class="step-num">Step<b>4</b></div>
+    <div class="step-num">Step<b>5</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s4">Paste Copilot&rsquo;s reply</h2>

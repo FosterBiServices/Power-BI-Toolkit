@@ -7,7 +7,10 @@ import json, glob, os
 fxdir=os.path.join(SRC,'fx')
 fxcode={os.path.basename(f)[:-3]:open(f).read().replace('\r','').strip() for f in sorted(glob.glob(os.path.join(fxdir,'fx*.pq'))) if not f.endswith('fxTests.pq')}
 assert len(fxcode)==9, sorted(fxcode)
-mq=open(S+'mq_core.js').read(); pw='const PWF_CODE = '+json.dumps(fxcode, ensure_ascii=False).replace('</','<\\/')+';\n'+open(S+'pw_fx.js').read()+'\n'+open(S+'pw_core.js').read()+'\n'+open(S+'pw_lint.js').read(); ex=open(S+'pw_ex.js').read(); ui=open(S+'pw_ui.js').read(); body=open(S+'pw_body.html').read()
+mq=open(S+'mq_core.js').read().replace('/*MQ-CORE-END*/', open(S+'mq_model.js').read()+open(S+'mq_pbip.js').read()+open(S+'mq_doc.js').read()+'/*MQ-CORE-END*/')
+# builder_core's model reader, in its own scope (some of its names are also in mq_core)
+bc='const BC = (() => {\n'+open(S+'builder_core.js').read()+'\nreturn { readModel, parseModel, DAX_QUERY };\n})();\n'
+mq=mq+'\n'+bc; pw='const PWF_CODE = '+json.dumps(fxcode, ensure_ascii=False).replace('</','<\\/')+';\n'+open(S+'pw_fx.js').read()+'\n'+open(S+'pw_core.js').read()+'\n'+open(S+'pw_lint.js').read(); ex=open(S+'pw_ex.js').read(); ui=open(S+'pw_ui.js').read(); body=open(S+'pw_body.html').read()
 head='<title>Power Query Writer</title>\n<meta name="description" content="Describe a Power Query query in plain words and get a Copilot prompt that writes it short, maintainable and formatted, then check the reply.">\n'+L(3,6)
 css=L(7,217)+'\n'+L(145,149)+'\n'+L(175,176)+'\n'+L(180,180)+'\n'+L(219,265)+'\n'+L(281,289)+'\n'+L(303,312)+'''
 /* ---------- Power Query Writer ---------- */
@@ -49,6 +52,6 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 '''
 logo=p[318]
 src=head+'\n'+css+'\n</style>\n\n<div class="wrap">\n\n  <header class="top">\n    <div class="brandbar">\n'+logo+'\n'+body+'\n<script>\n'+mq+'\n'+pw+'\n'+ex+'\n'+ui+'</script>\n'
-assert '</script>' not in (mq+pw+ex+ui)
+assert '</script>' not in (mq+pw+ex+ui), 'script end in the parts'
 open(P+'power-query-writer.html','w').write(src)
 print(len(src))

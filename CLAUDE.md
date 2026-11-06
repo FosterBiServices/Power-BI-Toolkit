@@ -196,7 +196,7 @@ Things to know:
 | model-compare | kmc. | two exports | no |
 | model-documenter | kmdoc. | yes | no |
 | about-this-report | kab. | yes | optional |
-| power-query-writer | kpw. | no | yes |
+| power-query-writer | kpw. | optional, or a PBIP folder | yes |
 | power-query-explainer | kpq. | no (own export, or a PBIP folder) | yes |
 | date-table-generator | kdt. | optional | no |
 | kpi-visualizer | kkv. | optional, or a PBIP folder | no |
@@ -233,6 +233,9 @@ runs; about an hour, so it asks run.js for more time with a `// time limit: N mi
 through both.
 
 ## Not yet checked in real Power BI or Copilot
+
+- Power Query Writer's fx functions TMDL script (`PWF.tmdl`): applying it in TMDL view, and the functions without their
+  Documentation wrapper (fxTests.pq, 45 checks).
 
 - Sample Data Maker: a script with two or more industries combined (renamed tables and measures, per-industry sizes),
   and the plain calculated tables after the RETURN fix (Accounts, Cost Centers and Departments failed before it).
@@ -305,6 +308,17 @@ page shows each function used, to add once. Checks: calls of listed functions wi
 listed, recipe steps missing, the fxApplyTypes pairs, and column names written with square brackets inside quotes
 ("[First Name]", from a real Copilot reply: the functions skip a name they don't find, so it silently does nothing; the
 prompt now says to give names as quoted text without brackets). Check: `pwfxtest.js` (the full chain also passed in Desktop).
+
+Power Query Writer with a model (Step 1, Connect your model: PBIP folder, export or No model; `connect.report: true` so the
+`sf-pbip-folder` event brings the folder's files). It reads the export with builder_core's `readModel`, which the build wraps
+in its own scope as `BC` (some builder_core names are also in mq_core); mq_model, mq_pbip and mq_doc are added to mq_core as
+in build_mq.py. "Build on an existing query" then offers the model's tables (not calculated or measures tables): picking one
+fills the columns with their types (a DateTime column named like a date is a date) and, from a PBIP folder, its query
+(`readPbip`, kept as `kpw.mq` with the export it came with, dropped when the model changes). "Add a table from your model"
+writes a merge line. The fx functions come as one TMDL view script (`PWF.tmdl`: `createOrReplace`, `expression fxName =`,
+the code three tabs in, the leading comment lines as the `///` description); functions the PBIP folder already has are
+named and left out. Advanced Editor, one function at a time, is the other way. A new source's columns still have to be
+pasted (the model doesn't have them yet). Check: `pwmodeltest.js` (fixture `src/tests/pwpbip/`).
 
 Power Query Writer reply checks (`src/parts/pw_lint.js`, `PWL.lint`, added to pw_core in build_pw.py): functions that don't
 exist (Table, List, Text, Record and Duration are listed in full; `ALIAS` maps names Copilot invents, such as Table.FilterRows,

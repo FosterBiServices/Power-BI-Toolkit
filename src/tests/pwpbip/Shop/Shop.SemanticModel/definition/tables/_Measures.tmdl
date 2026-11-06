@@ -1,0 +1,20 @@
+table _Measures
+	lineageTag: m0
+
+	measure Orders = COUNTROWS(Sales)
+		lineageTag: m1
+
+	column Column1
+		dataType: string
+		isHidden
+		lineageTag: m2
+		summarizeBy: none
+		sourceColumn: Column1
+
+	partition _Measures = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows({})
+				in
+				    Source

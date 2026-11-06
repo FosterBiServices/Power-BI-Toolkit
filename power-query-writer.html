@@ -351,16 +351,42 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       <span id="clearMsg"><b>Clear all entries?</b> This empties the request, source details, columns, parameters and Copilot&rsquo;s reply, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
       <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
     </div>
-    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Describe your query in Step 1 to start again.</div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Describe your query in Step 2 to start again.</div>
     <div class="banner" id="exampleBanner" hidden>
-      <span><strong>Example loaded.</strong> A sales lines query from a SQL data warehouse, with Copilot&rsquo;s reply already checked. Type your own request in Step 1 to start yours.</span>
+      <span><strong>Example loaded.</strong> A sales lines query from a SQL data warehouse, with Copilot&rsquo;s reply already checked. Type your own request in Step 2 to start yours.</span>
       <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
     </div>
   </header>
 
   <!-- STEP 1 -->
-  <section class="step" aria-labelledby="s1">
+  <section class="step" aria-labelledby="s0">
     <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s0">Connect your model</h2>
+        <p>Optional.</p>
+      </div>
+      <details class="extra" id="modelBox">
+        <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+        <div class="extra-body">
+          <ol class="how">
+            <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+            <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+          </ol>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+            <pre class="short" id="exportView"></pre>
+          </div>
+          <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+        </div>
+      </details>
+      <div id="modelMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>2</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s1">What should the query do?</h2>
@@ -370,9 +396,9 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
     </div>
   </section>
 
-  <!-- STEP 2 -->
+  <!-- STEP 3 -->
   <section class="step" aria-labelledby="s2">
-    <div class="step-num">Step<b>2</b></div>
+    <div class="step-num">Step<b>3</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s2">Where the data comes from</h2>
@@ -384,6 +410,8 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
         <div class="field"><label for="sourceDetail">Details</label><input type="text" id="sourceDetail" class="txt"></div>
       </div>
       <div id="existingBox" hidden>
+        <div class="field" id="pickBox" hidden><label for="pickTable">The table in your model</label><select id="pickTable"></select></div>
+        <div id="pickMsg"></div>
         <textarea id="existing" class="mid" spellcheck="false" aria-label="Existing query" placeholder="Paste the query from the Advanced Editor (Home > Advanced Editor), starting with let"></textarea>
         <div id="existingMsg"></div>
       </div>
@@ -410,14 +438,20 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
           <div class="codebox"><div class="codebox-bar"><span class="t">Cleaning and type steps: paste after the step where the column names are final</span><span class="r"><button class="btn" type="button" data-copy="steps">Copy</button></span></div><pre class="short" id="fxStepsCode"></pre></div>
           <p class="note small">Rename <code>PromotedHeaders</code> to the step before them. Copilot gets these in the prompt, so you only need them to build the query yourself.</p>
           <h3 class="sub">Functions to add to your file once</h3>
-          <p class="note small">For each one, in Power Query:</p>
+          <div id="fxHave"></div>
+          <div id="fxTmdlBox">
+            <p class="note small">All at once: in Power BI Desktop, open <b>TMDL view</b>, paste this script and select <b>Apply</b>. Each function is added as a query.</p>
+            <div class="codebox"><div class="codebox-bar"><span class="t">TMDL script: the functions</span><span class="r"><button class="btn primary" type="button" data-copy="fxtmdl">Copy script</button></span></div><pre class="short" id="fxTmdl"></pre></div>
+          </div>
+          <details class="extra" id="fxOneBox"><summary>Or one at a time in Power Query <span class="muted">(each function&rsquo;s code)</span></summary><div class="extra-body">
           <ol class="note small">
             <li><b>Home &gt; New Source &gt; Blank Query</b>.</li>
             <li><b>Home &gt; Advanced Editor</b>. Select everything already there, paste the code over it and select <b>Done</b>. The query then shows <b>Enter Parameters</b> and an <b>Invoke</b> button.</li>
             <li>Rename the query to the function&rsquo;s name exactly.</li>
           </ol>
-          <p class="note small">Don&rsquo;t paste the code into the list of queries on the left: Power Query turns pasted text there into a table. Every query in the file can use the functions once they&rsquo;re added. Skip the ones you already have.</p>
+          <p class="note small">Don&rsquo;t paste the code into the list of queries on the left: Power Query turns pasted text there into a table.</p>
           <div id="fxFns"></div>
+          </div></details>
         </div>
       </div>
 
@@ -425,6 +459,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
         <summary>Other queries, parameters and culture <span class="muted">(optional)</span></summary>
         <div class="extra-body">
           <label class="lab" for="merges">Other queries it may merge or append with <span class="hint">One per line: Query name: column, column</span></label>
+          <div class="field" id="mergePickBox" hidden><label for="mergePick">Add a table from your model</label><select id="mergePick"></select></div>
           <textarea id="merges" class="short" spellcheck="false" placeholder="Customers: CustomerKey, CustomerName, Region"></textarea>
           <label class="lab" for="params">Parameters that already exist <span class="hint">One per line: Name = value</span></label>
           <textarea id="params" class="short" spellcheck="false" placeholder="ServerName = &quot;sql-prod&quot;"></textarea>
@@ -438,9 +473,9 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
     </div>
   </section>
 
-  <!-- STEP 3 -->
+  <!-- STEP 4 -->
   <section class="step" aria-labelledby="s3">
-    <div class="step-num">Step<b>3</b></div>
+    <div class="step-num">Step<b>4</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">Send the prompt to Copilot</h2>
@@ -454,9 +489,9 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
     </div>
   </section>
 
-  <!-- STEP 4 -->
+  <!-- STEP 5 -->
   <section class="step" aria-labelledby="s4">
-    <div class="step-num">Step<b>4</b></div>
+    <div class="step-num">Step<b>5</b></div>
     <div class="step-body">
       <div class="step-head">
         <h2 id="s4">Paste Copilot&rsquo;s reply</h2>
@@ -911,7 +946,1933 @@ function lineDiff(a, b){
   while (j < m) out.push({ t: '+', v: B[j++] });
   return out;
 }
+
+/* ---------- whole model: export every query ---------- */
+const NL_MARK = '↵';
+const M_CLEAN = col => 'SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( ' + col + ', UNICHAR ( 13 ), "" ), UNICHAR ( 10 ), UNICHAR ( 8629 ) ), UNICHAR ( 9 ), "    " )';
+const M_EXPORT_QUERY = [
+'// Power Query Explainer: export every Power Query query in the model',
+'// Run in DAX query view, then select Copy above the results grid.',
+'EVALUATE',
+'VAR _tables = SELECTCOLUMNS ( INFO.TABLES (), "TID", [ID], "TName", [Name] )',
+'// What each query returns, as Power BI records it (Table, Function, Text...)',
+'VAR _types = SELECTCOLUMNS ( FILTER ( INFO.ANNOTATIONS (), [Name] = "PBI_ResultType" ), "AID", [ObjectID], "AValue", [Value] )',
+'// Loaded tables: the query behind each table (M partitions only)',
+'VAR _loaded =',
+'\tSELECTCOLUMNS (',
+'\t\tFILTER ( INFO.PARTITIONS (), [Type] = 4 ),',
+'\t\t"Kind", "Table",',
+'\t\t"Name",',
+'\t\t\tVAR _tid = [TableID]',
+'\t\t\tRETURN MAXX ( FILTER ( _tables, [TID] = _tid ), [TName] ),',
+'\t\t"ResultType", "Table",',
+'\t\t"Code", ' + M_CLEAN('[QueryDefinition]'),
+'\t)',
+'// Queries that aren’t loaded, parameters and functions',
+'VAR _other =',
+'\tSELECTCOLUMNS (',
+'\t\tFILTER ( INFO.EXPRESSIONS (), [Kind] = 0 ),',
+'\t\t"Kind", "Query",',
+'\t\t"Name", [Name],',
+'\t\t"ResultType",',
+'\t\t\tVAR _eid = [ID]',
+'\t\t\tRETURN CONCATENATEX ( FILTER ( _types, [AID] = _eid ), [AValue], ", " ),',
+'\t\t"Code", ' + M_CLEAN('[Expression]'),
+'\t)',
+'RETURN UNION ( _loaded, _other )',
+'ORDER BY [Kind], [Name]'].join('\n');
+
+function mUnquoteCell(s){
+  if (s.length >= 2 && s[0] === '"' && s[s.length - 1] === '"') {
+    const inner = s.slice(1, -1);
+    if (!/(^|[^"])"([^"]|$)/.test(inner.replace(/""/g, ''))) return inner.replace(/""/g, '"');
+  }
+  return s;
+}
+function parseMExport(text){
+  const res = { queries: [], error: null, skipped: [] };
+  const raw = (text || '').replace(/\r/g, '');
+  if (!raw.trim()) return res;
+  const lines = raw.split('\n');
+  let h = -1, map = {};
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const cells = lines[i].split('\t').map(c => lc(mUnquoteCell(c.trim())).replace(/^.*\[|\]$/g, ''));
+    if (cells.includes('kind') && cells.includes('name') && cells.includes('code')) { h = i; cells.forEach((c, j) => { map[c] = j; }); break; }
+  }
+  if (h < 0 && looksTmdl(raw)) {
+    const r = pbipTmdlQueries(raw);
+    pbipQueryList(r.tables, r.exprs, true).forEach(q => { if (q.measuresTable) res.skipped.push(q.name); else res.queries.push(q); });
+    res.tmdl = true;
+    if (!res.queries.length) res.error = 'No Power Query code was found in this TMDL. Script the tables whose queries you want (or the whole semantic model) in TMDL view, and copy all of it.';
+    return res;
+  }
+  if (h < 0) {
+    res.error = /\bkind\b.*\btable\b.*\bname\b/i.test(lines[0] || '')
+      ? 'This looks like the model export from the other toolkit pages. Run the query from Step 1 on this page instead; it returns the Power Query code.'
+      : 'The header row (Kind, Name, Code) wasn’t found. Use the Copy button above the results grid so the column names come along.';
+    return res;
+  }
+  const seen = new Set();
+  for (let i = h + 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const c = lines[i].split('\t');
+    const get = k => map[k] === undefined ? '' : mUnquoteCell((c[map[k]] || '').trim());
+    const name = get('name'), code = get('code').split(NL_MARK).join('\n');
+    if (!name || !code.trim() || seen.has(lc(name))) continue;
+    seen.add(lc(name));
+    // dedicated measures tables are always left out: their query only makes a placeholder
+    const kind = lc(get('kind'));
+    if (kind === 'measurestable' || (kind === 'table' && looksMeasuresTable(name, code))) { res.skipped.push(name); continue; }
+    res.queries.push({ name, loaded: lc(get('kind')) === 'table', code, resultType: get('resulttype'), table: get('table'), partition: get('partition'),
+      props: get('props').split(NL_MARK).join('\n').split(TAB_MARK).join('\t'), tmdl: lc(get('from')) === 'tmdl' });
+  }
+  if (!res.queries.length) res.error = 'No queries were found under the header row' + (res.skipped.length ? ', other than measures tables' : '') + '.';
+  return res;
+}
+
+function stripMComments(code){
+  const tk = mTokenize(code);
+  return tk.error ? code : tk.toks.filter(t => t.t !== 'comment').map(t => t.v).join('');
+}
+// Does the code (tokens from k, comments and spaces skipped) start with a function: (params) [as type] => or each
+function startsFunction(toks, k){
+  const sig = toks.filter((t, i) => i >= k && t.t !== 'ws' && t.t !== 'comment');
+  if (!sig.length) return false;
+  if (sig[0].t === 'id' && sig[0].v === 'each') return true;
+  if (sig[0].v !== '(') return false;
+  let d = 0, j = 0;
+  for (; j < sig.length; j++) { if (sig[j].v === '(') d++; else if (sig[j].v === ')' && --d === 0) break; }
+  j++;
+  if (sig[j] && sig[j].v === 'as') { j++; if (sig[j] && sig[j].v === 'nullable') j++; j++; }
+  return !!(sig[j] && sig[j].v === '=>');
+}
+// How a query was recognised as a function: 'model' (Power BI's own record), 'code', 'name' or ''
+function functionReason(code, name, resultType){
+  if (/\bfunction\b/i.test(resultType || '')) return 'model';
+  const tk = mTokenize(code);
+  if (!tk.error) {
+    if (startsFunction(tk.toks, 0)) return 'code';
+    const q = parseM(code);
+    if (!q.error && q.resultRefs.length === 1) {
+      const s = q.steps.find(x => x.name === q.resultRefs[0]);
+      const st = s && mTokenize(s.expr);
+      if (st && !st.error && startsFunction(st.toks, 0)) return 'code';
+    }
+  }
+  if (/^f[nx]([A-Z0-9_ .-]|$)/.test(name || '')) return 'name';
+  return '';
+}
+function queryType(code, loaded, name, resultType){
+  if (loaded) return 'table';
+  const s = stripMComments(code).trim();
+  if (/\bIsParameterQuery\s*=\s*true/i.test(s)) return 'parameter';
+  if (functionReason(code, name, resultType)) return 'function';
+  return 'query';
+}
+const TYPE_LABEL = { table: 'Loaded table', query: 'Not loaded', function: 'Function', parameter: 'Parameter' };
+
+// Literal values a query's source step depends on (paths, URLs, servers)
+function sourceLiterals(q){
+  const out = [];
+  q.steps.forEach(s => {
+    if (DB_SOURCES.test(s.fn)) { const p = s.strings.slice(0, 2); if (p.length) out.push({ v: p.join(' / '), parts: p, db: true }); }
+    else if (FILE_FNS.test(s.fn) || /File\.Contents|Web\.Contents|Folder\.Files/.test(s.expr))
+      s.strings.filter(v => /^[A-Za-z]:\\|^\\\\|^https?:\/\/|\.(xlsx|xlsm|xls|csv|txt|json|parquet)$/i.test(v)).forEach(v => out.push({ v, parts: [v], db: false }));
+  });
+  return out;
+}
+
+function analyzeModel(list){
+  const names = new Map(list.map(x => [x.name, x]));
+  const items = list.map(x => {
+    const type = queryType(x.code, x.loaded, x.name, x.resultType);
+    const it = { name: x.name, code: x.code, loaded: x.loaded, table: x.table || '', partition: x.partition || '', props: x.props || '', tmdl: !!x.tmdl, type, fnWhy: type === 'function' ? functionReason(x.code, x.name, x.resultType) : '', q: null, error: null, checks: [], deps: [], usedBy: [], literals: [], paramValue: '' };
+    if (type === 'parameter') {
+      const tk = mTokenize(x.code); const s = !tk.error && tk.toks.find(t => t.t === 'str');
+      it.paramValue = s ? s.v.slice(1, -1).replace(/""/g, '"') : '';
+    } else {
+      const q = parseM(x.code);
+      if (q.error && !q.noLet) it.error = q.error;
+      else if (!q.error) { it.q = q; it.checks = healthChecks(q); it.literals = sourceLiterals(q); }
+    }
+    // references to other queries
+    const tk = mTokenize(x.code);
+    if (!tk.error) {
+      const own = new Set(it.q ? it.q.steps.map(s => s.name) : []);
+      const toks = tk.toks;
+      toks.forEach((t, k) => {
+        let nm = null;
+        if (t.t === 'qid') nm = qidName(t.v);
+        else if (t.t === 'id') {
+          let p = k - 1; while (p >= 0 && toks[p].t === 'ws') p--;
+          let n = k + 1; while (n < toks.length && toks[n].t === 'ws') n++;
+          if (toks[p] && toks[p].v === '[' && toks[n] && toks[n].v === ']') return;
+          nm = t.v;
+        }
+        if (nm && nm !== x.name && names.has(nm) && !own.has(nm) && !it.deps.includes(nm)) it.deps.push(nm);
+      });
+    }
+    return it;
+  });
+  const byName = new Map(items.map(i => [i.name, i]));
+  items.forEach(i => i.deps.forEach(d => byName.get(d).usedBy.push(i.name)));
+
+  // model-wide findings
+  const findings = [];
+  const add = (level, title, detail, queries) => findings.push({ level, title, detail, queries: queries || [] });
+  items.filter(i => i.error).forEach(i => add('err', 'Couldn’t read “' + i.name + '”', i.error + ' If the code looks cut off, open this query in the Advanced Editor and use One query mode.', [i.name]));
+  const lits = new Map();
+  items.forEach(i => i.literals.forEach(l => { const k = l.v; if (!lits.has(k)) lits.set(k, { v: k, parts: l.parts, db: l.db, qs: [] }); if (!lits.get(k).qs.includes(i.name)) lits.get(k).qs.push(i.name); }));
+  const params = items.filter(i => i.type === 'parameter');
+  [...lits.values()].filter(l => l.qs.length > 1).forEach(l => {
+    const p = params.find(x => l.parts.includes(x.paramValue));
+    add('warn', (l.db ? 'Same server or database' : 'Same file path or URL') + ' in ' + l.qs.length + ' queries',
+      l.parts.map(x => '“' + x + '”').join(' / ') + ' is typed into each of them: ' + l.qs.join(', ') + '. ' + (p ? 'The parameter “' + p.name + '” already holds ' + (l.db ? 'part of this' : 'this value') + '; use it in these queries.' : 'Parameters would let you repoint them all in one place.'), l.qs);
+  });
+  items.filter(i => i.type === 'query' && !i.usedBy.length && !i.error).forEach(i => add('info', '“' + i.name + '” isn’t loaded or used', 'Nothing loads it and no other query refers to it, so it only adds clutter. Check it isn’t needed, then delete it.', [i.name]));
+  items.filter(i => i.type === 'function' && !i.usedBy.length).forEach(i => add('info', 'Function “' + i.name + '” isn’t used', 'No query calls it.', [i.name]));
+  items.filter(i => i.type === 'parameter' && !i.usedBy.length).forEach(i => add('info', 'Parameter “' + i.name + '” isn’t used', 'No query refers to it.', [i.name]));
+  const order = { table: 0, query: 1, function: 2, parameter: 3 };
+  items.sort((a, b) => order[a.type] - order[b.type] || a.name.localeCompare(b.name));
+  return { items, findings };
+}
+
+/* ---------- whole model: batched explain prompt ---------- */
+// batch: [{ name, type, code, q, steps: [names to comment], summary: bool }]
+function modelExplainPrompt(batch, o){
+  const opts = Object.assign({ audience: 'mixed' }, o || {});
+  const L = [];
+  L.push('You are explaining Power Query (M) queries from one Power BI model. For each query below, write a short comment for each listed step' + (batch.some(b => b.summary) ? ', and a summary where asked' : '') + '.');
+  L.push('');
+  L.push('## TASK');
+  L.push('Comment the listed steps of each query under STARTING POINT' + (batch.some(b => b.summary) ? ', and write a summary where asked' : '') + '.');
+  L.push('');
+  L.push('## RULES: how to write the comments');
+  if (opts.audience === 'business') L.push('- Audience: report authors who don’t read M. Say what the step does to the data in plain words, not how the function works.');
+  else L.push('- Audience: people who maintain the queries. Say what the step does and, where it isn’t obvious, why it matters.');
+  L.push('- One sentence per step, at most 120 characters. Start with a verb: "Keeps rows where...", "Renames...".');
+  L.push('- Be specific: name the columns, values and conditions from the code. When a step uses another query, name it.');
+  L.push('- If a step looks wrong, unnecessary or risky, add a NOTE line saying why, briefly. Otherwise leave NOTE out.');
+  L.push('- SUMMARY: 2 to 4 sentences: where the data comes from, the main changes, and what one row of the result is.');
+  L.push('');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
+  L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block. Every block starts with the QUERY line, using the query name exactly as given. Use each step name exactly as listed:');
+  L.push('');
+  L.push('@@@ SUMMARY @@@');
+  L.push('QUERY: Query name');
+  L.push('TEXT: Two to four sentences.');
+  L.push('@@@ END @@@');
+  L.push('@@@ STEP @@@');
+  L.push('QUERY: Query name');
+  L.push('NAME: Step name');
+  L.push('COMMENT: One sentence.');
+  L.push('NOTE: Only if the step looks wrong or risky.');
+  L.push('@@@ END @@@');
+  batch.forEach((b, i) => {
+    L.push('');
+    L.push('## STARTING POINT: query ' + (i + 1) + ': ' + b.name + ' (' + (TYPE_LABEL[b.type] || 'query').toLowerCase() + ')');
+    L.push(b.summary ? 'Write a SUMMARY for this query.' : 'No summary needed.');
+    L.push('Steps to comment:');
+    b.steps.forEach((n, k) => { const s = b.q.steps.find(x => x.name === n); L.push((k + 1) + '. ' + n + (s && s.fn ? ' (' + s.fn + ')' : '')); });
+    L.push('Code:');
+    L.push(b.code.trim());
+  });
+  L.push('');
+  L.push('=== END OF PROMPT ===');
+  return L.join('\n');
+}
+function parseModelExplain(text){
+  const t = cleanReply(text).replace(/[‘’]/g, "'");
+  const res = { summaries: [], steps: [], error: null };
+  if (!t.trim()) return res;
+  const bs = answerBlocks(t);
+  const L = ['QUERY', 'NAME', 'COMMENT', 'NOTE', 'TEXT'];
+  const qn = b => field(b.body, 'QUERY', L).replace(/^#"(.*)"$/s, '$1').replace(/^"(.*)"$/s, '$1').replace(/""/g, '"').trim();
+  bs.forEach(b => {
+    if (b.kind === 'STEP') {
+      const name = field(b.body, 'NAME', L).replace(/^#"(.*)"$/s, '$1').replace(/^"(.*)"$/s, '$1').replace(/""/g, '"').trim();
+      if (name) res.steps.push({ query: qn(b), name, comment: oneLine(field(b.body, 'COMMENT', L)), note: oneLine(field(b.body, 'NOTE', L)) });
+    } else if (b.kind === 'SUMMARY') {
+      const text = oneLine(field(b.body, 'TEXT', L) || b.body.replace(/(^|\n)[ \t]*QUERY[ \t]*:.*/i, '').replace(/^[ \t]*```[\w-]*[ \t]*$/gm, ''));
+      if (text) res.summaries.push({ query: qn(b), text });
+    }
+  });
+  if (!res.steps.length && !res.summaries.length) res.error = 'No @@@ STEP @@@ blocks were found. Make sure Copilot answered inside one code block, and paste its whole answer.';
+  return res;
+}
+
+/* ---------- whole model: read every query from a PBIP folder ---------- */
+// files: Map of 'folder/sub/file' -> text. Only .tmdl files and model.bim are used.
+// Returns [{ key, name, format, queries: [{ name, loaded, code, resultType }] }], one per semantic model in the folder.
+function pbipUnquote(v){
+  v = (v || '').trim();
+  return v.length > 1 && v[0] === "'" && v[v.length - 1] === "'" ? v.slice(1, -1).replace(/''/g, "'") : v;
+}
+function pbipTabs(line){ const m = /^\t*/.exec(line); return m[0].length; }
+// strip the common leading tabs (TMDL indents expressions with tabs; the M code keeps its own spaces)
+function pbipDedent(lines){
+  const used = lines.filter(l => l.trim());
+  const n = used.length ? Math.min(...used.map(pbipTabs)) : 0;
+  return lines.map(l => l.slice(Math.min(n, pbipTabs(l)))).join('\n').replace(/^\n+|\s+$/g, '');
+}
+// An expression that starts after "=" on line i: on the same line, in ``` fences, or on the following lines
+// indented at least minTabs. Returns { code, next } where next is the first line after it.
+function pbipExpr(lines, i, rest, minTabs){
+  rest = (rest || '').trim();
+  if (rest.startsWith('```')) {
+    const first = rest.slice(3);
+    if (first.trim().endsWith('```')) return { code: first.trim().slice(0, -3).trim(), next: i + 1 };
+    const out = first.trim() ? [first] : [];
+    let j = i + 1;
+    for (; j < lines.length; j++) { if (lines[j].trim().endsWith('```')) { out.push(lines[j].replace(/\s*```\s*$/, '')); j++; break; } out.push(lines[j]); }
+    return { code: pbipDedent(out), next: j };
+  }
+  const out = [];
+  let j = i + 1;
+  for (; j < lines.length; j++) { if (lines[j].trim() && pbipTabs(lines[j]) < minTabs) break; out.push(lines[j]); }
+  const body = pbipDedent(out);
+  return { code: rest ? (body ? rest + '\n' + body : rest) : body, next: j };
+}
+// A script copied from TMDL view starts with a command (createOrReplace...) and indents everything one more level
+function pbipUnscript(text){
+  const lines = text.replace(/\r/g, '').split('\n');
+  if (!lines.some(l => /^(createOrReplace|create|alter)\s*$/.test(l))) return lines;
+  return lines.filter(l => !/^(createOrReplace|create|alter|delete)\b/.test(l)).map(l => l.replace(/^\t/, ''));
+}
+function looksTmdl(text){ return /^(createOrReplace|create|alter)\s*$|^(ref\s+)?table\s+\S|^expression\s+\S.*=/m.test(text || '') && !/^[^\n]*\bkind\b[^\n]*\t[^\n]*\bname\b/i.test(text || ''); }
+const SOURCE_MARK = '\u00A7source';
+function pbipTmdlQueries(text){
+  const lines = pbipUnscript(text);
+  const tables = [], exprs = [];
+  let table = null, part = null, col = null, desc = [];
+  // keep a partition's or expression's other lines as they are, so a script can put it back unchanged
+  const strip = (l, n) => l.slice(Math.min(n, pbipTabs(l)));
+  for (let i = 0; i < lines.length; ) {
+    const line = lines[i], d = pbipTabs(line), t = line.trim();
+    let m;
+    if (t.startsWith('///')) { desc.push(strip(line, d)); i++; continue; }
+    const before = desc; desc = [];
+    if (d === 0 && (m = /^(?:ref\s+)?table\s+(.+?)\s*$/.exec(t))) { table = { name: pbipUnquote(m[1]), parts: [], policy: '', measures: 0, columns: [] }; tables.push(table); part = null; col = null; i++; continue; }
+    if (d === 0 && (m = /^expression\s+(.+?)\s*=(.*)$/.exec(t))) {
+      table = null; part = null;
+      const e = pbipExpr(lines, i, m[2], 2);
+      const x = { name: pbipUnquote(m[1]), code: e.code, resultType: '', kind: 'm', desc: before, props: [] };
+      // the expression's own properties, one level in
+      let j = e.next;
+      for (; j < lines.length; j++) {
+        const l = lines[j]; if (l.trim() && pbipTabs(l) === 0) break;
+        x.props.push(strip(l, 1));
+        const a = /^\tannotation\s+PBI_ResultType\s*=\s*(.+?)\s*$/.exec(l); if (a) x.resultType = a[1];
+        const k = /^\tkind\s*:\s*(\S+)/.exec(l); if (k) x.kind = k[1].toLowerCase();
+      }
+      if (x.kind === 'm') exprs.push(x);
+      i = j; continue;
+    }
+    if (d === 0 && t) { table = null; part = null; i++; continue; }
+    if (table && d === 1 && (m = /^partition\s+(.+?)\s*=\s*(\S+)\s*$/.exec(t))) {
+      part = { name: pbipUnquote(m[1]), type: m[2].toLowerCase(), depth: d, desc: before, props: [], code: '' };
+      if (part.type === 'm') table.parts.push(part);
+      i++; continue;
+    }
+    if (table && d === 1 && t) {
+      part = null; col = null;
+      if (/^measure\s/.test(t)) table.measures++;
+      if (/^column\s/.test(t)) { col = { hidden: false }; table.columns.push(col); }
+    }
+    if (table && col && d === 2 && /^isHidden(\s*:\s*true)?\s*$/.test(t)) col.hidden = true;
+    if (table && part && part.type === 'm' && d > part.depth && (m = /^source\s*=(.*)$/.exec(t))) {
+      const e = pbipExpr(lines, i, m[1], d + 1);
+      part.code = e.code; part.props.push(SOURCE_MARK);
+      i = e.next; continue;
+    }
+    if (table && part && d > part.depth && t) { part.props.push(strip(line, part.depth + 1)); i++; continue; }
+    // incremental refresh: the query lives in the refresh policy, the partitions are made from it
+    if (table && d >= 2 && (m = /^sourceExpression\s*=(.*)$/.exec(t))) { const e = pbipExpr(lines, i, m[1], d + 1); table.policy = e.code; i = e.next; continue; }
+    i++;
+  }
+  tables.forEach(t => { t.parts = t.parts.filter(p => p.code.trim()); t.parts.forEach(p => { while (p.props.length && !p.props[p.props.length - 1].trim()) p.props.pop(); }); });
+  exprs.forEach(x => { while (x.props.length && !x.props[x.props.length - 1].trim()) x.props.pop(); });
+  return { tables, exprs };
+}
+function pbipJoin(v){ return Array.isArray(v) ? v.join('\n') : (v || ''); }
+function pbipBimQueries(text){
+  const j = JSON.parse(text.replace(/^﻿/, ''));
+  const model = j.model || j;
+  const tables = (model.tables || []).map(t => ({
+    name: t.name || '',
+    parts: (t.partitions || []).filter(p => p.source && /^m$/i.test(p.source.type || '')).map(p => ({ name: p.name || '', code: pbipJoin(p.source.expression).trim() })).filter(p => p.code),
+    policy: t.refreshPolicy ? pbipJoin(t.refreshPolicy.sourceExpression).trim() : '',
+    measures: (t.measures || []).length, columns: (t.columns || []).filter(c => c.type !== 'rowNumber').map(c => ({ hidden: !!c.isHidden }))
+  }));
+  const exprs = (model.expressions || []).filter(e => !e.kind || /^m$/i.test(e.kind)).map(e => ({
+    name: e.name || '', code: pbipJoin(e.expression).trim(),
+    resultType: ((e.annotations || []).find(a => a.name === 'PBI_ResultType') || {}).value || ''
+  }));
+  return { tables, exprs };
+}
+// A dedicated measures table: it holds measures, its query reads no data source (Enter data or #table), and it has
+// at most one column or only hidden ones (the placeholder Enter data leaves behind). There is nothing to explain.
+function readsNoSource(code){
+  // Enter data keeps its rows in the code itself: Json.Document(Binary.Decompress(Binary.FromText("...")))
+  const c = (code || '').replace(/Json\.Document\s*\(\s*Binary\.Decompress/g, '');
+  return !CONNECTOR_RE.test(c) && !/\b(File|Folder|Web|SharePoint|Sql|Odbc|OData)\.\w+\s*\(/.test(c);
+}
+function isMeasuresTable(t){
+  const code = t.parts.map(p => p.code).join('\n') + (t.policy || '');
+  return t.measures > 0 && readsNoSource(code) && (t.columns.length <= 1 || t.columns.every(c => c.hidden));
+}
+// From code alone (the DAX export): named as a measures table, and reads no data source
+function looksMeasuresTable(name, code){ return /measure/i.test(name || '') && readsNoSource(code); }
+// tmdl: read from TMDL, with each partition's and expression's other lines kept, so a TMDL script can put it back
+function pbipQueryList(tables, exprs, tmdl){
+  const out = [];
+  tables.forEach(t => {
+    const parts = t.parts.length ? t.parts : t.policy ? [{ name: t.name, code: t.policy }] : [];
+    const seen = new Set();
+    const mt = isMeasuresTable(t);
+    parts.forEach((p, k) => {
+      if (seen.has(p.code)) return; seen.add(p.code);
+      out.push({ name: k === 0 ? t.name : t.name + ' (' + p.name + ')', loaded: true, code: p.code, resultType: 'Table',
+        table: t.parts.length ? t.name : '', partition: t.parts.length ? p.name : '', props: p.props ? (p.desc || []).map(l => '@' + l).concat(p.props).join('\n') : '', tmdl: !!tmdl && !!t.parts.length, measuresTable: mt });
+    });
+  });
+  exprs.filter(e => e.name && e.code.trim()).forEach(e => out.push({ name: e.name, loaded: false, code: e.code, resultType: e.resultType,
+    props: e.props ? (e.desc || []).map(l => '@' + l).concat(e.props).join('\n') : '', tmdl: !!tmdl }));
+  return out;
+}
+function readPbip(files){
+  const groups = new Map();
+  const keyOf = p => { const m = /^(.*?)\/definition\/.+\.tmdl$/i.exec(p) || /^(.*?)\/model\.bim$/i.exec(p); return m ? m[1] : null; };
+  for (const [path, text] of files) {
+    const p = path.replace(/\\/g, '/');
+    let k = keyOf(p);
+    if (k === null && /^definition\/.+\.tmdl$/i.test(p)) k = '';
+    if (k === null && /^model\.bim$/i.test(p)) k = '';
+    if (k === null) continue;
+    if (!groups.has(k)) groups.set(k, { tmdl: [], bim: null });
+    if (/\.tmdl$/i.test(p)) groups.get(k).tmdl.push([p, text]); else groups.get(k).bim = text;
+  }
+  const out = [];
+  for (const [key, g] of groups) {
+    const name = (key.split('/').pop() || 'Semantic model').replace(/\.(SemanticModel|Dataset)$/i, '');
+    let res = null, format = '', error = '';
+    if (g.tmdl.length) {
+      const tables = [], exprs = [];
+      g.tmdl.sort((a, b) => a[0].localeCompare(b[0])).forEach(([, text]) => { const r = pbipTmdlQueries(text); tables.push(...r.tables); exprs.push(...r.exprs); });
+      res = { tables, exprs, tmdl: true }; format = 'TMDL';
+    } else if (g.bim) {
+      try { res = pbipBimQueries(g.bim); format = 'model.bim'; } catch (e) { error = 'model.bim couldn’t be read: ' + (e.message || e); }
+    }
+    out.push({ key, name, format, error, queries: res ? pbipQueryList(res.tables, res.exprs, res.tmdl) : [] });
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+const TAB_MARK = '\u21E5';
+// the same text the DAX export gives, so a folder and a pasted export go through one path
+function queriesToExport(list){
+  const cell = s => '"' + String(s).replace(/"/g, '""') + '"';
+  const code = c => c.replace(/\r/g, '').replace(/\t/g, '    ').split('\n').join(NL_MARK);
+  return 'Kind\tName\tResultType\tFrom\tTable\tPartition\tProps\tCode\n' + list.map(q => [q.measuresTable ? 'MeasuresTable' : q.loaded ? 'Table' : 'Query', cell(q.name), cell(q.resultType || ''), q.tmdl ? 'TMDL' : '', cell(q.table || ''), cell(q.partition || ''), cell((q.props || '').replace(/\t/g, TAB_MARK).split('\n').join(NL_MARK)), cell(code(q.code))].join('\t')).join('\n');
+}
+
+/* ---------- TMDL script: put commented queries back in one go, in TMDL view ---------- */
+function tmdlName(n){ return /^[A-Za-z_][A-Za-z0-9_]*$/.test(n) ? n : "'" + n.replace(/'/g, "''") + "'"; }
+// list: [{ item, code }] for items read from TMDL (item.tmdl). Each partition or expression is replaced as a whole,
+// with its other lines (mode, lineageTag, queryGroup, annotations) copied back as they were read.
+function tmdlScript(list){
+  const ind = (n, l) => l.trim() ? '\t'.repeat(n) + l : '';
+  const code = (c, n) => c.replace(/\r/g, '').replace(/\s+$/, '').split('\n').map(l => ind(n, l));
+  const split = p => { const ls = (p || '').split('\n'); return { desc: ls.filter(l => l.startsWith('@')).map(l => l.slice(1)), props: ls.filter(l => !l.startsWith('@')) }; };
+  const L = ['createOrReplace', ''];
+  const byTable = new Map();
+  list.filter(x => x.item.tmdl && x.item.partition).forEach(x => { if (!byTable.has(x.item.table)) byTable.set(x.item.table, []); byTable.get(x.item.table).push(x); });
+  for (const [table, parts] of byTable) {
+    L.push(ind(1, 'ref table ' + tmdlName(table)), '');
+    parts.forEach(x => {
+      const p = split(x.item.props), props = p.props.includes(SOURCE_MARK) ? p.props : p.props.concat([SOURCE_MARK]);
+      p.desc.forEach(l => L.push(ind(2, l)));
+      L.push(ind(2, 'partition ' + tmdlName(x.item.partition) + ' = m'));
+      // the other lines in the order they were read, with the commented code where the source was
+      props.forEach(l => { if (l === SOURCE_MARK) L.push(ind(3, 'source ='), ...code(x.code, 5), ''); else L.push(ind(3, l)); });
+      L.push('');
+    });
+  }
+  list.filter(x => x.item.tmdl && !x.item.loaded).forEach(x => {
+    const p = split(x.item.props);
+    p.desc.forEach(l => L.push(ind(1, l)));
+    L.push(ind(1, 'expression ' + tmdlName(x.item.name) + ' ='), ...code(x.code, 3));
+    p.props.forEach(l => L.push(ind(2, l)));
+    L.push('');
+  });
+  return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+}
+
+/* ---------- whole model: business-friendly explanation ---------- */
+const CONNECTOR_NAMES = {
+  'Sql.Database': 'SQL Server database', 'Sql.Databases': 'SQL Server', 'Oracle.Database': 'Oracle database', 'PostgreSQL.Database': 'PostgreSQL database',
+  'MySQL.Database': 'MySQL database', 'Snowflake.Databases': 'Snowflake', 'GoogleBigQuery.Database': 'Google BigQuery', 'AmazonRedshift.Database': 'Amazon Redshift',
+  'Teradata.Database': 'Teradata database', 'Databricks.Catalogs': 'Databricks', 'Odbc.Query': 'ODBC data source', 'Odbc.DataSource': 'ODBC data source',
+  'OleDb.DataSource': 'OLE DB data source', 'AzureDataExplorer.Contents': 'Azure Data Explorer', 'AnalysisServices.Database': 'Analysis Services model',
+  'Access.Database': 'Access database', 'Excel.Workbook': 'Excel workbook', 'Csv.Document': 'CSV file', 'Json.Document': 'JSON file', 'Xml.Tables': 'XML file',
+  'Pdf.Tables': 'PDF file', 'Folder.Files': 'Folder of files', 'Folder.Contents': 'Folder of files', 'SharePoint.Files': 'SharePoint site',
+  'SharePoint.Contents': 'SharePoint site', 'SharePoint.Tables': 'SharePoint list', 'Web.Contents': 'Web address', 'Web.Page': 'Web page', 'OData.Feed': 'OData feed',
+  'Lakehouse.Contents': 'Fabric lakehouse', 'PowerPlatform.Dataflows': 'Dataflow', 'PowerBI.Dataflows': 'Dataflow', 'Salesforce.Data': 'Salesforce',
+  'Salesforce.Reports': 'Salesforce reports', 'Dataverse.Contents': 'Dataverse', 'CommonDataService.Database': 'Dataverse'
+};
+const CONNECTOR_RE = new RegExp('\\b(' + Object.keys(CONNECTOR_NAMES).map(k => k.replace('.', '\\.')).join('|') + ')\\s*\\(');
+function placeKind(v){
+  if (/^[A-Za-z]:\\Users\\[^\\]+\\/i.test(v)) return { where: 'a personal folder on one computer', personal: true };
+  if (/^[A-Za-z]:\\/.test(v)) return { where: 'a drive on one computer', personal: true };
+  if (/^\\\\/.test(v)) return { where: 'a shared network folder', personal: false };
+  if (/sharepoint\.com/i.test(v)) return { where: 'SharePoint', personal: false };
+  if (/^https?:\/\//i.test(v)) return { where: 'a web address', personal: false };
+  return { where: '', personal: false };
+}
+const fileName = v => v.replace(/[\\\/]+$/, '').split(/[\\\/]/).pop();
+const quoteName = s => '“' + s + '”';
+// the value a parameter holds, readable: #date(2024, 2, 1) -> 2024-02-01
+function paramDisplay(it){
+  const s = stripMComments(it.code).replace(/\s+meta\s*\[[\s\S]*$/, '').trim();
+  if (/^"([^"]|"")*"$/.test(s)) return s.slice(1, -1).replace(/""/g, '"');
+  const d = /^#date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/.exec(s);
+  if (d) return d[1] + '-' + d[2].padStart(2, '0') + '-' + d[3].padStart(2, '0');
+  return s;
+}
+// Where one query reads its own data: [{ label, where, personal }]
+function querySources(it, byName){
+  const out = [];
+  if (!it.q) return out;
+  const params = [...byName.values()].filter(x => x.type === 'parameter');
+  it.q.steps.forEach(s => {
+    const m = CONNECTOR_NAMES[s.fn] ? [null, s.fn] : CONNECTOR_RE.exec(s.expr);
+    if (!m) return;
+    const fn = m[1], kind = CONNECTOR_NAMES[fn];
+    // values typed in the step, or held by a parameter the step uses, in the order they appear
+    const pv = new Map(params.map(p => [p.name, p])), tk = mTokenize(s.expr), vals = [];
+    if (!tk.error) tk.toks.forEach(t => {
+      if (t.t === 'str') vals.push(t.v.slice(1, -1).replace(/""/g, '"'));
+      else if ((t.t === 'id' || t.t === 'qid') && pv.has(t.t === 'qid' ? qidName(t.v) : t.v)) vals.push(paramDisplay(pv.get(t.t === 'qid' ? qidName(t.v) : t.v)));
+    });
+    if (DB_SOURCES.test(fn) || /^(AnalysisServices|Lakehouse|Dataverse|CommonDataService)/.test(fn)) {
+      const db = vals[1], srv = vals[0];
+      out.push({ label: kind + (db ? ' ' + quoteName(db) : ''), where: srv ? 'server ' + srv : '', personal: false });
+    } else {
+      const path = vals.find(v => /^[A-Za-z]:\\|^\\\\|^https?:\/\//i.test(v)) || vals.find(v => /\.\w{2,5}$/.test(v)) || '';
+      const pk = placeKind(path);
+      const nm = path ? fileName(path) : '';
+      out.push({ label: kind + (nm && !/^https?:/i.test(path) ? ' ' + quoteName(nm) : ''), where: pk.where || (/^https?:/i.test(path) ? path : ''), personal: pk.personal });
+    }
+  });
+  const seen = new Set();
+  return out.filter(x => { const k = x.label + '|' + x.where; if (seen.has(k)) return false; seen.add(k); return true; });
+}
+// Every source behind a table, following the queries it uses: [{ label, where, personal, via }]
+function tableSources(it, byName){
+  const out = [], done = new Set();
+  const walk = (x, via) => {
+    if (done.has(x.name)) return; done.add(x.name);
+    querySources(x, byName).forEach(s => out.push(Object.assign({ via }, s)));
+    x.deps.forEach(d => { const y = byName.get(d); if (y && y.type !== 'function' && y.type !== 'parameter') walk(y, y.type === 'table' ? d : (via || d)); });
+  };
+  walk(it, '');
+  const seen = new Set();
+  return out.filter(x => { const k = x.label + '|' + x.where; if (seen.has(k)) return false; seen.add(k); return true; });
+}
+// A plain phrase for a step, used when Copilot hasn't written one. '' = leave it out (technical only).
+function plainStep(s, deps){
+  const cols = [...s.expr.matchAll(/\[([^\]]+)\]/g)].map(m => m[1].replace(/^#"(.*)"$/, '$1')).filter((v, i, a) => a.indexOf(v) === i && !/=/.test(v));
+  const list = a => a.slice(0, 5).join(', ') + (a.length > 5 ? ' and ' + (a.length - 5) + ' more' : '');
+  const str = s.strings;
+  switch (s.fn) {
+    case 'Table.SelectRows': return 'Keeps only some rows' + (cols.length ? ', based on ' + list(cols) : '') + '.';
+    case 'Table.RemoveColumns': return 'Leaves out ' + (str.length ? 'these columns: ' + list(str) : 'some columns') + '.';
+    case 'Table.SelectColumns': return 'Keeps only ' + (str.length ? 'these columns: ' + list(str) : 'some columns') + '.';
+    case 'Table.RenameColumns': { const p = []; for (let i = 0; i + 1 < str.length; i += 2) p.push(str[i] + ' to ' + str[i + 1]); return 'Renames ' + (p.length ? list(p) : 'columns') + '.'; }
+    case 'Table.AddColumn': return 'Adds a column' + (str[0] ? ' ' + quoteName(str[0]) : '') + (cols.length ? ', worked out from ' + list(cols) : '') + '.';
+    case 'Table.NestedJoin': case 'Table.Join': case 'Table.FuzzyNestedJoin': { const d = (deps || []).find(n => s.expr.includes(n)); return 'Looks up matching details from ' + (d ? quoteName(d) : 'another table') + '.'; }
+    case 'Table.ExpandTableColumn': case 'Table.ExpandRecordColumn': return 'Brings in ' + (str.length > 1 ? list(str.slice(1).filter((v, i, a) => a.indexOf(v) === i)) : 'columns') + ' from the looked-up data.';
+    case 'Table.Combine': return 'Stacks rows from several sources into one table.';
+    case 'Table.Group': return 'Groups rows and works out totals' + (str.length ? ' by ' + list(str.slice(0, 2)) : '') + '.';
+    case 'Table.Distinct': return 'Removes duplicate rows.';
+    case 'Table.ReplaceValue': return 'Replaces some values' + (str.length ? ' in ' + list(str.filter(v => v).slice(-1)) : '') + '.';
+    case 'Table.FillDown': return 'Fills blank cells with the value above.';
+    case 'Table.FillUp': return 'Fills blank cells with the value below.';
+    case 'Table.UnpivotOtherColumns': case 'Table.Unpivot': return 'Turns columns into rows, so each value gets its own row.';
+    case 'Table.Pivot': return 'Turns rows into columns.';
+    case 'Table.Skip': case 'Table.RemoveFirstN': return 'Leaves out the first rows.';
+    case 'Table.FirstN': return 'Keeps only the first rows.';
+    case 'Table.RemoveLastN': return 'Leaves out the last rows.';
+    case 'Table.RemoveRowsWithErrors': return 'Leaves out rows with errors.';
+    case 'Table.ReplaceErrorValues': return 'Replaces errors with a fixed value.';
+    case 'Table.TransformColumns': return 'Tidies the values in ' + (str.length ? list(str) : 'some columns') + '.';
+    case 'Table.SplitColumn': return 'Splits ' + (str[0] ? quoteName(str[0]) : 'a column') + ' into several columns.';
+    case 'Table.CombineColumns': return 'Joins several columns into one.';
+    case 'Table.AddIndexColumn': return 'Numbers the rows.';
+    case 'Table.AddFuzzyClusterColumn': return 'Groups similar values together.';
+    default: return '';
+  }
+}
+
+function businessPrompt(batch, o){
+  const opts = Object.assign({ title: '' }, o || {});
+  const L = [];
+  L.push('You are writing a plain-language guide to how a Power BI model prepares its data, for business readers who use the reports but don’t work in Power BI.');
+  L.push('');
+  L.push('## TASK');
+  L.push('For each table under STARTING POINT, explain in plain words what data it holds, where it comes from, and what is done to it before it reaches the reports.');
+  L.push('');
+  L.push('## CONTEXT');
+  if (opts.title) L.push('- Model or report: ' + opts.title);
+  L.push('- The readers know the business, not the tools. They want to know what the numbers include, what they leave out, and where they come from.');
+  L.push('- Each table’s Power Query code is under STARTING POINT, with the sources read from the code and the other queries and settings it uses.');
+  L.push('');
+  L.push('## RULES');
+  L.push('- Write for someone who has never opened Power BI Desktop. No code, function names or step names, and no terms like query, M, merge, join, data type, null or schema. Say “blank” for null, and “looked up from” or “combined with” for merges.');
+  L.push('- Name the real columns, values and conditions from the code where they change what the numbers include: which rows are left out, how a value is worked out, what is combined.');
+  L.push('- Leave out purely technical steps: setting types, using the first row as headers, reordering and sorting. Mention a rename only if readers would look for the old name.');
+  L.push('- Don’t invent business reasons the code doesn’t show. If the reason for a rule isn’t clear, say what it does and add a CHECK line asking the data owner to confirm it.');
+  L.push('- For files, give the file name and the kind of place (a personal folder, a shared folder, SharePoint), not the full path.');
+  L.push('- Short sentences. PURPOSE: one or two sentences. ROW: one sentence. STEPS: two to six lines, one change each.');
+  L.push('');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
+  L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block. One TABLE block per table, using each table name exactly as given:');
+  L.push('');
+  L.push('@@@ TABLE @@@');
+  L.push('TABLE: Table name');
+  L.push('PURPOSE: What this table is for in the reports.');
+  L.push('SOURCE: Where the data comes from, in plain words.');
+  L.push('ROW: What one row stands for.');
+  L.push('STEPS:');
+  L.push('- One line for each change that matters to the numbers.');
+  L.push('CHECK: Only if readers or the data owner should know or confirm something.');
+  L.push('@@@ END @@@');
+  batch.forEach((b, i) => {
+    L.push('');
+    L.push('## STARTING POINT: table ' + (i + 1) + ': ' + b.name);
+    if (b.sources.length) L.push('Data read from: ' + b.sources.join('; '));
+    if (b.uses.length) L.push('Uses: ' + b.uses.join('; '));
+    L.push('Code:');
+    L.push(b.code.trim());
+  });
+  L.push('');
+  L.push('=== END OF PROMPT ===');
+  return L.join('\n');
+}
+function parseBusiness(text){
+  const t = cleanReply(text).replace(/[‘’]/g, "'");
+  const res = { tables: [], error: null };
+  if (!t.trim()) return res;
+  const L = ['TABLE', 'PURPOSE', 'SOURCE', 'ROW', 'STEPS', 'CHECK'];
+  // skip the reply template, in case Copilot repeats it
+  answerBlocks(t).filter(b => b.kind === 'TABLE' && !b.body.includes('TABLE: Table name')).forEach(b => {
+    const table = field(b.body, 'TABLE', L).replace(/^'(.*)'$/s, '$1').replace(/^"(.*)"$/s, '$1').trim();
+    const steps = field(b.body, 'STEPS', L).split('\n').map(l => oneLine(l.replace(/^\s*(?:[-*•–]|\d+[.)])\s*/, ''))).filter(Boolean);
+    const r = { table, purpose: oneLine(field(b.body, 'PURPOSE', L)), source: oneLine(field(b.body, 'SOURCE', L)), row: oneLine(field(b.body, 'ROW', L)), steps, check: oneLine(field(b.body, 'CHECK', L)) };
+    if (/^only if\b/i.test(r.check) || /^(none|n\/a|-)\.?$/i.test(r.check)) r.check = '';
+    if (r.purpose || r.source || r.steps.length) res.tables.push(r);
+  });
+  if (!res.tables.length) res.error = 'No @@@ TABLE @@@ blocks were found. Make sure Copilot answered inside one code block, and paste its whole answer.';
+  return res;
+}
+
+/* ----- the document: a list of blocks, written out as a web page or a Word file ----- */
+// opts: { title, date, biz: name -> Copilot block, comments: name -> [{ name, comment }] or null, behind: bool }
+function businessDoc(m, opts){
+  const o = Object.assign({ title: '', date: '', biz: {}, comments: null, behind: true }, opts || {});
+  const byName = new Map(m.items.map(i => [i.name, i]));
+  const tables = m.items.filter(i => i.type === 'table');
+  const params = m.items.filter(i => i.type === 'parameter');
+  const helpers = m.items.filter(i => i.type === 'query' || i.type === 'function');
+  const title = o.title.trim() || 'this model';
+  const D = [];
+  D.push({ t: 'title', text: 'How the data in ' + title + ' is prepared' });
+  D.push({ t: 'sub', text: 'A plain-language guide for people who use the reports: where the data comes from and what is done to it before you see it.' + (o.date ? ' ' + o.date + '.' : '') });
+
+  // sources across the model
+  const srcMap = new Map();
+  tables.forEach(t => tableSources(t, byName).forEach(s => {
+    const k = s.label + '|' + s.where;
+    if (!srcMap.has(k)) srcMap.set(k, { label: s.label, where: s.where, personal: s.personal, used: [] });
+    if (!srcMap.get(k).used.includes(t.name)) srcMap.get(k).used.push(t.name);
+  }));
+  D.push({ t: 'h1', text: 'In short' });
+  D.push({ t: 'p', text: 'The reports use ' + tables.length + ' table' + (tables.length === 1 ? '' : 's') + (srcMap.size ? ', filled from ' + srcMap.size + ' data source' + (srcMap.size === 1 ? '' : 's') : '') + '. Each time the data is refreshed, Power BI reads the sources again and repeats the same preparation steps, so the reports always follow the rules described here.' });
+  if (srcMap.size) D.push({ t: 'table', head: ['Data source', 'Where it is', 'Used for'], rows: [...srcMap.values()].map(s => [s.label, s.where || '–', s.used.join(', ')]) });
+
+  D.push({ t: 'h1', text: 'The tables' });
+  tables.forEach(t => {
+    const b = o.biz[t.name];
+    D.push({ t: 'h2', text: t.name });
+    if (b && b.purpose) D.push({ t: 'p', text: b.purpose });
+    const srcs = tableSources(t, byName);
+    const srcText = b && b.source ? b.source : srcs.length ? srcs.map(s => s.label + (s.where ? ' (' + s.where + ')' : '') + (s.via ? ', through ' + s.via : '')).join('; ') + '.' : '';
+    if (srcText) D.push({ t: 'p', label: 'Where the data comes from', text: srcText });
+    if (b && b.row) D.push({ t: 'p', label: 'One row is', text: b.row });
+    const steps = b && b.steps.length ? b.steps : t.q ? t.q.steps.map(s => plainStep(s, t.deps)).filter((v, i, a) => v && a.indexOf(v) === i) : [];
+    if (steps.length) { D.push({ t: 'h3', text: 'What is done to the data' }); D.push({ t: 'ul', items: steps }); }
+    const know = [];
+    if (b && b.check) know.push(b.check);
+    srcs.filter(s => s.personal).forEach(s => know.push(s.label + ' is in ' + s.where + ', so the data can only be refreshed where that file is.'));
+    if (know.length) { D.push({ t: 'h3', text: 'Worth knowing' }); D.push({ t: 'ul', items: know }); }
+    const cm = o.comments && o.comments[t.name];
+    if (cm && cm.length) { D.push({ t: 'h3', text: 'Step by step' }); D.push({ t: 'ol', items: cm.map(c => c.comment) }); }
+    if (!b) D.push({ t: 'note', text: 'Read from the code. No plain-language description has been added for this table yet.' });
+  });
+
+  if (o.behind && params.length) {
+    D.push({ t: 'h1', text: 'Settings' });
+    D.push({ t: 'p', text: 'These values are stored once in the model and used by the tables, so they can be changed in one place.' });
+    D.push({ t: 'table', head: ['Setting', 'Current value', 'Used by'], rows: params.map(p => [p.name, paramDisplay(p) || '–', p.usedBy.join(', ') || 'Nothing yet']) });
+  }
+  if (o.behind && helpers.length) {
+    D.push({ t: 'h1', text: 'Behind the scenes' });
+    D.push({ t: 'p', text: 'These are preparation steps that don’t appear in the reports themselves but feed the tables above.' });
+    D.push({ t: 'ul', items: helpers.map(h => {
+      const s = querySources(h, byName).map(x => x.label + (x.where ? ' (' + x.where + ')' : '')).join('; ');
+      const used = h.usedBy.length ? 'used by ' + h.usedBy.join(', ') : 'not used by any table';
+      return h.name + ': ' + (h.type === 'function' ? 'a reusable rule, ' + used + '.' : (s ? 'reads ' + s + ', ' : '') + used + '.');
+    }) });
+  }
+  D.push({ t: 'h1', text: 'Words used in this guide' });
+  D.push({ t: 'ul', items: [
+    'Table: a set of rows and columns the reports use, like a sheet in Excel.',
+    'Data source: the database, file or system the data is read from.',
+    'Refresh: Power BI reads the data sources again and repeats these steps, so the reports show the latest data.',
+    'Setting: a value stored once in the model, such as a start date or a file location.'
+  ] });
+  D.push({ t: 'note', text: 'Written from the model’s Power Query code' + (Object.keys(o.biz).length ? ', with plain-language text drafted by Copilot' : '') + '. Check it with the report owner before you rely on it.' });
+  return D;
+}
+
+function docHtml(D){
+  const e = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const title = (D.find(b => b.t === 'title') || { text: 'Data guide' }).text;
+  const body = D.map(b => {
+    switch (b.t) {
+      case 'title': return '<h1 class="title">' + e(b.text) + '</h1>';
+      case 'sub': return '<p class="sub">' + e(b.text) + '</p>';
+      case 'h1': return '<h2>' + e(b.text) + '</h2>';
+      case 'h2': return '<h3>' + e(b.text) + '</h3>';
+      case 'h3': return '<h4>' + e(b.text) + '</h4>';
+      case 'p': return '<p>' + (b.label ? '<b>' + e(b.label) + ':</b> ' : '') + e(b.text) + '</p>';
+      case 'note': return '<p class="note">' + e(b.text) + '</p>';
+      case 'ul': case 'ol': return '<' + b.t + '>' + b.items.map(i => '<li>' + e(i) + '</li>').join('') + '</' + b.t + '>';
+      case 'table': return '<table><thead><tr>' + b.head.map(h => '<th>' + e(h) + '</th>').join('') + '</tr></thead><tbody>' + b.rows.map(r => '<tr>' + r.map(c => '<td>' + e(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
+      default: return '';
+    }
+  }).join('\n');
+  return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + e(title) + '</title><style>'
+    + 'body{font-family:"Segoe UI",Calibri,Arial,sans-serif;color:#1f2933;line-height:1.5;max-width:780px;margin:32px auto;padding:0 18px;font-size:15px;background:#fff}'
+    + 'h1.title{font-size:28px;color:#1f3864;margin:0 0 6px}.sub{color:#52606d;margin:0 0 24px}h2{font-size:21px;color:#1f3864;border-bottom:1px solid #d9e2ec;padding-bottom:4px;margin:30px 0 10px}'
+    + 'h3{font-size:18px;color:#2f5496;margin:24px 0 6px}h4{font-size:15px;margin:14px 0 4px}p{margin:6px 0}ul,ol{margin:4px 0 8px;padding-left:22px}li{margin:2px 0}'
+    + 'table{border-collapse:collapse;width:100%;margin:8px 0;font-size:14px}th,td{border:1px solid #cbd2d9;padding:6px 8px;text-align:left;vertical-align:top}th{background:#e8eef7}'
+    + '.note{color:#52606d;font-style:italic;font-size:14px}@media print{body{margin:0}}'
+    + '</style></head><body>\n' + body + '\n</body></html>\n';
+}
+
+// a stored (uncompressed) zip, enough for a Word file
+const ZIP_CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function zipStored(entries){
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = ZIP_CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  for (const [path, content] of entries) {
+    const name = enc.encode(path), data = enc.encode(content), crc = crc32(data);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(12, 0x21, true);
+    h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true);
+    parts.push(new Uint8Array(h.buffer), name, data);
+    const cd = new DataView(new ArrayBuffer(46));
+    cd.setUint32(0, 0x02014b50, true); cd.setUint16(4, 20, true); cd.setUint16(6, 20, true); cd.setUint16(8, 0x0800, true); cd.setUint16(14, 0x21, true);
+    cd.setUint32(16, crc, true); cd.setUint32(20, data.length, true); cd.setUint32(24, data.length, true); cd.setUint16(28, name.length, true); cd.setUint32(42, off, true);
+    central.push(new Uint8Array(cd.buffer), name);
+    off += 30 + name.length + data.length;
+  }
+  const size = central.reduce((a, b) => a + b.length, 0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true); end.setUint32(12, size, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+function docxParts(D){
+  const x = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+  const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+  const HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+  const run = (t, b) => '<w:r>' + (b ? '<w:rPr><w:b/></w:rPr>' : '') + '<w:t xml:space="preserve">' + x(t) + '</w:t></w:r>';
+  const para = (style, runs, extra) => '<w:p><w:pPr>' + (style ? '<w:pStyle w:val="' + style + '"/>' : '') + (extra || '') + '</w:pPr>' + runs + '</w:p>';
+  const STY = { title: 'Title', sub: 'Subtitle', h1: 'Heading1', h2: 'Heading2', h3: 'Heading3', note: 'Note' };
+  const body = D.map(b => {
+    if (STY[b.t]) return para(STY[b.t], run(b.text));
+    if (b.t === 'p') return para('', (b.label ? run(b.label + ': ', true) : '') + run(b.text));
+    if (b.t === 'ul' || b.t === 'ol') return b.items.map(i => para(b.t === 'ul' ? 'ListBullet' : 'ListNumber', run(i), '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="' + (b.t === 'ul' ? 1 : D.indexOf(b) + 2) + '"/></w:numPr>')).join('');
+    if (b.t === 'table') {
+      const n = b.head.length, wcol = Math.floor(9360 / n);
+      const cell = (t, h) => '<w:tc><w:tcPr><w:tcW w:w="' + wcol + '" w:type="dxa"/>' + (h ? '<w:shd w:val="clear" w:color="auto" w:fill="E8EEF7"/>' : '') + '</w:tcPr>' + para('TableText', run(t, h)) + '</w:tc>';
+      return '<w:tbl><w:tblPr><w:tblStyle w:val="Grid"/><w:tblW w:w="5000" w:type="pct"/></w:tblPr><w:tblGrid>' + b.head.map(() => '<w:gridCol w:w="' + wcol + '"/>').join('') + '</w:tblGrid>'
+        + '<w:tr><w:trPr><w:tblHeader/></w:trPr>' + b.head.map(h => cell(h, true)).join('') + '</w:tr>'
+        + b.rows.map(r => '<w:tr>' + r.map(c => cell(c, false)).join('') + '</w:tr>').join('') + '</w:tbl>' + para('', '');
+    }
+    return '';
+  }).join('');
+  const doc = HEAD + '<w:document ' + W + '><w:body>' + body + '<w:sectPr><w:pgMar w:top="1260" w:right="1260" w:bottom="1260" w:left="1260" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>';
+  const st = (id, name, ppr, rpr, type) => '<w:style w:type="' + (type || 'paragraph') + '" w:styleId="' + id + '"><w:name w:val="' + name + '"/>' + (id !== 'Normal' && type !== 'table' ? '<w:basedOn w:val="Normal"/><w:qFormat/>' : '') + (ppr ? '<w:pPr>' + ppr + '</w:pPr>' : '') + (rpr ? '<w:rPr>' + rpr + '</w:rPr>' : '') + '</w:style>';
+  const B = s => '<w:top w:val="single" w:sz="4" w:space="0" w:color="' + s + '"/><w:left w:val="single" w:sz="4" w:space="0" w:color="' + s + '"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="' + s + '"/><w:right w:val="single" w:sz="4" w:space="0" w:color="' + s + '"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="' + s + '"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="' + s + '"/>';
+  const styles = HEAD + '<w:styles ' + W + '><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="1F2933"/><w:lang w:val="en-US"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="100" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'
+    + st('Normal', 'Normal', '', '')
+    + st('Title', 'Title', '<w:spacing w:after="80"/>', '<w:sz w:val="48"/><w:szCs w:val="48"/><w:color w:val="1F3864"/>')
+    + st('Subtitle', 'Subtitle', '<w:spacing w:after="320"/>', '<w:color w:val="52606D"/>')
+    + st('Heading1', 'heading 1', '<w:keepNext/><w:spacing w:before="400" w:after="120"/><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="2" w:color="D9E2EC"/></w:pBdr><w:outlineLvl w:val="0"/>', '<w:b/><w:sz w:val="32"/><w:szCs w:val="32"/><w:color w:val="1F3864"/>')
+    + st('Heading2', 'heading 2', '<w:keepNext/><w:spacing w:before="320" w:after="80"/><w:outlineLvl w:val="1"/>', '<w:b/><w:sz w:val="27"/><w:szCs w:val="27"/><w:color w:val="2F5496"/>')
+    + st('Heading3', 'heading 3', '<w:keepNext/><w:spacing w:before="160" w:after="40"/><w:outlineLvl w:val="2"/>', '<w:b/>')
+    + st('ListBullet', 'List Bullet', '<w:spacing w:after="40"/><w:ind w:left="360" w:hanging="360"/>', '')
+    + st('ListNumber', 'List Number', '<w:spacing w:after="40"/><w:ind w:left="360" w:hanging="360"/>', '')
+    + st('Note', 'Note', '<w:spacing w:before="120"/>', '<w:i/><w:color w:val="52606D"/><w:sz w:val="20"/><w:szCs w:val="20"/>')
+    + st('TableText', 'Table Text', '<w:spacing w:after="0"/>', '<w:sz w:val="20"/><w:szCs w:val="20"/>')
+    + '<w:style w:type="table" w:styleId="Grid"><w:name w:val="Table Grid"/><w:tblPr><w:tblBorders>' + B('CBD2D9') + '</w:tblBorders><w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>'
+    + '</w:styles>';
+  // numbering: 1 = bullets; each numbered list gets its own instance so it starts at 1
+  const lists = D.filter(b => b.t === 'ol').map(b => D.indexOf(b) + 2);
+  const numbering = HEAD + '<w:numbering ' + W + '>'
+    + '<w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="singleLevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="360" w:hanging="360"/></w:pPr></w:lvl></w:abstractNum>'
+    + '<w:abstractNum w:abstractNumId="1"><w:multiLevelType w:val="singleLevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="360" w:hanging="360"/></w:pPr></w:lvl></w:abstractNum>'
+    + '<w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>'
+    + lists.map(id => '<w:num w:numId="' + id + '"><w:abstractNumId w:val="1"/><w:lvlOverride w:ilvl="0"><w:startOverride w:val="1"/></w:lvlOverride></w:num>').join('')
+    + '</w:numbering>';
+  const title = (D.find(b => b.t === 'title') || { text: '' }).text;
+  return [
+    ['[Content_Types].xml', HEAD + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>'],
+    ['_rels/.rels', HEAD + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>'],
+    ['docProps/core.xml', HEAD + '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>' + x(title) + '</dc:title></cp:coreProperties>'],
+    ['word/_rels/document.xml.rels', HEAD + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/></Relationships>'],
+    ['word/document.xml', doc],
+    ['word/styles.xml', styles],
+    ['word/numbering.xml', numbering]
+  ];
+}
+function docxBlob(D){ return zipStored(docxParts(D)); }
 /*MQ-CORE-END*/
+
+const BC = (() => {
+/*CORE-START*/
+const NL_MARK = '\u21B5';
+const TAB = '\t';
+
+const CLEAN = (col, tabRepl) => 'SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( ' + col + ', UNICHAR ( 13 ), "" ), UNICHAR ( 10 ), UNICHAR ( 8629 ) ), UNICHAR ( 9 ), "' + tabRepl + '" )';
+const DAX_QUERY = [
+'// Foster BI Toolkit: model export',
+'// Run in DAX query view, then select Copy above the results grid.',
+'EVALUATE',
+'// Lookups that find which remote model (if any) each table comes from',
+'VAR _tableIds = SELECTCOLUMNS ( INFO.TABLES (), "TID", [ID], "TName", [Name] )',
+'VAR _remoteParts =',
+'\tSELECTCOLUMNS (',
+'\t\tFILTER ( INFO.PARTITIONS (), [ExpressionSourceID] > 0 ),',
+'\t\t"PTID", [TableID],',
+'\t\t"PEID", [ExpressionSourceID]',
+'\t)',
+'VAR _expressions = SELECTCOLUMNS ( INFO.EXPRESSIONS (), "EID", [ID], "EName", [Name] )',
+'// Hierarchy levels, to tell which columns a hierarchy uses',
+'VAR _levels = SELECTCOLUMNS ( INFO.LEVELS (), "LCID", [ColumnID], "LHID", [HierarchyID] )',
+'VAR _hierarchies = SELECTCOLUMNS ( INFO.HIERARCHIES (), "HID", [ID], "HName", [Name] )',
+'// Calculated tables (partition type 2), for field parameters and other DAX tables',
+'VAR _calcParts = SELECTCOLUMNS ( FILTER ( INFO.PARTITIONS (), [Type] = 2 ), "CTID", [TableID], "CExpr", [QueryDefinition] )',
+'// Measure format strings: INFO.VIEW.MEASURES can leave FormatString empty and put a static one in FormatStringDefinition',
+'VAR _measureFormats = SELECTCOLUMNS ( INFO.MEASURES (), "MName", [Name], "MFmt", [FormatString], "MDyn", [FormatStringDefinitionID] )',
+'VAR _tables =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.VIEW.TABLES (),',
+'\t\t"Kind", "Table",',
+'\t\t"Table", [Name],',
+'\t\t"Name", [Name],',
+'\t\t"Type", [DataCategory],',
+'\t\t"Folder", "",',
+'\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [IsPrivate], " private", "" ),',
+'\t\t"Description", ' + CLEAN('[Description]', ' ') + ',',
+'\t\t"Expression",',
+'\t\t\tVAR _ctn = [Name]',
+'\t\t\tVAR _ctid = MAXX ( FILTER ( _tableIds, [TName] = _ctn ), [TID] )',
+'\t\t\tRETURN SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( MAXX ( FILTER ( _calcParts, [CTID] = _ctid ), [CExpr] ), UNICHAR ( 13 ), "" ), UNICHAR ( 10 ), UNICHAR ( 8629 ) ), UNICHAR ( 9 ), "    " ),',
+
+'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Summarize", "",',
+'\t\t"SortBy", "",',
+'\t\t"Hierarchies", "",',
+'\t\t"Storage", [StorageMode],',
+'\t\t"Source",',
+'\t\t\tVAR _tn = [Name]',
+'\t\t\tVAR _tid = MAXX ( FILTER ( _tableIds, [TName] = _tn ), [TID] )',
+'\t\t\tVAR _eid = MAXX ( FILTER ( _remoteParts, [PTID] = _tid ), [PEID] )',
+'\t\t\tRETURN CONCATENATEX ( FILTER ( _expressions, [EID] = _eid ), [EName], ", " )',
+'\t)',
+'VAR _columns =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.VIEW.COLUMNS (),',
+'\t\t"Kind", "Column",',
+'\t\t"Table", [Table],',
+'\t\t"Name", [Name],',
+'\t\t"Type", [DataType],',
+'\t\t"Folder", [DisplayFolder],',
+'\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [IsKey], " key", "" ),',
+'\t\t"Description", ' + CLEAN('[Description]', ' ') + ',',
+'\t\t"Expression", ' + CLEAN('[Expression]', '    ') + ',',
+'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Summarize", [SummarizeBy],',
+'\t\t"SortBy", [SortByColumn],',
+'\t\t"Hierarchies",',
+'\t\t\tVAR _cid = [ID]',
+'\t\t\tVAR _hids = SELECTCOLUMNS ( FILTER ( _levels, [LCID] = _cid ), "H", [LHID] )',
+'\t\t\tRETURN CONCATENATEX ( FILTER ( _hierarchies, [HID] IN _hids ), [HName], ", " ),',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
+'VAR _measures =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.VIEW.MEASURES (),',
+'\t\t"Kind", "Measure",',
+'\t\t"Table", [Table],',
+'\t\t"Name", [Name],',
+'\t\t"Type", VAR _mn = [Name] RETURN MAXX ( FILTER ( _measureFormats, [MName] = _mn ), [MFmt] ),',
+'\t\t"Folder", [DisplayFolder],',
+'\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [DataType] IN { "Text", "String" }, " text", "" ) & IF ( VAR _mn = [Name] RETURN MAXX ( FILTER ( _measureFormats, [MName] = _mn ), [MDyn] ) > 0, " dynamic-format", "" ),',
+'\t\t"Description", ' + CLEAN('[Description]', ' ') + ',',
+'\t\t"Expression", ' + CLEAN('[Expression]', '    ') + ',',
+'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Summarize", "",',
+'\t\t"SortBy", "",',
+'\t\t"Hierarchies", "",',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
+'VAR _relationships =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.VIEW.RELATIONSHIPS (),',
+'\t\t"Kind", "Relationship",',
+'\t\t"Table", [FromTable],',
+'\t\t"Name", [FromColumn],',
+'\t\t"Type", [FromCardinality] & ":" & [ToCardinality],',
+'\t\t"Folder", "",',
+'\t\t"Flags", [CrossFilteringBehavior] & IF ( [IsActive], "", " inactive" ),',
+'\t\t"Description", "",',
+'\t\t"Expression", "",',
+'\t\t"ToTable", [ToTable],',
+'\t\t"ToColumn", [ToColumn],',
+'\t\t"Summarize", "",',
+'\t\t"SortBy", "",',
+'\t\t"Hierarchies", "",',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
+'VAR _model =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.MODEL (),',
+'\t\t"Kind", "Model",',
+'\t\t"Table", "",',
+'\t\t"Name", [Name],',
+'\t\t"Type", "",',
+'\t\t"Folder", "",',
+'\t\t"Flags", IF ( [DiscourageImplicitMeasures], "discourage-implicit", "" ),',
+'\t\t"Description", "",',
+'\t\t"Expression", "",',
+'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Summarize", "",',
+'\t\t"SortBy", "",',
+'\t\t"Hierarchies", "",',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
+'RETURN',
+'\tUNION ( _tables, _columns, _measures, _relationships, _model )',
+'ORDER BY [Kind], [Table], [Name]'
+].join('\n');
+
+function unquoteCell(s){
+  if (s.length >= 2 && s[0] === '"' && s[s.length-1] === '"') {
+    const inner = s.slice(1, -1);
+    if (!/(^|[^"])"([^"]|$)/.test(inner.replace(/""/g, ''))) return inner.replace(/""/g, '"');
+  }
+  return s;
+}
+function restore(s){ return (s || '').split(NL_MARK).join('\n'); }
+function lc(s){ return (s || '').toLowerCase(); }
+// Date tables: marked as one (data category Time), or a DAX calculated table built on CALENDAR, CALENDARAUTO
+// or a GENERATESERIES of dates. Many models never mark theirs, so both count. (↵ is a line break in the export.)
+const CALC_DATE_RE = /\bCALENDAR(AUTO)?[\s\u21B5]*\(|\bGENERATESERIES[\s\u21B5]*\([\s\u21B5]*DATE[\s\u21B5]*\(/i;
+function isMarkedDateTable(t){ return !!t && lc(t.category) === 'time'; }
+function isCalcDateTable(t){ return !!t && CALC_DATE_RE.test(t.calc || ''); }
+function isDateTable(t){ return isMarkedDateTable(t) || isCalcDateTable(t); }
+// marked ones first
+function dateTablesOf(model){ return model.tables.filter(isMarkedDateTable).concat(model.tables.filter(t => !isMarkedDateTable(t) && isCalcDateTable(t))); }
+
+/* ---------- the shared model reader ----------
+   readModel() is the one place the model export is read. It keeps every column and flag the export has,
+   so a tool doesn't need its own parser. Rows Power BI makes for itself (auto date tables, RowNumber
+   columns) are left out; private tables are kept with private: true, and each tool decides.
+   tables   { name, category, hidden, private, description, storage, source, calc, flags[] }
+   columns  { table, name, dataType, folder, hidden, key, description, expression, summarize, sortBy, hierarchies, flags[] }
+   measures { table, name, formatString, folder, hidden, text, dynamicFormat, description, expression, flags[] }
+   rels     { fromTable, fromColumn, toTable, toColumn, card, fromCard, toCard, both, inactive, flags[] }
+   model    { name, table, type, discourage, flags[] } from the _model row, or null
+   opts.keepAuto keeps auto date tables and RowNumber columns (Model Documenter can show them).
+   opts.keepAuto keeps auto date tables and RowNumber columns (Model Documenter can show them).
+   cols     the export's column names (lower case), for tools that tell an older export query from a newer one
+   has      which optional export columns came with it (summarize, sortBy, hierarchies, storage, source, model, upgraded) */
+const AUTO_DATE_TABLE = /^(localdatetable_|datetabletemplate_)/i;
+// The export query's columns, in its order (used when a paste has no header row)
+const EXPORT_COLS = ['kind', 'table', 'name', 'type', 'folder', 'flags', 'description', 'expression', 'totable', 'tocolumn', 'summarize', 'sortby', 'hierarchies', 'storage', 'source'];
+function readModel(text, opts){
+  const keepAuto = !!(opts && opts.keepAuto);
+  const res = { tables: [], columns: [], measures: [], rels: [], model: null, has: {}, error: null, skipped: 0 };
+  const raw = (text || '').replace(/\r/g, '');
+  if (!raw.trim()) return res;
+  const lines = raw.split('\n');
+  let hIdx = -1, map = {};
+  for (let i = 0; i < Math.min(lines.length, 15); i++) {
+    const cells = lines[i].split('\t').map(c => lc(unquoteCell(c.trim())).replace(/^\[|\]$/g, '').replace(/^.*\[|\]$/g, ''));
+    if (cells.includes('kind') && cells.includes('table') && cells.includes('name')) {
+      hIdx = i; cells.forEach((c, j) => { map[c] = j; }); break;
+    }
+  }
+  // No header row (cells copied from the grid without it): rows that start with a kind the export makes
+  // are read in the export query's own column order.
+  if (hIdx < 0) {
+    const body = lines.filter(l => l.trim()), kinds = /^"?(table|column|measure|relationship|model)"?$/i;
+    const rowLike = body.filter(l => { const c = l.split('\t'); return c.length >= 8 && kinds.test(c[0].trim()); }).length;
+    if (body.length && rowLike >= Math.max(1, body.length * 0.8)) {
+      const width = Math.max(...body.map(l => l.split('\t').length));
+      EXPORT_COLS.forEach((c, j) => { if (j < width) map[c] = j; });
+      hIdx = -1; res.noHeader = true;
+    }
+  }
+  if (hIdx < 0 && !res.noHeader) {
+    res.error = 'The header row (Kind, Table, Name…) wasn’t found. Use the Copy button above the results grid so the column names come along, and make sure the query from Step 1 is the one you ran.';
+    return res;
+  }
+  const has = k => map[k] !== undefined;
+  res.cols = new Set(Object.keys(map)); // the export's column names, lower case
+  res.has = { summarize: has('summarize'), sortBy: has('sortby'), hierarchies: has('hierarchies'), storage: has('storage'), source: has('source'), model: false };
+  const get = (cells, k) => map[k] === undefined ? '' : restore(unquoteCell((cells[map[k]] || '').trim()));
+  for (let i = hIdx + 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const c = lines[i].split('\t');
+    const kind = lc(get(c, 'kind'));
+    const table = get(c, 'table');
+    const name = get(c, 'name');
+    const fl = lc(get(c, 'flags')), flags = fl.split(/\s+/).filter(Boolean);
+    if (!keepAuto && AUTO_DATE_TABLE.test(table)) { res.skipped++; continue; }
+    if (kind === 'table') {
+      res.tables.push({ name, category: get(c, 'type'), hidden: flags.includes('hidden'), private: flags.includes('private'), description: get(c, 'description'),
+        storage: get(c, 'storage'), source: get(c, 'source'), calc: get(c, 'expression'), flags });
+    } else if (kind === 'column') {
+      if (!keepAuto && /^RowNumber-/i.test(name)) { res.skipped++; continue; }
+      res.columns.push({ table, name, dataType: get(c, 'type'), folder: get(c, 'folder'), hidden: flags.includes('hidden'), key: flags.includes('key'),
+        description: get(c, 'description'), expression: get(c, 'expression'),
+        summarize: get(c, 'summarize'), sortBy: get(c, 'sortby'), hierarchies: get(c, 'hierarchies'), flags });
+    } else if (kind === 'measure') {
+      res.measures.push({ table, name, formatString: get(c, 'type'), folder: get(c, 'folder'), hidden: flags.includes('hidden'),
+        text: flags.includes('text'), dynamicFormat: flags.includes('dynamic-format'),
+        description: get(c, 'description'), expression: get(c, 'expression'), flags });
+    } else if (kind === 'relationship') {
+      const card = get(c, 'type'), parts = card.split(':');
+      const toT = get(c, 'totable');
+      if (!keepAuto && AUTO_DATE_TABLE.test(toT)) { res.skipped++; continue; }
+      res.rels.push({ fromTable: table, fromColumn: name, toTable: toT, toColumn: get(c, 'tocolumn'), card,
+        fromCard: parts[0] || '', toCard: parts[1] || '', both: /both/.test(fl), inactive: /inactive/.test(fl), flags });
+    } else if (kind === 'model') {
+      res.has.model = true; res.model = { name, table, type: get(c, 'type'), discourage: /discourage-implicit/.test(fl), flags };
+    }
+  }
+  res.has.upgraded = res.has.summarize && res.has.model;
+  if (!res.tables.length && !res.columns.length && !res.measures.length) res.error = NO_ROWS;
+  return res;
+}
+const NO_ROWS = 'The header row was found but no model rows came with it. Paste the full results.';
+// The model as most tools use it: private tables left out, a table row for every table that has
+// columns or measures, sorted by name, with composite-model source groups.
+function parseModel(text){
+  const res = readModel(text);
+  if (!('model' in res.has)) return res; // empty, or no header row
+  const priv = res.tables.filter(t => t.private).length;
+  res.tables = res.tables.filter(t => !t.private); res.skipped += priv;
+  const tablesSeen = new Map(res.tables.map(t => [lc(t.name), t]));
+  for (const x of [...res.columns, ...res.measures]) {
+    if (x.table && !tablesSeen.has(lc(x.table))) { const t = { name: x.table, category: '', hidden: false, description: '' }; res.tables.push(t); tablesSeen.set(lc(x.table), t); }
+  }
+  res.tables.sort((a, b) => a.name.localeCompare(b.name));
+  if (!res.tables.length && !res.columns.length) res.error = NO_ROWS;
+  annotateSources(res);
+  return res;
+}
+
+/* ---------- DAX references ---------- */
+// Blank out comments and string literals in one pass, so "--" or "//" inside a string (a URL, say)
+// doesn't hide the rest of the line, and a name inside a string isn't read as a reference.
+// Quoted table names and [bracketed] names are kept as they are.
+function stripDaxText(e){
+  const s = e || ''; let out = '', i = 0;
+  while (i < s.length) {
+    const c = s[i], n = s[i + 1];
+    if (c === '"') { let j = i + 1; while (j < s.length) { if (s[j] === '"') { if (s[j + 1] === '"') { j += 2; continue; } break; } j++; } out += '""'; i = j + 1; continue; }
+    if (c === "'") { let j = i + 1; while (j < s.length) { if (s[j] === "'") { if (s[j + 1] === "'") { j += 2; continue; } break; } j++; } out += s.slice(i, j + 1); i = j + 1; continue; }
+    if (c === '[') { const j = s.indexOf(']', i + 1); let k = j; while (k >= 0 && s[k + 1] === ']') k = s.indexOf(']', k + 2); if (k < 0) { out += s.slice(i); break; } out += s.slice(i, k + 1); i = k + 1; continue; }
+    if ((c === '/' && n === '/') || (c === '-' && n === '-')) { const j = s.indexOf('\n', i); out += ' '; i = j < 0 ? s.length : j; continue; }
+    if (c === '/' && n === '*') { const j = s.indexOf('*/', i + 2); out += ' '; i = j < 0 ? s.length : j + 2; continue; }
+    out += c; i++;
+  }
+  return out;
+}
+// Every 'Table'[Name], Table[Name] or bare [Name] in an expression, as { table, col } (table '' when bare).
+function daxRefs(expr){
+  const out = [], re = /(?:'((?:[^']|'')+)'|([A-Za-z_À-￿][\w.À-￿]*))?\s*\[((?:[^\]]|\]\])+)\]/g;
+  const s = stripDaxText(expr); let m;
+  while ((m = re.exec(s))) {
+    const table = m[1] ? m[1].replace(/''/g, "'") : m[2] && !DAX_WORD_BEFORE.test(m[2]) ? m[2] : '';
+    out.push({ table, col: m[3].replace(/\]\]/g, ']') });
+  }
+  return out;
+}
+// A keyword before a bracket (RETURN [Sales], VAR, IN, AND, OR, NOT) isn't a table name.
+const DAX_WORD_BEFORE = /^(var|return|in|and|or|not)$/i;
+// The model's measures an expression refers to as a bare [Name].
+function daxMeasureRefs(expr, model){
+  const names = new Map(model.measures.map(m => [lc(m.name), m])), out = new Set();
+  daxRefs(expr).forEach(r => { if (!r.table && names.has(lc(r.col))) out.add(names.get(lc(r.col))); });
+  return out;
+}
+// The measures a list of measures depends on, up to `depth` levels down (all levels when left out), not counting the list itself.
+function measureDeps(model, list, depth){
+  const inList = new Set(list.map(m => lc(m.name))), found = new Map();
+  let frontier = list;
+  for (let d = 0; d < (depth || Infinity) && frontier.length; d++) {
+    const next = [];
+    for (const m of frontier) for (const x of daxMeasureRefs(m.expression, model)) {
+      const k = lc(x.name);
+      if (inList.has(k) || found.has(k)) continue;
+      found.set(k, x); next.push(x);
+    }
+    frontier = next;
+  }
+  return [...found.values()];
+}
+
+/* ---------- composite models ----------
+   A source group is the set of tables that come from one source. Import tables form one group;
+   each DirectQuery source (a SQL database, a remote semantic model) is its own group; Dual tables
+   belong to the import group and their DirectQuery source. A relationship between tables that share
+   no group, or any many-to-many relationship, is a limited relationship. */
+function remoteLabel(source){
+  return (source || '').replace(/^DirectQuery to (AS|PBI|Analysis Services)\s*-\s*/i, '').trim();
+}
+function sourceGroups(t){
+  const mode = lc(t.storage);
+  const src = t.source ? 'remote:' + lc(t.source) : '';
+  if (mode === 'dual') return ['import', src || 'directquery'];
+  if (mode === 'directquery') return [src || 'directquery'];
+  if (mode === 'directlake') return [src || 'directlake'];
+  return [src || 'import'];
+}
+function annotateSources(model){
+  const byName = new Map(model.tables.map(t => [lc(t.name), t]));
+  const groups = new Set();
+  model.tables.forEach(t => { t.groups = sourceGroups(t); t.remote = !!t.source; groups.add(t.groups[0]); });
+  model.composite = groups.size > 1;
+  model.hasRemote = model.tables.some(t => t.remote);
+  model.rels.forEach(r => {
+    const a = byName.get(lc(r.fromTable)), b = byName.get(lc(r.toTable));
+    const cross = a && b && !a.groups.some(g => b.groups.includes(g));
+    r.crossSource = !!cross;
+    r.limited = !!cross || (lc(r.fromCard) === 'many' && lc(r.toCard) === 'many');
+  });
+  return model;
+}
+// Measures the export can't see (for example from a remote model), pasted one name per line.
+function parseExtraMeasures(text){
+  return (text || '').replace(/\r/g, '').split('\n')
+    .map(l => l.replace(/^\s*([-*•]|\d+[.)])\s*/, '').split(/\s(=|\|)\s|\t/)[0].trim())
+    .map(l => l.replace(/^'[^']*'\s*(?=\[)/, '').replace(/^\[(.*)\]$/, '$1').trim())
+    .filter(Boolean);
+}
+function withExtraMeasures(model, names){
+  if (!names.length) return model;
+  const have = new Set(model.measures.map(m => lc(m.name)));
+  const extra = [...new Set(names)].filter(n => !have.has(lc(n))).map(n => ({ table: '', name: n, formatString: '', folder: '', hidden: false, description: '', expression: '', remote: true }));
+  return Object.assign({}, model, { measures: model.measures.concat(extra), extraCount: extra.length });
+}
+
+function storageTag(t){
+  const bits = [];
+  if (t.remote) bits.push('from remote model ' + qName(remoteLabel(t.source)));
+  else if (t.storage && lc(t.storage) !== 'import') bits.push(t.storage);
+  else bits.push('Import');
+  return bits.join(', ');
+}
+
+function qName(n){ return "'" + n.replace(/'/g, "''") + "'"; }
+function bracket(n){ return '[' + n.replace(/\]/g, ']]') + ']'; }
+function oneLine(s){ return (s || '').replace(/\s+/g, ' ').trim(); }
+
+// Tables a DAX expression references directly: 'Table'[Col], Table[Col], 'Table', or a bare table name as a function argument.
+function tableRefs(expr, model){
+  const out = new Set();
+  if (!expr) return out;
+  const code = stripDax(expr);
+  const known = new Map(model.tables.map(t => [lc(t.name), t.name]));
+  let r;
+  const quoted = /'((?:[^']|'')+)'/g;
+  while ((r = quoted.exec(code))) { const n = r[1].replace(/''/g, "'"); if (known.has(lc(n))) out.add(known.get(lc(n))); }
+  const bare = /(^|[^\w'\]])([A-Za-z_][A-Za-z0-9_]*)\s*(?=[\[,)])/g;
+  while ((r = bare.exec(code))) { if (known.has(lc(r[2]))) out.add(known.get(lc(r[2]))); }
+  return out;
+}
+
+// Existing measures worth sending: when only some tables are selected, drop measures that only use unselected tables.
+function measuresForPrompt(model, tables){
+  if (!tables) return { list: model.measures, dropped: 0 };
+  const sel = new Set(tables.map(lc));
+  if (model.tables.every(t => sel.has(lc(t.name)))) return { list: model.measures, dropped: 0 };
+  const list = model.measures.filter(m => {
+    if (m.remote) return true;
+    const refs = [...tableRefs(m.expression, model)];
+    return !refs.length || refs.some(t => sel.has(lc(t)));
+  });
+  return { list, dropped: model.measures.length - list.length };
+}
+
+/* ---------- table suggestions for big models ---------- */
+const STOP_WORDS = new Set(('the and for with from per by of to in on at an or vs versus over under between than that this these those each all any '
+  + 'total totals count counts number numbers average avg sum rate rates percent percentage pct ratio share amount value values '
+  + 'using based only excluding including exclude include measure measures calculate calculated show new like who which where when '
+  + 'not without have has had are was were will would should can could how many much more less most least into out what is it its be '
+  + 'distinct unique minus plus divided times grand overall current selected same so as do does '
+  + 'filter filtered filtering type types split broken breakdown separate separately individual one').split(/\s+/));
+const TIME_WORDS = new Set(('year years yearly month months monthly week weeks weekly day days daily quarter quarters quarterly date dates '
+  + 'ytd mtd qtd yoy mom qoq wow prior previous last rolling trailing trend period periods fiscal ly py since ago growth change '
+  + 'annual annualized cumulative running').split(/\s+/));
+function stem(w){
+  if (w.length > 4 && w.endsWith('ies')) return w.slice(0, -3) + 'y';
+  if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1);
+  return w;
+}
+function wordsOf(s){
+  return (s || '').replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(stem);
+}
+function wordMatch(a, b){ return a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5)); }
+
+function suggestTables(model, requestsText, targetTable){
+  const raw = (requestsText || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const tokens = [...new Set(raw.map(stem).filter(w => w.length >= 3 && !/^\d+$/.test(w) && !STOP_WORDS.has(w) && !TIME_WORDS.has(w)))];
+  const wantsTime = raw.some(w => TIME_WORDS.has(w) || TIME_WORDS.has(stem(w)));
+  const picked = new Map(); // table name -> reason
+  const hit = (words) => tokens.find(t => words.some(w => wordMatch(t, w)));
+  for (const t of model.tables) {
+    const tw = hit(wordsOf(t.name));
+    if (tw) { picked.set(t.name, 'name matches “' + tw + '”'); continue; }
+    for (const c of model.columns) {
+      if (lc(c.table) !== lc(t.name)) continue;
+      const cw = hit(wordsOf(c.name));
+      if (cw) { picked.set(t.name, 'column ' + bracket(c.name) + ' matches “' + cw + '”'); break; }
+    }
+  }
+  for (const m of model.measures) {
+    const mw = hit(wordsOf(m.name));
+    if (!mw) continue;
+    for (const t of tableRefs(m.expression, model)) if (!picked.has(t)) picked.set(t, 'used by measure ' + bracket(m.name));
+  }
+  const matched = new Set(picked.keys());
+  // bring in the dimensions each matched table filters through (many side -> one side)
+  for (const r of model.rels) {
+    const from = model.tables.find(t => lc(t.name) === lc(r.fromTable));
+    const to = model.tables.find(t => lc(t.name) === lc(r.toTable));
+    if (!from || !to) continue;
+    const manyToOne = lc(r.toCard) === 'one' || !r.toCard;
+    if (matched.has(from.name) && manyToOne && !picked.has(to.name)) picked.set(to.name, 'related to ' + qName(from.name));
+    if (matched.has(to.name) && lc(r.fromCard) === 'one' && lc(r.toCard) === 'many' && !picked.has(from.name)) picked.set(from.name, 'related to ' + qName(to.name));
+  }
+  if (wantsTime) dateTablesOf(model).forEach(t => { if (!picked.has(t.name)) picked.set(t.name, 'date table (time words in requests)'); });
+  const home = model.tables.find(t => lc(t.name) === lc(targetTable || ''));
+  if (home && picked.size && !picked.has(home.name)) picked.set(home.name, 'home table for new measures');
+  return { picked, matchedCount: matched.size, tokens };
+}
+
+/* ---------- column values ----------
+   The export has names only. For filters on specific text values, the user can run a second small
+   query that lists the values of chosen columns, and paste the result back. */
+const VALUES_LIMIT = 50;
+
+// 'Table'[Column] / Table[Column] / [Column] (if unique) lines -> canonical column refs
+function parseColumnList(text, model){
+  const out = [], bad = [], seen = new Set();
+  for (let line of (text || '').replace(/\r/g, '').split('\n')) {
+    line = line.replace(/^\s*([-*•]|\d+[.)])\s*/, '').trim();
+    if (!line) continue;
+    let tn = null, cn = null, r;
+    if ((r = line.match(/^'((?:[^']|'')+)'\s*\[((?:[^\]]|\]\])+)\]/))) { tn = r[1].replace(/''/g, "'"); cn = r[2].replace(/\]\]/g, ']'); }
+    else if ((r = line.match(/^([A-Za-z_][\w ]*?)\s*\[((?:[^\]]|\]\])+)\]/))) { tn = r[1].trim(); cn = r[2].replace(/\]\]/g, ']'); }
+    else if ((r = line.match(/^\[((?:[^\]]|\]\])+)\]$/)) || (r = [null, line])) { cn = r[1].replace(/\]\]/g, ']'); }
+    let col;
+    if (tn) col = model.columns.find(c => lc(c.table) === lc(tn) && lc(c.name) === lc(cn));
+    else {
+      const hits = model.columns.filter(c => lc(c.name) === lc(cn));
+      if (hits.length === 1) col = hits[0];
+    }
+    if (!col) { bad.push(line); continue; }
+    const ref = qName(col.table) + bracket(col.name);
+    if (seen.has(lc(ref))) continue;
+    seen.add(lc(ref));
+    out.push({ table: col.table, column: col.name, ref });
+  }
+  return { cols: out, bad };
+}
+
+function valuesQuery(cols){
+  if (!cols.length) return '';
+  const part = c => 'SELECTCOLUMNS ( TOPN ( ' + VALUES_LIMIT + ', DISTINCT ( ' + c.ref + ' ), ' + c.ref + ', ASC ), '
+    + '"Column", "' + c.ref.replace(/"/g, '""') + '", "Value", ' + c.ref + ' & "", "Distinct", COUNTROWS ( DISTINCT ( ' + c.ref + ' ) ) )';
+  const body = cols.length === 1 ? part(cols[0]) : 'UNION (\n' + cols.map(c => '\t' + part(c)).join(',\n') + '\n)';
+  return ['// KPI Measure Builder: column values (first ' + VALUES_LIMIT + ' per column)',
+    '// Run in DAX query view, then select Copy above the results grid.',
+    'EVALUATE', body, 'ORDER BY [Column], [Value]'].join('\n');
+}
+
+// Pasted results -> Map(lc ref -> { ref, values, distinct })
+function parseValues(text){
+  const map = new Map();
+  const lines = (text || '').replace(/\r/g, '').split('\n');
+  let h = -1, idx = {};
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const cells = lines[i].split('\t').map(c => lc(unquoteCell(c.trim())).replace(/^.*\[|\]$/g, ''));
+    if (cells.includes('column') && cells.includes('value')) { h = i; cells.forEach((c, j) => { idx[c] = j; }); break; }
+  }
+  if (h < 0) return map;
+  for (let i = h + 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const c = lines[i].split('\t');
+    const ref = unquoteCell((c[idx.column] || '').trim());
+    if (!ref) continue;
+    const v = unquoteCell((c[idx.value] || '').replace(/^\s+|\s+$/g, ''));
+    const d = parseInt((c[idx.distinct] || '').trim(), 10);
+    const k = lc(ref);
+    if (!map.has(k)) map.set(k, { ref, values: [], distinct: isNaN(d) ? null : d });
+    map.get(k).values.push(v);
+  }
+  return map;
+}
+
+// Text columns whose names share words with the requests, best matches first
+function suggestValueColumns(model, requestsText, limit){
+  const raw = (requestsText || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const tokens = [...new Set(raw.map(stem).filter(w => w.length >= 3 && !STOP_WORDS.has(w) && !TIME_WORDS.has(w)))];
+  const scored = [];
+  for (const c of model.columns) {
+    if (!/^(string|text)$/i.test(c.dataType || '') || c.key) continue;
+    const cw = wordsOf(c.name);
+    const score = tokens.filter(t => cw.some(w => wordMatch(t, w))).length;
+    if (score) scored.push({ c, score });
+  }
+  scored.sort((a, b) => b.score - a.score || a.c.name.length - b.c.name.length);
+  return scored.slice(0, limit || 6).map(x => qName(x.c.table) + bracket(x.c.name));
+}
+
+function daxString(v){ return '"' + v.replace(/"/g, '""') + '"'; }
+
+/* ---------- relationship paths ----------
+   Filters flow from the one side (ToTable) to the many side (FromTable); both ways only when the
+   relationship filters both directions. */
+function hopFlows(r, fromT, toT){
+  if (lc(fromT) === lc(r.toTable) && lc(toT) === lc(r.fromTable)) return true;
+  return !!r.both;
+}
+function relPath(model, a, b, allowInactive){
+  if (lc(a) === lc(b)) return [];
+  const rels = model.rels.filter(r => allowInactive || !r.inactive);
+  const prev = new Map([[lc(a), null]]);
+  const queue = [a];
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const r of rels) {
+      let next = null;
+      if (lc(r.fromTable) === lc(cur)) next = r.toTable; else if (lc(r.toTable) === lc(cur)) next = r.fromTable;
+      if (!next || prev.has(lc(next))) continue;
+      prev.set(lc(next), { from: cur, rel: r, to: next });
+      if (lc(next) === lc(b)) {
+        const hops = []; let k = lc(b);
+        while (prev.get(k)) { const h = prev.get(k); hops.unshift(h); k = lc(h.from); }
+        return hops;
+      }
+      queue.push(next);
+    }
+  }
+  return null;
+}
+function describePath(model, a, b){
+  let hops = relPath(model, a, b, false), inactive = false;
+  if (!hops) { hops = relPath(model, a, b, true); inactive = !!hops; }
+  if (!hops) return { text: 'No relationship path connects ' + qName(a) + ' and ' + qName(b) + '. Relating them needs TREATAS or a relationship change.', tables: [], ok: false, forward: false, back: false };
+  const names = [a].concat(hops.map(h => h.to));
+  const forward = hops.every(h => hopFlows(h.rel, h.from, h.to));
+  const back = hops.slice().reverse().every(h => hopFlows(h.rel, h.to, h.from));
+  const limited = hops.some(h => h.rel.limited);
+  const inact = hops.filter(h => h.rel.inactive);
+  const parts = [names.map(qName).join(' → ') + '.'];
+  parts.push('A filter on ' + qName(a) + ' reaches ' + qName(b) + ': ' + (forward ? 'yes' : 'NO') + '. A filter on ' + qName(b) + ' reaches ' + qName(a) + ': ' + (back ? 'yes' : 'NO') + '.');
+  if (inactive) parts.push('Uses INACTIVE relationship(s) ' + inact.map(h => qName(h.rel.fromTable) + bracket(h.rel.fromColumn) + ' → ' + qName(h.rel.toTable) + bracket(h.rel.toColumn)).join(', ') + '; activate with USERELATIONSHIP.');
+  if (limited) parts.push('Includes a LIMITED relationship.');
+  return { text: parts.join(' '), tables: names, ok: true, forward, back, inactive };
+}
+
+/* ---------- detailed measures ---------- */
+const COMBINE = {
+  sum: ['Sum', 'add up the per-row results (SUMX)'],
+  max: ['Largest', 'take the largest per-row result (MAXX)'],
+  min: ['Smallest', 'take the smallest per-row result (MINX)'],
+  avg: ['Average', 'average the per-row results (AVERAGEX)'],
+  count: ['Count rows with a result', 'count the rows whose result is not blank'],
+  auto: ['Let Copilot decide', 'combine the per-row results in the way that fits the goal, and say how in NOTES']
+};
+function blankDetail(){ return { name: '', goal: '', tables: [], iterate: '', combine: 'sum', from: '', to: '', filters: '', example: '', edge: '', other: '' }; }
+
+function detailTables(model, d){
+  const set = new Map();
+  const add = n => { const t = model.tables.find(x => lc(x.name) === lc(n)); if (t) set.set(lc(t.name), t.name); };
+  (d.tables || []).forEach(add);
+  const col = r => { const m = /^'((?:[^']|'')+)'\[/.exec(r || ''); return m ? m[1].replace(/''/g, "'") : null; };
+  [d.iterate, d.from.startsWith('col:') ? d.from.slice(4) : '', d.to.startsWith('col:') ? d.to.slice(4) : ''].map(col).filter(Boolean).forEach(add);
+  return [...set.values()];
+}
+function detailPaths(model, d){
+  const ts = detailTables(model, d);
+  const out = [];
+  for (let i = 0; i < ts.length; i++) for (let j = i + 1; j < ts.length; j++) out.push(describePath(model, ts[i], ts[j]));
+  return out;
+}
+function windowEnd(v, d, dateCol){
+  if (v === 'sel') return 'the selected date, meaning ' + (dateCol ? 'MAX ( ' + dateCol + ' )' : 'the latest date') + ' in the current filter context';
+  if (v === 'periodStart') return 'the first date of the selected period' + (dateCol ? ', meaning MIN ( ' + dateCol + ' )' : '');
+  if (v === 'periodEnd') return 'the last date of the selected period' + (dateCol ? ', meaning MAX ( ' + dateCol + ' )' : '');
+  if (v.startsWith('col:')) return 'the value of ' + v.slice(4) + (d.iterate ? ' for the current row of the iteration' : ' in the current context');
+  return '';
+}
+function detailSection(model, d, n, dateCol){
+  const L = [];
+  L.push('### Detailed measure D' + n + (d.name ? ': ' + d.name : ''));
+  L.push('Goal: ' + (d.goal || '(not described)').trim());
+  const ts = detailTables(model, d);
+  if (ts.length) L.push('Tables involved: ' + ts.map(qName).join(', '));
+  const paths = detailPaths(model, d);
+  if (paths.length) { L.push('How these tables connect (from the model’s relationships):'); paths.forEach(p => L.push('- ' + p.text)); }
+  if (d.iterate) {
+    const c = COMBINE[d.combine] || COMBINE.sum;
+    L.push('Calculation shape: this is ONE measure. Iterate over each value of ' + d.iterate + ', calculate the result for that value, then ' + c[1] + '.');
+  }
+  if (d.from || d.to) {
+    const f = windowEnd(d.from, d, dateCol) || 'no lower limit', t = windowEnd(d.to, d, dateCol) || 'no upper limit';
+    L.push('Date window: from ' + f + ', up to and including ' + t + '.' + (d.iterate && (d.from.startsWith('col:') || d.to.startsWith('col:')) ? ' The window is different for each row of the iteration.' : ''));
+    if (d.from === 'sel' || d.to === 'sel' || d.from === 'periodEnd' || d.to === 'periodEnd' || d.from === 'periodStart' || d.to === 'periodStart')
+      L.push('Capture the selected date(s) in VARs before iterating. Inside the calculation, remove the slicer’s own date filter and apply this window instead.');
+  }
+  if (d.filters.trim()) L.push('Filters to keep or ignore: ' + oneLine(d.filters));
+  if (d.example.trim()) L.push('Worked example: ' + oneLineKeepBreaks(d.example).split('\n').join(' / '));
+  if (d.edge.trim()) L.push('Edge cases: ' + oneLineKeepBreaks(d.edge).split('\n').join(' / '));
+  if (d.other.trim()) L.push('Other notes: ' + oneLineKeepBreaks(d.other).split('\n').join(' / '));
+  return L;
+}
+function hasDetails(details){ return (details || []).some(d => (d.goal || '').trim() || (d.name || '').trim()); }
+
+function buildPrompt(model, requestsText, opts){
+  const o = Object.assign({ tables: null, hidden: true, formulas: true, descriptions: true, targetTable: '_Measures' }, opts || {});
+  const reqs = (requestsText || '').split('\n').map(s => s.replace(/^\s*(\d+[.)]|[-*•])\s*/, '').trim()).filter(Boolean);
+  const dateTables = model.tables.filter(isMarkedDateTable).map(t => t.name);
+  const calcDateTables = dateTablesOf(model).filter(t => !isMarkedDateTable(t)).map(t => t.name);
+  const dateTbl = dateTables[0] || calcDateTables[0];
+  const details = (o.details || []).filter(d => (d.goal || '').trim() || (d.name || '').trim());
+  const forced = new Set();
+  details.forEach(d => {
+    detailTables(model, d).forEach(t => forced.add(lc(t)));
+    detailPaths(model, d).forEach(p => p.tables.forEach(t => forced.add(lc(t))));
+    if ((d.from || d.to) && dateTbl) forced.add(lc(dateTbl));
+  });
+  const include = o.tables ? new Set(o.tables.map(lc).concat([...forced])) : null;
+  const inc = t => !include || include.has(lc(t));
+  const dateColObj = dateTbl && (model.columns.find(c => lc(c.table) === lc(dateTbl) && /^date$/i.test(c.name)) || model.columns.find(c => lc(c.table) === lc(dateTbl) && /date/i.test(c.dataType || '')));
+  const dateCol = dateColObj ? qName(dateColObj.table) + bracket(dateColObj.name) : null;
+  const L = [];
+  L.push('You are an expert in Power BI and DAX. Write DAX measures for the semantic model described below.');
+  L.push('');
+  L.push('## TASK: measures to write (the user’s requests)');
+  reqs.forEach((r, i) => L.push((i + 1) + '. ' + r));
+  details.forEach((d, i) => L.push((reqs.length + i + 1) + '. ' + (d.name || 'Detailed measure D' + (i + 1)) + ': see Detailed measure D' + (i + 1) + ' below.'));
+  if (!reqs.length && !details.length) L.push('1. (describe the measures you need here)');
+  if (details.length) {
+    L.push('');
+    L.push('## TASK: detailed measures');
+    L.push('These are complex. Read every line of each one before writing it.');
+    details.forEach((d, i) => { L.push(''); detailSection(model, d, i + 1, dateCol).forEach(x => L.push(x)); });
+  }
+  L.push('');
+  L.push('## RULES');
+  L.push('- Use only the tables, columns and measures listed under CONTEXT: model. Do not invent names.');
+  L.push("- Reference columns as 'Table'[Column]. Reference measures as [Measure] with no table prefix.");
+  L.push('- Reuse an existing measure when it already calculates what you need.');
+  L.push('- Use DIVIDE() for division. Use VAR ... RETURN when a measure has more than one step.');
+  if (dateTables.length) L.push("- The marked date table is " + dateTables.map(qName).join(', ') + '. Use it for all time intelligence.');
+  else if (calcDateTables.length) L.push('- ' + calcDateTables.map(qName).join(', ') + (calcDateTables.length > 1 ? ' are calculated date tables' : ' is a calculated date table') + ' (built in DAX, not marked as a date table). Use ' + qName(calcDateTables[0]) + ' for all time intelligence.');
+  else L.push('- No table is marked as a date table. For time intelligence, use the date table you can identify from the relationships and state which one in the description.');
+  L.push('- Filter through relationships. Do not use FILTER over a whole fact table when a simple column filter works.');
+  L.push('- Give each measure a clear Title Case name that is not already used by an existing measure or column.');
+  L.push('- FORMAT must be a Power BI format string, for example #,0 or #,0.00 or 0.0% or \\$#,0.');
+  if (o.descriptions) L.push('- DESCRIPTION is one plain-English sentence a report user would understand.');
+  L.push('- You can see table and column names, not the data. When a filter needs specific text values, use only values listed under "Known column values" or written in the request, spelled exactly as given.');
+  L.push('- If a request needs text values you were not given, do not guess them, and do not replace them with a generic filter such as VALUES() or KEEPFILTERS(VALUES()). Write a SKIPPED block whose REASON names the column whose values are needed.');
+  L.push('- When a one-line request asks for a separate measure "for each" value of a column, write one measure per value, named with the value, for example "Sales - Consumer". This does not apply to detailed measures, where "iterate over each value" means one measure that loops.');
+  if (model.composite) {
+    L.push('');
+    L.push('## RULES: composite model');
+    L.push('This model combines tables from more than one data source. Each table below says where it comes from.');
+    L.push('- Relationships marked LIMITED connect different data sources, or are many-to-many. Filters still flow across them.');
+    L.push('- Across a LIMITED relationship, do not use RELATED or RELATEDTABLE, and do not iterate the rows of one table while reading columns of a table on the other side.');
+    L.push('- Prefer aggregating within one source and then combining the results, for example DIVIDE ( [Measure from one source], [Measure from another source] ).');
+    L.push('- Across a LIMITED relationship, rows with no matching key are not grouped under a blank value, so visible rows may not add up to the total.');
+  }
+  if (details.length) {
+    L.push('');
+    L.push('## RULES: detailed measures');
+    L.push('- Add a NOTES line (2 to 4 plain sentences) explaining your approach, just before DAX:.');
+    L.push('- Capture values from the outer filter context, such as the selected date, in VARs BEFORE any iterator. Inside an iterator, CALCULATE and measure references cause context transition, which changes those values.');
+    L.push('- Iterate over the smallest table that works: VALUES of the column you iterate over, or SUMMARIZE of the columns you need. Do not iterate a whole fact table unless the request says to.');
+    L.push('- Inside the iterator, use CALCULATE (or a measure reference) so the current row becomes a filter. When a date window differs from the slicer selection, remove the date table filter (REMOVEFILTERS on the date table) and apply the window explicitly, for example DATESBETWEEN or a filter on the date column.');
+    L.push('- Follow the relationship paths given. If a path does not pass filters in the direction you need, use TREATAS or CROSSFILTER inside CALCULATE, and say so in NOTES.');
+    L.push('- Handle the edge cases listed, and make the worked example come out as described.');
+    L.push('- Break the DAX into named VAR steps with a short // comment on each.');
+  }
+  L.push('');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
+  L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block.');
+  L.push('Inside the code block, write each measure in exactly this layout:');
+  L.push('');
+  L.push('@@@ MEASURE @@@');
+  L.push('NAME: Measure Name');
+  L.push('FORMAT: #,0');
+  if (o.descriptions) L.push('DESCRIPTION: One sentence.');
+  if (details.length) L.push('NOTES: (detailed measures only) How the calculation works.');
+  L.push('DAX:');
+  L.push('CALCULATE (');
+  L.push('    [Existing Measure],');
+  L.push("    'Table'[Column] = \"value\"");
+  L.push(')');
+  L.push('@@@ END @@@');
+  L.push('');
+  L.push('Rules for this layout:');
+  L.push('- Write the DAX exactly as you would type it in Power BI, on as many lines as you like. Do not escape quotes, brackets or backslashes.');
+  L.push('- Do not start the DAX with the measure name and "=".');
+  L.push('- Do not use JSON, tables or bullet points.');
+  L.push('');
+  L.push('If a measure cannot be calculated from this model, do NOT write a placeholder such as BLANK(), 0 or ERROR(). Write a SKIPPED block instead, and say what is missing:');
+  L.push('');
+  L.push('@@@ SKIPPED @@@');
+  L.push('NAME: Measure Name');
+  L.push('REASON: What the model is missing, for example a column or relationship.');
+  L.push('@@@ END @@@');
+  L.push('');
+  L.push('## CONTEXT: model');
+  L.push('');
+  L.push('### Tables and columns');
+  for (const t of model.tables) {
+    if (!inc(t.name)) continue;
+    const cols = model.columns.filter(c => lc(c.table) === lc(t.name) && (o.hidden || !c.hidden));
+    const tags = [];
+    if (isMarkedDateTable(t)) tags.push('date table');
+    else if (isCalcDateTable(t)) tags.push('calculated date table');
+    if (!cols.length && model.measures.some(m => lc(m.table) === lc(t.name))) tags.push('measure table');
+    if (model.composite) tags.push(storageTag(t));
+    L.push(qName(t.name) + (tags.length ? ' (' + tags.join(', ') + ')' : '') + (t.description ? ': ' + oneLine(t.description) : ''));
+    for (const c of cols) {
+      const bits = [c.dataType || 'unknown type'];
+      if (c.key) bits.push('key');
+      if (c.hidden) bits.push('hidden');
+      if (c.expression) bits.push('calculated');
+      L.push('  - ' + bracket(c.name) + ': ' + bits.join(', ') + (c.description ? ' — ' + oneLine(c.description) : ''));
+    }
+  }
+  const rels = model.rels.filter(r => inc(r.fromTable) && inc(r.toTable));
+  if (rels.length) {
+    L.push('');
+    L.push('### Relationships');
+    for (const r of rels) {
+      L.push('- ' + qName(r.fromTable) + bracket(r.fromColumn) + ' (' + (r.fromCard || '?') + ') → ' + qName(r.toTable) + bracket(r.toColumn) + ' (' + (r.toCard || '?') + ')'
+        + (r.both ? ', filters both directions' : ', single direction')
+        + (r.crossSource ? ', LIMITED (crosses data sources)' : r.limited ? ', LIMITED (many-to-many)' : '')
+        + (r.inactive ? ', INACTIVE (use USERELATIONSHIP)' : ''));
+    }
+  }
+  if (o.knownValues && o.knownValues.size) {
+    L.push('');
+    L.push('### Known column values');
+    for (const kv of o.knownValues.values()) {
+      const shown = kv.values.map(v => v === '' ? '(blank)' : daxString(v)).join(', ');
+      const partial = kv.distinct !== null && kv.distinct > kv.values.length;
+      L.push('- ' + kv.ref + ': ' + shown + (partial ? ' (first ' + kv.values.length + ' of ' + kv.distinct + ' values; the list is incomplete)' : ''));
+    }
+  }
+  const mp = measuresForPrompt(model, o.tables);
+  if (mp.list.length) {
+    L.push('');
+    L.push('### Existing measures');
+    for (const m of mp.list) {
+      let line = '- ' + bracket(m.name);
+      if (m.remote) { L.push(line + ' (from the remote model; formula not available)'); continue; }
+      const home = model.tables.find(t => lc(t.name) === lc(m.table));
+      const tags = [];
+      if (m.formatString) tags.push('format ' + m.formatString);
+      if (home && home.remote) tags.push('from remote model ' + qName(remoteLabel(home.source)));
+      if (tags.length) line += ' (' + tags.join('; ') + ')';
+      if (o.formulas && m.expression) {
+        let e = oneLine(m.expression);
+        if (e.length > 300) e = e.slice(0, 300).replace(/\s+\S*$/, '') + ' … [formula shortened]';
+        line += ' = ' + e;
+      }
+      L.push(line);
+    }
+  }
+  if (o.formulas && mp.list.some(m => oneLine(m.expression).length > 300)) {
+    L.push('');
+    L.push('Formulas marked [formula shortened] are cut to save space. Reuse those measures by name; do not copy their partial formulas.');
+  }
+  L.push('');
+  L.push('=== END OF PROMPT ===');
+  return L.join('\n');
+}
+
+function repairJson(s){
+  let out = '', inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) {
+      if (esc) { out += ch; esc = false; continue; }
+      if (ch === '\\') { out += ch; esc = true; continue; }
+      if (ch === '"') { inStr = false; out += ch; continue; }
+      if (ch === '\n') { out += '\\n'; continue; }
+      if (ch === '\r') continue;
+      if (ch === '\t') { out += '\\t'; continue; }
+      out += ch;
+    } else {
+      if (ch === '"') inStr = true;
+      out += ch;
+    }
+  }
+  return out.replace(/,\s*([\]}])/g, '$1');
+}
+
+function pick(obj, keys){
+  const lower = {};
+  for (const k of Object.keys(obj)) lower[lc(k).replace(/[\s_-]/g, '')] = obj[k];
+  for (const k of keys) if (lower[k] !== undefined && lower[k] !== null) return String(lower[k]);
+  return '';
+}
+
+// Chat UIs often add markdown escapes (\[ \] \_ \*) when text is copied outside a code block.
+function unMarkdown(s){
+  let prev;
+  do { prev = s; s = s.replace(/(^|[^\\])\\([\[\]_*])/g, '$1$2'); } while (s !== prev);
+  return s;
+}
+function cleanField(v){
+  let s = (v || '').trim();
+  s = s.replace(/^`+|`+$/g, '').trim();
+  if (s.length >= 2 && ((s[0] === '"' && s[s.length - 1] === '"') || (s[0] === "'" && s[s.length - 1] === "'"))) {
+    const inner = s.slice(1, -1);
+    if (!inner.includes(s[0])) s = inner;
+  }
+  return s;
+}
+function toMeasure(name, expr, fmt, desc){
+  name = cleanField(name).replace(/^\[(.*)\]$/s, '$1').replace(/^'(.*)'$/s, '$1').trim();
+  expr = (expr || '').replace(/\r/g, '');
+  // strip a leading "Name =" if Copilot repeated the measure name
+  const m = expr.match(/^\s*(?:'([^']+)'|\[([^\]]+)\]|([^=\n(\[]+?))\s*:?=\s*/);
+  if (m) { const n = (m[1] || m[2] || m[3] || '').trim(); if (n && lc(n) === lc(name)) expr = expr.slice(m[0].length); }
+  return { name, expression: expr, formatString: cleanField(fmt), description: oneLineKeepBreaks(cleanField(desc)) };
+}
+
+// Preferred format: @@@ MEASURE @@@ ... @@@ END @@@ blocks, no escaping needed.
+// @@@ SKIPPED @@@ blocks carry a NAME and REASON for measures Copilot couldn't write.
+function parseBlocks(t){
+  const out = [];
+  const parts = t.split(/@@@\s*(MEASURE|SKIPPED)\s*@@@/i);
+  for (let p = 1; p < parts.length; p += 2) {
+    const skipped = parts[p].toUpperCase() === 'SKIPPED';
+    const body = parts[p + 1].split(/@@@\s*END\s*@@@/i)[0].replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '');
+    const re = /(^|\s)(NAME|FORMAT|DESCRIPTION|NOTES|REASON|DAX)[ \t]*:/g;
+    const found = {};
+    let r;
+    while ((r = re.exec(body))) {
+      const label = r[2];
+      if (found[label]) continue;
+      found[label] = { start: r.index + r[1].length, value: re.lastIndex };
+      if (label === 'DAX') break; // everything after DAX: belongs to the expression
+    }
+    const order = Object.entries(found).sort((a, b) => a[1].start - b[1].start);
+    const val = {};
+    order.forEach(([label, pos], i) => {
+      const end = i + 1 < order.length ? order[i + 1][1].start : body.length;
+      val[label] = body.slice(pos.value, end);
+    });
+    if (skipped) {
+      if (!found.NAME) continue;
+      const m = toMeasure(val.NAME, '', '', '');
+      m.skipped = true;
+      m.reason = oneLine(cleanField(val.REASON || val.DESCRIPTION || ''));
+      out.push(m);
+      continue;
+    }
+    if (!found.NAME && !found.DAX) continue;
+    let dax = (val.DAX || '').replace(/^[ \t]*\n/, '');
+    const mm = toMeasure(val.NAME || '', dax, val.FORMAT || '', val.DESCRIPTION || '');
+    if (val.NOTES) mm.notes = oneLine(cleanField(val.NOTES));
+    out.push(mm);
+  }
+  return out;
+}
+
+// DAX that computes nothing: BLANK(), 0, "", TRUE()/FALSE(), ERROR("..."), or only comments.
+function isPlaceholder(expr){
+  const code = stripDax(expr || '').replace(/\s+/g, '');
+  return /^(|BLANK\(\)|0|0\.0+|""|TRUE\(\)|FALSE\(\)|ERROR\(""\))$/i.test(code);
+}
+
+// Fallback for JSON-ish replies with unescaped quotes, missing [ or other damage:
+// read each value from its key to the next known key, instead of trusting the quoting.
+const JSON_KEYS = { name: 'name', measurename: 'name', measure: 'name', expression: 'expression', dax: 'expression', formula: 'expression',
+  daxexpression: 'expression', formatstring: 'formatString', format: 'formatString', description: 'description', desc: 'description' };
+function lenientJson(t){
+  const keyAlt = Object.keys(JSON_KEYS).sort((a, b) => b.length - a.length).join('|');
+  const startRe = new RegExp('"(' + keyAlt + ')"\\s*:\\s*"', 'gi');
+  const endRe = new RegExp('"\\s*(?:,\\s*"(?:' + keyAlt + ')"\\s*:|\\}\\s*(?=,\\s*\\{|\\]|$))', 'gi');
+  const objs = [];
+  let cur = null, r, lastEnd = 0;
+  while ((r = startRe.exec(t))) {
+    if (r.index < lastEnd) continue;
+    const field = JSON_KEYS[r[1].toLowerCase()];
+    endRe.lastIndex = startRe.lastIndex;
+    const e = endRe.exec(t);
+    const end = e ? e.index : t.length;
+    let v = t.slice(startRe.lastIndex, end);
+    v = v.replace(/\\(["\\\/nrt])/g, (m, c) => ({ n: '\n', r: '', t: '\t', '"': '"', '\\': '\\', '/': '/' }[c]));
+    if (!cur || field === 'name' && cur.name !== undefined || cur[field] !== undefined) { cur = {}; objs.push(cur); }
+    cur[field] = v;
+    lastEnd = end;
+    startRe.lastIndex = end;
+  }
+  return objs.map(o => toMeasure(o.name || '', o.expression || '', o.formatString || '', o.description || ''));
+}
+
+function parseResponse(text){
+  const res = { measures: [], error: null, format: '' };
+  let t = (text || '').replace(/\r/g, '').trim();
+  if (!t) return res;
+  t = unMarkdown(t).replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'").replace(/\u00A0/g, ' ');
+
+  if (/@@@\s*(MEASURE|SKIPPED)\s*@@@/i.test(t)) {
+    res.measures = parseBlocks(t);
+    res.format = 'blocks';
+    if (!res.measures.length) res.error = 'Measure blocks were found, but none had a NAME or DAX line. Check the reply and paste again.';
+    return res;
+  }
+
+  // JSON: strict first, then lenient
+  const j = t.replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '');
+  const a = j.search(/\[\s*\{/), c = j.indexOf('{'), d = j.lastIndexOf('}');
+  let body = null;
+  if (a >= 0) { const b = j.lastIndexOf(']'); body = j.slice(a, b > a ? b + 1 : undefined); }
+  else if (c >= 0 && d > c) body = '[' + j.slice(c, d + 1) + ']';
+  if (body) {
+    for (const x of [body, repairJson(body)]) {
+      try {
+        let data = JSON.parse(x);
+        if (!Array.isArray(data) && data && Array.isArray(data.measures)) data = data.measures;
+        if (!Array.isArray(data)) data = [data];
+        res.measures = data.filter(i => i && typeof i === 'object').map(i =>
+          toMeasure(pick(i, ['name', 'measurename', 'measure']), pick(i, ['expression', 'dax', 'formula', 'daxexpression', 'definition']),
+            pick(i, ['formatstring', 'format']), pick(i, ['description', 'desc'])));
+        res.format = 'json';
+        break;
+      } catch (e) {}
+    }
+  }
+  if (!res.measures.length) { res.measures = lenientJson(j); if (res.measures.length) res.format = 'json-repaired'; }
+  if (!res.measures.length) res.error = 'No measures were found in the reply. Copy the prompt again from Step 3 and make sure Copilot answers inside a code block with @@@ MEASURE @@@ blocks.';
+  return res;
+}
+function oneLineKeepBreaks(s){ return (s || '').replace(/\r/g, '').split('\n').map(x => x.trim()).filter(Boolean).join('\n'); }
+
+// Remove comments without touching "//" or "--" inside string literals (URLs, SVG namespaces)
+function stripComments(e){
+  return (e || '').replace(/"(?:[^"]|"")*"|\/\*[\s\S]*?\*\/|\/\/[^\n]*|--[^\n]*/g, m => m[0] === '"' ? m : ' ');
+}
+function stripDax(e){
+  return stripComments(e).replace(/"(?:[^"]|"")*"/g, '""');
+}
+
+function validate(measures, model, opts){
+  const target = (opts && opts.targetTable) || '_Measures';
+  const hasModel = model && (model.tables.length || model.columns.length);
+  const existing = new Map(); (model ? model.measures : []).forEach(m => existing.set(lc(m.name), m));
+  const tableSet = new Map(); (model ? model.tables : []).forEach(t => tableSet.set(lc(t.name), t));
+  const colsByTable = new Map();
+  (model ? model.columns : []).forEach(c => { const k = lc(c.table); if (!colsByTable.has(k)) colsByTable.set(k, new Set()); colsByTable.get(k).add(lc(c.name)); });
+  const allColNames = new Set((model ? model.columns : []).map(c => lc(c.name)));
+  const batch = new Map();
+  const notWritten = m => m.skipped || isPlaceholder(m.expression);
+  measures.filter(m => !notWritten(m)).forEach(m => { const k = lc(m.name); batch.set(k, (batch.get(k) || 0) + 1); });
+  return measures.map(m => {
+    // Copilot said it couldn't write this one, or wrote a placeholder instead of a calculation
+    if (m.skipped) {
+      return { measure: m, status: 'skip', errors: [], warns: [], infos: [m.reason ? 'Copilot’s reason: ' + m.reason : 'Copilot skipped this measure without giving a reason.'] };
+    }
+    if (m.expression.trim() && isPlaceholder(m.expression)) {
+      const infos = ['The DAX is only ' + oneLine(m.expression) + ', a placeholder rather than a calculation.'];
+      if (m.description) infos.push('Copilot’s note: ' + oneLine(m.description));
+      return { measure: m, status: 'skip', errors: [], warns: [], infos };
+    }
+    const errors = [], warns = [], infos = [];
+    let replaces = false;
+    if (!m.name) errors.push('Missing a name.');
+    if (!m.expression.trim()) errors.push('Missing a DAX expression.');
+    if (m.name && batch.get(lc(m.name)) > 1) errors.push('This name appears more than once in the reply.');
+    if (m.name && /[\[\]]/.test(m.name)) errors.push('Measure names can\u2019t contain [ or ].');
+    const ex = existing.get(lc(m.name));
+    if (ex) {
+      if (ex.remote) errors.push('A measure in the remote model already uses this name. Measure names must be unique across the model.');
+      else if (lc(ex.table) === lc(target)) { replaces = true; infos.push('Replaces the existing measure with this name in ' + qName(ex.table) + '.'); }
+      else errors.push('Name already used by a measure in ' + qName(ex.table) + '. Measure names must be unique across the model.');
+    }
+    if (m.name && colsByTable.has(lc(target)) && colsByTable.get(lc(target)).has(lc(m.name))) errors.push('A column in ' + qName(target) + ' already has this name.');
+    if (hasModel && m.expression) {
+      const code = stripDax(m.expression);
+      const seen = new Set();
+      const tcRe = /(?:'((?:[^']|'')+)'|([A-Za-z_][A-Za-z0-9_]*))\s*\[((?:[^\]]|\]\])+)\]/g;
+      let r;
+      while ((r = tcRe.exec(code))) {
+        const tn = (r[1] !== undefined ? r[1].replace(/''/g, "'") : r[2]);
+        const cn = r[3].replace(/\]\]/g, ']');
+        const key = lc(tn) + '|' + lc(cn);
+        if (seen.has(key)) continue; seen.add(key);
+        if (!tableSet.has(lc(tn))) { warns.push('Table ' + qName(tn) + ' isn\u2019t in the model export.'); continue; }
+        const cols = colsByTable.get(lc(tn));
+        const isCol = cols && cols.has(lc(cn));
+        const isMeas = existing.has(lc(cn)) || batch.has(lc(cn));
+        if (!isCol && !isMeas) warns.push(qName(tn) + bracket(cn) + ' isn\u2019t a column in that table.');
+      }
+      const qtRe = /'((?:[^']|'')+)'(\s*\[)?/g;
+      while ((r = qtRe.exec(code))) {
+        if (r[2]) continue; // 'Table'[Column] already checked above
+        const tn = r[1].replace(/''/g, "'");
+        const key = 't|' + lc(tn);
+        if (seen.has(key)) continue; seen.add(key);
+        if (!tableSet.has(lc(tn))) warns.push('Table ' + qName(tn) + ' isn’t in the model export.');
+      }
+      const bareRe = /(^|[^\w'\]])\[((?:[^\]]|\]\])+)\]/g;
+      while ((r = bareRe.exec(code))) {
+        const n = r[2].replace(/\]\]/g, ']');
+        const key = 'm|' + lc(n);
+        if (seen.has(key)) continue; seen.add(key);
+        // skip when this bracket is actually a Table [Column] with a space before it
+        const before = code.slice(0, r.index + r[1].length).replace(/\s+$/, '');
+        if (/('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_]*)$/.test(before) && !/\b(VAR|RETURN|IN|AND|OR|NOT|TRUE|FALSE)$/i.test(before)) {
+          const tm = before.match(/('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_]*)$/)[1];
+          const tn = tm[0] === "'" ? tm.slice(1, -1).replace(/''/g, "'") : tm;
+          if (tableSet.has(lc(tn))) continue;
+        }
+        if (lc(n) === lc(m.name)) { errors.push('The measure refers to itself.'); continue; }
+        if (existing.has(lc(n)) || batch.has(lc(n))) continue;
+        if (allColNames.has(lc(n))) continue; // column in row context
+        warns.push(bracket(n) + ' isn\u2019t a measure in the model or in this reply.');
+      }
+    }
+    if (m.expression && /KEEPFILTERS\s*\(\s*VALUES\s*\(/i.test(stripDax(m.expression))) {
+      warns.push('KEEPFILTERS ( VALUES ( ... ) ) keeps the filter already in place, so it changes nothing. If you wanted one measure per value, list the values (Step 3, \u201cColumn values\u201d) and ask again.');
+    }
+    const kvs = opts && opts.knownValues;
+    if (kvs && kvs.size && m.expression) {
+      const code = stripComments(m.expression);
+      const rx = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      for (const kv of kvs.values()) {
+        if (kv.distinct !== null && kv.distinct > kv.values.length) continue; // incomplete list: can't judge
+        const mm = kv.ref.match(/^'((?:[^']|'')+)'\[(.*)\]$/);
+        if (!mm) continue;
+        const tn = mm[1].replace(/''/g, "'"), cn = mm[2].replace(/\]\]/g, ']');
+        const tPat = "(?:'" + rx(tn.replace(/'/g, "''")) + "'" + (/^[A-Za-z_]\w*$/.test(tn) ? '|' + rx(tn) : '') + ')';
+        const colPat = tPat + '\\s*\\[' + rx(cn.replace(/\]/g, ']]')) + '\\]';
+        const eqRe = new RegExp(colPat + '\\s*(?:==|=|<>)\\s*"((?:[^"]|"")*)"', 'gi');
+        const inRe = new RegExp(colPat + '\\s+IN\\s*\\{([^}]*)\\}', 'gi');
+        const known = new Set(kv.values.map(lc));
+        const found = [];
+        let r;
+        while ((r = eqRe.exec(code))) found.push(r[1].replace(/""/g, '"'));
+        while ((r = inRe.exec(code))) (r[1].match(/"((?:[^"]|"")*)"/g) || []).forEach(l => found.push(l.slice(1, -1).replace(/""/g, '"')));
+        for (const v of new Set(found)) if (!known.has(lc(v))) warns.push(daxString(v) + ' isn\u2019t one of the known values of ' + kv.ref + '.');
+      }
+    }
+    if (m.notes) infos.unshift('Copilot\u2019s approach: ' + m.notes);
+    if (!m.formatString) infos.push('No format string. Power BI will use General.');
+    let status = 'ok';
+    if (errors.length) status = 'err'; else if (warns.length) status = 'warn'; else if (replaces) status = 'replace';
+    return { measure: m, status, errors, warns, infos };
+  });
+}
+
+function tmdlName(n){ return /^[A-Za-z_][A-Za-z0-9_]*$/.test(n) ? n : qName(n); }
+function tmdlValue(v){
+  if (/"/.test(v) || /^\s|\s$/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+  return v;
+}
+function exprLines(expr){
+  let lines = expr.replace(/\r/g, '').split('\n').map(l => l.replace(/\s+$/, ''));
+  while (lines.length && !lines[0].trim()) lines.shift();
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  lines = lines.map(l => { const m = l.match(/^[ \t]*/)[0]; return m.replace(/\t/g, '    ') + l.slice(m.length); });
+  const ind = Math.min(...lines.filter(l => l.trim()).map(l => l.match(/^ */)[0].length));
+  return lines.map(l => {
+    if (!l.trim()) return '';
+    const s = l.slice(isFinite(ind) ? ind : 0);
+    const lead = s.match(/^ */)[0].length;
+    return TAB.repeat(Math.floor(lead / 4)) + ' '.repeat(lead % 4) + s.slice(lead);
+  });
+}
+
+function normFolder(f){ return (f || '').trim().replace(/\//g, '\\').replace(/\\{2,}/g, '\\').replace(/^\\|\\$/g, ''); }
+
+function toTmdl(measures, opts){
+  const mode = opts.mode || 'script';
+  const table = (opts.targetTable || '_Measures').trim();
+  const folder = normFolder(opts.folder);
+  const base = mode === 'script' ? 2 : 1;
+  const out = [];
+  if (mode === 'script') { out.push('createOrReplace', '', TAB + 'ref table ' + tmdlName(table), ''); }
+  for (const m of measures) {
+    const ind = TAB.repeat(base);
+    if (m.description) m.description.split('\n').forEach(d => out.push(ind + '/// ' + d.trim()));
+    const lines = exprLines(m.expression);
+    if (lines.length <= 1) out.push(ind + 'measure ' + tmdlName(m.name) + ' = ' + (lines[0] || '').trim());
+    else {
+      out.push(ind + 'measure ' + tmdlName(m.name) + ' =');
+      lines.forEach(l => out.push(l ? TAB.repeat(base + 2) + l : ''));
+    }
+    if (m.formatString) out.push(TAB.repeat(base + 1) + 'formatString: ' + tmdlValue(m.formatString));
+    if (folder) out.push(TAB.repeat(base + 1) + 'displayFolder: ' + tmdlValue(folder));
+    out.push('');
+  }
+  while (out.length && out[out.length - 1] === '') out.pop();
+  return out.join('\n') + '\n';
+}
+
+function testQuery(measures){
+  if (!measures.length) return '';
+  const rows = measures.map((m, i) => TAB + '"' + m.name.replace(/"/g, '""') + '", ' + bracket(m.name) + (i < measures.length - 1 ? ',' : ''));
+  return ['// Run in DAX query view after applying the TMDL.', 'EVALUATE', 'ROW (', ...rows, ')'].join('\n');
+}
+/*CORE-END*/
+return { readModel, parseModel, DAX_QUERY };
+})();
 
 const PWF_CODE = {"fxAddDateTimeFromPairs": "// fxAddDateTimeFromPairs: For each {source column, name} pair, adds \"<name> date\" and \"<name> time\" columns from a date-time value or\n// text. Values that can't be read become null. Options: KeepOriginalColumns (default true), Overwrite (default\n// true: replaces existing \"<name> date\"/\"<name> time\" columns), Culture for reading text, for example \"en-US\".\n// Example: fxAddDateTimeFromPairs(Source, {{\"sys_updated_on\", \"Updated\"}}, [Culture = \"en-US\"])\n(InputTable as table, Pairs as list, optional Options as nullable record) as table =>\n    let\n        Opts = if Options = null then [] else Options,\n        KeepOriginal = Record.FieldOrDefault(Opts, \"KeepOriginalColumns\", true),\n        Overwrite = Record.FieldOrDefault(Opts, \"Overwrite\", true),\n        Culture = Record.FieldOrDefault(Opts, \"Culture\", null),\n        // any date/time value, or text in Options[Culture], as a datetime; null when it can't be read\n        ToDateTime = (v as any) as nullable datetime =>\n            if v = null then null\n            else if v is datetime then v\n            else if v is datetimezone then DateTimeZone.RemoveZone(v)\n            else if v is date then DateTime.From(v)\n            else if v is time then #datetime(1899, 12, 30, 0, 0, 0) + (v - #time(0, 0, 0))\n            else if v is text then (try DateTime.FromText(Text.Trim(v), Culture) otherwise null)\n            else (try DateTime.From(v, Culture) otherwise null),\n        SourceCols = List.Transform(Pairs, each _{0}),\n        Missing = List.Difference(SourceCols, Table.ColumnNames(InputTable)),\n        // used by every step after it, so a missing column stops the query with this message\n        Checked = if List.IsEmpty(Missing) then InputTable else error Error.Record(\"Column not found\", \"These columns were not found: \" & Text.Combine(Missing, \", \")),\n        AddPair = (state as table, pair as list) as table =>\n            let\n                Src = pair{0},\n                DateName = pair{1} & \" date\",\n                TimeName = pair{1} & \" time\",\n                Cleared = if Overwrite then Table.RemoveColumns(state, {DateName, TimeName}, MissingField.Ignore) else state,\n                // read each value once, then split it\n                WithDT = Table.AddColumn(Cleared, \"__dt\", (r) => ToDateTime(Record.Field(r, Src)), type nullable datetime),\n                WithDate = Table.AddColumn(WithDT, DateName, each if [__dt] = null then null else DateTime.Date([__dt]), type nullable date),\n                WithTime = Table.AddColumn(WithDate, TimeName, each if [__dt] = null then null else DateTime.Time([__dt]), type nullable time)\n            in\n                Table.RemoveColumns(WithTime, {\"__dt\"}),\n        Added = List.Accumulate(Pairs, Checked, AddPair),\n        // the source columns go last, after the new columns have been read from them\n        Result = if KeepOriginal then Added else Table.RemoveColumns(Added, SourceCols)\n    in\n        Result", "fxApplyTypes": "// fxApplyTypes: Sets column types from a list of {column, type} pairs in one step. Pairs for columns the table doesn't have\n// are skipped, so a missing or renamed source column doesn't break the refresh. Every other column gets\n// Options[DefaultType] (type text unless you say otherwise; null leaves them as they are). Options[Culture]\n// reads dates and numbers in that culture, for example \"en-GB\".\n// Example: fxApplyTypes(PromotedHeaders, {{\"CREATE DATE\", type date}, {\"USER ID\", Int64.Type}})\n(InputTable as table, TypePairs as list, optional Options as nullable record) as table =>\n    let\n        Opts = if Options = null then [] else Options,\n        // the type for any column TypePairs doesn't list; null leaves those columns as they are\n        DefaultType = Record.FieldOrDefault(Opts, \"DefaultType\", type text),\n        Culture = Record.FieldOrDefault(Opts, \"Culture\", null),\n        ExistingCols = Table.ColumnNames(InputTable),\n        // the last pair for a column wins; pairs for columns that aren't in the table are skipped\n        TypeOf = (c as text) => let m = List.Select(TypePairs, each _{0} = c) in if List.IsEmpty(m) then DefaultType else List.Last(m){1},\n        AllPairs = List.Select(List.Transform(ExistingCols, (c) => {c, TypeOf(c)}), each _{1} <> null),\n        Typed = Table.TransformColumnTypes(InputTable, AllPairs, Culture)\n    in\n        Typed", "fxDedupe": "// fxDedupe: Keeps one row for each combination of the key columns: the first one, or the last with Options[KeepLast] =\n// true (in the table's current row order; sort before calling it to choose). Options[IgnoreCase] (default false)\n// treats \"ABC\" and \"abc\" as the same key.\n// Example: fxDedupe(SortedByDate, {\"USER ID\"}, [KeepLast = true])\n(InputTable as table, KeyColumns as list, optional Options as nullable record) as table =>\n    let\n        Opts = if Options = null then [] else Options,\n        KeepLast = Record.FieldOrDefault(Opts, \"KeepLast\", false),\n        IgnoreCase = Record.FieldOrDefault(Opts, \"IgnoreCase\", false),\n        Keys = if IgnoreCase then List.Transform(KeyColumns, each {_, Comparer.OrdinalIgnoreCase}) else KeyColumns,\n        // buffered so \"first\" and \"last\" follow the row order the table has here\n        Ordered = Table.Buffer(if KeepLast then Table.ReverseRows(InputTable) else InputTable),\n        Distinct = Table.Distinct(Ordered, Keys),\n        Result = if KeepLast then Table.ReverseRows(Distinct) else Distinct\n    in\n        Result", "fxRemoveBlankRows": "// fxRemoveBlankRows: Removes rows where every value is null, empty text or only spaces.\n// Example: fxRemoveBlankRows(PromotedHeaders)\n(InputTable as table) as table =>\n    Table.SelectRows(InputTable, each not List.IsEmpty(List.Select(Record.FieldValues(_), (v) => v <> null and not (v is text and Text.Trim(v) = \"\"))))", "fxReplaceNulls": "// fxReplaceNulls: Replaces null with Value in the columns named. Columns the table doesn't have are skipped.\n// Example: fxReplaceNulls(Source, {\"Region\"}, \"Unknown\")\n(InputTable as table, Columns as list, Value as any) as table =>\n    let\n        Cols = List.Intersect({Columns, Table.ColumnNames(InputTable)}),\n        Result = Table.ReplaceValue(InputTable, null, Value, Replacer.ReplaceValue, Cols)\n    in\n        Result", "fxSetCase": "// fxSetCase: Upper, lower or proper case for the text in the columns named. Columns the table doesn't have are skipped;\n// values that aren't text are left as they are.\n// Example: fxSetCase(Trimmed, {\"OFFICE\"}, \"Upper\")\n(InputTable as table, Columns as list, Case as text) as table =>\n    let\n        Fn = if Case = \"Upper\" then Text.Upper else if Case = \"Lower\" then Text.Lower else if Case = \"Proper\" then Text.Proper\n            else error Error.Record(\"Unknown case\", \"Case is \"\"Upper\"\", \"\"Lower\"\" or \"\"Proper\"\", not \"\"\" & Case & \"\"\".\"),\n        Cols = List.Intersect({Columns, Table.ColumnNames(InputTable)}),\n        Result = Table.TransformColumns(InputTable, List.Transform(Cols, (c) => {c, each if _ is text then Fn(_) else _, Type.TableColumn(Value.Type(InputTable), c)}))\n    in\n        Result", "fxTextToNumber": "// fxTextToNumber: Turns text in the columns named into numbers, ignoring currency signs, spaces and percent signs: \"$1,234.50\"\n// is 1234.5, \"(45)\" is -45 and \"12%\" is 0.12. Options[Culture] reads the separators of that culture (for example\n// \"de-DE\" for 1.234,50). Options[WholeNumber] (default false) rounds to whole numbers. Values that can't be read\n// become null.\n// Example: fxTextToNumber(Source, {\"Amount\"})\n(InputTable as table, Columns as list, optional Options as nullable record) as table =>\n    let\n        Opts = if Options = null then [] else Options,\n        Culture = Record.FieldOrDefault(Opts, \"Culture\", null),\n        WholeNumber = Record.FieldOrDefault(Opts, \"WholeNumber\", false),\n        // \"$1,234.50\", \"(45)\", \"12%\", \" 7 \" -> 1234.5, -45, 0.12, 7; null when it can't be read\n        ToNumber = (v as any) as nullable number =>\n            if v = null then null\n            else if v is number then (if WholeNumber then Number.Round(v, 0, RoundingMode.AwayFromZero) else v)\n            else if v is text then\n                let\n                    t = Text.Trim(Text.Replace(v, \"#(00A0)\", \" \")),\n                    Negative = Text.StartsWith(t, \"(\") and Text.EndsWith(t, \")\") or Text.StartsWith(t, \"-\"),\n                    Percent = Text.EndsWith(t, \"%\"),\n                    Digits = Text.Remove(t, {\"$\", \"€\", \"£\", \"%\", \"(\", \")\", \" \", \"-\"}),\n                    n = if Digits = \"\" then null else try Number.FromText(Digits, Culture) otherwise null,\n                    Signed = if n = null then null else (if Negative then -n else n) / (if Percent then 100 else 1)\n                in\n                    if Signed = null then null else if WholeNumber then Number.Round(Signed, 0, RoundingMode.AwayFromZero) else Signed\n            else null,\n        Cols = List.Intersect({Columns, Table.ColumnNames(InputTable)}),\n        Result = Table.TransformColumns(InputTable, List.Transform(Cols, (c) => {c, ToNumber, if WholeNumber then Int64.Type else type nullable number}))\n    in\n        Result", "fxToDate": "// fxToDate: Turns the columns named into dates: dates, date-times (the time is dropped), Excel serial numbers and text.\n// Text is read in Options[Culture] (for example \"en-GB\" for day-first dates) or with Options[Format] (for\n// example \"yyyyMMdd\"). Values that can't be read become null instead of errors.\n// Example: fxToDate(Source, {\"Order Date\", \"Ship Date\"}, [Culture = \"en-GB\"])\n(InputTable as table, Columns as list, optional Options as nullable record) as table =>\n    let\n        Opts = if Options = null then [] else Options,\n        Culture = Record.FieldOrDefault(Opts, \"Culture\", null),\n        Format = Record.FieldOrDefault(Opts, \"Format\", null),\n        ReadOpts = [Format = Format, Culture = Culture],\n        // dates, date-times, Excel serial numbers and text; null when it can't be read\n        ToDate = (v as any) as nullable date =>\n            if v = null then null\n            else if v is date then v\n            else if v is datetime then DateTime.Date(v)\n            else if v is datetimezone then DateTime.Date(DateTimeZone.RemoveZone(v))\n            else if v is number then (if v >= 1 and v < 2958466 then Date.From(v) else null)\n            else if v is text then\n                let t = Text.Trim(v)\n                in\n                    if t = \"\" then null\n                    else try Date.FromText(t, ReadOpts)\n                    otherwise try DateTime.Date(DateTime.FromText(t, ReadOpts))\n                    otherwise try Date.From(Number.FromText(t, \"en-US\"))\n                    otherwise null\n            else null,\n        Cols = List.Intersect({Columns, Table.ColumnNames(InputTable)}),\n        Result = Table.TransformColumns(InputTable, List.Transform(Cols, (c) => {c, ToDate, type nullable date}))\n    in\n        Result", "fxTrimText": "// fxTrimText: Trims text in the columns named (every column when Columns is null): leading and trailing spaces, non-breaking\n// spaces and, with Options[Clean] (default true), control characters such as line breaks. Empty text becomes\n// null (Options[BlankToNull], default true). Options[CollapseSpaces] (default false) turns runs of spaces inside\n// the text into one. Values that aren't text are left as they are.\n// Example: fxTrimText(ChangeTypes)\n(InputTable as table, optional Columns as nullable list, optional Options as nullable record) as table =>\n    let\n        Opts = if Options = null then [] else Options,\n        Clean = Record.FieldOrDefault(Opts, \"Clean\", true),\n        BlankToNull = Record.FieldOrDefault(Opts, \"BlankToNull\", true),\n        CollapseSpaces = Record.FieldOrDefault(Opts, \"CollapseSpaces\", false),\n        // every column when Columns is null; only text values change, so number and date columns are safe\n        Cols = if Columns = null then Table.ColumnNames(InputTable) else List.Intersect({Columns, Table.ColumnNames(InputTable)}),\n        Tidy = (v as any) as any =>\n            if v is text then\n                let\n                    NoNbsp = Text.Replace(v, \"#(00A0)\", \" \"),\n                    Cleaned = if Clean then Text.Clean(NoNbsp) else NoNbsp,\n                    Trimmed = Text.Trim(Cleaned),\n                    Collapsed = if CollapseSpaces then Text.Combine(List.Select(Text.Split(Trimmed, \" \"), each _ <> \"\"), \" \") else Trimmed\n                in\n                    if BlankToNull and Collapsed = \"\" then null else Collapsed\n            else v,\n        // keep each column's type\n        Result = Table.TransformColumns(InputTable, List.Transform(Cols, (c) => {c, Tidy, Type.TableColumn(Value.Type(InputTable), c)}))\n    in\n        Result"};
 /* ---------- Power Query Writer: reusable fx functions and cleaning recipes ----------
@@ -1036,7 +2997,25 @@ const PWF = (() => {
     parseMine(inp.myFns).forEach(f => { if (!out.some(x => x.name === f.name)) out.push(f); });
     return out;
   }
-  return { LIB, BY, RECIPES, blankOpts, active, recipeSteps, render, parseMine, known, M_TYPE };
+  /* A TMDL view script that adds the functions named as queries (shared expressions), in one paste.
+     The comment lines at the top of each function become its description; the code goes three tabs in, deeper
+     than the expression's own line, as Desktop writes it in expressions.tmdl. */
+  function tmdl(names){
+    const fns = names.map(n => BY.get(n)).filter(f => f && f.code);
+    if (!fns.length) return '';
+    const L = ['createOrReplace', ''];
+    fns.forEach(f => {
+      const lines = f.code.replace(/\r/g, '').split('\n'), head = [];
+      while (lines.length && /^\s*\/\//.test(lines[0])) head.push(lines.shift().replace(/^\s*\/\/\s?/, ''));
+      const desc = head.filter(l => !/^Example:/.test(l)).join(' ').replace(new RegExp('^' + f.name + ':\\s*'), '').replace(/\s+/g, ' ').trim();
+      if (desc) L.push('\t/// ' + desc);
+      L.push('\texpression ' + f.name + ' =');
+      lines.forEach(l => L.push(l.trim() ? '\t\t\t' + l : ''));
+      L.push('');
+    });
+    return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  }
+  return { LIB, BY, RECIPES, blankOpts, active, recipeSteps, render, parseMine, known, M_TYPE, tmdl };
 })();
 
 
@@ -1587,7 +3566,7 @@ function copyText(text, btn){
 }
 
 const FIELDS = ['goal', 'sourceDetail', 'existing', 'columns', 'merges', 'params', 'culture', 'myFns', 'pwReply', 'pwError'];
-const blank = () => ({ goal: '', start: 'new', source: 'sql', sourceDetail: '', existing: '', columns: '', merges: '', params: '', culture: '', makeParams: true, typeMap: true, typeHow: 'fx', fx: PWF.blankOpts(), haveFx: false, myFns: '', pwReply: '', pwError: '' });
+const blank = () => ({ pick: '', goal: '', start: 'new', source: 'sql', sourceDetail: '', existing: '', columns: '', merges: '', params: '', culture: '', makeParams: true, typeMap: true, typeHow: 'fx', fx: PWF.blankOpts(), haveFx: false, myFns: '', pwReply: '', pwError: '' });
 const state = { example: false, v: blank(), prompt: '', reply: null };
 
 function inputs(){
@@ -1602,6 +3581,71 @@ function toForm(){
   $('source').value = v.source; $('makeParams').checked = v.makeParams; $('typeMap').checked = v.typeMap !== false;
   $('typeSteps').checked = v.typeHow === 'steps'; $('haveFx').checked = !!v.haveFx;
   document.querySelectorAll('input[name=start]').forEach(i => { i.checked = i.value === v.start; });
+}
+
+/* ---------- the connected model (Step 1) ---------- */
+// The model export (or a PBIP folder read as one) gives the tables and their columns; a PBIP folder also gives each
+// table's Power Query code and the queries that are functions (state.mq, saved per model name).
+state.model = null; state.mq = null;
+function modelTables(){
+  const m = state.model; if (!m || m.error) return [];
+  const cols = t => m.columns.filter(c => c.table === t.name && !c.expression);
+  // leave out calculated tables and measures tables (measures, and at most one column, hidden or named for measures)
+  const measuresTable = t => m.measures.some(x => x.table === t.name) && cols(t).length <= 1 && (cols(t).every(c => c.hidden) || /measure/i.test(t.name));
+  return m.tables.filter(t => !t.calc && !measuresTable(t) && (cols(t).length || mqFor(t.name))).map(t => ({ name: t.name, cols: cols(t) }));
+}
+// the model's data types in the words the column list reads (a DateTime column named like a date is a date)
+function colType(c){
+  const t = (c.dataType || '').toLowerCase();
+  if (/int/.test(t)) return 'whole number';
+  if (/double|decimal|currency|number/.test(t)) return 'number';
+  if (/date/.test(t)) return /time/i.test(c.name) || !/date|day/i.test(c.name) ? 'datetime' : 'date';
+  if (/bool/.test(t)) return 'logical';
+  return 'text';
+}
+function colLines(t){ return t.cols.map(c => c.name + ': ' + colType(c)).join('\n'); }
+function mqFor(name){ const q = state.mq && state.mq.queries.find(x => x.table === name || x.name === name); return q ? q.code : ''; }
+function modelFns(){ return state.mq ? state.mq.queries.filter(q => !q.loaded && (/function/i.test(q.resultType || '') || /^\s*\([^)]*\)\s*(as\s+[\w.]+\s*)?=>/.test(q.code.replace(/^(\s*\/\/[^\n]*\n)+/, '')))).map(q => q.name) : []; }
+function renderModel(){
+  const ts = modelTables(), m = state.model;
+  $('modelMsg').innerHTML = m && m.error ? '<div class="msg err">' + esc(m.error) + '</div>' : '';
+  $('pickBox').hidden = !ts.length;
+  $('mergePickBox').hidden = !ts.length;
+  const opts = '<option value="">Choose a table</option>' + ts.map(t => '<option' + (t.name === state.v.pick ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('');
+  $('pickTable').innerHTML = opts;
+  $('mergePick').innerHTML = '<option value="">Choose a table to add</option>' + ts.map(t => '<option>' + esc(t.name) + '</option>').join('');
+  const pick = ts.find(t => t.name === state.v.pick);
+  $('pickMsg').innerHTML = !pick ? '' : mqFor(pick.name)
+    ? '<div class="msg ok">&#10003; Its query' + (pick.cols.length ? ' and ' + pick.cols.length + ' column' + (pick.cols.length === 1 ? '' : 's') : '') + ' came from your model.</div>'
+    : '<div class="msg info">Its ' + pick.cols.length + ' column' + (pick.cols.length === 1 ? '' : 's') + ' came from your model. The model export doesn&rsquo;t include the queries, so paste this one from the Advanced Editor below, or connect the PBIP folder in Step 1 and it&rsquo;s filled in.</div>';
+  $('existing').placeholder = ts.length ? 'Pick a table above, or paste the query from the Advanced Editor (Home > Advanced Editor), starting with let' : 'Paste the query from the Advanced Editor (Home > Advanced Editor), starting with let';
+}
+function pickTable(name){
+  const t = modelTables().find(x => x.name === name);
+  leaveExample();
+  state.v.pick = name;
+  if (t) {
+    if (t.cols.length) state.v.columns = colLines(t);
+    const code = mqFor(name); if (code) state.v.existing = code;
+  }
+  toForm(); renderAll(); persist();
+}
+const modelSig = t => (t || '').length + ':' + (t || '').slice(0, 300);
+function loadModel(first){
+  const text = $('modelInput').value;
+  state.model = text.trim() ? BC.parseModel(text) : null;
+  // the queries read from a folder belong to the model read with them
+  if (state.mq && !first && state.mq.sig !== modelSig(text)) { state.mq = null; store.set('mq', ''); }
+  renderModel(); renderFx();
+}
+async function loadFolderQueries(root, list){
+  const files = await SF_SUITE.pbipFiles(list.filter(x => /\.(tmdl|bim)$/i.test(x.path)));
+  const models = readPbip(new Map(files.map(f => [f.path, f.text]))).filter(x => x.queries.length);
+  if (!models.length) return;
+  const m = models[0];
+  state.mq = { name: m.name, sig: modelSig($('modelInput').value), queries: m.queries.map(q => ({ name: q.name, table: q.table || '', loaded: q.loaded, resultType: q.resultType || '', code: q.code })) };
+  store.set('mq', JSON.stringify(state.mq));
+  renderModel(); renderFx();
 }
 
 /* ---------- render ---------- */
@@ -1654,7 +3698,13 @@ function renderFx(){
   state.fxCode = f.code;
   $('fxOut').hidden = !f.rs;
   $('fxStepsCode').textContent = f.code;
-  $('fxFns').innerHTML = f.rs ? f.rs.fns.map(n => { const fn = PWF.BY.get(n); return '<details class="extra"><summary><code>' + n + '</code> <span class="muted">' + esc(fn.does) + '</span></summary><div class="codebox"><div class="codebox-bar"><span class="t">Blank query &gt; Advanced Editor, then rename it ' + n + '</span><span class="r"><button class="btn" type="button" data-copyfn="' + n + '">Copy</button></span></div><pre class="short">' + esc(fn.code) + '</pre></div></details>'; }).join('') : '';
+  const have = new Set(modelFns().map(n => n.toLowerCase())), fns = f.rs ? f.rs.fns : [];
+  const inModel = fns.filter(n => have.has(n.toLowerCase())), toAdd = fns.filter(n => !have.has(n.toLowerCase()));
+  state.fxTmdl = PWF.tmdl(toAdd);
+  $('fxTmdl').textContent = state.fxTmdl;
+  $('fxTmdlBox').hidden = $('fxOneBox').hidden = !toAdd.length;
+  $('fxHave').innerHTML = inModel.length ? '<div class="msg ok">&#10003; Already in your model: ' + inModel.map(n => '<code>' + esc(n) + '</code>').join(', ') + '.' + (toAdd.length ? ' Add the others below.' : '') + '</div>' : '';
+  $('fxFns').innerHTML = f.rs ? toAdd.map(n => { const fn = PWF.BY.get(n); return '<details class="extra"><summary><code>' + n + '</code> <span class="muted">' + esc(fn.does) + '</span></summary><div class="codebox"><div class="codebox-bar"><span class="t">Blank query &gt; Advanced Editor, then rename it ' + n + '</span><span class="r"><button class="btn" type="button" data-copyfn="' + n + '">Copy</button></span></div><pre class="short">' + esc(fn.code) + '</pre></div></details>'; }).join('') : '';
 }
 // what a recipe starts with when ticked: the date columns for dates, the date-time columns for splitting
 function recipeDefaults(id, cols){
@@ -1666,11 +3716,11 @@ function fxChanged(redraw){ if (redraw) renderRecipes(); renderFx(); renderPromp
 function renderPrompt(){
   const v = state.v;
   state.prompt = v.goal.trim() ? PW.prompt(inputs()) : '';
-  $('pwPromptView').textContent = state.prompt || 'Describe the query in Step 1 to build the prompt.';
+  $('pwPromptView').textContent = state.prompt || 'Describe the query in Step 2 to build the prompt.';
   const n = state.prompt.length;
   $('promptTitle').textContent = 'Prompt for Copilot' + (n ? ' (' + n.toLocaleString() + ' characters)' : '');
   const tips = [];
-  if (v.goal.trim() && !PW.parseColumns(v.columns).length) tips.push('No columns given: Copilot will have to guess names. Pasting a few rows from the preview in Step 2 makes the query far more likely to work first time.');
+  if (v.goal.trim() && !PW.parseColumns(v.columns).length) tips.push('No columns given: Copilot will have to guess names. Pasting a few rows from the preview in Step 3 (or picking a table from your model) makes the query far more likely to work first time.');
   $('promptMsg').innerHTML = tips.map(t => '<div class="msg info">' + esc(t) + '</div>').join('');
 }
 const LEVEL = { err: ['err', 'Fix'], warn: ['warn', 'Check'], info: ['skip', 'Note'], ok: ['ok', 'OK'] };
@@ -1702,9 +3752,9 @@ function renderReply(){
   $('fixBox').hidden = !state.fix; $('pwFixView').textContent = state.fix;
   $('fixMsg').innerHTML = state.fix ? (prob ? '' : '<div class="msg info">The prompt below asks Copilot to fix the ' + found + ' problem' + (found === 1 ? '' : 's') + ' the page found. Add the error from Desktop above if there is one.</div>')
     : '<div class="msg ok">Nothing to fix from the checks. If Desktop shows an error or the result is wrong, describe it above and a fix prompt appears.</div>';
-  $('questionsBox').innerHTML = r.questions.length ? '<h3 class="sub">Copilot&rsquo;s assumptions and questions</h3><div class="msg info"><ul class="qs">' + r.questions.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>Answer them in Step 1 and send the prompt again if they change the query.</div>' : '';
+  $('questionsBox').innerHTML = r.questions.length ? '<h3 class="sub">Copilot&rsquo;s assumptions and questions</h3><div class="msg info"><ul class="qs">' + r.questions.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>Answer them in Step 2 and send the prompt again if they change the query.</div>' : '';
 }
-function renderAll(){ renderStart(); renderCols(); renderPrompt(); renderReply(); }
+function renderAll(){ renderModel(); renderStart(); renderCols(); renderPrompt(); renderReply(); }
 
 /* ---------- persistence ---------- */
 function persist(){ store.set('v', state.example ? '' : JSON.stringify(state.v)); }
@@ -1732,6 +3782,21 @@ function init(){
     if (k === 'pwReply' || k === 'pwError') renderReply(); else if (k === 'columns' || k === 'culture') { renderCols(); renderPrompt(); renderReply(); } else if (k === 'existing') { renderStart(); renderPrompt(); } else { renderPrompt(); if (k === 'params' || k === 'merges' || k === 'myFns') renderReply(); }
     persist();
   }));
+  $('exportView').textContent = BC.DAX_QUERY;
+  try { state.mq = JSON.parse(store.get('mq') || 'null'); if (!state.mq || !Array.isArray(state.mq.queries)) state.mq = null; } catch (e) { state.mq = null; }
+  $('modelInput').addEventListener('input', () => loadModel());
+  document.addEventListener('sf-pbip-folder', e => loadFolderQueries(e.detail.root, e.detail.list).catch(() => {}));
+  $('pickTable').addEventListener('change', () => pickTable($('pickTable').value));
+  $('mergePick').addEventListener('change', () => {
+    const t = modelTables().find(x => x.name === $('mergePick').value); $('mergePick').value = ''; if (!t) return;
+    leaveExample();
+    const line = t.name + ': ' + t.cols.map(c => c.name).join(', ');
+    const cur = state.v.merges.split('\n').filter(l => l.trim() && l.split(':')[0].trim() !== t.name);
+    state.v.merges = cur.concat([line]).join('\n'); $('merges').value = state.v.merges;
+    try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
+    renderPrompt(); renderReply(); persist();
+  });
+  loadModel(true);
   $('source').addEventListener('change', () => { leaveExample(); state.v.source = $('source').value; renderStart(); renderPrompt(); persist(); });
   $('makeParams').addEventListener('change', () => { state.v.makeParams = $('makeParams').checked; renderPrompt(); persist(); });
   $('typeMap').addEventListener('change', () => { state.v.typeMap = $('typeMap').checked; renderCols(); renderPrompt(); renderReply(); persist(); });
@@ -1760,6 +3825,8 @@ function init(){
     else if (b.dataset.copy === 'fix' && state.fix) copyText(state.fix, b);
     else if (b.dataset.copy === 'typemap') copyText($('typeMapCode').textContent, b);
     else if (b.dataset.copy === 'steps' && state.fxCode) copyText(state.fxCode, b);
+    else if (b.dataset.copy === 'fxtmdl' && state.fxTmdl) copyText(state.fxTmdl, b);
+    else if (b.dataset.copy === 'export') copyText(BC.DAX_QUERY, b);
     else if (b.dataset.copyfn && PWF.BY.get(b.dataset.copyfn)) copyText(PWF.BY.get(b.dataset.copyfn).code, b);
     else if (b.dataset.copyparam != null && state.reply) copyText(paramQuery(state.reply.params[+b.dataset.copyparam]), b);
   });
@@ -2490,6 +4557,8 @@ init();
   }
 })();
 /*SUITE-END*/
+
+SF_SUITE.hook({ input: 'modelInput', prefix: 'kpw.', open: 'modelBox', connect: { step: 's0', report: true, none: 'Paste the query and columns yourself in Step 3.', exportOnly: ['#modelBox'], open: 'modelBox', lede: 'Optional. With your model, you pick the table to build on and the tables to merge with, and its columns come along. A PBIP folder also brings each table\u2019s query, and the functions already in it.' } });
 </script>
 
 </body>

@@ -27,7 +27,7 @@ HOOKS={
  'theme-builder':"",
  'layout-designer':"",
  'power-query-explainer':"",
- 'power-query-writer':"",
+ 'power-query-writer':"SF_SUITE.hook({ input: 'modelInput', prefix: 'kpw.', open: 'modelBox', connect: { step: 's0', report: true, none: 'Paste the query and columns yourself in Step 3.', exportOnly: ['#modelBox'], open: 'modelBox', lede: 'Optional. With your model, you pick the table to build on and the tables to merge with, and its columns come along. A PBIP folder also brings each table\\u2019s query, and the functions already in it.' } });",
  'sample-data-maker':"",
 }
 for name,hook in HOOKS.items():
