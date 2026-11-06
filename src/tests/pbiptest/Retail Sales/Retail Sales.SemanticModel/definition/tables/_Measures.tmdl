@@ -1,0 +1,31 @@
+table _Measures
+
+	/// Net sales after discounts
+	measure 'Total Sales' = SUM(Sales[Net Amount])
+		formatString: \$#,0
+		displayFolder: Core
+
+	measure 'Order Count' = DISTINCTCOUNT(Sales[CustomerKey])
+		formatString: #,0
+		displayFolder: Core
+
+	measure 'Sales YoY %' =
+			VAR _ly = CALCULATE([Total Sales], SAMEPERIODLASTYEAR('Date'[Date]))
+			RETURN
+				DIVIDE([Total Sales] - _ly, _ly)
+		displayFolder: Time intelligence
+		formatStringDefinition = IF(ABS([Sales YoY %]) < 1, "0.0%", "0%")
+
+	measure 'Sales Title' = "Sales for " & SELECTEDVALUE('Date'[Year], "all years")
+		isHidden
+
+	column Value
+		isHidden
+		formatString: 0
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Value]
+
+	partition _Measures = calculated
+		mode: import
+		source = Row("Value", BLANK())
