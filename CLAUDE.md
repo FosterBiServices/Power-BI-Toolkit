@@ -248,6 +248,8 @@ through both.
 - Sample Data Maker: a script with two or more industries combined (renamed tables and measures, per-industry sizes),
   and the plain calculated tables after the RETURN fix (Accounts, Cost Centers and Departments failed before it).
 - Prompt files in Copilot (attaching the downloaded prompt; Copilot's file reply).
+- Prep for AI Writer's culture script: applying it in TMDL view (Preview should show only the culture), and whether Desktop keeps
+  an entity the page added for a field it hadn't indexed yet.
 - Sample Data Maker's Make new data: applying the TMDL script in TMDL view (tables, relationships,
   measures), including `ref table _Measures` into a report that already has one. The DAX itself is checked: every table function of all six industries, run as a DAX
   query in Desktop (Oct 2026), gave the same row counts, sums and distinct counts as the page preview.
@@ -368,6 +370,14 @@ readiness list has **Copy list** (rows for Excel) and **Download the lists for E
 name. **Columns to rename in Power Query** lists cryptic and shared-name columns with a suggested name (`friendlyName`, `ABBR`)
 and writes one `Table.RenameColumns(#"Previous step", ..., MissingField.Ignore)` step per table; calculated columns are left to
 the Data pane. Measures without a description point to Measure Describer (Step 2 and the descriptions tab). Check: `pfnamestest.js`.
+Every item in those lists has a **leave out** link for its table (or measure). **Add the synonyms to the model** (Step 5 of AI
+instructions, for people without Prep data for AI): the person pastes the culture script from TMDL view (or a PBIP folder's
+`cultures/en-US.tmdl`); `cultureParse` reads its `linguisticMetadata` JSON, `cultureMerge` adds the ticked synonyms to the entity
+whose Binding matches (ConceptualEntity = table, or a measure's home table; ConceptualProperty = field), as
+`{ "term": { "LastModified": ... } }` placed before the Suggested terms (how Desktop saved a synonym typed in Model view), accepts a
+term Power BI only suggested, keeps every other term, and adds an entity for a field that has none. `cultureScript` puts the JSON
+back on its line and adds `createOrReplace` when missing. Desktop's JSON round-trips unchanged through JSON.parse/stringify
+(checked on a real culture). Check: `pfculturetest.js`.
 
 Checked on a real model in Power BI Desktop 2.158 (Oct 2026): the About This Report data
 sources query, the Model Linter dependencies query, the shared export, and Model Compare on a
