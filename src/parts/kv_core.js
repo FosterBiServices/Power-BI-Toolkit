@@ -451,6 +451,11 @@ const KV_OPTIONS = [
     fits: 'When you want a card styled exactly your way, like the status pill, and your organization allows the HTML Content visual from AppSource.',
     avoid: 'Reports where custom visuals aren’t allowed; use a card with variance. Text in it isn’t clickable for drill-through.',
     score: h => h.base ? 50 : 40 },
+  { id: 'fnlib', for: ['goal', 'change', 'trend', 'number'], name: 'Reusable card functions', kind: 'fn', need: '',
+    nmc: ['The value for the date filter’s range', 'A pill with the change (MoM, YoY or vs target) in status colors; in the HTML version each month’s change shows on hover', 'The two numbers the pill compares, and 12 monthly columns'],
+    fits: 'Many KPIs that share one design: pick a card or a small chart (bullet, progress, sparkline, variance bar), as an SVG image or HTML. Its function goes in your model once, then each card is a one-line measure. Hover a column in the preview.',
+    avoid: 'Power BI Desktop without DAX user-defined functions, and models without a date table with one row per day.',
+    score: h => 54 },
   { id: 'ctxlabel', for: ['context', 'number'], name: 'Card with context labels', kind: 'native', need: 'ctx',
     nmc: ['The value', 'Nothing good or bad: context only', 'Your context lines under or beside the value, in your label color'],
     fits: 'Giving the number scale or perspective without judging it: share of total, rank, per customer, as-of date.',
@@ -609,6 +614,7 @@ function kvPreview(id, k, cfg){
     case 'kpi': return '<div class="kv-card"><div class="kv-cl">' + esc(kvName(k)) + '</div><div class="kv-kpi"><div class="kv-area">' + kvSvgArea(n, P) + '</div><div class="kv-cv" style="color:' + sc + '">' + esc(kvFmt(n.v, k.format, true)) + ' <span class="kv-ic">' + (L.st === 'good' ? '✔' : L.st === 'bad' ? '!' : '') + '</span></div></div><div class="kv-sub">Goal: ' + esc(kvFmt(n.t, k.format, true)) + ' (' + kvSigned(L.d) + ')</div></div>';
     case 'dcols': case 'dtarget': case 'dbadge': case 'dlolli': case 'dfill': case 'ddetail': return '<div class="kv-svg kv-design">' + kvDesignSvg(id, k, cfg) + '</div>';
     case 'html': return '<div class="kv-html">' + kvHtmlCard(k, Object.assign({}, cfg, { htmlScale: 1 })) + '</div>';
+    case 'fnlib': return '<div class="kv-svg kv-design">' + kvfPreview(k, cfg, 'summary') + '</div>';
     case 'core': return kvCardHtml(k, L, '<div class="kv-area">' + kvSvgArea(n, P) + '</div>', { refs: kvLabelHtml(L), right: kvRight(cfg) });
   }
   return '';
@@ -624,7 +630,7 @@ function kvRowPreview(id, kpis, cfg){
   return '<div class="kv-strip">' + kpis.map(k => {
     const L = kvLook(k, cfg), P = L.P, sc = L.st ? L.c.text : P.text;
     const img = id === 'rspark' ? kvSvgSpark(L.n, sc, P) : id === 'rbullet' && L.h.target ? kvSvgBullet(L.n, sc, P) : '';
-    return kvCardHtml(k, L, img ? '<div class="kv-svg">' + img + '</div>' : '', { refs: kvLabelHtml(L, true), right: kvRight(cfg) });
+    return kvCardHtml(k, L, img ? '<div class="kv-svg">' + img + '</div>' : '', { refs: kvLabelHtml(L, true) + kvCtxHtml(k), right: kvRight(cfg) });
   }).join('') + '</div>';
 }
 
@@ -750,17 +756,23 @@ function kvCtxMeasure(k, c, i){
 function kvOptionMeasures(id, k, cfg){
   const h = kvHas(k), out = [];
   if (!(k.measure || '').trim()) return out;
+  if (id === 'fnlib') return kvfMeasures(k, cfg);
   const svgId = { rspark: 'spark', rbullet: 'bullet' }[id] || id;
   const needStatus = h.base && !['card', 'kpi', 'slope', 'ctxlabel', 'ctxsub', 'ctxtip'].includes(id);
   if (needStatus) out.push(...kvStatusMeasures(k, cfg).filter(m => !/ Status Fill$/.test(m.name) || id === 'rtable' || id === 'html'));
-  if (['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html'].includes(id)) kvCtx(k).slice(0, KV_CTX_MAX).forEach((c, i) => out.push(kvCtxMeasure(k, c, i)));
+  if (['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html', 'rcards', 'rspark', 'rbullet'].includes(id)) kvCtx(k).slice(0, KV_CTX_MAX).forEach((c, i) => out.push(kvCtxMeasure(k, c, i)));
   if (['ctxlabel', 'ctxsub', 'ctxtip'].includes(id)) return out;
   if (id === 'html') { out.push(kvHtmlMeasure(k, cfg)); return out; }
   if (KV_DESIGNS[id]) { if (id === 'ddetail') kvCtx(k).slice(0, KV_CTX_MAX).forEach((c, i) => out.push(kvCtxMeasure(k, c, i))); out.push(kvDesignMeasure(id, k, cfg)); return out; }
   if (id === 'rlist') return out;
   if (id === 'rtable') { if (h.target) out.push(kvSvgMeasure('bullet', k, cfg)); out.push(kvSvgMeasure('spark', k, cfg)); }
   else if (id === 'rbullet' && !h.target) { /* nothing to draw */ }
-  else { const s = kvSvgMeasure(svgId, k, cfg); if (s) out.push(s); }
+  else {
+    const s = kvSvgMeasure(svgId, k, cfg), fc = kvFnCfg(id, cfg);
+    // built as a function: the same measure, as a one-line call to the function in the script
+    if (s && fc) { const e = kvfCall(k, fc); if (e) Object.assign(s, { expression: e, fn: true }); }
+    if (s) out.push(s);
+  }
   return out;
 }
 
@@ -808,6 +820,8 @@ function kvScorecard(kpis, cfg){
 function kvTmdl(kpis, cfg, optionId){
   const T = TAB, plan = kvPlan(kpis, cfg, optionId);
   const L = ['createOrReplace', ''];
+  const fc = kvFnCfg(optionId, cfg);
+  if (fc && (optionId === 'fnlib' || plan.some(m => m.fn))) L.push(...kvfTmdlBlocks(fc));
   if (plan.length) { L.push(T + 'ref table ' + tmdlName((cfg.table || '').trim()), ''); plan.forEach(m => L.push(...kvMeasureLines(m, T))); }
   if (optionId === 'rtable') {
     const s = kvScorecard(kpis, cfg);
@@ -826,7 +840,9 @@ function kvTmdl(kpis, cfg, optionId){
 function kvTestQuery(kpis, cfg, optionId){
   const plan = kvPlan(kpis, cfg, optionId); if (!plan.length) return '';
   const tq = qName((cfg.table || '').trim()), I = '    ';
-  const L = ['// Run in DAX query view. It defines the new measures for this query only; nothing in the model changes.', 'DEFINE'];
+  const fc = kvFnCfg(optionId, cfg), fns = fc && (optionId === 'fnlib' || plan.some(m => m.fn));
+  const L = ['// Run in DAX query view. It defines the new ' + (fns ? 'functions and ' : '') + 'measures for this query only; nothing in the model changes.', 'DEFINE'];
+  if (fns) L.push(...kvfDefine(fc));
   plan.forEach(m => { L.push(I + 'MEASURE ' + tq + bracket(m.name) + ' ='); exprLines(m.expression).forEach(l => L.push(l ? I + I + l.replace(/\t/g, I) : '')); });
   L.push('EVALUATE', 'ROW (');
   const cols = plan.map(m => I + daxString(m.name) + ', ' + bracket(m.name));
@@ -837,7 +853,7 @@ function kvChecks(kpis, cfg, optionId, model){
   const out = [], add = (level, text) => out.push({ level, text });
   if (!kpis.length) { add('info', 'Add a KPI in Step 2.'); return out; }
   kpis.forEach((k, i) => { if (!(k.measure || '').trim()) add('err', 'KPI ' + (i + 1) + (k.label ? ' (' + k.label + ')' : '') + ' has no measure. Type the measure’s name so the DAX can use it.'); });
-  const usesCtx = ['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html', 'ddetail'].includes(optionId);
+  const usesCtx = ['ctxlabel', 'ctxsub', 'ctxtip', 'cardvar', 'html', 'ddetail', 'rcards', 'rspark', 'rbullet'].includes(optionId);
   if (usesCtx) kpis.forEach(k => (k.ctx || []).forEach((c, j) => {
     const d = kvCtxKind(c), r = (c.ref || '').trim(), where = kvName(k) + ', context ' + (j + 1);
     if (c.kind !== 'text' && !r) add('warn', where + ' has no ' + d.ref.toLowerCase() + ' yet, so it’s left out.');
@@ -845,6 +861,8 @@ function kvChecks(kpis, cfg, optionId, model){
     else if (model && kvColName(r) && ['share', 'rank', 'per', 'asof'].includes(c.kind)) { const cn = kvColName(r); if (!model.columns.some(x => lc(x.table) === lc(cn.table) && lc(x.name) === lc(cn.column))) add('err', where + ': ' + r + ' isn’t in the model export.'); }
   }));
   const plan = kvPlan(kpis, cfg, optionId);
+  const fc = kvFnCfg(optionId, cfg);
+  if (fc && (optionId === 'fnlib' || plan.some(m => m.fn))) kvfChecks(kpis, fc, model, add);
   if (plan.length && !(cfg.table || '').trim()) add('err', 'Type the table the new measures go in (Step 5).');
   const names = kpis.map(k => lc(kvName(k))), dup = names.filter((x, i) => names.indexOf(x) !== i);
   if (dup.length) add('err', 'Two KPIs have the same name: ' + [...new Set(dup)].join(', ') + '. Give each its own label; the new measures are named after it.');
@@ -859,10 +877,10 @@ function kvChecks(kpis, cfg, optionId, model){
     const same = plan.filter(m => { const e = ms.get(lc(m.name)); return e && lc(e.table) === lc((cfg.table || '').trim()); });
     if (same.length) add('warn', 'The script replaces these measures, which are already in ' + cfg.table.trim() + ': ' + same.map(m => m.name).join(', ') + '.');
     const tc = (cfg.trendCol || '').match(/^'?(.*?)'?\[(.*)\]$/);
-    if (plan.some(m => /Sparkline/.test(m.name) || m.usesTrend) && tc && !model.columns.some(c => lc(c.table) === lc(tc[1]) && lc(c.name) === lc(tc[2]))) add('err', 'The trend column ' + cfg.trendCol.trim() + ' isn’t in the model export.');
+    if (plan.some(m => (/Sparkline/.test(m.name) && !m.fn) || m.usesTrend) && tc && !model.columns.some(c => lc(c.table) === lc(tc[1]) && lc(c.name) === lc(tc[2]))) add('err', 'The trend column ' + cfg.trendCol.trim() + ' isn’t in the model export.');
     if (optionId === 'rtable' && tables.has(lc(kvScoreTable(cfg)))) add('warn', 'A table called ' + kvScoreTable(cfg) + ' is already in the model. The script replaces it.');
   }
-  if (plan.some(m => /Sparkline/.test(m.name) || m.usesTrend) && /\[[^\]]*\]$/.test(cfg.trendCol || '') && !/month|period|week|quarter|year/i.test((cfg.trendCol.match(/\[([^\]]*)\]$/) || [])[1])) add('info', 'Trend by ' + cfg.trendCol.trim() + ' shows the last ' + (cfg.periods || 12) + ' values of that column (days, if it\u2019s a date). For months, use a column with one date per month, like \'Date\'[Month Start].');
-  if (plan.some(m => /Sparkline/.test(m.name) || m.usesTrend) && !/\[.+\]$/.test((cfg.trendCol || '').trim())) add('err', 'Type the trend column as \'Table\'[Column], for example \'Date\'[Month Start].');
+  if (plan.some(m => (/Sparkline/.test(m.name) && !m.fn) || m.usesTrend) && /\[[^\]]*\]$/.test(cfg.trendCol || '') && !/month|period|week|quarter|year/i.test((cfg.trendCol.match(/\[([^\]]*)\]$/) || [])[1])) add('info', 'Trend by ' + cfg.trendCol.trim() + ' shows the last ' + (cfg.periods || 12) + ' values of that column (days, if it\u2019s a date). For months, use a column with one date per month, like \'Date\'[Month Start].');
+  if (plan.some(m => (/Sparkline/.test(m.name) && !m.fn) || m.usesTrend) && !/\[.+\]$/.test((cfg.trendCol || '').trim())) add('err', 'Type the trend column as \'Table\'[Column], for example \'Date\'[Month Start].');
   return out;
 }

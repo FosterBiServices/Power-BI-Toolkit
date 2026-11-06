@@ -1,0 +1,187 @@
+/// Sales order lines: one row per product on an order, with quantity, price, discount, sales and cost.
+table Sales
+
+	/// Order the line belongs to.
+	column 'Order Number'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Order Number]
+
+	/// Line on the order, from 1.
+	column 'Line Number'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Line Number]
+
+	/// When the order was placed. Links to Date.
+	column 'Order Date'
+		dataType: dateTime
+		isDataTypeInferred
+		formatString: Short Date
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Order Date]
+
+	/// When the order shipped.
+	column 'Ship Date'
+		dataType: dateTime
+		isDataTypeInferred
+		formatString: Short Date
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Ship Date]
+
+	/// Links to Customers.
+	column CustomerKey
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [CustomerKey]
+
+	/// Links to Products.
+	column ProductKey
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [ProductKey]
+
+	/// Links to Stores.
+	column StoreKey
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [StoreKey]
+
+	/// Units on the line.
+	column Quantity
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Quantity]
+
+	/// List price of one unit.
+	column 'Unit Price'
+		dataType: double
+		isDataTypeInferred
+		formatString: #,0.00
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Unit Price]
+
+	/// Discount given, as a share of the price.
+	column Discount
+		dataType: double
+		isDataTypeInferred
+		formatString: 0%
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Discount]
+
+	/// Quantity times price, less the discount.
+	column 'Sales Amount'
+		dataType: double
+		isDataTypeInferred
+		formatString: #,0.00
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Sales Amount]
+
+	/// Quantity times unit cost.
+	column 'Cost Amount'
+		dataType: double
+		isDataTypeInferred
+		formatString: #,0.00
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Cost Amount]
+
+	partition Sales = calculated
+		mode: import
+		source =
+			-- Sales order lines: one row per product on an order, with quantity, price, discount, sales and cost.
+			VAR num_orders = 60000
+			VAR start_date = DATE( 2023, 1, 1 )
+			VAR end_date = DATE( 2026, 9, 30 )
+			VAR num_customers = 3600
+			VAR num_products = 192
+			VAR num_stores = 12
+			VAR seed = 2012
+			RETURN
+			    VAR _Rows =
+			        SELECTCOLUMNS( GENERATESERIES( 1, num_orders, 1 ), "_k", [Value] )
+			    VAR _Step1 =
+			        ADDCOLUMNS(
+			            _Rows,
+			            "Order Number", 100000 + [_k],
+			            "Order Date", start_date + INT( POWER( MOD( SIN( [_k] * 12.9898 + 1 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ), 0.9 ) * ( INT( end_date - start_date ) + 1 ) ),
+			            "CustomerKey", INT( POWER( MOD( SIN( [_k] * 12.9898 + 2 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ), 1.6 ) * num_customers ) + 1,
+			            "StoreKey", INT( MOD( SIN( [_k] * 12.9898 + 3 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * num_stores ) + 1,
+			            "_lines", INT( MOD( SIN( [_k] * 12.9898 + 4 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 4 ) + 1
+			        )
+			    VAR _Step2 =
+			        ADDCOLUMNS(
+			            _Step1,
+			            "Ship Date", [Order Date] + ( 1 + INT( MOD( SIN( [_k] * 12.9898 + 5 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 6 ) )
+			        )
+			    VAR _Step3 =
+			        GENERATE(
+			            _Step2,
+			            SELECTCOLUMNS( GENERATESERIES( 1, [_lines], 1 ), "Line Number", [Value] )
+			        )
+			    VAR _Step4 =
+			        ADDCOLUMNS(
+			            _Step3,
+			            "_lk", ( [_k] * 10 ) + [Line Number]
+			        )
+			    VAR _Step5 =
+			        ADDCOLUMNS(
+			            _Step4,
+			            "ProductKey", INT( POWER( MOD( SIN( [_lk] * 12.9898 + 6 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ), 1.3 ) * num_products ) + 1,
+			            "Quantity", INT( POWER( MOD( SIN( [_lk] * 12.9898 + 7 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ), 2 ) * 6 ) + 1,
+			            "Discount", SWITCH( TRUE(), MOD( SIN( [_lk] * 12.9898 + 8 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.7, 0, MOD( SIN( [_lk] * 12.9898 + 8 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.85, 5, MOD( SIN( [_lk] * 12.9898 + 8 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.95, 10, 20 ) / 100
+			        )
+			    VAR _Step6 =
+			        ADDCOLUMNS(
+			            _Step5,
+			            "Unit Price", ROUND( SWITCH( INT( MOD( ( [ProductKey] - 1 ) + seed, 16 ) / 4 ), 0, 120, 1, 45, 2, 80, 60 ) * ( 0.6 + ( MOD( SIN( [ProductKey] * 12.9898 + 12 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 1.4 ) ), 2 ),
+			            "Cost Amount", ROUND( [Quantity] * ROUND( ROUND( SWITCH( INT( MOD( ( [ProductKey] - 1 ) + seed, 16 ) / 4 ), 0, 120, 1, 45, 2, 80, 60 ) * ( 0.6 + ( MOD( SIN( [ProductKey] * 12.9898 + 12 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 1.4 ) ), 2 ) * ( 0.45 + ( MOD( SIN( [ProductKey] * 12.9898 + 13 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 0.25 ) ), 2 ), 2 )
+			        )
+			    VAR _Step7 =
+			        ADDCOLUMNS(
+			            _Step6,
+			            "Sales Amount", ROUND( ( [Quantity] * [Unit Price] ) * ( 1 - [Discount] ), 2 )
+			        )
+			    RETURN
+			        SELECTCOLUMNS(
+			            _Step7,
+			            "Order Number", [Order Number],
+			            "Line Number", [Line Number],
+			            "Order Date", [Order Date],
+			            "Ship Date", [Ship Date],
+			            "CustomerKey", [CustomerKey],
+			            "ProductKey", [ProductKey],
+			            "StoreKey", [StoreKey],
+			            "Quantity", [Quantity],
+			            "Unit Price", [Unit Price],
+			            "Discount", [Discount],
+			            "Sales Amount", [Sales Amount],
+			            "Cost Amount", [Cost Amount]
+			        )
+

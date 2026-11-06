@@ -1,0 +1,47 @@
+/// Field parameter for the sales trend chart (Field Parameter Builder).
+table 'Trend Metric'
+
+	column 'Trend Metric'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		sourceColumn: [Value1]
+		sortByColumn: 'Trend Metric Order'
+
+		relatedColumnDetails
+			groupByColumn: 'Trend Metric Fields'
+
+	column 'Trend Metric Fields'
+		dataType: string
+		isDataTypeInferred
+		isHidden
+		summarizeBy: none
+		sourceColumn: [Value2]
+		sortByColumn: 'Trend Metric Order'
+
+		extendedProperty ParameterMetadata =
+				{
+				  "version": 3,
+				  "kind": 2
+				}
+
+	column 'Trend Metric Order'
+		dataType: int64
+		isDataTypeInferred
+		isHidden
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: [Value3]
+
+	partition 'Trend Metric' = calculated
+		mode: import
+		source =
+				{
+				    ("Total Sales", NAMEOF ( '_Measures'[Total Sales] ), 0),
+				    ("Gross Margin", NAMEOF ( '_Measures'[Gross Margin] ), 1),
+				    ("Gross Margin %", NAMEOF ( '_Measures'[Gross Margin %] ), 2),
+				    ("Order Count", NAMEOF ( '_Measures'[Order Count] ), 3),
+				    ("Average Order Value", NAMEOF ( '_Measures'[Average Order Value] ), 4),
+				    ("Units Sold", NAMEOF ( '_Measures'[Units Sold] ), 5)
+				}
+

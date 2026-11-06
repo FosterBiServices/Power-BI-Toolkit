@@ -1,0 +1,52 @@
+@@@ QUERY @@@
+let
+    Source = Excel.Workbook(File.Contents(WorkbookPath), null, true),
+    Services = Source{[Item = "Services", Kind = "Sheet"]}[Data],
+    PromotedHeaders = Table.PromoteHeaders(Services, [PromoteAllScalars = true]),
+    TypePairs = {
+        {"CREATE DATE", type date},
+        {"ACTUAL BEGIN DATE", type date},
+        {"ACTUAL END DATE", type date},
+        {"USER ID", Int64.Type},
+        {"STATE ID", type text},
+        {"OFFICE", type text},
+        {"SERVICE", type text},
+        {"COMPLETION STATUS", type text},
+        {"PROGRAM", type text},
+        {"COMMENTS", type text}
+    },
+    ExistingCols = Table.ColumnNames(PromotedHeaders),
+    TypePairsExistingOnly = List.Select(TypePairs, each List.Contains(ExistingCols, _{0})),
+    ExplicitTypeMap = Record.FromList(
+        List.Transform(TypePairsExistingOnly, each _{1}),
+        List.Transform(TypePairsExistingOnly, each _{0})
+    ),
+    AllTypePairs = List.Transform(
+        ExistingCols,
+        (c) => {c, Record.FieldOrDefault(ExplicitTypeMap, c, type text)}
+    ),
+    ChangeTypes = Table.TransformColumnTypes(PromotedHeaders, AllTypePairs),
+    Filtered = Table.SelectRows(
+        ChangeTypes,
+        each [COMPLETION STATUS] = "Complete" and [CREATE DATE] >= #date(2024, 1, 1)
+    ),
+    Duration = Table.AddColumn(
+        Filtered,
+        "Duration Days",
+        each Duration.Days([ACTUAL END DATE] - [ACTUAL BEGIN DATE]),
+        Int64.Type
+    ),
+    RemovedComments = Table.RemoveColumns(Duration, {"COMMENTS"})
+in
+    RemovedComments
+@@@ END @@@
+@@@ STEPS @@@
+Source: Connects to the Excel workbook
+@@@ END @@@
+@@@ PARAMETERS @@@
+Name | Type | Value
+WorkbookPath | Text | (path to services.xlsx)
+@@@ END @@@
+@@@ QUESTIONS @@@
+The workbook path was not provided.
+@@@ END @@@

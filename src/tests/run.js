@@ -19,7 +19,9 @@ const server = http.createServer((req, res) => {
 // each check runs in its own process; spawn (not spawnSync) keeps this server answering meanwhile
 const run = t => new Promise(done => {
   const c = spawn(process.execPath, [t], { cwd: __dirname, stdio: 'inherit' });
-  const timer = setTimeout(() => c.kill(), 180000);
+  // 3 minutes a check, or what its first lines ask for with "// time limit: N minutes"
+  const ask = /\/\/ time limit: (\d+) minutes/.exec(fs.readFileSync(path.join(__dirname, t), 'utf8').slice(0, 600));
+  const timer = setTimeout(() => c.kill(), (ask ? +ask[1] : 3) * 60000);
   c.on('exit', code => { clearTimeout(timer); done(code); });
 });
 server.listen(8765, async () => {

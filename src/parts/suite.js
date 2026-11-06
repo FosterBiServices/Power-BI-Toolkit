@@ -1,6 +1,6 @@
 
 /*SUITE-START*/
-/* ---------- SF Power BI Toolkit: one model export shared by every page on the site ---------- */
+/* ---------- Foster BI Toolkit: one model export shared by every page on the site ---------- */
 (function(){
   const KEY = 'sfpbi.shared.model';
   const HOME = 'index.html';
@@ -19,6 +19,7 @@
   // source: 'pbip' when the rows were read from a PBIP folder (every tool then opens on that folder)
   S.set = (text, name, source) => {
     try {
+      text = S.withHeader(text);
       const prev = S.get();
       if (prev && prev.text && prev.text.trim() !== (text || '').trim()) keep(prev);
       localStorage.setItem(KEY, JSON.stringify({ text, name: name !== undefined ? name : (prev ? prev.name || '' : ''), savedAt: Date.now(), source: source || '' }));
@@ -44,11 +45,23 @@
   };
   S.clear = () => { try { localStorage.removeItem(KEY); } catch (e) {} };
   // Header row (Kind, Table, Name) plus at least one row
-  S.looksLikeExport = t => {
+  const hasHeader = t => {
     const lines = (t || '').replace(/\r/g, '').split('\n');
     const h = lines.slice(0, 15).findIndex(l => { const c = l.toLowerCase().split('\t').map(x => x.replace(/^"|"$/g, '').replace(/^.*\[|\]$/g, '').trim()); return c.includes('kind') && c.includes('table') && c.includes('name'); });
     return h >= 0 && lines.slice(h + 1).some(l => l.trim());
   };
+  // The export query's columns in its order. Rows copied from the results grid without the header row
+  // get it put back, so everything that reads the saved export finds its columns.
+  const EXPORT_HEAD = ['Kind', 'Table', 'Name', 'Type', 'Folder', 'Flags', 'Description', 'Expression', 'ToTable', 'ToColumn', 'Summarize', 'SortBy', 'Hierarchies', 'Storage', 'Source'];
+  S.withHeader = t => {
+    if (!t || hasHeader(t)) return t;
+    const body = t.replace(/\r/g, '').split('\n').filter(l => l.trim());
+    const rows = body.filter(l => { const c = l.split('\t'); return c.length >= 8 && /^"?(table|column|measure|relationship|model)"?$/i.test(c[0].trim()); }).length;
+    if (!body.length || rows < body.length * 0.8) return t;
+    const width = Math.min(EXPORT_HEAD.length, Math.max(...body.map(l => l.split('\t').length)));
+    return EXPORT_HEAD.slice(0, width).join('\t') + '\n' + t;
+  };
+  S.looksLikeExport = t => hasHeader(S.withHeader(t));
   S.counts = t => {
     const lines = (t || '').replace(/\r/g, '').split('\n');
     const out = { table: 0, column: 0, measure: 0, relationship: 0 };
@@ -201,7 +214,7 @@
     'dax-reviewer.html': [['promptView', 'reply', 'DAX Reviewer prompt']],
     'power-query-explainer.html': [['exPromptView', 'exReply', 'Power Query comments prompt'], ['exFollowView', 'exReply', 'Power Query follow-up prompt'], ['clPromptView', 'clReply', 'Power Query cleanup prompt'], ['mPromptView', 'mReply', 'Power Query model prompt'], ['bPromptView', 'bReply', 'Power Query business explanation prompt']],
     'about-this-report.html': [['promptView', 'aiInput', 'About This Report prompt']],
-    'power-query-writer.html': [['pwPromptView', 'pwReply', 'Power Query Writer prompt']]
+    'power-query-writer.html': [['pwPromptView', 'pwReply', 'Power Query Writer prompt'], ['pwFixView', 'pwReply', 'Power Query fix prompt']]
   };
   const saveText = (name, text) => {
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text.replace(/\r?\n/g, '\r\n')], { type: 'text/plain;charset=utf-8' })); a.download = name;
@@ -439,7 +452,7 @@
     const rows = [HEAD.join('\t')], r = o => rows.push(HEAD.map(h => cell(o[h])).join('\t'));
     m.tables.forEach(t => r({ Kind: 'Table', Table: t.name, Name: t.name, Type: t.category, Flags: [t.hidden ? 'hidden' : '', t.private ? 'private' : ''].filter(Boolean).join(' '), Description: t.description, Expression: t.calc, Storage: t.storage, Source: t.source }));
     m.columns.forEach(c => r({ Kind: 'Column', Table: c.table, Name: c.name, Type: c.type, Folder: c.folder, Flags: [c.hidden ? 'hidden' : '', c.key ? 'key' : ''].filter(Boolean).join(' '), Description: c.description, Expression: c.expression, Summarize: c.summarize, SortBy: c.sortBy, Hierarchies: c.hierarchies }));
-    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
+    m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : '', x.text ? 'text' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
     m.rels.forEach(x => r({ Kind: 'Relationship', Table: x.fromTable, Name: x.fromColumn, Type: x.fromCard + ':' + x.toCard, Flags: x.cross + (x.active ? '' : ' inactive'), ToTable: x.toTable, ToColumn: x.toColumn }));
     if (m.model) r({ Kind: 'Model', Name: m.model.name, Flags: m.model.discourage ? 'discourage-implicit' : '' });
     return rows.join('\n');
@@ -482,6 +495,7 @@
             description: c.doc || c.props.description || '', expression: c.value || '', summarize: c.props.summarizeby ? cap(c.props.summarizeby) : num ? 'Default' : 'None', sortBy: unq(c.props.sortbycolumn || ''), hierarchies: (levels[c.name] || []).join(', ') });
         } else if (c.kind === 'measure') {
           m.measures.push({ table: o.name, name: c.name, format: c.props.formatstring || '', folder: c.props.displayfolder || '', hidden: yes(c.props.ishidden), dynamic: 'formatstringdefinition' in c.props || c.children.some(x => x.kind === 'formatstringdefinition'),
+            text: /^(imageurl|weburl)$/i.test(unq(c.props.datacategory || '')) || /^string$/i.test(c.props.datatype || ''),
             description: c.doc || c.props.description || '', expression: c.value || '' });
         }
       });
@@ -496,7 +510,7 @@
       (t.hierarchies || []).forEach(h => (h.levels || []).forEach(l => { (levels[l.column] = levels[l.column] || []).push(h.name); }));
       m.tables.push({ name: t.name, category: t.dataCategory || '', hidden: !!t.isHidden, private: !!t.isPrivate, description: join(t.description), calc: s.type === 'calculated' ? join(s.expression) : '', storage: cap(p.mode || 'import').replace(/^Directquery$/i, 'DirectQuery'), source: s.type === 'entity' ? (s.expressionSource || '') : '' });
       (t.columns || []).forEach(c => { if (c.type === 'rowNumber') return; const num = /int64|double|decimal/i.test(c.dataType || ''); m.columns.push({ table: t.name, name: c.name, type: TYPES[(c.dataType || '').toLowerCase()] || c.dataType || '', folder: c.displayFolder || '', hidden: !!c.isHidden, key: !!c.isKey, description: join(c.description), expression: c.type === 'calculated' ? join(c.expression) : '', summarize: c.summarizeBy ? cap(c.summarizeBy) : num ? 'Default' : 'None', sortBy: c.sortByColumn || '', hierarchies: (levels[c.name] || []).join(', ') }); });
-      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, description: join(x.description), expression: join(x.expression) }));
+      (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, text: /^(imageurl|weburl)$/i.test(x.dataCategory || '') || /^string$/i.test(x.dataType || ''), description: join(x.description), expression: join(x.expression) }));
     });
     (md.relationships || []).forEach(r => m.rels.push({ fromTable: r.fromTable, fromColumn: r.fromColumn, toTable: r.toTable, toColumn: r.toColumn, fromCard: cap(r.fromCardinality || 'many'), toCard: cap(r.toCardinality || 'one'), cross: cap(r.crossFilteringBehavior || 'oneDirection'), active: r.isActive !== false }));
     return m;

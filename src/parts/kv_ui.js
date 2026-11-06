@@ -16,11 +16,11 @@ function hl(code){
   return esc(code).split('\n').map(l => {
     if (/^\s*(\/\/|\/\/\/)/.test(l)) return '<span class="tok-com">' + l + '</span>';
     return l.replace(/(&quot;(?:[^&]|&(?!quot;))*?&quot;)/g, '<span class="tok-str">$1</span>')
-      .replace(/\b(createOrReplace|ref|table|column|measure|partition|DEFINE|MEASURE|EVALUATE|ROW|VAR|RETURN|SWITCH|IF|FORMAT|CONCATENATEX|ADDCOLUMNS|FILTER|TOPN|DIVIDE|SELECTEDVALUE|formatStringDefinition|dataCategory|displayFolder|formatString)\b/g, '<span class="tok-kw">$1</span>');
+      .replace(/\b(createOrReplace|ref|table|column|measure|function|partition|annotation|DEFINE|MEASURE|FUNCTION|EVALUATE|ROW|VAR|RETURN|SWITCH|IF|FORMAT|CONCATENATEX|ADDCOLUMNS|FILTER|TOPN|DIVIDE|SELECTEDVALUE|formatStringDefinition|dataCategory|displayFolder|formatString)\b/g, '<span class="tok-kw">$1</span>');
   }).join('\n');
 }
 const clone = o => JSON.parse(JSON.stringify(o));
-const blankCfg = () => ({ mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), ink: clone(KV_INK_DEF), refPos: 'below', band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard', htmlW: KV_HTML_W, htmlH: KV_HTML_H, htmlLayout: 'auto' });
+const blankCfg = () => ({ mode: 'one', sel: 0, option: '', rowOption: 'rcards', preset: 'excel', colors: clone(KV_EXCEL), ink: clone(KV_INK_DEF), refPos: 'below', band: 2, table: '', folder: 'KPI Visuals', trendCol: "'Date'[Month Start]", periods: 12, scoreTable: 'KPI Scorecard', htmlW: KV_HTML_W, htmlH: KV_HTML_H, htmlLayout: 'auto', fnDate: "'Date'[Date]", fnAsOf: '', fnStyle: 'summary', fnOut: 'html', fnCompare: 'mom', fnDays: 30, fnW: '', fnH: '', asFn: false });
 const state = { example: false, model: null, kpis: [], cfg: blankCfg(), out: {} };
 const FIELDS = ['label', 'measure', 'format', 'better', 'target', 'compare', 'compareLabel', 'pv.value', 'pv.target', 'pv.compare', 'pv.trend'];
 // field paths: 'label', 'pv.value', 'ctx.0.ref'
@@ -109,6 +109,13 @@ function renderModel(){
     const dt = dateCols.filter(c => /date|time/i.test(c.dataType || '')), best = dt.find(c => /month/i.test(c.name)) || dateCols.find(c => /year.?month/i.test(c.name)) || dt.find(c => /date|calendar/i.test(c.table)) || dt.find(c => isDateTable(state.model.tables.find(t => lc(t.name) === lc(c.table))));
     if (best) state.cfg.trendCol = qName(best.table) + bracket(best.name);
   }
+  // the card functions need a date column with one row per day: a column called Date in a date table first
+  const dayCols = dateCols.filter(c => /date|time/i.test(c.dataType || '') && !/month|year|week|quarter/i.test(c.name));
+  $('dayCols').innerHTML = dayCols.map(c => '<option value="' + esc(qName(c.table) + bracket(c.name)) + '">').join('');
+  if (state.model && state.cfg.fnDate === blankCfg().fnDate && !state.model.columns.some(c => qName(c.table) + bracket(c.name) === state.cfg.fnDate)) {
+    const best = dayCols.find(c => lc(c.name) === 'date' && isDateTable(state.model.tables.find(t => lc(t.name) === lc(c.table)))) || dayCols.find(c => lc(c.name) === 'date') || dayCols.find(c => isDateTable(state.model.tables.find(t => lc(t.name) === lc(c.table))));
+    if (best) state.cfg.fnDate = qName(best.table) + bracket(best.name);
+  }
   renderAvail();
 }
 const inKpis = name => state.kpis.some(k => lc(k.measure) === lc(name));
@@ -125,9 +132,9 @@ function kpiFromMeasure(x){
   const k = kvBlankKpi(), ms = state.model.measures, base = lc(x.name).replace(/\s*(total|sum|amount)\s*/g, ' ').trim();
   k.label = x.name; k.measure = x.name; k.format = x.formatString || '';
   const near = re => ms.find(m => m.name !== x.name && lc(m.name).includes(base) && re.test(m.name));
-  const t = near(/target|budget|goal|plan|quota/i), c = near(/\b(LY|PY|SPLY|prior|last year|previous)\b/i);
+  const t = near(/target|budget|goal|plan|quota/i), c = near(/\b(LY|PY|SPLY|PM|prior|last year|last month|previous)\b/i);
   if (t) k.target = t.name;
-  if (c) { k.compare = c.name; k.compareLabel = 'last year'; }
+  if (c) { k.compare = c.name; k.compareLabel = /\b(PM|MoM|month)\b/i.test(c.name) ? 'last month' : 'last year'; }
   if (/return|cost|churn|days|time|defect|error|late/i.test(x.name)) k.better = 'lower';
   if (!state.cfg.table.trim()) state.cfg.table = x.table;
   return k;
@@ -172,13 +179,19 @@ function readThemeJson(){
 }
 
 /* ---------- Step 3: options ---------- */
-const KIND = { native: 'Power BI visual', svg: 'SVG measure', core: 'Core visuals', html: 'HTML measure', design: 'SVG card' };
+const KIND = { native: 'Power BI visual', svg: 'SVG measure', core: 'Core visuals', html: 'HTML measure', design: 'SVG card', fn: 'DAX functions' };
 function currentKpi(){ return state.kpis[Math.min(state.cfg.sel, state.kpis.length - 1)] || null; }
 function chosenOption(){
   if (state.cfg.mode === 'row') return rowOptions().find(o => o.id === state.cfg.rowOption) || rowOptions()[0];
   const k = currentKpi(); if (!k) return null;
   const r = kvRanked(k), pick = r.find(x => x.o.id === state.cfg.option && x.ok);
   return (pick || r[0]).o;
+}
+// Context lines that can't show yet: everything but fixed text needs its column or measure first
+function ctxMissing(kpis){
+  const miss = [];
+  kpis.forEach(x => (x.ctx || []).forEach((c, j) => { if (c && c.kind !== 'text' && !(c.ref || '').trim()) { const d = kvCtxKind(c); miss.push(esc(kvName(x)) + ', context ' + (j + 1) + ' (' + esc(d.name.charAt(0).toLowerCase() + d.name.slice(1)) + '): fill in &ldquo;' + esc(d.ref) + '&rdquo;, for example ' + esc(d.ph)); } }));
+  return miss.length ? '<div class="msg warn">Context isn&rsquo;t on these cards yet. ' + miss.join('; ') + '. Until then it&rsquo;s left out of the cards and the DAX.</div>' : '';
 }
 // The previews use the card colors from Step 4
 function inkVars(el){ const P = kvInk(state.cfg); ['bg', 'text', 'muted', 'track'].forEach(x => el.style.setProperty('--kv-' + x, P[x])); }
@@ -192,7 +205,7 @@ function renderOptions(){
   if (!state.kpis.length) { $('options').innerHTML = '<p class="note">Add a KPI in Step 2 to see the options.</p>'; $('sampleMsg').innerHTML = ''; return; }
   const chosen = chosenOption();
   const sample = row ? state.kpis.some(x => kvNums(x).sample) : kvNums(k).sample;
-  $('sampleMsg').innerHTML = sample ? '<div class="msg info">Some preview numbers are made up because none were typed. Add yours under &ldquo;Numbers for the preview&rdquo; in Step 2.</div>' : '';
+  $('sampleMsg').innerHTML = (sample ? '<div class="msg info">Some preview numbers are made up because none were typed. Add yours under &ldquo;Numbers for the preview&rdquo; in Step 2.</div>' : '') + ctxMissing(row ? state.kpis : [k]);
   $('s3note').textContent = row ? 'Each layout shows all your KPIs. Pick one to see how to build it.' : 'Ways that fit what you want readers to get come first. Pick one to see how to build it.';
   if (row) {
     $('options').innerHTML = rowOptions().map(o => '<article class="kv-opt wide' + (o === chosen ? ' on' : '') + '">'
@@ -233,8 +246,77 @@ function optCard(o, k, h, chosen){
 const B = n => '<b>' + esc(bracket(n)) + '</b>';
 const FP = p => '<b>Format visual &gt; ' + p + '</b>';
 const FX = n => 'select the <b>fx</b> button, set Format style to <b>Field value</b> and pick ' + B(n);
+// Setup for the reusable card functions
+function kvfSteps(kpis, cfg){
+  const k = kpis[0], plan = kvPlan(kpis, cfg, 'fnlib'), lib = kvfLibrary(cfg), s = kvfStyle(cfg), html = kvfOut(cfg) === 'html', d = kvfDate(cfg);
+  const tbl = esc((cfg.table || '').trim() || '_Measures'), fold = esc(normFolder(cfg.folder || '') || ''), F = n => '<b>' + esc(kvfN(n)) + '</b>';
+  const code = t => '<pre class="kv-code">' + esc(t) + '</pre>', fn = kvfFnName(cfg), small = !!s.need || s.id === 'spark';
+  const kk = kpis.find(y => kvfFits(y, cfg) && (y.measure || '').trim()) || k, m = kvRef(kk.measure), mine = plan[0];
+  if (!mine) return [];
+  const G = [];
+  G.push({ title: 'Turn on DAX functions (once)', steps: [
+    'In Power BI Desktop, go to <b>File &gt; Options and settings &gt; Options &gt; Preview features</b>. If <b>DAX user-defined functions</b> is listed, turn it on and restart Power BI Desktop. If it isn&rsquo;t listed, it&rsquo;s already on in your version.'] });
+  G.push({ title: 'Add the functions and measures', steps: [
+    'Optional: copy the <b>test query</b> above, open <b>DAX query view</b>, paste it into a new tab and select <b>Run</b>. It defines the functions and measures for that query only and shows what each one returns. Nothing in the model changes.',
+    'Open <b>TMDL view</b>. Copy the <b>TMDL script</b> above, open a new tab with <b>+</b>, paste it and select <b>Apply</b>. It adds ' + (lib.length > 1 ? lib.length + ' functions (' + lib.map(f => '<b>' + esc(f.name.slice(KVF_PKG.length + 1)) + '</b>').join(', ') + ')' : 'the function ' + F(fn)) + ' and ' + plan.length + ' measure' + (plan.length > 1 ? 's' : '') + ' in <b>' + tbl + '</b>' + (fold ? ', in the folder <b>' + fold + '</b>' : '') + '.',
+    'The functions are in <b>Model view &gt; Functions</b>, named ' + F('*') + '. For another card or the other version (SVG or HTML), pick it above and apply its script too: the functions sit side by side.'] });
+  const z = kvfSize(cfg), sized = ' (the size in Step 5; the card is drawn for it)';
+  if (html) {
+    G.push({ title: 'Show it in the HTML Content visual', steps: [
+      'Once per report: in the Visualizations pane select <b>&hellip;</b> &gt; <b>Get more visuals</b>, search for <b>HTML Content</b> (by Daniel Marsh-Patrick) and select <b>Add</b>. If AppSource visuals are blocked where you work, ask your Power BI admin, or pick <b>SVG image</b> above.',
+      'Select an empty spot, select the <b>HTML Content</b> icon, and drag ' + B(mine.name) + ' into its <b>Values</b> field well.',
+      FP('General &gt; Properties &gt; Size') + ': ' + z.w + ' wide and ' + z.h + ' high' + sized + '. For another size, type it in Step 5 and copy the measure again.',
+      FP('General') + ': turn <b>Title</b>, <b>Background</b> and <b>Header icons</b> off, and set <b>Padding</b> to 0' + (small ? '.' : '; the card has its own background and rounded corners. It fits the visual without a scroll bar.')]
+      .concat(s.tips ? ['Hover a column to see its ' + (s.id === 'rolling' ? 'days' : 'month') + ', its value and the change from the period before, in your status colors.'] : []) });
+  } else if (small) {
+    G.push({ title: 'Show it in a table or a card', tip: 'Names in the Format pane move a little between Power BI versions. If a setting isn&rsquo;t where a step says, type its name in the search box at the top of the Format pane.', steps: [
+      'Select ' + B(mine.name) + ' in the Data pane and check that <b>Measure tools &gt; Data category</b> is <b>Image URL</b> (the script sets it).',
+      'In a table or matrix: add it as a column, then set ' + FP('Visual &gt; Image size') + ' to ' + s.w + ' wide and ' + s.h + ' high.',
+      'In a card: drag <b>' + esc(m) + '</b> into the <b>Data</b> field well, turn ' + FP('Visual &gt; Image') + ' on, take the image from data (Image URL) and pick ' + B(mine.name) + '.'] });
+  } else {
+    G.push({ title: 'Show it as an image', tip: 'Names in the Format pane move a little between Power BI versions. If a setting isn&rsquo;t where a step says, type its name in the search box at the top of the Format pane.', steps: [
+      'Select an empty spot, select the <b>Card</b> visual, and drag <b>' + esc(m) + '</b> into its <b>Data</b> field well.',
+      'Turn ' + FP('Visual &gt; Image') + ' on, take the image from data (Image URL), and pick ' + B(mine.name) + '. Set Image fit to <b>Fit</b>.',
+      FP('Visual &gt; Callout value') + ', <b>Label</b> and <b>Reference labels</b>: turn them off. Turn the card&rsquo;s background, border and shadow off too.',
+      FP('General &gt; Properties &gt; Size') + ': about ' + (z.w + 16) + ' wide and ' + (z.h + 16) + ' high' + sized + '.' + (s.tips ? ' An image has no hover tooltips; pick HTML above for those.' : ''),
+      'In a table instead: add ' + B(mine.name) + ' as a column and set ' + FP('Visual &gt; Image size') + ' to ' + z.h + ' high and ' + z.w + ' wide.'] });
+  }
+  // what each input is, for this card
+  const ins = {
+    summary: 'a title (shown in capitals), any measure, its format string (like "#,0", "0.0%" or "\\$#,0"), TRUE () when lower is better, the visual&rsquo;s width and height in pixels, then what it compares with',
+    trend: 'a title (shown in capitals), any measure, its format string, TRUE () when lower is better, the visual&rsquo;s width and height in pixels, then what it compares with',
+    rolling: 'a title (shown in capitals), a measure, the number of days in each window, its format string, TRUE () when lower is better, and the visual&rsquo;s width and height in pixels',
+    snapshot: 'a title, the value as text, a caption, a share between 0 and 1 for the bar (or BLANK () for none), and the width and height in pixels',
+    bullet: 'the value, its target, and TRUE () when lower is better', progress: 'the value, its target, and TRUE () when lower is better',
+    varbar: 'the value, what it&rsquo;s compared with (a target or an earlier period), and TRUE () when lower is better',
+    spark: 'any measure, TRUE () when lower is better, then what the last point&rsquo;s color compares with'
+  }[s.id];
+  const ex = [kvMName(kk, s.suffix) + ' = ' + kvfCall(kk, cfg)];
+  if (s.cmp) { const c2 = Object.assign({}, cfg, { fnCompare: 'yoy' }), c3 = Object.assign({}, cfg, { fnCompare: 'mom' });
+    if (kvfCompare(kk, cfg).mode !== 'yoy') ex.push(kvName(kk) + ' YoY = ' + kvfCall(kk, c2));
+    if (kvfCompare(kk, cfg).mode !== 'mom') ex.push(kvName(kk) + ' MoM = ' + kvfCall(kk, c3));
+    ex.push( kvName(kk) + ' vs Budget = ' + kvfCall(kk, c3).replace(/"MoM", BLANK \(\) \)$/, '"Budget", [' + kvName(kk) + ' Budget] )')); }
+  G.push({ title: 'Make more', steps: [
+    'Each one is a single-line measure. Select <b>New measure</b> and type one like these, with your own measure' + (s.id === 'snapshot' || !small ? ', title and format string' : '') + ':' + code(ex.join('\n')),
+    'What goes in: ' + ins + '.'].concat(s.cmp ? ['What it compares with: <b>"MoM"</b>, this month against the month before; <b>"YoY"</b>, the date filter against the same dates last year (it needs a year more of data); or any other word, like <b>"Target"</b> or <b>"Budget"</b>, followed by that measure. Use <b>BLANK ()</b> for the measure with MoM and YoY.'] : [])
+    .concat(html ? [] : ['Set each new measure&rsquo;s <b>Data category</b> to <b>Image URL</b> under Measure tools.']) });
+  G.push({ title: 'Change colors and dates later', steps: [
+    'Colors, the neutral band (now ' + esc(String(cfg.band)) + '%) and how numbers are shortened are written into the functions, so there are no color functions to look after. Change them in Step 4, then copy the script and apply it again: every card that uses the function follows.']
+    .concat(s.dates ? ['Dates come from ' + F('StartDate') + ' and ' + F('EndDate') + ': the first and last date of ' + esc(d.col) + ' in the date filter' + (d.asOf ? ', ending no later than ' + esc(d.asOf) : '') + '.'] : []) });
+  return G;
+}
 // Setup steps in Power BI for the chosen option, in groups: [{ title, steps: [html] }]
 function kvSteps(id, kpis, cfg){
+  if (id === 'fnlib') return kvfSteps(kpis, cfg);
+  const G0 = kvOptionSteps(id, kpis, cfg), fc = kvFnCfg(id, cfg), k0 = kpis.find(x => kvfFits(x, fc || cfg)) || kpis[0];
+  if (!fc || !kvPlan(kpis, cfg, id).some(m => m.fn)) return G0;
+  const mm = kvPlan(kpis, cfg, id).find(m => m.fn);
+  return [{ title: 'Turn on DAX functions (once)', steps: [
+    'In Power BI Desktop, go to <b>File &gt; Options and settings &gt; Options &gt; Preview features</b>. If <b>DAX user-defined functions</b> is listed, turn it on and restart Power BI Desktop. If it isn&rsquo;t listed, it&rsquo;s already on in your version.',
+    'The script adds the function <b>' + esc(kvfN(kvfFnName(fc))) + '</b> and a one-line measure that calls it. For another KPI, select <b>New measure</b> and type one like this, then set its <b>Data category</b> to <b>Image URL</b>:'
+      + '<pre class="kv-code">' + esc(mm.name + ' = ' + mm.expression) + '</pre>'] }].concat(G0);
+}
+function kvOptionSteps(id, kpis, cfg){
   const k = kpis[0], h = kvHas(k), m = kvRef(k.measure), trend = esc((cfg.trendCol || '').trim() || "'Date'[Month Start]");
   const plan = kvPlan(kpis, cfg, id), status = x => kvOptionMeasures(id, x, cfg).some(p => /Status Label$/.test(p.name));
   const G = [];
@@ -358,11 +440,13 @@ function kvSteps(id, kpis, cfg){
     case 'rcards': case 'rspark': case 'rbullet': {
       const pic = id === 'rspark' ? 'Sparkline' : id === 'rbullet' ? 'Bullet' : '';
       G.push({ title: 'Add the visual', steps: [newCard, 'Drag each KPI measure into the <b>Data</b> field well, in this order: ' + kpis.map(x => '<b>' + esc(kvRef(x.measure)) + '</b>').join(', ') + '. One card visual shows a card for each.', FP('Visual &gt; Layout') + ': set the arrangement to a single row with ' + kpis.length + ' cards (max tiles), and the gap between them.'] });
-      const each = kpis.map(x => { const st = status(x), hasPic = pic && (pic !== 'Bullet' || kvHas(x).target); if (!st && !hasPic) return ''; return '<b>' + esc(kvRef(x.measure)) + '</b>: ' + [st ? 'reference label ' + B(kvMName(x, 'Status Label')) + ', its color from ' + B(kvMName(x, 'Status Color')) : '', hasPic ? 'image ' + B(kvMName(x, pic)) : ''].filter(Boolean).join('; ') + '.'; }).filter(Boolean);
+      const ctxOf = x => kvCtx(x).slice(0, KV_CTX_MAX).map((c, j) => B(kvCtxName(x, j)));
+      const each = kpis.map(x => { const st = status(x), hasPic = pic && (pic !== 'Bullet' || kvHas(x).target), cx = ctxOf(x); if (!st && !hasPic && !cx.length) return ''; return '<b>' + esc(kvRef(x.measure)) + '</b>: ' + [st ? 'reference label ' + B(kvMName(x, 'Status Label')) + ', its color from ' + B(kvMName(x, 'Status Color')) : '', cx.length ? 'context label' + (cx.length > 1 ? 's ' : ' ') + cx.join(' and ') : '', hasPic ? 'image ' + B(kvMName(x, pic)) : ''].filter(Boolean).join('; ') + '.'; }).filter(Boolean);
       const steps = [callout + ' Leave &ldquo;Apply settings to&rdquo; on <b>All</b> for this, so every card matches.',
         'At the top of the Visual tab, set <b>Apply settings to</b> (Series) to one KPI at a time. Then:'];
       if (each.length) steps.push('<ul>' + each.map(x => '<li>' + x + '</li>').join('') + '</ul>');
-      steps.push('For each one, ' + FP('Visual &gt; Reference labels') + ': add a label and pick its Status Label; for the value color, select <b>fx</b>, Format style <b>Field value</b>, and pick its Status Color. Leave the label background off; it would fill the whole label area.');
+      if (kpis.some(status)) steps.push('For each one, ' + FP('Visual &gt; Reference labels') + ': add a label and pick its Status Label; for the value color, select <b>fx</b>, Format style <b>Field value</b>, and pick its Status Color. Leave the label background off; it would fill the whole label area.');
+      if (kpis.some(x => kvCtx(x).length)) steps.push('For each context label, ' + FP('Visual &gt; Reference labels') + ': add ' + (kpis.some(status) ? 'another' : 'a') + ' label and pick the context measure. Turn its title off and make its value your label color (' + kvInk(cfg).muted + '): it&rsquo;s context, not good or bad.');
       if (right) steps.push(...rightSteps.map(x => x + ' Keep &ldquo;Apply settings to&rdquo; on <b>All</b> for this.'));
       if (pic) steps.push('And ' + FP('Visual &gt; Images') + ': turn images on, set Image type to <b>Image URL</b>, select <b>fx</b> &gt; Field value and pick its ' + pic + ' measure. Position <b>Bottom</b>.' + (id === 'rbullet' ? ' KPIs without a target get no bullet.' : ''));
       G.push({ title: 'Format it', tip, steps });
@@ -385,17 +469,29 @@ function kvSteps(id, kpis, cfg){
 // Options whose setup uses the card's reference labels, so they can go to the right of the value
 function usesRef(id, kpis, cfg){
   if (['cardvar', 'ctxlabel'].includes(id)) return true;
-  return ['core', 'bullet', 'progress', 'spark', 'varbar', 'waffle', 'rcards', 'rspark', 'rbullet'].includes(id) && kpis.some(x => kvHas(x).base && (x.measure || '').trim());
+  return ['core', 'bullet', 'progress', 'spark', 'varbar', 'waffle', 'rcards', 'rspark', 'rbullet'].includes(id) && kpis.some(x => (kvHas(x).base || (['rcards', 'rspark', 'rbullet'].includes(id) && kvHas(x).ctx)) && (x.measure || '').trim());
 }
 function renderBuild(){
   const o = chosenOption(), row = state.cfg.mode === 'row';
   const kpis = row ? state.kpis : (currentKpi() ? [currentKpi()] : []);
   $('buildName').textContent = o ? o.name : '';
-  if (!o || !kpis.length) { $('buildKind').textContent = 'Add a KPI in Step 2 first.'; $('steps').innerHTML = ''; $('setupHead').hidden = true; $('checks').innerHTML = ''; $('outBox').hidden = true; $('buildCfg').hidden = true; state.out = {}; return; }
-  const plan = kvPlan(kpis, state.cfg, o.id);
-  $('buildKind').textContent = plan.length ? 'The script adds ' + plan.length + ' measure' + (plan.length > 1 ? 's' : '') + (o.id === 'rtable' ? ' and the scorecard table' : '') + ' to your model. Below the script, step-by-step setup in Power BI says where each one goes.' : 'Nothing to add to your model. The steps below set it up in Power BI.';
-  $('buildCfg').hidden = !plan.length;
-  const spark = plan.some(m => /Sparkline/.test(m.name) || m.usesTrend);
+  if (!o || !kpis.length) { $('buildKind').textContent = 'Add a KPI in Step 2 first.'; $('steps').innerHTML = ''; $('setupHead').hidden = true; $('checks').innerHTML = ''; $('outBox').hidden = true; $('buildCfg').hidden = true; renderFnBox(null); state.out = {}; return; }
+  const plan = kvPlan(kpis, state.cfg, o.id), fn = o.id === 'fnlib';
+  const nf = fn ? kvfLibrary(state.cfg).length : 0;
+  $('buildKind').textContent = fn ? (plan.length ? 'The script adds ' + (nf > 1 ? nf + ' functions' : 'one function') + ' to your model, with your colors from Step 4, and ' + plan.length + ' measure' + (plan.length > 1 ? 's that use' : ' that uses') + (nf > 1 ? ' them' : ' it') + '. After that, each new card is a one-line measure.' : kvName(kpis[0]) + ' has no ' + (kvfStyle(state.cfg).need === 'target' ? 'target' : 'target or comparison') + ', so it gets no ' + kvfStyle(state.cfg).name.toLowerCase() + '. Pick another card.')
+    : plan.length ? 'The script adds ' + plan.length + ' measure' + (plan.length > 1 ? 's' : '') + (o.id === 'rtable' ? ' and the scorecard table' : '') + ' to your model. Below the script, step-by-step setup in Power BI says where each one goes.' : 'Nothing to add to your model. The steps below set it up in Power BI.';
+  const fs = kvfStyle(state.cfg);
+  const fc = kvFnCfg(o.id, state.cfg), fnSpark = !fn && !!fc && kvfStyle(fc).dates;
+  document.querySelectorAll('#buildCfg .fnf').forEach(el => { el.hidden = !fn || (el.classList.contains('fnd') && !fs.dates); });
+  document.querySelectorAll('#buildCfg .fnd').forEach(el => { if (fnSpark) el.hidden = false; });
+  $('fnCompareWrap').hidden = !fn || !fs.cmp; $('fnDaysWrap').hidden = !fn || !fs.days;
+  $('asFnWrap').hidden = !KVF_OPT[o.id] || row; $('asFn').value = state.cfg.asFn ? '1' : '';
+  const z = kvfSize(state.cfg); $('fnW').placeholder = fs.w; $('fnH').placeholder = fs.h;
+  $('fnSizeNote').textContent = 'Suggested ' + fs.w + ' × ' + fs.h + (z.own ? '. Built for ' + z.w + ' × ' + z.h + (z.min ? ' (at least ' + z.min[0] + ' × ' + z.min[1] + ')' : '') : '') + '.';
+  if (fn && kpis[0]) { const ok = kvfComparesFor(kpis[0]), cur = kvfCompare(kpis[0], state.cfg).mode; $('fnCompare').innerHTML = ok.map(x => '<option value="' + x.id + '"' + (x.id === cur ? ' selected' : '') + '>' + esc(x.name) + '</option>').join(''); }
+  renderFnBox(fn ? kpis : null);
+  $('buildCfg').hidden = !plan.length && !fn;
+  const spark = plan.some(m => (/Sparkline/.test(m.name) && !m.fn) || m.usesTrend);
   $('trendWrap').hidden = !spark && o.id !== 'kpi' && o.id !== 'core'; $('periodsWrap').hidden = !spark; $('scoreWrap').hidden = o.id !== 'rtable'; $('htmlSizeWrap').hidden = o.id !== 'html'; renderHtmlFit(o.id === 'html' ? kpis[0] : null);
   const ref = usesRef(o.id, kpis, state.cfg); $('refPosWrap').hidden = !ref; $('refBelow').checked = !kvRight(state.cfg); $('refRight').checked = kvRight(state.cfg);
   if (!plan.length && (o.id === 'kpi' || o.id === 'core' || ref)) $('buildCfg').hidden = false;
@@ -428,9 +524,20 @@ function renderHtmlFit(k){
         + '<div class="kv-fitframe" style="width:' + f.size.w + 'px;height:' + f.size.h + 'px;padding:' + (KV_HTML_EDGE / 2) + 'px">' + kvHtmlCard(k, c, f) + '</div></figure>';
     }).join('') + '</div><div class="small muted">Shown at the size the script is built for, with the preview&rsquo;s numbers. Select one to use it.</div>';
 }
+// The card functions: each KPI drawn with the chosen card, as the HTML version (hover a column)
+function renderFnBox(kpis){
+  const box = $('fnBox'); box.hidden = !kpis; if (!kpis) { box.innerHTML = ''; return; }
+  inkVars(box);
+  const s = kvfStyle(state.cfg);
+  const z = kvfSize(state.cfg);
+  box.innerHTML = '<p class="small muted">' + esc(s.name) + ' (' + z.w + ' &times; ' + z.h + '): ' + esc(s.tip) + (s.tips ? ' Hover a column.' : '') + ' Shown with the preview&rsquo;s numbers.</p>'
+    + '<div class="kv-fngrid">' + kpis.filter(k => (k.measure || '').trim()).map(k => { const c = kvfPreview(k, state.cfg);
+      return '<div class="kv-fnfig" style="max-width:' + Math.max(z.w, 160) + 'px">' + (c && s.w <= 120 ? '<div class="small muted">' + esc(kvName(k)) + '</div>' : '') + (c || '<p class="small muted">' + esc(kvName(k)) + ': no ' + (s.need === 'target' ? 'target' : 'target or comparison') + '</p>') + '</div>'; }).join('') + '</div>';
+}
 function syncInputs(){
   const c = state.cfg;
-  [['homeTable', 'table'], ['folder', 'folder'], ['trendCol', 'trendCol'], ['periods', 'periods'], ['scoreTable', 'scoreTable'], ['htmlW', 'htmlW'], ['htmlH', 'htmlH']].forEach(([id, key]) => { if (document.activeElement !== $(id)) $(id).value = c[key]; });
+  [['homeTable', 'table'], ['folder', 'folder'], ['trendCol', 'trendCol'], ['periods', 'periods'], ['scoreTable', 'scoreTable'], ['htmlW', 'htmlW'], ['htmlH', 'htmlH'], ['fnDate', 'fnDate'], ['fnAsOf', 'fnAsOf'], ['fnDays', 'fnDays'], ['fnW', 'fnW'], ['fnH', 'fnH']].forEach(([id, key]) => { if (document.activeElement !== $(id)) $(id).value = c[key]; });
+  $('fnStyle').value = kvfStyle(c).id; $('fnOut').value = kvfOut(c);
 }
 function renderLive(){ renderOptions(); renderBuild(); }
 function renderAll(){ renderKpis(); renderModel(); renderColors(); renderLive(); }
@@ -443,11 +550,15 @@ function resetAll(){
 }
 function init(){
   $('exportView').textContent = DAX_QUERY;
+  $('fnStyle').innerHTML = KVF_STYLES.filter(s => s.card).map(s => '<option value="' + s.id + '">' + esc(s.name) + '</option>').join('');
+  $('fnOut').innerHTML = KVF_OUTS.map(o => '<option value="' + o.id + '">' + esc(o.name) + '</option>').join('');
   const saved = store.get('model');
   let kpis = null, cfg = null; try { kpis = JSON.parse(store.get('kpis') || 'null'); cfg = JSON.parse(store.get('cfg') || 'null'); } catch (e) {}
-  if (cfg) { state.cfg = Object.assign(blankCfg(), cfg); state.cfg.ink = kvInk(cfg); }
+  // saved entries from an older version or cut short: keep only what has the right shape
+  if (!Array.isArray(kpis)) kpis = null; else kpis = kpis.filter(k => k && typeof k === 'object');
+  if (cfg && typeof cfg === 'object' && !Array.isArray(cfg)) { state.cfg = Object.assign(blankCfg(), cfg); state.cfg.ink = kvInk(cfg); }
   if (saved && saved.trim()) $('modelInput').value = saved;
-  if (kpis && kpis.length) state.kpis = kpis.map(k => Object.assign(kvBlankKpi(), k, { pv: Object.assign(kvBlankKpi().pv, k.pv || {}), ctx: Array.isArray(k.ctx) ? k.ctx.slice(0, KV_CTX_MAX).map(c => Object.assign(kvBlankCtx(c.kind), c)) : [] }));
+  if (kpis && kpis.length) state.kpis = kpis.map(k => Object.assign(kvBlankKpi(), k, { pv: Object.assign(kvBlankKpi().pv, k.pv || {}), ctx: Array.isArray(k.ctx) ? k.ctx.filter(c => c && typeof c === 'object').slice(0, KV_CTX_MAX).map(c => Object.assign(kvBlankCtx(c.kind), c)) : [] }));
   else if (!(saved && saved.trim()) && store.get('blank') !== '1') { state.kpis = clone(KV_EX_KPIS); Object.assign(state.cfg, KV_EX_CFG); setExample(true); }
   renderAll();
   $('dlHtml').addEventListener('click', () => { if (!state.out.html) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([state.out.html], { type: 'text/html' })); a.download = (kvName(currentKpi() || {}).replace(/[^\w -]+/g, '').trim() || 'KPI') + ' card.html'; document.body.appendChild(a); a.click(); a.remove(); });
@@ -541,9 +652,13 @@ function init(){
     renderLive(); persist();
     const s4 = $('s4'); if (s4 && s4.scrollIntoView) s4.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
-  [['homeTable', 'table'], ['folder', 'folder'], ['trendCol', 'trendCol'], ['scoreTable', 'scoreTable']].forEach(([id, key]) => $(id).addEventListener('input', () => { state.cfg[key] = $(id).value; renderBuild(); persist(); }));
+  [['homeTable', 'table'], ['folder', 'folder'], ['trendCol', 'trendCol'], ['scoreTable', 'scoreTable'], ['fnDate', 'fnDate'], ['fnAsOf', 'fnAsOf']].forEach(([id, key]) => $(id).addEventListener('input', () => { state.cfg[key] = $(id).value; renderBuild(); persist(); }));
+  [['fnStyle', 'fnStyle'], ['fnOut', 'fnOut'], ['fnCompare', 'fnCompare']].forEach(([id, key]) => $(id).addEventListener('change', () => { state.cfg[key] = $(id).value; renderBuild(); persist(); }));
   $('htmlFit').addEventListener('click', e => { const b = e.target.closest('[data-hlay]'); if (!b) return; state.cfg.htmlLayout = b.dataset.hlay; renderBuild(); persist(); });
   ['htmlW', 'htmlH'].forEach(id => $(id).addEventListener('input', () => { const v = parseInt($(id).value, 10); state.cfg[id] = isFinite(v) ? Math.max(40, Math.min(2000, v)) : (id === 'htmlW' ? KV_HTML_W : KV_HTML_H); renderBuild(); persist(); }));
+  [['fnW', 'fnW'], ['fnH', 'fnH']].forEach(([id, key]) => $(id).addEventListener('input', () => { state.cfg[key] = $(id).value; renderBuild(); persist(); }));
+  $('asFn').addEventListener('change', () => { state.cfg.asFn = !!$('asFn').value; renderBuild(); persist(); });
+  $('fnDays').addEventListener('input', () => { const v = parseInt($('fnDays').value, 10); state.cfg.fnDays = isFinite(v) ? Math.max(1, Math.min(366, v)) : 30; renderBuild(); persist(); });
   $('periods').addEventListener('input', () => { const v = parseInt($('periods').value, 10); state.cfg.periods = isFinite(v) ? Math.max(2, Math.min(36, v)) : 12; renderBuild(); persist(); });
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); });
   document.addEventListener('click', e => {

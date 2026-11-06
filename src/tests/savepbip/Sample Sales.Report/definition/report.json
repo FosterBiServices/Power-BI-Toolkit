@@ -1,0 +1,125 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.3.0/schema.json",
+  "themeCollection": {
+    "baseTheme": {
+      "name": "Fluent2-CY26SU10",
+      "reportVersionAtImport": {
+        "visual": "2.14.0",
+        "report": "3.4.0",
+        "page": "2.3.1"
+      },
+      "type": "SharedResources"
+    },
+    "customTheme": {
+      "name": "FosterGolfCo.theme.json",
+      "reportVersionAtImport": {
+        "visual": "2.14.0",
+        "report": "3.4.0",
+        "page": "2.3.1"
+      },
+      "type": "RegisteredResources"
+    }
+  },
+  "objects": {
+    "section": [
+      {
+        "properties": {
+          "verticalAlignment": {
+            "expr": {
+              "Literal": {
+                "Value": "'Top'"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "resourcePackages": [
+    {
+      "name": "SharedResources",
+      "type": "SharedResources",
+      "items": [
+        {
+          "name": "Fluent2-CY26SU10",
+          "path": "BaseThemes/Fluent2-CY26SU10.json",
+          "type": "BaseTheme"
+        }
+      ]
+    },
+    {
+      "name": "RegisteredResources",
+      "type": "RegisteredResources",
+      "items": [
+        {
+          "name": "FosterGolfCo.theme.json",
+          "path": "FosterGolfCo.theme.json",
+          "type": "CustomTheme"
+        },
+        {
+          "name": "SF_Shield_Logo.png",
+          "path": "SF_Shield_Logo.png",
+          "type": "Image"
+        },
+        {
+          "name": "p01_overview.png",
+          "path": "p01_overview.png",
+          "type": "Image"
+        },
+        {
+          "name": "p02_pl.png",
+          "path": "p02_pl.png",
+          "type": "Image"
+        },
+        {
+          "name": "p03_bva.png",
+          "path": "p03_bva.png",
+          "type": "Image"
+        },
+        {
+          "name": "p04_sales.png",
+          "path": "p04_sales.png",
+          "type": "Image"
+        },
+        {
+          "name": "p05_margin.png",
+          "path": "p05_margin.png",
+          "type": "Image"
+        },
+        {
+          "name": "p06_stores.png",
+          "path": "p06_stores.png",
+          "type": "Image"
+        },
+        {
+          "name": "p07_opex.png",
+          "path": "p07_opex.png",
+          "type": "Image"
+        },
+        {
+          "name": "p08_ar.png",
+          "path": "p08_ar.png",
+          "type": "Image"
+        },
+        {
+          "name": "p09_gl.png",
+          "path": "p09_gl.png",
+          "type": "Image"
+        },
+        {
+          "name": "p10_about.png",
+          "path": "p10_about.png",
+          "type": "Image"
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "useStylableVisualContainerHeader": true,
+    "exportDataMode": "AllowSummarized",
+    "defaultDrillFilterOtherVisuals": true,
+    "allowChangeFilterTypes": true,
+    "useEnhancedTooltips": true,
+    "useDefaultAggregateDisplayName": true
+  }
+}

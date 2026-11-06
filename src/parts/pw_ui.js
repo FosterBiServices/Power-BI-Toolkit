@@ -26,19 +26,21 @@ function copyText(text, btn){
   try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
 }
 
-const FIELDS = ['goal', 'sourceDetail', 'existing', 'columns', 'merges', 'params', 'culture', 'pwReply'];
-const blank = () => ({ goal: '', start: 'new', source: 'sql', sourceDetail: '', existing: '', columns: '', merges: '', params: '', culture: '', makeParams: true, pwReply: '' });
+const FIELDS = ['goal', 'sourceDetail', 'existing', 'columns', 'merges', 'params', 'culture', 'myFns', 'pwReply', 'pwError'];
+const blank = () => ({ goal: '', start: 'new', source: 'sql', sourceDetail: '', existing: '', columns: '', merges: '', params: '', culture: '', makeParams: true, typeMap: true, typeHow: 'fx', fx: PWF.blankOpts(), haveFx: false, myFns: '', pwReply: '', pwError: '' });
 const state = { example: false, v: blank(), prompt: '', reply: null };
 
 function inputs(){
   const v = state.v, ex = v.start === 'existing' && v.existing.trim() ? parseM(v.existing) : null;
   return { goal: v.goal, start: v.start, source: v.source, sourceDetail: v.sourceDetail, existing: v.existing, existingDb: ex && !ex.error && sourceInfo(ex).kind === 'database',
-    columns: v.columns, merges: v.merges, params: v.params, culture: v.culture, makeParams: v.makeParams };
+    columns: v.columns, merges: v.merges, params: v.params, culture: v.culture, makeParams: v.makeParams, typeMap: v.typeMap !== false,
+    typeHow: v.typeHow === 'steps' ? 'steps' : 'fx', fx: v.fx, haveFx: !!v.haveFx, myFns: v.myFns };
 }
 function toForm(){
   const v = state.v;
   FIELDS.forEach(k => { $(k).value = v[k] || ''; });
-  $('source').value = v.source; $('makeParams').checked = v.makeParams;
+  $('source').value = v.source; $('makeParams').checked = v.makeParams; $('typeMap').checked = v.typeMap !== false;
+  $('typeSteps').checked = v.typeHow === 'steps'; $('haveFx').checked = !!v.haveFx;
   document.querySelectorAll('input[name=start]').forEach(i => { i.checked = i.value === v.start; });
 }
 
@@ -56,7 +58,51 @@ function renderStart(){
 function renderCols(){
   const cols = PW.parseColumns(state.v.columns);
   $('colChips').innerHTML = cols.length ? cols.map(c => '<span class="chip">' + esc(c.name) + (c.type ? ' <small>' + esc(c.type) + '</small>' : '') + '</span>').join('') + '<span class="muted small">' + cols.length + ' column' + (cols.length === 1 ? '' : 's') + '</span>' : '';
+  // the type map: shown once there are columns
+  $('typeMapBox').hidden = !cols.length;
+  $('typeHowBox').hidden = state.v.typeMap === false;
+  $('typeMapView').hidden = state.v.typeMap === false || state.v.typeHow !== 'steps';
+  $('typeMapCode').textContent = cols.length ? PW.typeMap(cols, 'PromotedHeaders', state.v.culture) : '';
+  $('fxBox').hidden = !cols.length;
+  renderRecipes(cols); renderFx();
 }
+/* ---------- cleaning recipes ---------- */
+const R_OPTS = {
+  trim: o => '<label><input type="checkbox" data-opt="collapse"' + (o.collapse ? ' checked' : '') + '> Also turn runs of spaces inside the text into one</label>',
+  case: o => '<label>Case <select data-opt="how">' + ['Upper', 'Lower', 'Proper'].map(c => '<option' + (o.how === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select></label>',
+  date: o => '<label class="row" style="flex:1 1 220px">Format <input type="text" class="txt" data-opt="format" value="' + esc(o.format || '') + '" placeholder="only if fixed, for example yyyyMMdd"></label>',
+  num: o => '<label><input type="checkbox" data-opt="whole"' + (o.whole ? ' checked' : '') + '> Whole numbers (rounded)</label>',
+  split: o => '<label><input type="checkbox" data-opt="keep"' + (o.keep !== false ? ' checked' : '') + '> Keep the original columns</label>',
+  nulls: o => '<label class="row" style="flex:1 1 220px">Replace with <input type="text" class="txt" data-opt="value" value="' + esc(o.value || '') + '" placeholder="for example Unknown or 0"></label>',
+  dedupe: o => '<label><input type="checkbox" data-opt="last"' + (o.last ? ' checked' : '') + '> Keep the last row instead of the first</label><label><input type="checkbox" data-opt="nocase"' + (o.nocase ? ' checked' : '') + '> Ignore upper and lower case</label>'
+};
+function fxOpt(id){ const all = state.v.fx || (state.v.fx = PWF.blankOpts()); return all[id] || (all[id] = PWF.blankOpts()[id]); }
+function renderRecipes(cols){
+  cols = cols || PW.parseColumns(state.v.columns);
+  $('recipes').innerHTML = PWF.RECIPES.map(r => {
+    const o = fxOpt(r.id), picked = new Set(o.cols || []);
+    const need = r.cols && !r.all && o.on && !cols.some(c => picked.has(c.name));
+    return '<div class="recipe" data-r="' + r.id + '"><label class="opts"><span><input type="checkbox" data-on="' + r.id + '"' + (o.on ? ' checked' : '') + '> ' + esc(r.label) + ' <span class="muted small">' + r.fx + '</span></span></label>'
+      + '<div class="rbody"' + (o.on && (r.cols || R_OPTS[r.id] || r.hint) ? '' : ' hidden') + '>' + (r.hint ? '<p class="note small">' + esc(r.hint) + '</p>' : '')
+      + (r.cols ? '<div class="colpick" role="group" aria-label="Columns for ' + esc(r.label) + '">' + cols.map(c => '<button type="button" data-col="' + esc(c.name) + '" aria-pressed="' + picked.has(c.name) + '">' + esc(c.name) + '</button>').join('') + '</div>' : '')
+      + (R_OPTS[r.id] ? '<div class="row">' + R_OPTS[r.id](o) + '</div>' : '')
+      + (need ? '<div class="msg info">Pick at least one column.</div>' : '') + '</div></div>';
+  }).join('');
+}
+function renderFx(){
+  const f = PW.fxInfo(inputs());
+  state.fxCode = f.code;
+  $('fxOut').hidden = !f.rs;
+  $('fxStepsCode').textContent = f.code;
+  $('fxFns').innerHTML = f.rs ? f.rs.fns.map(n => { const fn = PWF.BY.get(n); return '<details class="extra"><summary><code>' + n + '</code> <span class="muted">' + esc(fn.does) + '</span></summary><div class="codebox"><div class="codebox-bar"><span class="t">Blank query &gt; Advanced Editor, then rename it ' + n + '</span><span class="r"><button class="btn" type="button" data-copyfn="' + n + '">Copy</button></span></div><pre class="short">' + esc(fn.code) + '</pre></div></details>'; }).join('') : '';
+}
+// what a recipe starts with when ticked: the date columns for dates, the date-time columns for splitting
+function recipeDefaults(id, cols){
+  if (id === 'date') return cols.filter(c => c.type === 'date').map(c => c.name);
+  if (id === 'split') return cols.filter(c => c.type === 'datetime').map(c => c.name);
+  return [];
+}
+function fxChanged(redraw){ if (redraw) renderRecipes(); renderFx(); renderPrompt(); renderReply(); persist(); }
 function renderPrompt(){
   const v = state.v;
   state.prompt = v.goal.trim() ? PW.prompt(inputs()) : '';
@@ -88,6 +134,14 @@ function renderReply(){
   } else $('stepsBox').innerHTML = '';
   $('paramsBox').innerHTML = r.params.length ? '<h3 class="sub">Parameters to create first</h3><p class="note small">In Power Query: <b>Home &gt; Manage Parameters &gt; New Parameter</b>, or create a blank query, open the Advanced Editor and paste its line below, then rename the query to the parameter name.</p>'
     + r.params.map((p, i) => '<div class="codebox"><div class="codebox-bar"><span class="t">' + esc(p.name) + '</span><span class="r"><button class="btn" type="button" data-copyparam="' + i + '">Copy</button></span></div><pre class="short">' + esc(paramQuery(p)) + '</pre></div>').join('') : '';
+  // a fixed reply says what it changed
+  $('changesBox').innerHTML = (r.changes || []).length ? '<h3 class="sub">What Copilot changed</h3><div class="msg info"><ul class="qs">' + r.changes.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></div>' : '';
+  // the fix prompt: the Desktop error (or what's wrong) and the page's own findings
+  const prob = (state.v.pwError || '').trim(), found = c.list.filter(x => x.level === 'err' || x.level === 'warn').length;
+  state.fix = prob || found ? PW.fixPrompt(inputs(), r, c.list, prob) : '';
+  $('fixBox').hidden = !state.fix; $('pwFixView').textContent = state.fix;
+  $('fixMsg').innerHTML = state.fix ? (prob ? '' : '<div class="msg info">The prompt below asks Copilot to fix the ' + found + ' problem' + (found === 1 ? '' : 's') + ' the page found. Add the error from Desktop above if there is one.</div>')
+    : '<div class="msg ok">Nothing to fix from the checks. If Desktop shows an error or the result is wrong, describe it above and a fix prompt appears.</div>';
   $('questionsBox').innerHTML = r.questions.length ? '<h3 class="sub">Copilot&rsquo;s assumptions and questions</h3><div class="msg info"><ul class="qs">' + r.questions.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>Answer them in Step 1 and send the prompt again if they change the query.</div>' : '';
 }
 function renderAll(){ renderStart(); renderCols(); renderPrompt(); renderReply(); }
@@ -106,7 +160,7 @@ function resetAll(){ state.v = blank(); setExample(false); toForm(); $('moreBox'
 function init(){
   $('source').innerHTML = PW.SOURCES.map(s => '<option value="' + s[0] + '">' + esc(s[1]) + '</option>').join('');
   let saved = null; try { saved = JSON.parse(store.get('v') || 'null'); } catch (e) {}
-  if (saved) state.v = Object.assign(blank(), saved);
+  if (saved) { const b = blank(); state.v = Object.assign(b, saved); const fx = PWF.blankOpts(); Object.keys(fx).forEach(k => Object.assign(fx[k], (saved.fx || {})[k] || {})); state.v.fx = fx; }
   else if (store.get('blank') !== '1') { state.v = Object.assign(blank(), { goal: PW_EX.goal, start: PW_EX.start, source: PW_EX.source, sourceDetail: PW_EX.sourceDetail, columns: PW_EX.columns, merges: PW_EX.merges, params: PW_EX.params, culture: PW_EX.culture, makeParams: PW_EX.makeParams, pwReply: PW_EX.reply }); setExample(true); }
   toForm(); renderAll();
 
@@ -115,16 +169,38 @@ function init(){
     if (state.example) { const val = SF_SUITE.ownText($(k).value, state.v[k] || ''); leaveExample(); state.v[k] = val; $(k).value = val; }
     else state.v[k] = $(k).value;
     try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
-    if (k === 'pwReply') renderReply(); else if (k === 'columns') { renderCols(); renderPrompt(); renderReply(); } else if (k === 'existing') { renderStart(); renderPrompt(); } else { renderPrompt(); if (k === 'params' || k === 'merges') renderReply(); }
+    if (k === 'pwReply' || k === 'pwError') renderReply(); else if (k === 'columns' || k === 'culture') { renderCols(); renderPrompt(); renderReply(); } else if (k === 'existing') { renderStart(); renderPrompt(); } else { renderPrompt(); if (k === 'params' || k === 'merges' || k === 'myFns') renderReply(); }
     persist();
   }));
   $('source').addEventListener('change', () => { leaveExample(); state.v.source = $('source').value; renderStart(); renderPrompt(); persist(); });
   $('makeParams').addEventListener('change', () => { state.v.makeParams = $('makeParams').checked; renderPrompt(); persist(); });
+  $('typeMap').addEventListener('change', () => { state.v.typeMap = $('typeMap').checked; renderCols(); renderPrompt(); renderReply(); persist(); });
+  $('typeSteps').addEventListener('change', () => { state.v.typeHow = $('typeSteps').checked ? 'steps' : 'fx'; renderCols(); renderPrompt(); renderReply(); persist(); });
+  $('haveFx').addEventListener('change', () => { state.v.haveFx = $('haveFx').checked; renderPrompt(); renderReply(); persist(); });
+  $('recipes').addEventListener('change', e => {
+    const t = e.target, box = t.closest('.recipe'); if (!box) return;
+    const id = box.dataset.r, o = fxOpt(id);
+    if (t.dataset.on) { o.on = t.checked; if (o.on && !(o.cols || []).length) o.cols = recipeDefaults(id, PW.parseColumns(state.v.columns)); fxChanged(true); }
+    else if (t.dataset.opt) { o[t.dataset.opt] = t.type === 'checkbox' ? t.checked : t.value; fxChanged(t.tagName === 'SELECT' ? false : t.type === 'checkbox'); }
+  });
+  $('recipes').addEventListener('input', e => { const t = e.target, box = t.closest('.recipe'); if (!box || !t.dataset.opt || t.type === 'checkbox') return; fxOpt(box.dataset.r)[t.dataset.opt] = t.value; fxChanged(false); });
+  $('recipes').addEventListener('click', e => {
+    const b = e.target.closest('button[data-col]'), box = b && b.closest('.recipe'); if (!box) return;
+    const o = fxOpt(box.dataset.r), n = b.dataset.col, cs = new Set(o.cols || []);
+    if (cs.has(n)) cs.delete(n); else cs.add(n);
+    o.cols = PW.parseColumns(state.v.columns).map(c => c.name).filter(c => cs.has(c));
+    fxChanged(true);
+    const again = document.querySelector('.recipe[data-r="' + box.dataset.r + '"] button[data-col="' + CSS.escape(n) + '"]'); if (again) again.focus();
+  });
   document.querySelectorAll('input[name=start]').forEach(i => i.addEventListener('change', () => { leaveExample(); state.v.start = i.value; toForm(); renderAll(); persist(); }));
   document.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.copy === 'prompt' && state.prompt) copyText(state.prompt, b);
     else if (b.dataset.copy === 'query' && state.reply) copyText(state.reply.code, b);
+    else if (b.dataset.copy === 'fix' && state.fix) copyText(state.fix, b);
+    else if (b.dataset.copy === 'typemap') copyText($('typeMapCode').textContent, b);
+    else if (b.dataset.copy === 'steps' && state.fxCode) copyText(state.fxCode, b);
+    else if (b.dataset.copyfn && PWF.BY.get(b.dataset.copyfn)) copyText(PWF.BY.get(b.dataset.copyfn).code, b);
     else if (b.dataset.copyparam != null && state.reply) copyText(paramQuery(state.reply.params[+b.dataset.copyparam]), b);
   });
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); $('goal').focus(); });

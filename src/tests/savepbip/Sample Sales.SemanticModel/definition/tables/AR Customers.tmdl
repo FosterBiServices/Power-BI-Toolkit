@@ -1,0 +1,80 @@
+/// Business customers with region and payment terms.
+table 'AR Customers'
+
+	/// Key that links to Invoices.
+	column CustomerKey
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [CustomerKey]
+
+	/// Company name.
+	column Customer
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Customer]
+
+	/// Sales region.
+	column Region
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Region]
+
+	/// Net 30, Net 45 or Net 60.
+	column 'Payment Terms'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Payment Terms]
+		sortByColumn: 'Payment Terms Days'
+
+	/// Days the customer has to pay.
+	column 'Payment Terms Days'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Payment Terms Days]
+
+	partition 'AR Customers' = calculated
+		mode: import
+		source =
+			-- Business customers with region and payment terms.
+			VAR num_customers = 150
+			VAR seed = 2012
+			RETURN
+			    VAR _Rows =
+			        SELECTCOLUMNS( GENERATESERIES( 1, num_customers, 1 ), "_k", [Value] )
+			    VAR _Step1 =
+			        ADDCOLUMNS(
+			            _Rows,
+			            "CustomerKey", [_k],
+			            "Customer", SWITCH( INT( MOD( SIN( [_k] * 12.9898 + 10 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 20 ), 0, "Blue", 1, "Summit", 2, "Harbor", 3, "Maple", 4, "Iron", 5, "Silver", 6, "Cedar", 7, "Bright", 8, "Northern", 9, "Golden", 10, "Red", 11, "Pine", 12, "Swift", 13, "Stone", 14, "Clear", 15, "Prime", 16, "River", 17, "Oak", 18, "Crest", "Lakeside" ) & " " & SWITCH( INT( MOD( SIN( [_k] * 12.9898 + 11 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 16 ), 0, "Ridge", 1, "Field", 2, "Works", 3, "Point", 4, "Bay", 5, "Path", 6, "Peak", 7, "Line", 8, "Gate", 9, "Wave", 10, "Brook", 11, "Forge", 12, "Bridge", 13, "Grove", 14, "Hill", "Valley" ) & " " & SWITCH( INT( MOD( SIN( [_k] * 12.9898 + 12 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 12 ), 0, "Supply", 1, "Foods", 2, "Logistics", 3, "Systems", 4, "Partners", 5, "Retail", 6, "Health", 7, "Labs", 8, "Group", 9, "Traders", 10, "Industries", "Services" ),
+			            "Region", SWITCH( INT( MOD( SIN( [_k] * 12.9898 + 1 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 5 ), 0, "North", 1, "South", 2, "East", 3, "West", "Central" ),
+			            "Payment Terms Days", SWITCH( TRUE(), MOD( SIN( [_k] * 12.9898 + 30 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.6, 30, MOD( SIN( [_k] * 12.9898 + 30 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.85, 45, 60 )
+			        )
+			    VAR _Step2 =
+			        ADDCOLUMNS(
+			            _Step1,
+			            "Payment Terms", "Net " & [Payment Terms Days]
+			        )
+			    RETURN
+			        SELECTCOLUMNS(
+			            _Step2,
+			            "CustomerKey", [CustomerKey],
+			            "Customer", [Customer],
+			            "Region", [Region],
+			            "Payment Terms", [Payment Terms],
+			            "Payment Terms Days", [Payment Terms Days]
+			        )
+

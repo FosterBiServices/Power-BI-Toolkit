@@ -316,7 +316,8 @@ function renderSuggestions(){
   h += tips.length ? '<div class="sg-tips"><h4>Design tips for your visuals</h4><ul>' + tips.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul></div>' : '';
   h += list.map((v, i) => {
     const L = LO.layout(v.cfg), svg = LR.wireframe(L, v.cfg, col, st, { zones: true, font: state.look.font, ids: false });
-    return '<div class="sg' + (v.recommended ? ' rec' : '') + '"><h4>' + esc(v.name) + (v.recommended ? '<span class="rec-tag">Best fit</span>' : '') + '</h4><p class="blurb">' + esc(v.blurb) + '</p>' + svg
+    return '<div class="sg' + (v.recommended ? ' rec' : '') + '"><h4>' + esc(v.name) + (v.recommended ? '<span class="rec-tag">Best fit</span>' : '') + '</h4><p class="blurb">' + esc(v.blurb) + '</p>'
+      + (v.size ? '<div class="msg warn sg-size">Changes your page from <b>' + v.size.from.join(' &times; ') + '</b> to <b>' + v.size.to.join(' &times; ') + '</b>.</div>' : '') + svg
       + '<ul>' + v.why.map(([z, t]) => '<li><b class="' + (zc[z] || 'zpg') + '">' + z + '</b>' + esc(t) + '</li>').join('') + '</ul>'
       + (v.probs || []).map(p => '<div class="msg ' + p.level + '">' + esc(p.text) + '</div>').join('')
       + '<div class="btns"><button type="button" class="btn' + (v.recommended ? ' primary' : '') + '" data-usesg="' + i + '">Use this layout</button></div></div>';
@@ -357,14 +358,32 @@ function renderColors(){
 }
 
 /* ---------- step 4 ---------- */
+// rename a visual from its layout id (g2, g2.1 for a split box, t0, s1, h0, l3, title)
+const canRename = id => id === 'title' || /^[gtshl]\d+(\.\d+)?$/.test(id || '');
+function renameItem(id, v){
+  const c = state.cfg;
+  if (id === 'title') { c.header.title = v; return true; }
+  const m = /^([gtshl])(\d+)(?:\.(\d+))?$/.exec(id || ''); if (!m) return false;
+  if (m[3] != null) { const it = c.items[+m[2]], sub = it && it.sub; if (!sub) return false; sub.items = sub.items || []; while (sub.items.length <= +m[3]) sub.items.push({}); sub.items[+m[3]].title = v; return true; }
+  const keep = state.sel; state.sel = m[1] + m[2]; const sel = selItem(); state.sel = keep;
+  if (!sel) return false; sel.item.title = v; return true;
+}
 function renderOut(){
   const L = state.L, c = state.cfg, col = state.col, st = state.look.style;
   state.out.wf = LR.wireframe(L, c, col, st, { font: state.look.font });
   state.out.bg = LR.background(L, c, col, st, { font: state.look.font });
   state.out.tsv = LO.positionsTsv(L, st);
   $('wfThumb').innerHTML = state.out.wf; $('bgThumb').innerHTML = state.out.bg;
+  // say when the logo isn't in the background, and where to put it instead
+  const lgItem = L.items.find(o => o.logo), lgSet = c.header.logo || {};
+  $('bgLogoNote').innerHTML = lgItem && lgSet.src && !lgSet.inBg ? '<div class="msg info">Your logo isn&rsquo;t in this background. Add it in Desktop as an <b>Image</b> visual at X ' + Math.round(lgItem.x) + ', Y ' + Math.round(lgItem.y) + ', ' + Math.round(lgItem.w) + ' &times; ' + Math.round(lgItem.h) + ', or tick <b>Draw it on the background image</b> under Logo in Step 1.</div>'
+    : lgItem && !lgSet.src ? '<div class="msg info">The logo box is empty in this background: add the logo image under Logo in Step 1, or add an <b>Image</b> visual in Desktop at X ' + Math.round(lgItem.x) + ', Y ' + Math.round(lgItem.y) + '.</div>' : '';
   const rows = state.out.tsv.split('\n').map(r => r.split('\t'));
-  $('posTable').innerHTML = '<thead><tr>' + rows[0].map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + rows.slice(1).map(r => '<tr>' + r.map((v, i) => '<td' + (i > 1 ? ' class="num"' : '') + '>' + esc(v) + '</td>').join('') + '</tr>').join('') + '</tbody>';
+  // the Visual column is editable: rename every visual in one place (the names go into the wireframe, PowerPoint and Figma layers)
+  const ids = L.items.filter(o => !o.band || o.id === 'header' || o.id === 'title').map(o => o.id);
+  $('posTable').innerHTML = '<thead><tr>' + rows[0].map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + rows.slice(1).map((r, k) => '<tr>' + r.map((v, i) => i === 0 && canRename(ids[k])
+    ? '<td><input type="text" class="ren" data-ren="' + esc(ids[k]) + '" value="' + esc(v) + '" aria-label="Name of ' + esc(v) + '" autocomplete="off"></td>'
+    : '<td' + (i > 1 ? ' class="num"' : '') + '>' + esc(v) + '</td>').join('') + '</tr>').join('') + '</tbody>';
 }
 
 const _mctx = document.createElement('canvas').getContext('2d');
@@ -420,7 +439,7 @@ function init(){
     if (file.size > 1024 * 1024) { $('logoInfo').textContent = 'That image is over 1 MB. Use a smaller PNG or an SVG.'; $('logoFile').value = ''; return; }
     const rd = new FileReader();
     // stored as PNG or JPEG so Figma and PowerPoint take it; keep the height, set the width from the image's proportions
-    rd.onload = () => LX.readImage(rd.result, 1200).then(im => { const lg = state.cfg.header.logo; lg.src = im.src; lg.ratio = im.w / im.h; lg.w = Math.round(lg.h * lg.ratio); edited(); },
+    rd.onload = () => LX.readImage(rd.result, 1200).then(im => { const lg = state.cfg.header.logo; if (!lg.src) lg.inBg = true; lg.src = im.src; lg.ratio = im.w / im.h; lg.w = Math.round(lg.h * lg.ratio); edited(); },
       err => { $('logoInfo').textContent = err.message; });
     rd.readAsDataURL(file);
   });
@@ -626,6 +645,7 @@ function init(){
       else if (b.dataset.dl === 'bg-png1') download(await LX.png(state.out.bg, c.w, c.h, 1), name + ' background.png');
     } catch (err) { const m = document.createElement('div'); m.className = 'msg err'; m.textContent = err.message || String(err); b.closest('.btns').after(m); setTimeout(() => m.remove(), 8000); }
   });
+  $('posTable').addEventListener('change', e => { const t = e.target.closest('[data-ren]'); if (t && renameItem(t.dataset.ren, t.value.trim())) edited({ editor: true }); });
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); });
 }
 init();

@@ -1,0 +1,128 @@
+/// Customer invoices with due date, paid date and status at the end date.
+table Invoices
+
+	/// Invoice ID.
+	column 'Invoice Number'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Invoice Number]
+
+	/// Links to Customers.
+	column CustomerKey
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [CustomerKey]
+
+	/// When the invoice was sent. Links to Date.
+	column 'Invoice Date'
+		dataType: dateTime
+		isDataTypeInferred
+		formatString: Short Date
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Invoice Date]
+
+	/// When payment is due.
+	column 'Due Date'
+		dataType: dateTime
+		isDataTypeInferred
+		formatString: Short Date
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Due Date]
+
+	/// When it was paid. Blank if not paid by the end date.
+	column 'Paid Date'
+		dataType: dateTime
+		isDataTypeInferred
+		formatString: Short Date
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Paid Date]
+
+	/// Invoice amount.
+	column Amount
+		dataType: double
+		isDataTypeInferred
+		formatString: #,0.00
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Amount]
+
+	/// Paid, Open (not yet due) or Overdue, at the end date.
+	column Status
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Status]
+
+	/// Days from invoice to payment.
+	column 'Days to Pay'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Days to Pay]
+
+	partition Invoices = calculated
+		mode: import
+		source =
+			-- Customer invoices with due date, paid date and status at the end date.
+			VAR num_invoices = 8000
+			VAR start_date = DATE( 2023, 1, 1 )
+			VAR end_date = DATE( 2026, 9, 30 )
+			VAR num_customers = 150
+			VAR seed = 2012
+			RETURN
+			    VAR _Rows =
+			        SELECTCOLUMNS( GENERATESERIES( 1, num_invoices, 1 ), "_k", [Value] )
+			    VAR _Step1 =
+			        ADDCOLUMNS(
+			            _Rows,
+			            "Invoice Number", "INV-" & FORMAT( [_k], "000000" ),
+			            "CustomerKey", INT( POWER( MOD( SIN( [_k] * 12.9898 + 1 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ), 1.5 ) * num_customers ) + 1,
+			            "Invoice Date", start_date + INT( POWER( MOD( SIN( [_k] * 12.9898 + 2 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ), 0.85 ) * ( INT( end_date - start_date ) + 1 ) ),
+			            "Amount", ROUND( 500 + ( POWER( MOD( SIN( [_k] * 12.9898 + 3 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ), 3 ) * 25000 ), 2 )
+			        )
+			    VAR _Step2 =
+			        ADDCOLUMNS(
+			            _Step1,
+			            "Due Date", [Invoice Date] + SWITCH( TRUE(), MOD( SIN( [CustomerKey] * 12.9898 + 30 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.6, 30, MOD( SIN( [CustomerKey] * 12.9898 + 30 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.85, 45, 60 )
+			        )
+			    VAR _Step3 =
+			        ADDCOLUMNS(
+			            _Step2,
+			            "_paid", IF( MOD( SIN( [_k] * 12.9898 + 4 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.02, BLANK(), [Due Date] + ( SWITCH( TRUE(), MOD( SIN( [_k] * 12.9898 + 5 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.2, -10, MOD( SIN( [_k] * 12.9898 + 5 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.6, 0, MOD( SIN( [_k] * 12.9898 + 5 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.8, 10, MOD( SIN( [_k] * 12.9898 + 5 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) < 0.92, 30, 60 ) + INT( MOD( SIN( [_k] * 12.9898 + 6 * 78.233 + seed * 37.719 ) * 43758.5453, 1 ) * 10 ) ) )
+			        )
+			    VAR _Step4 =
+			        ADDCOLUMNS(
+			            _Step3,
+			            "Paid Date", IF( [_paid] > end_date, BLANK(), [_paid] )
+			        )
+			    VAR _Step5 =
+			        ADDCOLUMNS(
+			            _Step4,
+			            "Status", IF( ISBLANK( [Paid Date] ), IF( [Due Date] < end_date, "Overdue", "Open" ), "Paid" ),
+			            "Days to Pay", IF( ISBLANK( [Paid Date] ), BLANK(), INT( [Paid Date] - [Invoice Date] ) )
+			        )
+			    RETURN
+			        SELECTCOLUMNS(
+			            _Step5,
+			            "Invoice Number", [Invoice Number],
+			            "CustomerKey", [CustomerKey],
+			            "Invoice Date", [Invoice Date],
+			            "Due Date", [Due Date],
+			            "Paid Date", [Paid Date],
+			            "Amount", [Amount],
+			            "Status", [Status],
+			            "Days to Pay", [Days to Pay]
+			        )
+

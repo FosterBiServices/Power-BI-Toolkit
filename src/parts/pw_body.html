@@ -1,7 +1,7 @@
       <div class="txt">
         <span class="eyebrow">Power BI toolkit</span>
         <h1>Power Query Writer</h1>
-        <p class="lede">Say what the query should do and get a Copilot prompt that writes it: working first time, easy to maintain and as short as possible, with one-word step names, short comments only where needed, and formatting in the style of powerqueryformatter.com. Then paste Copilot&rsquo;s reply here to check it before it goes into Power BI.</p>
+        <p class="lede">Say what the query should do and get a Copilot prompt that writes it: working first time, easy to maintain and as short as possible, with one-word step names, short comments only where needed, and formatting in the style of powerqueryformatter.com. Common cleaning steps and the column types use reusable functions you add to your file once. Then paste Copilot&rsquo;s reply here to check it before it goes into Power BI.</p>
       </div>
       <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
     </div>
@@ -50,6 +50,34 @@
       <p class="note small">In the Power Query preview, select the table icon at the top left of the grid, then <b>Copy Entire Table</b>, and paste the header and a few rows. Or type the names, one per line. Copilot then uses your exact column names, and the reply is checked against them.</p>
       <textarea id="columns" class="short" spellcheck="false" aria-label="Columns" placeholder="Paste the header row and a few rows, or one column name per line"></textarea>
       <div class="chips" id="colChips"></div>
+      <div id="typeMapBox" hidden>
+        <label class="opts"><span><input type="checkbox" id="typeMap"> Set column types with a type map</span></label>
+        <p class="note small">One list of column-and-type pairs, applied only to the columns that exist, and every other column as text, so a missing or renamed source column doesn&rsquo;t break the refresh. The types come from the rows you pasted: check them, and change any here or in the query. Copilot is told to use it as it is. It calls the <code>fxApplyTypes</code> function, so each query needs one short step instead of the whole map.</p>
+        <label class="opts" id="typeHowBox"><span><input type="checkbox" id="typeSteps"> Write the type map as steps in the query instead of calling a function</span></label>
+        <details class="extra" id="typeMapView"><summary>See the type map as steps <span class="muted">(or copy it into your own query)</span></summary>
+          <div class="codebox"><div class="codebox-bar"><span class="t">Type map steps: paste after the step where the column names are final</span><span class="r"><button class="btn" type="button" data-copy="typemap">Copy</button></span></div><pre class="short" id="typeMapCode"></pre></div>
+          <p class="note small">Rename <code>PromotedHeaders</code> to the step before it, and add a comma after the step before it if it was the last one.</p>
+        </details>
+      </div>
+
+      <div id="fxBox" hidden>
+        <h3 class="sub">Cleaning steps <span class="muted">(optional)</span></h3>
+        <p class="note small">Common clean-up done by reusable functions, so each query needs one short step for each and the logic lives in one place. Tick what the data needs and pick the columns. The steps go into the prompt as required steps, and the functions to add to your file are below.</p>
+        <div class="recipes" id="recipes"></div>
+        <div id="fxOut" hidden>
+          <div class="codebox"><div class="codebox-bar"><span class="t">Cleaning and type steps: paste after the step where the column names are final</span><span class="r"><button class="btn" type="button" data-copy="steps">Copy</button></span></div><pre class="short" id="fxStepsCode"></pre></div>
+          <p class="note small">Rename <code>PromotedHeaders</code> to the step before them. Copilot gets these in the prompt, so you only need them to build the query yourself.</p>
+          <h3 class="sub">Functions to add to your file once</h3>
+          <p class="note small">For each one, in Power Query:</p>
+          <ol class="note small">
+            <li><b>Home &gt; New Source &gt; Blank Query</b>.</li>
+            <li><b>Home &gt; Advanced Editor</b>. Select everything already there, paste the code over it and select <b>Done</b>. The query then shows <b>Enter Parameters</b> and an <b>Invoke</b> button.</li>
+            <li>Rename the query to the function&rsquo;s name exactly.</li>
+          </ol>
+          <p class="note small">Don&rsquo;t paste the code into the list of queries on the left: Power Query turns pasted text there into a table. Every query in the file can use the functions once they&rsquo;re added. Skip the ones you already have.</p>
+          <div id="fxFns"></div>
+        </div>
+      </div>
 
       <details class="extra" id="moreBox">
         <summary>Other queries, parameters and culture <span class="muted">(optional)</span></summary>
@@ -60,6 +88,9 @@
           <textarea id="params" class="short" spellcheck="false" placeholder="ServerName = &quot;sql-prod&quot;"></textarea>
           <div class="field"><label for="culture">Culture for types and dates <span class="muted">(if the source isn&rsquo;t in your own format, for example en-GB)</span></label><input type="text" id="culture" class="txt" placeholder="for example en-US"></div>
           <label class="opts"><span><input type="checkbox" id="makeParams"> Use parameters for servers, databases, file paths and URLs</span></label>
+          <label class="opts"><span><input type="checkbox" id="haveFx"> The toolkit&rsquo;s fx functions are in my file, so Copilot may use any of them</span></label>
+          <label class="lab" for="myFns">Functions you already have <span class="hint">One per line: name(arguments): what it does. Copilot calls them by name instead of writing its own.</span></label>
+          <textarea id="myFns" class="short" spellcheck="false" placeholder="fxCleanPhone(InputTable, Columns): keeps the digits of phone numbers"></textarea>
         </div>
       </details>
     </div>
@@ -87,7 +118,7 @@
     <div class="step-body">
       <div class="step-head">
         <h2 id="s4">Paste Copilot&rsquo;s reply</h2>
-        <p>The query is read and checked here: step references, the naming rule, repeated steps, column names, parameters and formatting.</p>
+        <p>The query is read and checked here: brackets and quotes, functions that don&rsquo;t exist and argument counts, <code>each</code> with <code>_</code> or <code>[Column]</code> in the right place, step references and order, column names, the type map, parameters, the naming rule and formatting.</p>
       </div>
       <textarea id="pwReply" class="mid" spellcheck="false" aria-label="Copilot's reply" placeholder="Paste Copilot's whole reply here"></textarea>
       <div id="replyMsg"></div>
@@ -100,6 +131,17 @@
         <div id="stepsBox"></div>
         <div id="paramsBox"></div>
         <div id="questionsBox"></div>
+        <div id="changesBox"></div>
+        <div class="fixbox">
+          <h3 class="sub">Didn&rsquo;t work in Power BI Desktop?</h3>
+          <p class="note small">Paste the error Power Query shows (the message in the yellow bar, or click <b>Error</b> in a cell to see it), or say what&rsquo;s wrong. The page writes a short prompt that asks Copilot to fix only that and keep the rest of the query. Paste Copilot&rsquo;s answer into the reply box above, in place of the old one, and the checks run again.</p>
+          <textarea id="pwError" class="short" spellcheck="false" aria-label="The error or problem" placeholder="For example: Expression.Error: The column 'Create Date' of the table wasn't found. Or: Duration Days is empty for every row."></textarea>
+          <div id="fixMsg"></div>
+          <div class="codebox" id="fixBox" hidden>
+            <div class="codebox-bar"><span class="t">Fix prompt for Copilot</span><span class="r"><button class="btn primary" type="button" data-copy="fix">Copy prompt</button></span></div>
+            <pre class="tall" id="pwFixView" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+          </div>
+        </div>
       </div>
     </div>
   </section>

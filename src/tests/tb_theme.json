@@ -1,0 +1,3 @@
+{"name":"Sample Retail","dataColors":["#2A5C8A","#7B4F9E","#3B8EA5","#5D6D7E","#9C6ADE","#4F7CAC","#6C5B7B"],"background":"#FFFFFF","foreground":"#1B2631","good":"#1D6FA3","neutral":"#8C8C8C","bad":"#E07B39",
+"textClasses":{"label":{"fontFace":"Lato","fontSize":10,"color":"#1B2631"}},
+"visualStyles":{"*":{"*":{"title":[{"fontSize":13,"bold":true}],"border":[{"show":true,"radius":6}]}},"page":{"*":{"background":[{"color":{"solid":{"color":"#F4F6F8"}},"transparency":0}]}},"slicer":{"*":{"data":[{"mode":"Dropdown"}]}}}}

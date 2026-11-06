@@ -1,0 +1,2 @@
+{"name":"funnel1","position":{"x":20,"y":20,"z":0,"height":300,"width":400},
+"visual":{"visualType":"funnel","visualContainerObjects":{"title":[{"properties":{"text":{"expr":{"Literal":{"Value":"'Orders by stage'"}}},"show":{"expr":{"Literal":{"Value":"true"}}}}}]}}}

@@ -1,0 +1,96 @@
+/// Profit and loss accounts, with type, sign and sort order.
+table Accounts
+
+	/// Key that links to General Ledger.
+	column AccountKey
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [AccountKey]
+
+	/// Account name.
+	column Account
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Account]
+		sortByColumn: 'Sort Order'
+
+	/// Revenue, Cost of sales, Operating expense or Other.
+	column 'Account Type'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Account Type]
+		sortByColumn: 'Account Type Order'
+
+	/// 1 for revenue, -1 for costs. Signed Amount uses it.
+	column Sign
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Sign]
+
+	/// Profit and loss order.
+	column 'Sort Order'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Sort Order]
+
+	/// Profit and loss order of Account Type (added for the P&L).
+	column 'Account Type Order' = SWITCH( TRUE(), Accounts[Sort Order] <= 20, 1, Accounts[Sort Order] <= 50, 2, Accounts[Sort Order] <= 140, 3, 4 )
+		dataType: int64
+		isHidden
+		summarizeBy: none
+
+	partition Accounts = calculated
+		mode: import
+		source =
+			-- Profit and loss accounts, with type, sign and sort order.
+			    VAR _Rows =
+			        DATATABLE(
+			            "AccountKey", INTEGER,
+			            "Account", STRING,
+			            "Account Type", STRING,
+			            "Sign", INTEGER,
+			            "Sort Order", INTEGER,
+			            {
+			                { 1, "Product revenue", "Revenue", 1, 10 },
+			                { 2, "Service revenue", "Revenue", 1, 20 },
+			                { 3, "Materials", "Cost of sales", -1, 30 },
+			                { 4, "Direct labor", "Cost of sales", -1, 40 },
+			                { 5, "Freight", "Cost of sales", -1, 50 },
+			                { 6, "Salaries", "Operating expense", -1, 60 },
+			                { 7, "Benefits", "Operating expense", -1, 70 },
+			                { 8, "Rent", "Operating expense", -1, 80 },
+			                { 9, "Marketing", "Operating expense", -1, 90 },
+			                { 10, "Travel", "Operating expense", -1, 100 },
+			                { 11, "Software", "Operating expense", -1, 110 },
+			                { 12, "Utilities", "Operating expense", -1, 120 },
+			                { 13, "Professional fees", "Operating expense", -1, 130 },
+			                { 14, "Depreciation", "Operating expense", -1, 140 },
+			                { 15, "Interest", "Other", -1, 150 },
+			                { 16, "Income tax", "Other", -1, 160 }
+			            }
+			        )
+			    RETURN
+			        SELECTCOLUMNS(
+			            _Rows,
+			            "AccountKey", [AccountKey],
+			            "Account", [Account],
+			            "Account Type", [Account Type],
+			            "Sign", [Sign],
+			            "Sort Order", [Sort Order]
+			        )
+

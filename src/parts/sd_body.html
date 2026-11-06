@@ -123,10 +123,11 @@
     <div class="step-num">Step<b>2</b></div>
     <div class="step-body">
       <div class="step-head">
-        <h2 id="m2">Pick an industry</h2>
-        <p>Each one comes with the tables and measures that industry usually reports on, plus a date table.</p>
+        <h2 id="m2">Pick one or more industries</h2>
+        <p>Each one comes with the tables and measures that industry usually reports on, plus a date table. Pick more than one to put them in one model.</p>
       </div>
-      <div class="inds" id="industries" role="radiogroup" aria-label="Industry"></div>
+      <div class="inds" id="industries" role="group" aria-label="Industries"></div>
+      <div id="combineNote"></div>
     </div>
   </section>
 
@@ -146,6 +147,7 @@
       </div>
       <div id="makeMsg"></div>
       <div class="field"><span class="flabel">Tables</span><div class="opts" id="tablePicks"></div></div>
+      <div id="dropMsg"></div>
       <div class="field"><span class="flabel">Write it as</span>
         <span class="seg" role="radiogroup" aria-label="Write it as">
           <label><input type="radio" name="style" value="udf"><span>DAX functions</span></label>

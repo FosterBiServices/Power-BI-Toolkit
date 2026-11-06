@@ -1,0 +1,1 @@
+{"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/1.2.0/schema.json","themeCollection":{"baseTheme":{"name":"CY24SU10","reportVersionAtImport":"5.59","type":"SharedResources"},"customTheme":{"name":"Sample_Retail_84531.json","reportVersionAtImport":"5.59","type":"RegisteredResources"}},"layoutOptimization":"None"}

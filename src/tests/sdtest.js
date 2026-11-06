@@ -23,8 +23,14 @@ const { chromium } = require('playwright');
   console.log('staff masked hire', staffHire[0], '(a whole number of weeks from 15/01/2020) | Manager ID still finds Employee ID', staffHire[1]);
   // make new data
   await p.click('label.mode:has(input[value=make])'); await p.waitForTimeout(300);
+  // industry cards add or remove an industry; pick only one by unticking the others
+  const only = async id => {
+    if (await p.getAttribute('[data-ind="' + id + '"]', 'aria-checked') !== 'true') await p.click('[data-ind="' + id + '"]');
+    for (const o of await p.$$eval('[data-ind][aria-checked=true]', x => x.map(b => b.dataset.ind))) if (o !== id) await p.click('[data-ind="' + o + '"]');
+    await p.waitForTimeout(150);
+  };
   for (const id of ['retail', 'hr', 'finance', 'health', 'mfg', 'service']) {
-    await p.click('[data-ind="' + id + '"]'); await p.waitForTimeout(150);
+    await only(id);
     const r = await p.evaluate(() => ({ tabs: document.querySelectorAll('#makeTabs [data-tab]').length, rows: document.querySelectorAll('#makePreview tbody tr').length, t: state.tmdl }));
     console.log(id, 'tables', r.tabs, '| preview rows', r.rows, '| functions', (r.t.match(/^\tfunction /gm) || []).length, '| relationships', (r.t.match(/^\trelationship /gm) || []).length, '| measures', (r.t.match(/^\t\tmeasure /gm) || []).length, '| DataGoblins', /DataGoblins/.test(r.t));
   }
@@ -36,6 +42,28 @@ const { chromium } = require('playwright');
   console.log('with a saved _Measures:', await p.evaluate(() => (state.tmdl.match(/^\t(ref )?table _Measures$/m) || ['none'])[0].trim()), '(expect ref table _Measures) |', await p.evaluate(() => $('mtNote').textContent.slice(0, 40)));
   await p.evaluate(() => { localStorage.removeItem('sfpbi.shared.model'); changed(); });
   console.log('plain tables: functions', await p.evaluate(() => (state.tmdl.match(/^\tfunction /gm) || []).length), '(expect 0) | VAR seed', await p.evaluate(() => /VAR seed = 1/.test(state.tmdl)));
+  // plain tables: a table with no settings (Accounts, Departments) must not start with a bare RETURN
+  await only('finance');
+  console.log('plain tables: bare RETURN after the settings', await p.evaluate(() => /source =\n\t+-- [^\n]*\n(\t+VAR [^\n]*\n)*\t+RETURN\n/.test(state.tmdl)), '(expect false) | Accounts starts with VAR _Rows',
+    await p.evaluate(() => /partition Accounts = calculated\n\t+mode: import\n\t+source =\n\t+-- [^\n]*\n\t+VAR _Rows =/.test(state.tmdl)));
+  // two industries in one model: one Date, clashing names renamed, sizes per industry
+  await p.click('[data-ind="retail"]'); await p.waitForTimeout(150);
+  const both = await p.evaluate(() => ({ inds: indsOf(state.make).join('+'), tabs: Array.from(document.querySelectorAll('#makeTabs [data-tab]')).map(b => b.dataset.tab),
+    dates: (state.tmdl.match(/^\ttable Date$/gm) || []).length, fin: /^\ttable 'Retail Customers'$/m.test(state.tmdl), gm: /measure 'Retail Gross Margin %'/.test(state.tmdl),
+    sizes: Array.from(document.querySelectorAll('#sizes label')).map(l => l.textContent).join(', '), note: $('combineNote').textContent }));
+  console.log('finance + retail:', both.inds, '| tables', both.tabs.length, both.tabs.join(','), '| Date tables', both.dates, '(expect 1) | Retail Customers', both.fin, '| Retail Gross Margin %', both.gm);
+  console.log('  sizes', both.sizes); console.log('  note', both.note);
+  await p.fill('#sz-num_customers_finance', '40'); await p.dispatchEvent('#sz-num_customers_finance', 'change'); await p.waitForTimeout(150);
+  console.log('  Finance customers size 40 only:', await p.evaluate(() => /VAR num_customers_finance = 40/.test(state.tmdl) && !/VAR num_customers_retail = 40/.test(state.tmdl)));
+  // untick Date: the page says what was left out
+  await p.click('#tablePicks input[data-tbl="Date"]'); await p.waitForTimeout(150);
+  console.log('Date unticked:', await p.textContent('#dropMsg'));
+  await p.click('#tablePicks input[data-tbl="Date"]'); await p.waitForTimeout(150);
+  console.log('Date ticked again, message gone', await p.evaluate(() => $('dropMsg').textContent === ''));
+  await p.click('[data-ind="finance"]'); await p.waitForTimeout(150);
+  console.log('back to', await p.evaluate(() => indsOf(state.make).join('+')), '(expect retail) | note empty', await p.evaluate(() => $('combineNote').textContent === ''));
+  await p.click('[data-ind="retail"]'); await p.waitForTimeout(150);
+  console.log('last industry can\'t be unpicked', await p.evaluate(() => indsOf(state.make).join('+')));
   await p.fill('#endDate', '2019-01-01'); await p.dispatchEvent('#endDate', 'change'); await p.waitForTimeout(150);
   console.log('end before start message', await p.textContent('#makeMsg'));
   await p.setViewportSize({ width: 390, height: 800 }); await p.waitForTimeout(200);

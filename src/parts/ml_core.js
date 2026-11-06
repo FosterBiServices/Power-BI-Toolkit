@@ -4,69 +4,23 @@ const ML = (() => {
   const low = s => (s || '').toLowerCase();
   const NUMERIC = /^(int64|integer|whole number|double|decimal|decimal number|fixed decimal number|currency|number)$/i;
 
-  // Parse the export, keeping the extra columns the linter uses
+  // The shared reader (readModel in builder_core) keeps every export column the linter uses.
+  // Private tables stay in; a calculated table's DAX is read as its expression.
   function parse(text){
-    const res = { tables: [], columns: [], measures: [], rels: [], model: null, has: {}, error: null };
-    const lines = (text || '').replace(/\r/g, '').split('\n');
-    let h = -1, map = {};
-    for (let i = 0; i < Math.min(lines.length, 15); i++) {
-      const cells = lines[i].split('\t').map(c => low(unquoteCell(c.trim())).replace(/^.*\[|\]$/g, ''));
-      if (cells.includes('kind') && cells.includes('table') && cells.includes('name')) { h = i; cells.forEach((c, j) => { map[c] = j; }); break; }
-    }
-    if (h < 0) { res.error = 'The header row (Kind, Table, Name…) wasn’t found. Run the export query below, select Copy above the results grid, and paste here.'; return res; }
-    res.has = { summarize: 'summarize' in map, sortBy: 'sortby' in map, hierarchies: 'hierarchies' in map };
-    const get = (c, k) => map[k] === undefined ? '' : restore(unquoteCell((c[map[k]] || '').trim()));
-    let modelRow = false, measureFlagsSeen = false;
-    for (let i = h + 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue;
-      const c = lines[i].split('\t'), kind = low(get(c, 'kind')), table = get(c, 'table'), name = get(c, 'name'), flags = low(get(c, 'flags'));
-      if (/^(localdatetable_|datetabletemplate_)/i.test(table)) continue;
-      if (kind === 'table') res.tables.push({ name, hidden: /\bhidden\b/.test(flags), category: get(c, 'type'), expression: get(c, 'expression') });
-      else if (kind === 'column') {
-        if (/^RowNumber-/i.test(name)) continue;
-        res.columns.push({ table, name, dataType: get(c, 'type'), folder: get(c, 'folder'), hidden: /\bhidden\b/.test(flags), key: /\bkey\b/.test(flags),
-          expression: get(c, 'expression'), summarize: get(c, 'summarize'), sortBy: get(c, 'sortby'), hierarchies: get(c, 'hierarchies') });
-      } else if (kind === 'measure') {
-        if (/text|dynamic-format/.test(flags)) measureFlagsSeen = true;
-        res.measures.push({ table, name, formatString: get(c, 'type'), folder: get(c, 'folder'), hidden: /\bhidden\b/.test(flags),
-          text: /\btext\b/.test(flags), dynamicFormat: /dynamic-format/.test(flags), expression: get(c, 'expression') });
-      } else if (kind === 'relationship') {
-        res.rels.push({ fromTable: table, fromColumn: name, toTable: get(c, 'totable'), toColumn: get(c, 'tocolumn'), card: get(c, 'type'),
-          both: /both/.test(flags), inactive: /inactive/.test(flags) });
-      } else if (kind === 'model') { modelRow = true; res.model = { name, discourage: /discourage-implicit/.test(flags) }; }
-    }
-    res.has.model = modelRow;
-    res.has.upgraded = res.has.summarize && modelRow;
-    if (!res.tables.length && !res.columns.length && !res.measures.length) res.error = 'No tables, columns or measures were found under the header row.';
+    const res = readModel(text);
+    if (!('model' in res.has)) res.error = 'The header row (Kind, Table, Name…) wasn’t found. Run the export query below, select Copy above the results grid, and paste here.';
+    else if (res.error) res.error = 'No tables, columns or measures were found under the header row.';
+    res.tables.forEach(t => { t.expression = t.calc; });
     return res;
   }
 
-  /* Column references in DAX: 'Table'[Col], Table[Col], or bare [Col] */
-  // blank out comments and string literals in one pass, so "--" or "//" inside a string (a URL, say)
-  // doesn't hide the rest of the line, and a name inside a string isn't read as a reference
-  function stripDaxText(e){
-    const s = e || ''; let out = '', i = 0;
-    while (i < s.length) {
-      const c = s[i], n = s[i + 1];
-      if (c === '"') { let j = i + 1; while (j < s.length) { if (s[j] === '"') { if (s[j + 1] === '"') { j += 2; continue; } break; } j++; } out += '""'; i = j + 1; continue; }
-      if (c === "'") { let j = i + 1; while (j < s.length) { if (s[j] === "'") { if (s[j + 1] === "'") { j += 2; continue; } break; } j++; } out += s.slice(i, j + 1); i = j + 1; continue; }
-      if (c === '[') { const j = s.indexOf(']', i + 1); let k = j; while (k >= 0 && s[k + 1] === ']') k = s.indexOf(']', k + 2); if (k < 0) { out += s.slice(i); break; } out += s.slice(i, k + 1); i = k + 1; continue; }
-      if ((c === '/' && n === '/') || (c === '-' && n === '-')) { const j = s.indexOf('\n', i); out += ' '; i = j < 0 ? s.length : j; continue; }
-      if (c === '/' && n === '*') { const j = s.indexOf('*/', i + 2); out += ' '; i = j < 0 ? s.length : j + 2; continue; }
-      out += c; i++;
-    }
-    return out;
-  }
+  // Column references in DAX: 'Table'[Col], Table[Col], or bare [Col] (stripDaxText and daxRefs are in builder_core)
+  const refs = daxRefs;
+
   // names that appear only as text (inside a string or comment): worth a look before deleting
   function textMentions(m, name){
     const needle = low(name), re = new RegExp('(^|[^\\w])' + needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\w])(?!\\s*\\()', 'i');
     return m.measures.filter(x => low(x.name) !== needle && re.test((x.expression || '').replace(/\[(?:[^\]]|\]\])*\]/g, '[]').replace(/'(?:[^']|'')*'/g, "''")) && !refs(x.expression).some(r => low(r.col) === needle)).map(x => x.name);
-  }
-  function refs(expr){
-    const out = [], re = /(?:'((?:[^']|'')+)'|([A-Za-z_À-￿][\w.À-￿]*))?\s*\[((?:[^\]]|\]\])+)\]/g;
-    const s = stripDaxText(expr); let m;
-    while ((m = re.exec(s))) out.push({ table: m[1] ? m[1].replace(/''/g, "'") : m[2] || '', col: m[3].replace(/\]\]/g, ']') });
-    return out;
   }
   const key = (t, c) => low(t) + '\u0001' + low(c);
 
@@ -151,6 +105,19 @@ const ML = (() => {
   const TYPE_NAMES = { tableEx: 'Table', pivotTable: 'Matrix', cardVisual: 'Card', card: 'Card', multiRowCard: 'Multi-row card', kpi: 'KPI', image: 'Image', map: 'Map', filledMap: 'Filled map', azureMap: 'Azure map', decompositionTreeVisual: 'Decomposition tree' };
   const typeName = t => TYPE_NAMES[t] || (t ? t.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase()) : 'Visual');
   const looksKey = n => /(key|id|sk|code)$/i.test(n.replace(/[\s_]+/g, '')) || /^(id|key)\b/i.test(n);
+  const isDateCol = c => /date/i.test(c.dataType || '');
+  // a measure that returns text: a label, an SVG image or HTML. A format string does nothing for these.
+  // The export flags them (text); a PBIP folder doesn't say, so this reads the expression.
+  function returnsText(expr){
+    const x = (expr || '').replace(/\/\/[^\n]*|--[^\n]*|\/\*[\s\S]*?\*\//g, '');
+    if (/data:image\/svg|<svg[\s>]|<\/?(div|span|table|td|p|b|br)\b/i.test(x)) return true;
+    const TEXT = /^(?:"|(?:FORMAT|CONCATENATE|CONCATENATEX|UNICHAR|REPT|LEFT|RIGHT|MID|UPPER|LOWER|TRIM|SUBSTITUTE|COMBINEVALUES)\s*\()/i;
+    const parts = x.split(/\bRETURN\b/i);
+    let res = parts[parts.length - 1].trim();
+    const v = /^([A-Za-z_]\w*)$/.exec(res);
+    if (v) { const d = new RegExp('\\bVAR\\s+' + v[1] + '\\s*=\\s*([\\s\\S]*?)(?=\\bVAR\\b|\\bRETURN\\b|$)', 'i').exec(x); if (d) res = d[1].trim(); }
+    return TEXT.test(res) || /"\s*&|&\s*"/.test(res);
+  }
 
   function lint(m, cfg){
     const on = id => !cfg.off || !cfg.off[id];
@@ -169,9 +136,14 @@ const ML = (() => {
         add('folder', 'warn', 'Measure', x.table, x.name, 'No display folder. ' + (perTable[low(x.table)] > 1 ? perTable[low(x.table)] + ' measures in this table.' : 'The only measure in this table.')));
     }
     if (on('format')) {
-      m.measures.filter(visible).filter(x => !(x.formatString || '').trim() && !x.dynamicFormat && !x.text).forEach(x =>
-        add('format', 'warn', 'Measure', x.table, x.name, 'No format string.'));
-      if (!m.has.upgraded) notes.format = 'Measures with a dynamic format string, or that return text, also show here. The updated export query tells them apart.';
+      let textMs = 0;
+      m.measures.filter(visible).filter(x => !(x.formatString || '').trim() && !x.dynamicFormat && !x.text).forEach(x => {
+        if (returnsText(x.expression)) { textMs++; return; }
+        add('format', 'warn', 'Measure', x.table, x.name, 'No format string.');
+      });
+      const tn = !textMs ? '' : textMs + ' measure' + (textMs === 1 ? '' : 's') + ' that return text, an image or HTML ' + (textMs === 1 ? 'isn\u2019t' : 'aren\u2019t') + ' listed: a format string does nothing for ' + (textMs === 1 ? 'it' : 'them') + '.';
+      const old = m.has.upgraded ? '' : 'Measures with a dynamic format string may also show here. The updated export query tells them apart.';
+      if (tn || old) notes.format = [tn, old].filter(Boolean).join(' ');
     }
     if (on('keys')) {
       const seen = new Set();
@@ -180,11 +152,14 @@ const ML = (() => {
         const many = /^many/i.test(r.card) || !/:/.test(r.card);
         [[r.fromTable, r.fromColumn, many ? 'many' : 'one', r.toTable], [r.toTable, r.toColumn, /:many$/i.test(r.card) ? 'many' : 'one', r.fromTable]].forEach(([t, n, side, other]) => {
           const c = colOf(t, n); const k = key(t, n); if (!c || seen.has(k) || !visible(c)) return; seen.add(k);
+          // a date on the one side (Date[Date]) is what people slice by: not a key to hide
+          if (isDateCol(c) && side === 'one') return;
+          if (isDateCol(c)) { add('keys', 'info', 'Column', t, n, 'Visible date that links this table to ' + other + '. Hide it if people should use the dates in ' + other + ' (they also get its months and years).'); return; }
           if (side === 'many') add('keys', 'warn', 'Column', t, n, 'Visible foreign key: it links this table to ' + other + '. Authors should use the columns of ' + other + ' instead.');
           else add('keys', looksKey(n) ? 'warn' : 'info', 'Column', t, n, 'Visible key on the one side of the relationship with ' + other + '.' + (looksKey(n) ? '' : ' Keep it visible if people read it as a label (a code or name, say).'));
         });
       });
-      m.columns.filter(c => c.key && visible(c) && !seen.has(key(c.table, c.name))).forEach(c => add('keys', 'info', 'Column', c.table, c.name, 'Marked as the table’s key column and visible.'));
+      m.columns.filter(c => c.key && visible(c) && !isDateCol(c) && !seen.has(key(c.table, c.name))).forEach(c => add('keys', 'info', 'Column', c.table, c.name, 'Marked as the table’s key column and visible.'));
     }
     if (on('bidir')) {
       m.rels.filter(r => r.both).forEach(r => {
@@ -437,5 +412,5 @@ const ML = (() => {
     return out;
   }
 
-  return { parse, lint, whereUsed, DEPS_QUERY, parseDeps, stripDaxText, refs, usage, measureUsage, reportUsage, reportList, mergeReports, matchScore, RULES, numeric, typeName };
+  return { parse, lint, returnsText, whereUsed, DEPS_QUERY, parseDeps, stripDaxText, refs, usage, measureUsage, reportUsage, reportList, mergeReports, matchScore, RULES, numeric, typeName };
 })();

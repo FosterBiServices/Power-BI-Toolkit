@@ -1,0 +1,321 @@
+/// One row per day, 2023 to 2026, made with the Date Table Generator. Calendar fiscal year.
+table Date
+	dataCategory: Time
+
+	column Date
+		dataType: dateTime
+		isDataTypeInferred
+		isKey
+		formatString: Short Date
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Date]
+
+	column Year
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Year]
+
+	column Quarter
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Quarter]
+
+	column 'Year Quarter'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Year Quarter]
+
+	column 'Month Number'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Month Number]
+
+	column 'Month Name'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Month Name]
+		sortByColumn: 'Month Number'
+
+	column 'Month Short'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Month Short]
+		sortByColumn: 'Month Number'
+
+	column 'Year Month'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Year Month]
+		sortByColumn: 'Month Sort'
+
+	column 'Month Sort'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Month Sort]
+
+	column 'Month Start'
+		dataType: dateTime
+		isDataTypeInferred
+		formatString: Short Date
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Month Start]
+
+	column 'Month End'
+		dataType: dateTime
+		isDataTypeInferred
+		formatString: Short Date
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Month End]
+
+	column 'Day of Month'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Day of Month]
+
+	column 'Day of Week Number'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Day of Week Number]
+
+	column 'Day Name'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Day Name]
+		sortByColumn: 'Day of Week Number'
+
+	column 'Week Start'
+		dataType: dateTime
+		isDataTypeInferred
+		formatString: Short Date
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Week Start]
+
+	column 'Fiscal Year'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Fiscal Year]
+
+	column 'Fiscal Year Number'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Fiscal Year Number]
+
+	column 'Fiscal Quarter'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Fiscal Quarter]
+
+	column 'Fiscal Year Quarter'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Fiscal Year Quarter]
+
+	column 'Fiscal Month Number'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Fiscal Month Number]
+
+	column 'Is Weekend'
+		dataType: boolean
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Is Weekend]
+
+	column 'Is Holiday'
+		dataType: boolean
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Is Holiday]
+
+	column 'Holiday Name'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Holiday Name]
+
+	column 'Is Working Day'
+		dataType: boolean
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Is Working Day]
+
+	column 'Month Filter'
+		dataType: string
+		isDataTypeInferred
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Month Filter]
+		sortByColumn: 'Month Sort'
+
+	column 'Day Offset'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Day Offset]
+
+	column 'Month Offset'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Month Offset]
+
+	column 'Year Offset'
+		dataType: int64
+		isDataTypeInferred
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Year Offset]
+
+
+	column DateWithSales = 'Date'[Date] <= MAX ( 'Sales'[Order Date] )
+		isHidden
+		summarizeBy: none
+
+	measure ShowValueForDates =
+			VAR LastDateWithData = CALCULATE ( MAX ( 'Sales'[Order Date] ), REMOVEFILTERS () )
+			VAR FirstDateVisible = MIN ( 'Date'[Date] )
+			VAR Result = FirstDateVisible <= LastDateWithData
+			RETURN
+				Result
+		isHidden
+		displayFolder: Time intelligence helpers
+
+	partition Date = calculated
+		mode: import
+		source =
+			// Date table: 2023-01-01 to 2026-12-31
+			// Made with the Date Table Generator. Fiscal year starts in January.
+			VAR _today = TODAY ()
+			VAR _start = DATE ( 2023, 1, 1 )
+			VAR _end = DATE ( 2026, 12, 31 )
+			// Holidays: worked out from rules for every year in the range, so they keep up as the dates move
+			VAR _holidays =
+			    SELECTCOLUMNS (
+			            FILTER (
+			                GENERATE (
+			                    GENERATESERIES ( YEAR ( _start ) - 1, YEAR ( _end ) + 1, 1 ),
+			                    VAR _hy = [Value]
+			                    RETURN
+			                        UNION (
+			                            ROW ( "HolidayDate", DATE ( _hy, 1, 1 ), "HolidayName", "New Year's Day", "Seq", _hy * 100 + 1 ),
+			                            ROW ( "HolidayDate", SWITCH ( WEEKDAY ( DATE ( _hy, 1, 1 ), 1 ), 7, DATE ( _hy, 1, 1 ) - 1, 1, DATE ( _hy, 1, 1 ) + 1 ), "HolidayName", "New Year's Day (observed)", "Seq", _hy * 100 + 2 ),
+			                            ROW ( "HolidayDate", DATE ( _hy, 1, 1 ) + MOD ( 2 - WEEKDAY ( DATE ( _hy, 1, 1 ), 1 ) + 7, 7 ) + 14, "HolidayName", "Martin Luther King Jr. Day", "Seq", _hy * 100 + 3 ),
+			                            ROW ( "HolidayDate", DATE ( _hy, 2, 1 ) + MOD ( 2 - WEEKDAY ( DATE ( _hy, 2, 1 ), 1 ) + 7, 7 ) + 14, "HolidayName", "Presidents' Day", "Seq", _hy * 100 + 4 ),
+			                            ROW ( "HolidayDate", EOMONTH ( DATE ( _hy, 5, 1 ), 0 ) - MOD ( WEEKDAY ( EOMONTH ( DATE ( _hy, 5, 1 ), 0 ), 1 ) - 2 + 7, 7 ), "HolidayName", "Memorial Day", "Seq", _hy * 100 + 5 ),
+			                            ROW ( "HolidayDate", IF ( _hy >= 2021, DATE ( _hy, 6, 19 ) ), "HolidayName", "Juneteenth", "Seq", _hy * 100 + 6 ),
+			                            ROW ( "HolidayDate", IF ( _hy >= 2021, SWITCH ( WEEKDAY ( DATE ( _hy, 6, 19 ), 1 ), 7, DATE ( _hy, 6, 19 ) - 1, 1, DATE ( _hy, 6, 19 ) + 1 ) ), "HolidayName", "Juneteenth (observed)", "Seq", _hy * 100 + 7 ),
+			                            ROW ( "HolidayDate", DATE ( _hy, 7, 4 ), "HolidayName", "Independence Day", "Seq", _hy * 100 + 8 ),
+			                            ROW ( "HolidayDate", SWITCH ( WEEKDAY ( DATE ( _hy, 7, 4 ), 1 ), 7, DATE ( _hy, 7, 4 ) - 1, 1, DATE ( _hy, 7, 4 ) + 1 ), "HolidayName", "Independence Day (observed)", "Seq", _hy * 100 + 9 ),
+			                            ROW ( "HolidayDate", DATE ( _hy, 9, 1 ) + MOD ( 2 - WEEKDAY ( DATE ( _hy, 9, 1 ), 1 ) + 7, 7 ), "HolidayName", "Labor Day", "Seq", _hy * 100 + 10 ),
+			                            ROW ( "HolidayDate", DATE ( _hy, 10, 1 ) + MOD ( 2 - WEEKDAY ( DATE ( _hy, 10, 1 ), 1 ) + 7, 7 ) + 7, "HolidayName", "Columbus Day", "Seq", _hy * 100 + 11 ),
+			                            ROW ( "HolidayDate", DATE ( _hy, 11, 11 ), "HolidayName", "Veterans Day", "Seq", _hy * 100 + 12 ),
+			                            ROW ( "HolidayDate", SWITCH ( WEEKDAY ( DATE ( _hy, 11, 11 ), 1 ), 7, DATE ( _hy, 11, 11 ) - 1, 1, DATE ( _hy, 11, 11 ) + 1 ), "HolidayName", "Veterans Day (observed)", "Seq", _hy * 100 + 13 ),
+			                            ROW ( "HolidayDate", DATE ( _hy, 11, 1 ) + MOD ( 5 - WEEKDAY ( DATE ( _hy, 11, 1 ), 1 ) + 7, 7 ) + 21, "HolidayName", "Thanksgiving Day", "Seq", _hy * 100 + 14 ),
+			                            ROW ( "HolidayDate", DATE ( _hy, 12, 25 ), "HolidayName", "Christmas Day", "Seq", _hy * 100 + 15 ),
+			                            ROW ( "HolidayDate", SWITCH ( WEEKDAY ( DATE ( _hy, 12, 25 ), 1 ), 7, DATE ( _hy, 12, 25 ) - 1, 1, DATE ( _hy, 12, 25 ) + 1 ), "HolidayName", "Christmas Day (observed)", "Seq", _hy * 100 + 16 )
+			                        )
+			                ),
+			                NOT ISBLANK ( [HolidayDate] )
+			            ),
+			            "HolidayDate", [HolidayDate],
+			            "HolidayName", [HolidayName],
+			            "Seq", [Seq]
+			        )
+			RETURN
+			    GENERATE (
+			        CALENDAR ( _start, _end ),
+			        VAR _d = [Date]
+			        VAR _y = YEAR ( _d )
+			        VAR _m = MONTH ( _d )
+			        VAR _q = QUARTER ( _d )
+			        VAR _dow = WEEKDAY ( _d, 2 )
+			        VAR _fsy = _y - IF ( _m < 1, 1, 0 )
+			        VAR _fy = _fsy
+			        VAR _fm = MOD ( _m - 1 + 12, 12 ) + 1
+			        VAR _fq = QUOTIENT ( _fm - 1, 3 ) + 1
+			        VAR _weekend = WEEKDAY ( _d, 1 ) IN { 1, 7 }
+			        VAR _hol = CONCATENATEX ( FILTER ( _holidays, [HolidayDate] = _d ), [HolidayName], " / ", [Seq], ASC )
+			        RETURN
+			            ROW (
+			                "Year", _y,
+			                "Quarter", "Q" & _q,
+			                "Year Quarter", _y & " Q" & _q,
+			                "Month Number", _m,
+			                "Month Name", FORMAT ( _d, "mmmm" ),
+			                "Month Short", FORMAT ( _d, "mmm" ),
+			                "Year Month", FORMAT ( _d, "mmm yyyy" ),
+			                "Month Sort", _y * 12 + _m,
+			                "Month Start", DATE ( _y, _m, 1 ),
+			                "Month End", EOMONTH ( _d, 0 ),
+			                "Day of Month", DAY ( _d ),
+			                "Day of Week Number", _dow,
+			                "Day Name", FORMAT ( _d, "dddd" ),
+			                "Week Start", _d - _dow + 1,
+			                "Fiscal Year", "FY" & _fy,
+			                "Fiscal Year Number", _fy,
+			                "Fiscal Quarter", "FQ" & _fq,
+			                "Fiscal Year Quarter", "FY" & _fy & " Q" & _fq,
+			                "Fiscal Month Number", _fm,
+			                "Is Weekend", _weekend,
+			                "Is Holiday", NOT ISBLANK ( _hol ),
+			                "Holiday Name", _hol,
+			                "Is Working Day", NOT _weekend && ISBLANK ( _hol ),
+			                "Month Filter", IF ( _y = YEAR ( _today ) && _m = MONTH ( _today ), "Current", FORMAT ( _d, "mmmm" ) & "-" & _y ),
+			                "Day Offset", INT ( _d - _today ),
+			                "Month Offset", ( _y - YEAR ( _today ) ) * 12 + _m - MONTH ( _today ),
+			                "Year Offset", _y - YEAR ( _today )
+			            )
+			    )
+

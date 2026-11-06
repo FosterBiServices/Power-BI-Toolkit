@@ -219,14 +219,18 @@ const LS = (() => {
       if (lead.fit.overW > 2 && +base.w < 1920) extra.push(mk(lead.id, 'Larger page', fns[lead.id], 'The same layout on a 1920 × 1080 page, so visuals side by side get their width.', { large: true }));
       if (lead.fit.overH > 2) extra.push(mk(lead.id, 'Taller page', fns[lead.id], 'The same layout on a taller page, so every visual shows its categories without squeezing.', { tall: true }));
     }
+    // a layout that changes the page size (taller or larger) never ranks above one that keeps it, and is never the Best fit:
+    // the person chose the page size, so changing it is their call (the card says so)
+    const resized = v => v.tall || v.large;
     const all = order.concat(extra);
-    const ranked = all.filter(fits).concat(extra.filter(v => !fits(v)), order.filter(v => !fits(v)));
+    const ranked = all.filter(v => fits(v) && !resized(v)).concat(all.filter(v => fits(v) && resized(v)), extra.filter(v => !fits(v)), order.filter(v => !fits(v)));
     const seen = new Set(), res = [];
     ranked.forEach(v => { const k = sameShape(v); if (!seen.has(k) && res.length < 4) { seen.add(k); res.push(v); } });
     const tips = p.tips.slice();
     const nVis = p.v30.length + (p.detail ? 1 : 0);
     if (nVis > 7) tips.push(nVis + ' visuals below the KPIs compete for attention. Six or fewer reads best: split the page in two, or move some to tooltips or a drill-through page.');
-    res.forEach((v, i) => { v.recommended = i === 0 && fits(v); v.why = explain(p, v); v.tips = tips;
+    res.forEach((v, i) => { v.recommended = i === 0 && fits(v) && !resized(v); v.why = explain(p, v); v.tips = tips;
+      v.size = +v.cfg.w !== +base.w || +v.cfg.h !== +base.h ? { from: [+base.w, +base.h], to: [+v.cfg.w, +v.cfg.h] } : null;
       const L = LO.layout(v.cfg); v.probs = L.probs; });
     return res;
   }
