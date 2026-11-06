@@ -369,6 +369,7 @@ textarea.edit{font-family:var(--sans);font-size:14px;line-height:1.55;min-height
     .skipin .lab{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500}
     .skipin .lab .hint{font-weight:400;color:var(--muted)}
     .chip.out[aria-pressed="true"]{background:var(--surface-2);border-color:var(--muted);color:var(--muted);text-decoration:line-through}
+    .qskip{font-size:12px;margin-left:6px;white-space:nowrap}
     .flag-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
     details.flag .facts{display:flex;flex-wrap:wrap;gap:8px;margin:0 12px 10px}
     details.flag .renin{display:flex;flex-direction:column;gap:12px;margin:0 12px 12px}
@@ -390,7 +391,7 @@ textarea.edit{font-family:var(--sans);font-size:14px;line-height:1.55;min-height
       </div>
       <textarea id="modelInput" class="big" spellcheck="false" aria-label="Query results" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
       <div id="modelMsg"></div>
-      <details class="skipbox" id="skipBox" hidden>
+      <details class="skipbox" id="skipBox" open hidden>
         <summary><b>Leave out helper tables and measures</b> <span class="muted" id="skipSum"></span></summary>
         <div class="skipin">
           <p class="note small">Paging, sorting, formatting and other helper tables and measures report users never ask about. What you leave out here is skipped by the checks below, both prompts and every list on this page. Your model doesn&rsquo;t change.</p>
@@ -2278,11 +2279,14 @@ function renderModel(){
       + '<div class="cov-bar"><span style="width:' + pct + '%"></span></div></div>';
   };
   $('meters').innerHTML = meter('visible tables', rd.coverage.tables) + meter('visible columns', rd.coverage.columns) + meter('visible measures', rd.coverage.measures);
+  const fItem = ref => { const o = resolveRef(m, ref); return { text: ref, tables: o && o.kind === 'column' ? [o.table] : [], measure: o && o.kind === 'measure' ? o.name : '' }; };
   const flag = (id, title, items, hint) => items.length ? '<details class="flag" data-f="' + id + '"' + (openFlags.has(id) ? ' open' : '') + '><summary><b>' + items.length + '</b> ' + title + '</summary><p class="note small">' + hint + '</p>'
-    + '<div class="facts"><button type="button" class="btn small" data-flagcopy="' + id + '" title="Copies every item as rows you can paste into Excel">Copy list</button></div><ul>' + items.slice(0, 60).map(x => '<li class="mono">' + esc(x) + '</li>').join('') + (items.length > 60 ? '<li>…and ' + (items.length - 60) + ' more</li>' : '') + '</ul></details>' : '';
-  $('flags').innerHTML = flag('shared', 'column names shared by several tables', rd.shared.map(s => '[' + s.name + '] in ' + s.tables.join(', ')), 'Copilot can mix these up. The instructions prompt asks Copilot to explain them; renaming them is even better.')
-    + flag('cryptic', 'cryptic or technical names', rd.cryptic, 'Codes, abbreviations and underscores are hard for Copilot to match to everyday words. The prompt asks for terminology and synonyms for these.')
-    + flag('keys', 'visible ID or key columns', rd.keys, 'Consider hiding these, or leaving them out of the AI data schema (Prep data for AI > Simplify the data schema).')
+    + '<div class="facts"><button type="button" class="btn small" data-flagcopy="' + id + '" title="Copies every item as rows you can paste into Excel">Copy list</button></div><ul>' + items.slice(0, 60).map(x => '<li><span class="mono">' + esc(x.text) + '</span>'
+      + (x.measure ? ' <button type="button" class="linkbtn qskip" data-qskipm="' + esc(x.measure) + '">leave out</button>'
+        : x.tables.map(t => ' <button type="button" class="linkbtn qskip" data-qskipt="' + esc(t) + '" title="Leave the whole ' + esc(t) + ' table out of this page">leave out ' + esc(x.tables.length > 1 ? t : 'table') + '</button>').join('')) + '</li>').join('') + (items.length > 60 ? '<li>…and ' + (items.length - 60) + ' more</li>' : '') + '</ul></details>' : '';
+  $('flags').innerHTML = flag('shared', 'column names shared by several tables', rd.shared.map(s => ({ text: '[' + s.name + '] in ' + s.tables.join(', '), tables: s.tables })), 'Copilot can mix these up. The instructions prompt asks Copilot to explain them; renaming them is even better.')
+    + flag('cryptic', 'cryptic or technical names', rd.cryptic.map(fItem), 'Codes, abbreviations and underscores are hard for Copilot to match to everyday words. The prompt asks for terminology and synonyms for these.')
+    + flag('keys', 'visible ID or key columns', rd.keys.map(fItem), 'Consider hiding these in the Data pane, so Copilot doesn\u2019t offer them as answers.')
     || '<p class="note small">No shared, cryptic or visible key column names found.</p>';
   $('flagActions').innerHTML = state.readyRows.length ? '<button type="button" class="btn small" id="readyCsv">Download the lists for Excel</button><span class="note small">Every name above in one spreadsheet, with a suggested name and a column for yours.</span>' : '';
   $('ready').hidden = false;
@@ -2691,6 +2695,14 @@ function init(){
   });
   // readiness lists: copy one, or download them all
   $('flags').addEventListener('click', e => {
+    const q = e.target.closest('[data-qskipt],[data-qskipm]');
+    if (q) {
+      leaveExample();
+      const s = skipNorm();
+      if (q.dataset.qskipt) { if (!s.tables.some(x => lc(x) === lc(q.dataset.qskipt))) s.tables.push(q.dataset.qskipt); }
+      else if (!s.measures.includes(q.dataset.qskipm)) s.measures.push(q.dataset.qskipm);
+      skipChanged(); return;
+    }
     const b = e.target.closest('[data-flagcopy]'); if (!b) return;
     const issue = { shared: 'Shared name', cryptic: 'Cryptic name', keys: 'Visible key' }[b.dataset.flagcopy];
     const rows = (state.readyRows || []).filter(r => r.issue === issue);
