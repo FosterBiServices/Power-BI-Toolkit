@@ -98,6 +98,13 @@ Things to know:
   holds the industries; `sd_mask.js` the masking. Generated functions are named
   `FosterBIServices.SampleData.*` with `DAXLIB_PackageId = FosterBIServices.SampleData`. The idea comes
   from the DataGoblins.SampleData DAX library; nothing is copied from it, and nothing generated names it.
+  People's names are TV and movie characters by default (`sd_names.js`, `SD_NAMES`: the owner's two lists, COACH used
+  before MEMBER, with 1 marking women for Gender), or the old made-up names (`state.names`, saved as `ksd.names`, one choice
+  for both modes; `SD.names` is set before an industry is built). `SD.nameIndex(k, off)`, `SD.person`, `SD.gender`: keys 1, 2,
+  3... take the coach names first in a seed-shuffled order, then the rest, then mixed first and last names. In the DAX each
+  name list is one `|` text read with PATHITEM (functions `...Character.Name` / `...Character.Gender` in DAX functions mode).
+  Masking gives the n-th person the n-th character the same way. Mask mode's **Remove column** (`drop`) leaves a column out of
+  the download (columns added in Power Query), and never decides what its linked columns become. Check: `sdnamestest.js`.
   DAX rules found in Desktop: `key` can't be a function parameter name (hence `row_key`), and a
   TRUE/FALSE column can't hold BLANK (it turns FALSE), so boolean columns use `and(...)`, never
   `iff(..., blank())`, or the preview won't match.
@@ -237,6 +244,7 @@ through both.
 - Power Query Writer's fx functions TMDL script (`PWF.tmdl`): applying it in TMDL view, and the functions without their
   Documentation wrapper (fxTests.pq, 45 checks).
 
+- Sample Data Maker's character names in the DAX (PATHITEM over one long `|` text, MID for Gender), in both modes.
 - Sample Data Maker: a script with two or more industries combined (renamed tables and measures, per-industry sizes),
   and the plain calculated tables after the RETURN fix (Accounts, Cost Centers and Departments failed before it).
 - Prompt files in Copilot (attaching the downloaded prompt; Copilot's file reply).

@@ -55,17 +55,19 @@
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">Check each column</h2>
-        <p>The page guessed what each column holds. Change any that are wrong. <b>Keep as is</b> is right for things that aren&rsquo;t private, such as categories, regions or status.</p>
+        <p>The page guessed what each column holds. Change any that are wrong. <b>Keep as is</b> is right for things that aren&rsquo;t private, such as categories, regions or status. <b>Remove column</b> leaves a column out, such as one you added in Power Query, so the file is back to its raw state.</p>
       </div>
       <details class="extra">
         <summary>What each choice does</summary>
         <div class="extra-body">
           <ul class="howto">
             <li><b>Fake ID</b>: digits and letters are swapped, the shape and any shared start (such as <code>CUST-</code>) stay. Each ID gets its own fake one.</li>
-            <li><b>Person name</b>, <b>Company name</b>, <b>City</b>, <b>Street address</b>, <b>Phone</b>: made-up values. The same original always gets the same fake value, in every file.</li>
+            <li><b>Person name</b>: a TV or movie character, each person a different one (or made-up names, picked in Step 5). The same original always gets the same fake name, in every file.</li>
+            <li><b>Company name</b>, <b>City</b>, <b>Street address</b>, <b>Phone</b>: made-up values. The same original always gets the same fake value, in every file.</li>
             <li><b>Email</b>: built from the fake person name in the same row when there is one, at example.com.</li>
             <li><b>Numbered labels</b>: each different value becomes the column name and a number, such as Product 12.</li>
             <li><b>Scale numbers</b>: the whole column is multiplied by a hidden factor, with a little noise per value, so totals and trends keep their shape. Totals that should add up across columns won&rsquo;t exactly.</li>
+            <li><b>Remove column</b>: the column isn&rsquo;t in the download at all. Use it for columns added in Power Query or Excel, so the masked file looks like the raw source. Linked columns in other tables stay.</li>
             <li><b>Shift dates</b>: every date in every file moves by the same hidden number of whole weeks, so weekdays, gaps and seasons stay true.</li>
           </ul>
         </div>
@@ -103,6 +105,11 @@
       <div class="cfg">
         <div class="field"><label for="maskSeed">Seed</label><input type="number" id="maskSeed" class="num" min="1" max="999999999"></div>
         <button type="button" class="btn" id="newSeed">New seed</button>
+        <div class="field"><span class="flabel">People&rsquo;s names</span>
+          <span class="seg" role="radiogroup" aria-label="People&rsquo;s names">
+            <label><input type="radio" name="namesMask" value="chars"><span>TV and movie characters</span></label>
+            <label><input type="radio" name="namesMask" value="made"><span>Made-up names</span></label>
+          </span></div>
       </div>
       <p class="note">The same seed and the same files give the same fake values every time. Keep the seed to yourself: with it and your real files, someone could work out the hidden factor and date shift.</p>
       <div class="prevbar">
@@ -144,6 +151,11 @@
         <div class="field"><label for="startDate">Start date</label><input type="date" id="startDate"></div>
         <div class="field"><label for="endDate">End date</label><input type="date" id="endDate"></div>
         <div class="field"><label for="makeSeed">Seed</label><input type="number" id="makeSeed" class="num" min="1" max="999999999"></div>
+        <div class="field"><span class="flabel">People&rsquo;s names</span>
+          <span class="seg" role="radiogroup" aria-label="People&rsquo;s names">
+            <label><input type="radio" name="namesMake" value="chars"><span>TV and movie characters</span></label>
+            <label><input type="radio" name="namesMake" value="made"><span>Made-up names</span></label>
+          </span></div>
       </div>
       <div id="makeMsg"></div>
       <div class="field"><span class="flabel">Tables</span><div class="opts" id="tablePicks"></div></div>

@@ -352,17 +352,19 @@ section.dim .step-body>*:not(.step-head){opacity:.45;pointer-events:none}
     <div class="step-body">
       <div class="step-head">
         <h2 id="s3">Check each column</h2>
-        <p>The page guessed what each column holds. Change any that are wrong. <b>Keep as is</b> is right for things that aren&rsquo;t private, such as categories, regions or status.</p>
+        <p>The page guessed what each column holds. Change any that are wrong. <b>Keep as is</b> is right for things that aren&rsquo;t private, such as categories, regions or status. <b>Remove column</b> leaves a column out, such as one you added in Power Query, so the file is back to its raw state.</p>
       </div>
       <details class="extra">
         <summary>What each choice does</summary>
         <div class="extra-body">
           <ul class="howto">
             <li><b>Fake ID</b>: digits and letters are swapped, the shape and any shared start (such as <code>CUST-</code>) stay. Each ID gets its own fake one.</li>
-            <li><b>Person name</b>, <b>Company name</b>, <b>City</b>, <b>Street address</b>, <b>Phone</b>: made-up values. The same original always gets the same fake value, in every file.</li>
+            <li><b>Person name</b>: a TV or movie character, each person a different one (or made-up names, picked in Step 5). The same original always gets the same fake name, in every file.</li>
+            <li><b>Company name</b>, <b>City</b>, <b>Street address</b>, <b>Phone</b>: made-up values. The same original always gets the same fake value, in every file.</li>
             <li><b>Email</b>: built from the fake person name in the same row when there is one, at example.com.</li>
             <li><b>Numbered labels</b>: each different value becomes the column name and a number, such as Product 12.</li>
             <li><b>Scale numbers</b>: the whole column is multiplied by a hidden factor, with a little noise per value, so totals and trends keep their shape. Totals that should add up across columns won&rsquo;t exactly.</li>
+            <li><b>Remove column</b>: the column isn&rsquo;t in the download at all. Use it for columns added in Power Query or Excel, so the masked file looks like the raw source. Linked columns in other tables stay.</li>
             <li><b>Shift dates</b>: every date in every file moves by the same hidden number of whole weeks, so weekdays, gaps and seasons stay true.</li>
           </ul>
         </div>
@@ -400,6 +402,11 @@ section.dim .step-body>*:not(.step-head){opacity:.45;pointer-events:none}
       <div class="cfg">
         <div class="field"><label for="maskSeed">Seed</label><input type="number" id="maskSeed" class="num" min="1" max="999999999"></div>
         <button type="button" class="btn" id="newSeed">New seed</button>
+        <div class="field"><span class="flabel">People&rsquo;s names</span>
+          <span class="seg" role="radiogroup" aria-label="People&rsquo;s names">
+            <label><input type="radio" name="namesMask" value="chars"><span>TV and movie characters</span></label>
+            <label><input type="radio" name="namesMask" value="made"><span>Made-up names</span></label>
+          </span></div>
       </div>
       <p class="note">The same seed and the same files give the same fake values every time. Keep the seed to yourself: with it and your real files, someone could work out the hidden factor and date shift.</p>
       <div class="prevbar">
@@ -441,6 +448,11 @@ section.dim .step-body>*:not(.step-head){opacity:.45;pointer-events:none}
         <div class="field"><label for="startDate">Start date</label><input type="date" id="startDate"></div>
         <div class="field"><label for="endDate">End date</label><input type="date" id="endDate"></div>
         <div class="field"><label for="makeSeed">Seed</label><input type="number" id="makeSeed" class="num" min="1" max="999999999"></div>
+        <div class="field"><span class="flabel">People&rsquo;s names</span>
+          <span class="seg" role="radiogroup" aria-label="People&rsquo;s names">
+            <label><input type="radio" name="namesMake" value="chars"><span>TV and movie characters</span></label>
+            <label><input type="radio" name="namesMake" value="made"><span>Made-up names</span></label>
+          </span></div>
       </div>
       <div id="makeMsg"></div>
       <div class="field"><span class="flabel">Tables</span><div class="opts" id="tablePicks"></div></div>
@@ -500,6 +512,153 @@ section.dim .step-body>*:not(.step-head){opacity:.45;pointer-events:none}
 </div>
 
 <script>
+/* ---------- Sample Data Maker: TV and movie character names ----------
+   People get these names unless "Made-up names" is picked. [first, last, 1 when the character is a woman].
+   COACH comes first: those names are used before MEMBER's. Edit the lists here; nothing else needs to change. */
+const SD_NAMES = {
+  COACH: [
+    ["Rachel", "Green", 1], ["Monica", "Geller", 1], ["Ross", "Geller"], ["Phoebe", "Buffay", 1], ["Joey", "Tribbiani"], ["Chandler", "Bing"],
+    ["Michael", "Scott"], ["Dwight", "Schrute"], ["Jim", "Halpert"], ["Pam", "Beesly", 1], ["Stanley", "Hudson"], ["Angela", "Martin", 1],
+    ["Kevin", "Malone"], ["Oscar", "Martinez"], ["Andy", "Bernard"], ["Kelly", "Kapoor", 1], ["Toby", "Flenderson"], ["Darryl", "Philbin"],
+    ["Erin", "Hannon", 1], ["Leslie", "Knope", 1], ["Ron", "Swanson"], ["Ann", "Perkins", 1], ["April", "Ludgate", 1], ["Andy", "Dwyer"],
+    ["Tom", "Haverford"], ["Donna", "Meagle", 1], ["Ben", "Wyatt"], ["Chris", "Traeger"], ["Jerry", "Gergich"], ["Elaine", "Benes", 1],
+    ["George", "Costanza"], ["Cosmo", "Kramer"], ["Jake", "Peralta"], ["Amy", "Santiago", 1], ["Rosa", "Diaz", 1], ["Terry", "Jeffords"],
+    ["Raymond", "Holt"], ["Charles", "Boyle"], ["Gina", "Linetti", 1], ["Ted", "Mosby"], ["Marshall", "Eriksen"], ["Lily", "Aldrin", 1],
+    ["Robin", "Scherbatsky", 1], ["Barney", "Stinson"], ["Sheldon", "Cooper"], ["Leonard", "Hofstadter"], ["Howard", "Wolowitz"],
+    ["Raj", "Koothrappali"], ["John", "Dorian"], ["Elliot", "Reid", 1], ["Christopher", "Turk"], ["Perry", "Cox"], ["Carla", "Espinosa", 1],
+    ["Johnny", "Rose"], ["Moira", "Rose", 1], ["David", "Rose"], ["Alexis", "Rose", 1], ["Ted", "Lasso"], ["Rebecca", "Welton", 1], ["Roy", "Kent"],
+    ["Keeley", "Jones", 1], ["Lorelai", "Gilmore", 1], ["Rory", "Gilmore", 1], ["Luke", "Danes"], ["Sam", "Malone"], ["Diane", "Chambers", 1],
+    ["Frasier", "Crane"], ["Niles", "Crane"], ["Jeff", "Winger"], ["Abed", "Nadir"]
+  ],
+  MEMBER: [
+    ["Tony", "Stark"], ["Steve", "Rogers"], ["Natasha", "Romanoff", 1], ["Bruce", "Banner"], ["Thor", "Odinson"], ["Clint", "Barton"],
+    ["Peter", "Parker"], ["Stephen", "Strange"], ["T", "Challa"], ["Carol", "Danvers", 1], ["Wanda", "Maximoff", 1], ["Sam", "Wilson"],
+    ["Bucky", "Barnes"], ["Scott", "Lang"], ["Hope", "Van Dyne", 1], ["Bruce", "Wayne"], ["Clark", "Kent"], ["Diana", "Prince", 1],
+    ["Arthur", "Curry"], ["Barry", "Allen"], ["Victor", "Stone"], ["Harley", "Quinn", 1], ["Floyd", "Lawton"], ["Billy", "Batson"], ["Teth", "Adam"],
+    ["Selina", "Kyle", 1], ["Oswald", "Cobblepot"], ["Edward", "Nashton"], ["Lois", "Lane", 1], ["Amanda", "Waller", 1], ["Luke", "Skywalker"],
+    ["Leia", "Organa", 1], ["Han", "Solo"], ["Anakin", "Skywalker"], ["Obi", "Wan Kenobi"], ["Padme", "Amidala", 1], ["Lando", "Calrissian"],
+    ["Rey", "Skywalker", 1], ["Finn", "FN2187"], ["Poe", "Dameron"], ["Ben", "Solo"], ["Mace", "Windu"], ["Qui", "Gon Jinn"], ["Cassian", "Andor"],
+    ["Jyn", "Erso", 1], ["Harry", "Potter"], ["Hermione", "Granger", 1], ["Ron", "Weasley"], ["Albus", "Dumbledore"], ["Severus", "Snape"],
+    ["Draco", "Malfoy"], ["Sirius", "Black"], ["Remus", "Lupin"], ["Rubeus", "Hagrid"], ["Minerva", "McGonagall", 1], ["Neville", "Longbottom"],
+    ["Luna", "Lovegood", 1], ["Ginny", "Weasley", 1], ["Cedric", "Diggory"], ["Bellatrix", "Lestrange", 1], ["Frodo", "Baggins"],
+    ["Samwise", "Gamgee"], ["Aragorn", "Elessar"], ["Legolas", "Greenleaf"], ["Gimli", "Gloinsson"], ["Boromir", "Denethorson"],
+    ["Meriadoc", "Brandybuck"], ["Peregrin", "Took"], ["Gandalf", "Greyhame"], ["Galadriel", "Noldor", 1], ["Elrond", "Peredhel"],
+    ["Arwen", "Undomiel", 1], ["Theoden", "Ednew"], ["Eowyn", "Eomundsdottir", 1], ["Faramir", "Denethorson"], ["James", "Bond"], ["M", "Eve", 1],
+    ["Q", "Quartermaster"], ["Moneypenny", "Eve", 1], ["Felix", "Leiter"], ["Madeleine", "Swann", 1], ["Vesper", "Lynd", 1], ["Le", "Chiffre"],
+    ["Raoul", "Silva"], ["Ernst", "Blofeld"], ["Dominic", "Greene"], ["Camille", "Montes", 1], ["Mathis", "Rene"], ["Tanner", "Bill"],
+    ["Paloma", "Agent", 1], ["Ethan", "Hunt"], ["Luther", "Stickell"], ["Benji", "Dunn"], ["Ilsa", "Faust", 1], ["Julia", "Meade", 1],
+    ["William", "Brandt"], ["Grace", "Thief", 1], ["Gabriel", "Villain"], ["Alanna", "Mitsopolis", 1], ["Zola", "Mitsopolis", 1],
+    ["Eugene", "Kittridge"], ["August", "Walker"], ["Owen", "Davian"], ["Jane", "Carter", 1], ["Declan", "Gormley"], ["Dominic", "Toretto"],
+    ["Letty", "Ortiz", 1], ["Brian", "O Conner"], ["Mia", "Toretto", 1], ["Roman", "Pearce"], ["Tej", "Parker"], ["Han", "Lue"],
+    ["Gisele", "Yashar", 1], ["Luke", "Hobbs"], ["Deckard", "Shaw"], ["Jakob", "Toretto"], ["Ramsey", "Hacker", 1], ["Elena", "Neves", 1],
+    ["Vince", "Racer"], ["Cipher", "Terrorist", 1], ["Alan", "Grant"], ["Ellie", "Sattler", 1], ["Ian", "Malcolm"], ["John", "Hammond"],
+    ["Robert", "Muldoon"], ["Dennis", "Nedry"], ["Henry", "Wu"], ["Lex", "Murphy", 1], ["Tim", "Murphy"], ["Sarah", "Harding", 1], ["Owen", "Grady"],
+    ["Claire", "Dearing", 1], ["Maisie", "Lockwood", 1], ["Barry", "Sembene"], ["Zia", "Rodriguez", 1], ["Katniss", "Everdeen", 1],
+    ["Peeta", "Mellark"], ["Gale", "Hawthorne"], ["Haymitch", "Abernathy"], ["Effie", "Trinket", 1], ["Finnick", "Odair"], ["Annie", "Cresta", 1],
+    ["Johanna", "Mason", 1], ["Coriolanus", "Snow"], ["Alma", "Coin", 1], ["Primrose", "Everdeen", 1], ["Cinna", "Stylist"],
+    ["Plutarch", "Heavensbee"], ["Caesar", "Flickerman"], ["Beetee", "Latier"], ["Thomas", "Anderson"], ["Trinity", "Hacker", 1],
+    ["Morpheus", "Captain"], ["Agent", "Smith"], ["Niobe", "Captain", 1], ["Oracle", "Program", 1], ["Merovingian", "Program"],
+    ["Persephone", "Program", 1], ["Link", "Operator"], ["Tank", "Operator"], ["Dozer", "Operator"], ["Mouse", "Operator"], ["Cypher", "Reagan"],
+    ["Sati", "Program", 1], ["Bugs", "Captain"], ["Jack", "Sparrow"], ["Will", "Turner"], ["Elizabeth", "Swann", 1], ["Hector", "Barbossa"],
+    ["Davy", "Jones"], ["James", "Norrington"], ["Joshamee", "Gibbs"], ["Tia", "Dalma", 1], ["Cutler", "Beckett"], ["Angelica", "Teach", 1],
+    ["Blackbeard", "Teach"], ["Henry", "Turner"], ["Carina", "Smyth", 1], ["Bootstrap", "Turner"], ["Sao", "Feng"], ["Indiana", "Jones"],
+    ["Marion", "Ravenwood", 1], ["Henry", "Jones"], ["Marcus", "Brody"], ["Sallah", "Mohammed"], ["Rene", "Belloq"], ["Willie", "Scott", 1],
+    ["Short", "Round"], ["Elsa", "Schneider", 1], ["Walter", "Donovan"], ["Irina", "Spalko", 1], ["Mutt", "Williams"], ["Helena", "Shaw", 1],
+    ["Basil", "Shaw"], ["Jürgen", "Voller"], ["Peter", "Venkman"], ["Raymond", "Stantz"], ["Egon", "Spengler"], ["Winston", "Zeddemore"],
+    ["Dana", "Barrett", 1], ["Louis", "Tully"], ["Janine", "Melnitz", 1], ["Walter", "Peck"], ["Oscar", "Barrett"], ["Callie", "Spengler", 1],
+    ["Trevor", "Spengler"], ["Phoebe", "Spengler", 1], ["Gary", "Grooberson"], ["Lucky", "Domingo", 1], ["Podcast", "Fan"], ["Sarah", "Connor", 1],
+    ["John", "Connor"], ["Kyle", "Reese"], ["T800", "Terminator"], ["T1000", "Terminator"], ["Marcus", "Wright"], ["Kate", "Brewster", 1],
+    ["Dani", "Ramos", 1], ["Grace", "Harper", 1], ["Carl", "Terminator"], ["Rev9", "Terminator"], ["Miles", "Dyson"], ["Peter", "Silberman"],
+    ["Blair", "Williams", 1], ["Alex", "Terminator"], ["Ellen", "Ripley", 1], ["Dallas", "Arthur"], ["Joan", "Lambert", 1], ["Samuel", "Brett"],
+    ["Dennis", "Parker"], ["Thomas", "Kane"], ["Ash", "Android"], ["Dwayne", "Hicks"], ["William", "Hudson"], ["Jenette", "Vasquez", 1],
+    ["Carter", "Burke"], ["Bishop", "Android"], ["Newt", "Jorden", 1], ["Charles", "Weyland"], ["Elizabeth", "Shaw", 1], ["Rocky", "Balboa"],
+    ["Adrian", "Pennino", 1], ["Paulie", "Pennino"], ["Apollo", "Creed"], ["Clubber", "Lang"], ["Ivan", "Drago"], ["Mickey", "Goldmill"],
+    ["Robert", "Balboa"], ["Adonis", "Creed"], ["Bianca", "Taylor", 1], ["Mary", "Anne Creed", 1], ["Viktor", "Drago"], ["Duke", "Evers"],
+    ["Tommy", "Gunn"], ["Ricky", "Conlan"], ["Vito", "Corleone"], ["Michael", "Corleone"], ["Sonny", "Corleone"], ["Fredo", "Corleone"],
+    ["Connie", "Corleone", 1], ["Tom", "Hagen"], ["Kay", "Adams", 1], ["Peter", "Clemenza"], ["Salvatore", "Tessio"], ["Luca", "Brasi"],
+    ["Virgil", "Sollozzo"], ["Carlo", "Rizzi"], ["Apollonia", "Vitelli", 1], ["Hyman", "Roth"], ["Frank", "Pentangeli"], ["Tony", "Soprano"],
+    ["Carmela", "Soprano", 1], ["Christopher", "Moltisanti"], ["Silvio", "Dante"], ["Paulie", "Gualtieri"], ["Junior", "Soprano"],
+    ["Meadow", "Soprano", 1], ["Anthony", "Soprano"], ["Jennifer", "Melfi", 1], ["Adriana", "La Cerva", 1], ["Bobby", "Baccalieri"],
+    ["Janice", "Soprano", 1], ["Ralph", "Cifaretto"], ["Richie", "Aprile"], ["Artie", "Bucco"], ["Jimmy", "McNulty"], ["Bunk", "Moreland"],
+    ["Lester", "Freamon"], ["Kima", "Greggs", 1], ["Cedric", "Daniels"], ["William", "Rawls"], ["Rhonda", "Pearlman", 1], ["Omar", "Little"],
+    ["Stringer", "Bell"], ["Avon", "Barksdale"], ["Marlo", "Stanfield"], ["Bodie", "Broadus"], ["D", "Angelo Barksdale"], ["Tommy", "Carcetti"],
+    ["Bubbles", "Cousins"], ["Walter", "White"], ["Jesse", "Pinkman"], ["Skyler", "White", 1], ["Hank", "Schrader"], ["Marie", "Schrader", 1],
+    ["Walter", "White Junior"], ["Saul", "Goodman"], ["Gustavo", "Fring"], ["Mike", "Ehrmantraut"], ["Lydia", "Rodarte Quayle", 1],
+    ["Todd", "Alquist"], ["Tuco", "Salamanca"], ["Hector", "Salamanca"], ["Jane", "Margolis", 1], ["Gale", "Boetticher"], ["Jimmy", "McGill"],
+    ["Kim", "Wexler", 1], ["Chuck", "McGill"], ["Howard", "Hamlin"], ["Nacho", "Varga"], ["Lalo", "Salamanca"], ["Clifford", "Main"],
+    ["Kevin", "Wachtell"], ["Paige", "Novick", 1], ["Ernesto", "Assistant"], ["Francesca", "Liddy", 1], ["Huell", "Babineaux"],
+    ["Marco", "Pasternak"], ["Bill", "Oakley"], ["Rich", "Schweikart"], ["Dexter", "Morgan"], ["Debra", "Morgan", 1], ["Harry", "Morgan"],
+    ["Rita", "Bennett", 1], ["Maria", "LaGuerta", 1], ["Angel", "Batista"], ["Vince", "Masuka"], ["James", "Doakes"], ["Joey", "Quinn"],
+    ["Harrison", "Morgan"], ["Arthur", "Mitchell"], ["Miguel", "Prado"], ["Lumen", "Pierce", 1], ["Hannah", "McKay", 1], ["Travis", "Marshall"],
+    ["Don", "Draper"], ["Peggy", "Olson", 1], ["Roger", "Sterling"], ["Joan", "Holloway", 1], ["Betty", "Draper", 1], ["Pete", "Campbell"],
+    ["Lane", "Pryce"], ["Bert", "Cooper"], ["Sally", "Draper", 1], ["Ken", "Cosgrove"], ["Harry", "Crane"], ["Megan", "Draper", 1], ["Stan", "Rizzo"],
+    ["Henry", "Francis"], ["Rachel", "Menken", 1], ["Josiah", "Bartlet"], ["Leo", "McGarry"], ["Josh", "Lyman"], ["Toby", "Ziegler"],
+    ["Sam", "Seaborn"], ["CJ", "Cregg", 1], ["Donna", "Moss", 1], ["Charlie", "Young"], ["Abbey", "Bartlet", 1], ["Will", "Bailey"],
+    ["Kate", "Harper", 1], ["Matt", "Santos"], ["Arnold", "Vinick"], ["Nancy", "McNally", 1], ["Ainsley", "Hayes", 1], ["Frank", "Underwood"],
+    ["Claire", "Underwood", 1], ["Doug", "Stamper"], ["Zoe", "Barnes", 1], ["Peter", "Russo"], ["Remy", "Danton"], ["Jackie", "Sharp", 1],
+    ["Tom", "Hammerschmidt"], ["Rachel", "Posner", 1], ["Seth", "Grayson"], ["Catherine", "Durant", 1], ["Lucas", "Goodwin"], ["LeAnn", "Harvey", 1],
+    ["Will", "Conway"], ["Jane", "Davis", 1], ["John", "Dutton"], ["Beth", "Dutton", 1], ["Kayce", "Dutton"], ["Jamie", "Dutton"], ["Rip", "Wheeler"],
+    ["Monica", "Long Dutton", 1], ["Tate", "Dutton"], ["Thomas", "Rainwater"], ["Mo", "Brings Plenty"], ["Jimmy", "Hurdstrom"],
+    ["Teeter", "Cowhand", 1], ["Colby", "Mayfield"], ["Lloyd", "Pierce"], ["Walker", "Ranchhand"], ["Sarah", "Atwood", 1], ["Raylan", "Givens"],
+    ["Boyd", "Crowder"], ["Ava", "Crowder", 1], ["Art", "Mullen"], ["Tim", "Gutterson"], ["Rachel", "Brooks", 1], ["Winona", "Hawkins", 1],
+    ["Mags", "Bennett", 1], ["Dickie", "Bennett"], ["Dewey", "Crowe"], ["Wynn", "Duffy"], ["Robert", "Quarles"], ["Loretta", "McCready", 1],
+    ["Katherine", "Hale", 1], ["Bo", "Crowder"], ["Harry", "Bosch"], ["Maddie", "Bosch", 1], ["Honey", "Chandler", 1], ["Jerry", "Edgar"],
+    ["Grace", "Billets", 1], ["Irvin", "Irving"], ["Eleanor", "Wish", 1], ["Jimmy", "Robertson"], ["Santiago", "Robertson"], ["Crate", "Moore"],
+    ["Barrel", "Johnson"], ["Carl", "Rogers"], ["Maurice", "Bassi"], ["Reina", "Vasquez", 1], ["Preston", "Borders"], ["Jack", "Reacher"],
+    ["Roscoe", "Conklin", 1], ["Oscar", "Finlay"], ["Frances", "Neagley", 1], ["Karla", "Dixon", 1], ["David", "O Donnell"], ["Calvin", "Franz"],
+    ["Tony", "Swan"], ["Manuel", "Orozco"], ["Jorge", "Sanchez"], ["Shane", "Langston"], ["A", "M Assassin"], ["Kliner", "Senior"],
+    ["Kliner", "Junior"], ["Paul", "Hubble"], ["Jack", "Ryan"], ["Cathy", "Mueller", 1], ["James", "Greer"], ["Mike", "November"],
+    ["Matice", "Operative"], ["Harriet", "Baumann", 1], ["Luka", "Gocharov"], ["Domingo", "Chavez"], ["Elizabeth", "Wright", 1], ["Nicolas", "Reyes"],
+    ["Gloria", "Bonalde", 1], ["Suleiman", "Ali"], ["Victor", "Polizzi"], ["Zeyara", "Lemos", 1], ["Petr", "Kovac"], ["Olivia", "Benson", 1],
+    ["Elliot", "Stabler"], ["Odafin", "Tutuola"], ["Amanda", "Rollins", 1], ["Dominick", "Carisi"], ["Rafael", "Barba"], ["John", "Munch"],
+    ["Donald", "Cragen"], ["George", "Huang"], ["Melinda", "Warner", 1], ["Alex", "Cabot", 1], ["Casey", "Novak", 1], ["Monique", "Jeffries", 1],
+    ["Brian", "Cassidy"], ["Kathy", "Stabler", 1], ["Maggie", "Bell", 1], ["Omar", "Zidan"], ["Jubal", "Valentine"], ["Isobel", "Castille", 1],
+    ["Stuart", "Scola"], ["Tiffany", "Wallace", 1], ["Kristen", "Chazal", 1], ["Dana", "Mosier", 1], ["Elise", "Taylor", 1], ["Ian", "Lim"],
+    ["Nina", "Chase", 1], ["Trevor", "Hobbs"], ["Rina", "Trenholm", 1], ["Clayton", "Webb"], ["Gemma", "Brooks", 1], ["Leroy", "Jethro Gibbs"],
+    ["Anthony", "DiNozzo"], ["Ziva", "David", 1], ["Timothy", "McGee"], ["Abigail", "Sciuto", 1], ["Donald", "Mallard"], ["Jimmy", "Palmer"],
+    ["Leon", "Vance"], ["Eleanor", "Bishop", 1], ["Nicholas", "Torres"], ["Jacqueline", "Sloane", 1], ["Katrina", "Law", 1], ["Jenny", "Shepard", 1],
+    ["Kate", "Todd", 1], ["Mike", "Franks"], ["Aaron", "Hotchner"], ["David", "Rossi"], ["Spencer", "Reid"], ["Derek", "Morgan"],
+    ["Jennifer", "Jareau", 1], ["Penelope", "Garcia", 1], ["Emily", "Prentiss", 1], ["Jason", "Gideon"], ["Ashley", "Seaver", 1],
+    ["Alex", "Blake", 1], ["Kate", "Callahan", 1], ["Tara", "Lewis", 1], ["Luke", "Alvez"], ["Matt", "Simmons"], ["Elle", "Greenaway", 1],
+    ["Frank", "Reagan"], ["Danny", "Reagan"], ["Erin", "Reagan", 1], ["Jamie", "Reagan"], ["Henry", "Reagan"], ["Eddie", "Janko", 1],
+    ["Linda", "Reagan", 1], ["Nicky", "Reagan Boyle", 1], ["Sean", "Reagan"], ["Jack", "Reagan"], ["Maria", "Baez", 1], ["Abigail", "Baker", 1],
+    ["Garrett", "Moore"], ["Sid", "Gormley"], ["Anthony", "Abetemarco"], ["Hank", "Voight"], ["Jay", "Halstead"], ["Hailey", "Upton", 1],
+    ["Kim", "Burgess", 1], ["Adam", "Ruzek"], ["Kevin", "Atwater"], ["Trudy", "Platt", 1], ["Antonio", "Dawson"], ["Alvin", "Olinsky"],
+    ["Erin", "Lindsay", 1], ["Vanessa", "Rojas", 1], ["Dante", "Torres"], ["Sean", "Roman"], ["Sheldon", "Jin"], ["Mouse", "Gerwitz"],
+    ["Daniel", "Harrelson"], ["Jim", "Street"], ["David", "Kay"], ["Dominique", "Luca"], ["Christina", "Alonso", 1], ["Victor", "Tan"],
+    ["Robert", "Hicks"], ["Jessica", "Cortez", 1], ["Nichelle", "Carmichael", 1], ["Nora", "Fowler", 1], ["Piper", "Lynch", 1],
+    ["Erika", "Rogers", 1], ["Mumford", "Jeff"], ["Buck", "Spivey"], ["Annie", "Kay", 1], ["Harvey", "Specter"], ["Mike", "Ross"], ["Louis", "Litt"],
+    ["Donna", "Paulsen", 1], ["Rachel", "Zane", 1], ["Jessica", "Pearson", 1], ["Katrina", "Bennett", 1], ["Alex", "Williams"],
+    ["Samantha", "Wheeler", 1], ["Robert", "Zane"], ["Daniel", "Hardman"], ["Sheila", "Sazs", 1], ["Gretchen", "Bodinski", 1], ["Jeff", "Malone"],
+    ["Sean", "Cahill"], ["Raymond", "Reddington"], ["Elizabeth", "Keen", 1], ["Donald", "Ressler"], ["Harold", "Cooper"], ["Dembe", "Zuma"],
+    ["Tom", "Keen"], ["Samar", "Navabi", 1], ["Aram", "Mojtabai"], ["Alina", "Park", 1], ["Meera", "Malik", 1], ["Cynthia", "Panabaker", 1],
+    ["Kathryn", "Nemec", 1], ["Marvin", "Gerard"], ["Ian", "Garvey"], ["Berlin", "Milos"], ["John", "Reese"], ["Harold", "Finch"],
+    ["Joss", "Carter", 1], ["Lionel", "Fusco"], ["Sameen", "Shaw", 1], ["Root", "Groves", 1], ["Grace", "Hendricks", 1], ["Nathan", "Ingram"],
+    ["Carl", "Elias"], ["Dominic", "Besson"], ["Zoe", "Morgan", 1], ["Kara", "Stanton", 1], ["Peter", "Collier"], ["Control", "Northern", 1],
+    ["Bear", "Dog"], ["Jack", "Shephard"], ["Kate", "Austen", 1], ["James", "Ford"], ["John", "Locke"], ["Hugo", "Reyes"], ["Sayid", "Jarrah"],
+    ["Sun", "Kwon", 1], ["Jin", "Kwon"], ["Claire", "Littleton", 1], ["Charlie", "Pace"], ["Desmond", "Hume"], ["Benjamin", "Linus"],
+    ["Juliet", "Burke", 1], ["Michael", "Dawson"], ["Daniel", "Faraday"], ["Eleven", "Hopper", 1], ["Mike", "Wheeler"], ["Dustin", "Henderson"],
+    ["Lucas", "Sinclair"], ["Will", "Byers"], ["Max", "Mayfield", 1], ["Jim", "Hopper"], ["Joyce", "Byers", 1], ["Nancy", "Wheeler", 1],
+    ["Jonathan", "Byers"], ["Steve", "Harrington"], ["Robin", "Buckley", 1], ["Eddie", "Munson"], ["Billy", "Hargrove"], ["Erica", "Sinclair", 1],
+    ["Jon", "Snow"], ["Daenerys", "Targaryen", 1], ["Tyrion", "Lannister"], ["Cersei", "Lannister", 1], ["Jaime", "Lannister"], ["Arya", "Stark", 1],
+    ["Sansa", "Stark", 1], ["Bran", "Stark"], ["Ned", "Stark"], ["Robb", "Stark"], ["Jorah", "Mormont"], ["Samwell", "Tarly"],
+    ["Brienne", "Tarth", 1], ["Petyr", "Baelish"], ["Davos", "Seaworth"], ["Rick", "Grimes"], ["Daryl", "Dixon"], ["Carol", "Peletier", 1],
+    ["Michonne", "Hawthorne", 1], ["Maggie", "Greene", 1], ["Glenn", "Rhee"], ["Carl", "Grimes"], ["Judith", "Grimes", 1], ["Negan", "Smith"],
+    ["Eugene", "Porter"], ["Rosita", "Espinosa", 1], ["Abraham", "Ford"], ["Gabriel", "Stokes"], ["Aaron", "Raleigh"], ["Morgan", "Jones"],
+    ["Fox", "Mulder"], ["Dana", "Scully", 1], ["Walter", "Skinner"], ["John", "Doggett"], ["Monica", "Reyes", 1], ["Alex", "Krycek"],
+    ["Jeffrey", "Spender"], ["Cigarette", "Smoking Man"], ["Melvin", "Frohike"], ["Richard", "Langly"], ["John", "Byers"],
+    ["Marita", "Covarrubias", 1], ["Alvin", "Kersh"], ["Diana", "Fowley", 1], ["Margaret", "Scully", 1], ["Jack", "Bauer"], ["Chloe", "O Brian", 1],
+    ["David", "Palmer"], ["Kim", "Bauer", 1], ["Tony", "Almeida"], ["Michelle", "Dessler", 1], ["Audrey", "Raines", 1], ["Bill", "Buchanan"],
+    ["Nina", "Myers", 1], ["George", "Mason"], ["Wayne", "Palmer"], ["Martha", "Logan", 1], ["Charles", "Logan"], ["Renee", "Walker", 1],
+    ["Kate", "Warner", 1], ["Carrie", "Mathison", 1], ["Saul", "Berenson"], ["Nicholas", "Brody"], ["Jessica", "Brody", 1], ["Dana", "Brody", 1],
+    ["Peter", "Quinn"], ["Dar", "Adal"], ["Max", "Piotrowski"], ["Fara", "Sherazi", 1], ["Maggie", "Mathison", 1], ["David", "Estes"],
+    ["Mira", "Berenson", 1], ["Otto", "Düring"], ["Allison", "Carr", 1], ["Tasneem", "Qureishi", 1], ["Marty", "Byrde"], ["Wendy", "Byrde", 1],
+    ["Charlotte", "Byrde", 1], ["Jonah", "Byrde"], ["Ruth", "Langmore", 1], ["Darlene", "Snell", 1], ["Jacob", "Snell"], ["Helen", "Pierce", 1],
+    ["Nelson", "Bonilla"], ["Omar", "Navarro"], ["Camila", "Navarro", 1], ["Javi", "Elizonndro"], ["Rachel", "Garrison", 1], ["Roy", "Petty"],
+    ["Ben", "Davis"]
+  ]
+};
+
 /* ---------- Sample Data Maker: a small expression language that writes DAX and runs in the page ----------
    Each column is built from the helpers below. A helper returns { d, f, refs }: d(ctx) writes the DAX,
    f(row, env) works out the same value in JavaScript (for the preview), refs lists the columns it reads.
@@ -608,9 +767,52 @@ const SD = (() => {
   X.LISTS = LISTS;
   const LIST_DESC = { FirstName: 'first names', LastName: 'last names', City: 'city names', CompanyA: 'first words of a company name', CompanyB: 'second words of a company name', CompanyC: 'last words of a company name' };
   // a person's name that no other key in the table shares (up to 3,600 keys): first, last and the first-name position
-  X.nameIndex = k => X.mod(X.add(X.mul(lift(k), 1201), X.mul(X.P('seed'), 97)), 3600);
   X.firstOf = ix => X.at(LISTS.FirstName, X.int(X.div(ix, 60)));
   X.lastOf = ix => X.at(LISTS.LastName, X.mod(X.add(X.mul(X.mod(ix, 60), 7), X.int(X.div(ix, 60))), 60));
+
+  /* People's names: TV and movie characters (SD_NAMES, the default) or made-up ones (FirstName and LastName above).
+     The page sets X.names before an industry is built. A name index from 0 to n - 1 is one character each: keys
+     1, 2, 3... take the COACH names first (in an order the seed shuffles), then the MEMBER names. Past n, an index
+     puts one character's first name with another's last name. The names are one text each in the DAX (PATHITEM). */
+  X.names = 'chars';
+  let chars = null;
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+  const coprime = n => [11, 13, 17, 19, 23, 29, 31, 37, 41, 43].find(a => gcd(a, n) === 1) || 1;
+  X.chars = () => {
+    if (!chars) {
+      const all = SD_NAMES.COACH.concat(SD_NAMES.MEMBER);
+      chars = { n: all.length, nc: SD_NAMES.COACH.length, first: all.map(x => x[0]), last: all.map(x => x[1]), fem: all.map(x => x[2] ? 'F' : 'M').join('') };
+    }
+    return chars;
+  };
+  const CHAR_NAME = PKG + '.Character.Name', CHAR_GENDER = PKG + '.Character.Gender';
+  const nameDax = (x, ch) => 'PATHITEM( ' + q(ch.first.join('|')) + ', MOD( ' + x + ', ' + ch.n + ' ) + 1 ) & " " & PATHITEM( ' + q(ch.last.join('|')) + ', MOD( ' + x + ' + INT( ' + x + ' / ' + ch.n + ' ), ' + ch.n + ' ) + 1 )';
+  const genderDax = (x, ch) => 'IF( MID( ' + q(ch.fem) + ', MOD( ' + x + ', ' + ch.n + ' ) + 1, 1 ) = "F", "Female", "Male" )';
+  // the name index of a whole-number key; off gives another set of people (providers, agents) for the same keys
+  X.nameIndex = (k, off) => {
+    k = lift(k); off = off || 0;
+    if (X.names !== 'chars') return X.mod(X.add(X.mul(off ? X.add(k, off) : k, 1201), X.mul(X.P('seed'), 97)), 3600);
+    const ch = X.chars(), nm = ch.n - ch.nc, p = X.sub(k, 1);
+    const plus = x => off ? X.add(x, off) : x;
+    const coach = X.mod(plus(X.add(X.mul(p, coprime(ch.nc)), X.mul(X.P('seed'), 7))), ch.nc);
+    const member = X.add(ch.nc, X.mod(plus(X.add(X.mul(X.sub(p, ch.nc), coprime(nm)), X.mul(X.P('seed'), 13))), nm));
+    return X.iff(X.lt(p, ch.nc), coach, X.iff(X.lt(p, ch.n), member, p));
+  };
+  X.person = ix => {
+    if (X.names !== 'chars') return X.cat(X.firstOf(ix), ' ', X.lastOf(ix));
+    ix = lift(ix); const ch = X.chars();
+    return node(c => { if (c.mode === 'udf') { c.chars = true; return CHAR_NAME + '( ' + ix.d(c) + ' )'; } return nameDax(wrap(ix, c), ch); },
+      (r, e) => { const v = Math.floor(nz(ix.f(r, e))); return ch.first[v % ch.n] + ' ' + ch.last[(v + Math.floor(v / ch.n)) % ch.n]; }, ix.refs, true);
+  };
+  X.gender = ix => {
+    if (X.names !== 'chars') return X.iff(X.lt(X.int(X.div(ix, 60)), 30), 'Female', 'Male');
+    ix = lift(ix); const ch = X.chars();
+    return node(c => { if (c.mode === 'udf') { c.chars = true; return CHAR_GENDER + '( ' + ix.d(c) + ' )'; } return genderDax(wrap(ix, c), ch); },
+      (r, e) => ch.fem[Math.floor(nz(ix.f(r, e))) % ch.n] === 'F' ? 'Female' : 'Male', ix.refs);
+  };
+  const CHAR_FNS = () => { const ch = X.chars(); return [
+    [CHAR_NAME, 'A TV or movie character\'s name for a name index: 0 to ' + (ch.n - 1) + ' is one character each, higher numbers mix first and last names.', 'name_index', '-- names from TV shows and movies\n' + nameDax('name_index', ch)],
+    [CHAR_GENDER, 'Female or Male, for the character a name index gives.', 'name_index', genderDax('name_index', ch)]]; };
   X.company = (k, s) => X.cat(X.pick('CompanyA', X.R(k, s)), ' ', X.pick('CompanyB', X.R(k, s + 1)), ' ', X.pick('CompanyC', X.R(k, s + 2)));
   X.days = () => X.add(X.int(X.sub(X.P('end_date'), X.P('start_date'))), 1);
 
@@ -758,6 +960,7 @@ const SD = (() => {
         const items = LISTS[n];
         L.push(...fnBlock(PKG + '.List.' + n, 'Picks one of ' + items.length + ' ' + LIST_DESC[n] + ' from a random number from 0 up to 1.', 'r', 'SWITCH(\n' + IND + 'INT( r * ' + items.length + ' ),\n' + items.slice(0, -1).map((v, i) => IND + i + ', ' + q(v) + ',').join('\n') + '\n' + IND + q(items[items.length - 1]) + '\n)'));
       });
+      if (c.chars) CHAR_FNS().forEach(f => L.push(...fnBlock(...f)));
       tables.forEach((t, i) => L.push(...fnBlock(t.fn, t.desc, fnParams(t), bodies[i])));
     }
     tables.forEach((t, i) => {
@@ -817,6 +1020,7 @@ const SD = (() => {
     const fd = (name, params, b) => 'FUNCTION ' + name + ' = (' + (params ? ' ' + params + ' ' : '') + ') =>\n' + b.split('\n').map(l => IND + l).join('\n');
     const parts = [fd(FN_RANDOM, 'row_key, stream, seed', RANDOM_BODY)];
     Array.from(c.lists).sort().forEach(n => parts.push(fd(PKG + '.List.' + n, 'r', 'SWITCH( INT( r * ' + LISTS[n].length + ' ), ' + LISTS[n].slice(0, -1).map((v, i) => i + ', ' + q(v)).join(', ') + ', ' + q(LISTS[n][LISTS[n].length - 1]) + ' )')));
+    if (c.chars) CHAR_FNS().forEach(f => parts.push(fd(f[0], f[2], f[3])));
     parts.push(fd(t.fn, fnParams(t), body));
     return 'DEFINE\n' + parts.join('\n\n') + '\n\nEVALUATE\n' + (top ? 'TOPN( ' + top + ', ' + callOf(t, opts.args) + ' )' : callOf(t, opts.args)) + '\n';
   }
@@ -831,7 +1035,7 @@ const SD_IND = (() => {
   const k = C('_k');
   const S = P('start_date'), E = P('end_date');
   const dateIn = (key, s, skew) => add(S, int(mul(skew === 1 ? R(key, s) : pow(R(key, s), skew), days())));
-  const person = ix => cat(firstOf(ix), ' ', lastOf(ix));
+  const person = ix => SD.person(ix);
   const REGIONS = ['North', 'South', 'East', 'West', 'Central'];
   const seedP = ['seed', 'INT64'];
   const n = name => [SD.pname(name), 'INT64'];
@@ -941,7 +1145,7 @@ const SD_IND = (() => {
         meta: [key('DepartmentKey', 'Key that links to Employees.'), col('Department', 'text', 'Department name.'), col('Division', 'text', 'Commercial, Operations, Technology or Corporate.')] },
       { name: 'Employees', fn: PKG + '.HR.Employees', params: [n('num_employees'), ...dts, seedP], desc: 'Everyone employed since well before the start date: department, job, pay, hire and termination dates, and why they left.',
         stages: [{ series: P('num_employees') }, { cols: [['EmployeeKey', k], ['Employee Number', cat('E', pad(add(10000, k), '00000'))], ['_ni', nameIndex(k)],
-          ['Employee', person(C('_ni'))], ['Gender', iff(lt(int(div(C('_ni'), 60)), 30), 'Female', 'Male')],
+          ['Employee', person(C('_ni'))], ['Gender', SD.gender(C('_ni'))],
           ['DepartmentKey', wpick([[1, 20], [2, 8], [3, 18], [4, 20], [5, 16], [6, 6], [7, 6], [8, 6]], R(k, 1))],
           ['_lv', wpick([[1, 45], [2, 25], [3, 15], [4, 10], [5, 5]], R(k, 2))], ['Job Level', at(LEVELS, sub(C('_lv'), 1))],
           ['Job Title', iff(ge(C('_lv'), 4), cat(C('Job Level'), ', ', at(DEPTS, sub(C('DepartmentKey'), 1))), iff(eq(C('_lv'), 1), at(ROLES, sub(C('DepartmentKey'), 1)), cat(C('Job Level'), ' ', at(ROLES, sub(C('DepartmentKey'), 1)))))],
@@ -973,7 +1177,7 @@ const SD_IND = (() => {
       { name: 'Requisitions', fn: PKG + '.HR.Requisitions', params: [n('num_requisitions'), ...dts, seedP], desc: 'Job openings: department, job, recruiter, when each opened and closed, and how long it took to fill.',
         stages: [{ series: P('num_requisitions') }, { cols: reqCols() }, { cols: [['RequisitionKey', k], ['Requisition ID', cat('REQ-', pad(add(1000, k), '0000'))],
           ['DepartmentKey', C('_rd')], ['Job Level', at(LEVELS, sub(C('_rl'), 1))], ['Job Title', jobTitle(C('_rl'), C('_rd'))],
-          ['Recruiter', person(nameIndex(add(3500, mod(k, 6))))], ['Opened Date', C('_open')], ['Status', C('_status')], ['Closed Date', C('_close')],
+          ['Recruiter', person(nameIndex(add(mod(k, 6), 1), 3499))], ['Opened Date', C('_open')], ['Status', C('_status')], ['Closed Date', C('_close')],
           ['Days to Fill', iff(eq(C('_status'), 'Filled'), C('_d'), blank())]] }],
         meta: [key('RequisitionKey', 'Key that links to Applications.'), col('Requisition ID', 'text', 'Job opening number.'), key('DepartmentKey', 'Links to Departments.'),
           col('Job Level', 'text', 'Associate, Senior, Lead, Manager or Director.'), col('Job Title', 'text', 'Job being hired for.'), col('Recruiter', 'text', 'Recruiter who owns the opening.'),
@@ -1110,14 +1314,14 @@ const SD_IND = (() => {
     tables: [
       { name: 'Patients', fn: PKG + '.Health.Patients', params: [n('num_patients'), ['end_date', 'DATETIME'], seedP], desc: 'Patients with age band, gender, insurance and city.',
         stages: [{ series: P('num_patients') }, { cols: [['PatientKey', k], ['MRN', cat('MRN', pad(add(100000, k), '000000'))], ['_ni', nameIndex(k)], ['Patient', person(C('_ni'))],
-          ['Gender', iff(lt(int(div(C('_ni'), 60)), 30), 'Female', 'Male')], ['_age', int(mul(pow(R(k, 1), 0.9), 92))],
+          ['Gender', SD.gender(C('_ni'))], ['_age', int(mul(pow(R(k, 1), 0.9), 92))],
           ['Birth Date', add(date(sub(year(E), C('_age')), 1, 1), int(mul(R(k, 2), 365)))],
           ['Age Band', iff(lt(C('_age'), 18), '0-17', iff(lt(C('_age'), 35), '18-34', iff(lt(C('_age'), 50), '35-49', iff(lt(C('_age'), 65), '50-64', '65+'))))],
           ['Insurance', wpick([['Commercial', 45], ['Medicare', 25], ['Medicaid', 18], ['Self-pay', 7], ['Other', 5]], R(k, 3))], ['City', pick('City', R(k, 4))]] }],
         meta: [key('PatientKey', 'Key that links to Encounters.'), col('MRN', 'text', 'Medical record number.'), col('Patient', 'text', 'Full name.'), col('Gender', 'text', 'Female or Male.'),
           col('Birth Date', 'date', 'Date of birth.'), col('Age Band', 'text', 'Age at the end date: 0-17, 18-34, 35-49, 50-64 or 65+.'), col('Insurance', 'text', 'Who pays: Commercial, Medicare, Medicaid, Self-pay or Other.'), col('City', 'text', 'Home city.')] },
       { name: 'Providers', fn: PKG + '.Health.Providers', params: [n('num_providers'), seedP], desc: 'Doctors and their specialty.',
-        stages: [{ series: P('num_providers') }, { cols: [['ProviderKey', k], ['_ni', nameIndex(add(k, 1800))], ['Provider', cat('Dr. ', person(C('_ni')))], ['Specialty', specOf(k)]] }],
+        stages: [{ series: P('num_providers') }, { cols: [['ProviderKey', k], ['_ni', nameIndex(k, 1800)], ['Provider', cat('Dr. ', person(C('_ni')))], ['Specialty', specOf(k)]] }],
         meta: [key('ProviderKey', 'Key that links to Encounters.'), col('Provider', 'text', 'Doctor’s name.'), col('Specialty', 'text', 'Medical specialty.')] },
       { name: 'Encounters', fn: PKG + '.Health.Encounters', params: [n('num_encounters'), ...dts, n('num_patients'), n('num_providers'), seedP], desc: 'Visits and hospital stays: type, length of stay, readmission, wait time, charges, payments and satisfaction.',
         stages: [{ series: P('num_encounters') }, { cols: [['Encounter ID', cat('ENC', pad(k, '0000000'))], ['PatientKey', add(int(mul(pow(R(k, 1), 1.2), P('num_patients'))), 1)],
@@ -1199,7 +1403,7 @@ const SD_IND = (() => {
           ['Plan', wpick([['Basic', 45], ['Standard', 35], ['Premium', 20]], R(k, 2))], ['Region', pick(REGIONS, R(k, 3))]] }],
         meta: [key('CustomerKey', 'Key that links to Tickets.'), col('Customer', 'text', 'Company name.'), col('Segment', 'text', 'Enterprise, Mid-market or Small business.'), col('Plan', 'text', 'Basic, Standard or Premium.'), col('Region', 'text', 'Sales region.')] },
       { name: 'Agents', fn: PKG + '.Service.Agents', params: [n('num_agents'), ['end_date', 'DATETIME'], seedP], desc: 'Support agents with team, location and hire date.',
-        stages: [{ series: P('num_agents') }, { cols: [['AgentKey', k], ['_ni', nameIndex(add(k, 900))], ['Agent', person(C('_ni'))], ['Team', at(TEAMS, mod(sub(k, 1), 4))],
+        stages: [{ series: P('num_agents') }, { cols: [['AgentKey', k], ['_ni', nameIndex(k, 900)], ['Agent', person(C('_ni'))], ['Team', at(TEAMS, mod(sub(k, 1), 4))],
           ['Location', wpick([['Office', 60], ['Remote', 40]], R(k, 1))], ['Hire Date', sub(E, int(mul(R(k, 2), 2500)))]] }],
         meta: [key('AgentKey', 'Key that links to Tickets.'), col('Agent', 'text', 'Full name.'), col('Team', 'text', 'Billing, Technical, Accounts or General.'), col('Location', 'text', 'Office or Remote.'), col('Hire Date', 'date', 'First day as an agent.')] },
       { name: 'Tickets', fn: PKG + '.Service.Tickets', params: [n('num_tickets'), ...dts, n('num_customers'), n('num_agents'), seedP], desc: 'Support tickets: channel, category, priority, response and resolution times, SLA, satisfaction and status at the end date.',
@@ -1309,7 +1513,7 @@ const SDM = (() => {
   const STREET_END = ['Street', 'Avenue', 'Road', 'Lane', 'Drive', 'Court', 'Way', 'Place'];
   const TREATS = [
     ['keep', 'Keep as is'], ['id', 'Fake ID (same shape)'], ['person', 'Person name'], ['company', 'Company name'], ['email', 'Email'], ['phone', 'Phone'],
-    ['city', 'City'], ['address', 'Street address'], ['label', 'Numbered labels'], ['scale', 'Scale numbers'], ['date', 'Shift dates'], ['blank', 'Blank it out']];
+    ['city', 'City'], ['address', 'Street address'], ['label', 'Numbered labels'], ['scale', 'Scale numbers'], ['date', 'Shift dates'], ['blank', 'Blank it out'], ['drop', 'Remove column']];
   const TREAT_NAME = Object.fromEntries(TREATS);
 
   /* seeded hashing and random numbers */
@@ -1437,7 +1641,7 @@ const SDM = (() => {
   }
 
   /* ---------- fake values ---------- */
-  function makeFaker(seed){
+  function makeFaker(seed, names){
     const seen = {}, used = {};
     const once = (kind, key, make) => {
       const m = seen[kind] = seen[kind] || new Map(); if (m.has(key)) return m.get(key);
@@ -1447,8 +1651,21 @@ const SDM = (() => {
     };
     const caseLike = (orig, v) => orig === orig.toUpperCase() && /[A-Z]/.test(orig) ? v.toUpperCase() : orig === orig.toLowerCase() && /[a-z]/.test(orig) ? v.toLowerCase() : v;
     const F = {};
+    // TV and movie characters: the n-th person gets the n-th character, COACH names first, each list in an order
+    // the seed shuffles; once every character is used, first and last names are mixed
+    const ch = SD.chars(); let pn = 0, order = null;
+    const charAt = j => {
+      if (!order) {
+        const r = rng(seed + '|chars'), shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const x = Math.floor(r() * (i + 1)); [a[i], a[x]] = [a[x], a[i]]; } return a; };
+        order = shuffle(Array.from({ length: ch.nc }, (v, i) => i)).concat(shuffle(Array.from({ length: ch.n - ch.nc }, (v, i) => ch.nc + i)));
+      }
+      return order[j];
+    };
     F.person = orig => once('person', orig.trim().toLowerCase(), (r, i) => {
-      const f = pickOf(r, L.FirstName), l = pickOf(r, L.LastName), mid = i > 60 ? ' ' + String.fromCharCode(65 + Math.floor(r() * 26)) + '.' : '';
+      let f, l;
+      if (names === 'made') { f = pickOf(r, L.FirstName); l = pickOf(r, L.LastName); }
+      else { const j = pn++; if (j < ch.n) { const x = charAt(j); f = ch.first[x]; l = ch.last[x]; } else { f = pickOf(r, ch.first); l = pickOf(r, ch.last); } }
+      const mid = i > 60 ? ' ' + String.fromCharCode(65 + Math.floor(r() * 26)) + '.' : '';
       const s = orig.trim();
       const v = /,/.test(s) ? l + ', ' + f + mid : !/\s/.test(s) ? f + (i > 60 ? ' ' + l : '') : f + mid + ' ' + l;
       return caseLike(s, v);
@@ -1485,14 +1702,15 @@ const SDM = (() => {
   // settings: { seed, treats: { tableId: [treat per column] }, links: [{a:[t,c], b:[t,c]}] }
   function dateShift(seed){ const r = rng(seed + '|dates'); const w = 1 + Math.floor(r() * 8); return (r() < 0.5 ? -1 : 1) * w * 7; }
   function run(tables, settings){
-    const seed = String(settings.seed), F = makeFaker(seed), g = groups(tables, settings.links || []);
+    const seed = String(settings.seed), F = makeFaker(seed, settings.names), g = groups(tables, settings.links || []);
     const shift = dateShift(seed);
     // the treatment of a group is the first one in it that changes anything
     const gTreat = {};
-    tables.forEach(t => t.headers.forEach((h, c) => { const id = g[t.id + ':' + c], tr = settings.treats[t.id][c]; if (!gTreat[id] || (gTreat[id] === 'keep' && tr !== 'keep')) gTreat[id] = tr; }));
+    // (a removed column is only left out of its own table: it doesn't decide what its linked columns become)
+    tables.forEach(t => t.headers.forEach((h, c) => { const id = g[t.id + ':' + c], tr = settings.treats[t.id][c]; if (tr === 'drop') return; if (!gTreat[id] || (gTreat[id] === 'keep' && tr !== 'keep')) gTreat[id] = tr; }));
     // group facts: shared prefix for IDs, order of first appearance and a header for labels
     const gVals = {}, gHead = {};
-    tables.forEach(t => t.headers.forEach((h, c) => { const id = g[t.id + ':' + c]; if (!gHead[id]) gHead[id] = String(h || 'Item').replace(/[\s_\-]*(id|key|code|name|no)$/i, '').trim() || String(h); const arr = gVals[id] = gVals[id] || []; t.rows.forEach(r => { const x = r[c]; if (x && x.k !== 'empty') arr.push(x); }); }));
+    tables.forEach(t => t.headers.forEach((h, c) => { const id = g[t.id + ':' + c]; if (settings.treats[t.id][c] === 'drop') return; if (!gHead[id]) gHead[id] = String(h || 'Item').replace(/[\s_\-]*(id|key|code|name|no)$/i, '').trim() || String(h); const arr = gVals[id] = gVals[id] || []; t.rows.forEach(r => { const x = r[c]; if (x && x.k !== 'empty') arr.push(x); }); }));
     const gPrefix = {}, gOrder = {};
     Object.keys(gVals).forEach(id => {
       if (gTreat[id] === 'id') gPrefix[id] = sharedPrefix(gVals[id].map(x => x.k === 'num' ? null : textOf(x)).filter(x => x !== null).concat(gVals[id].some(x => x.k === 'num') ? [0] : []));
@@ -1531,7 +1749,10 @@ const SDM = (() => {
           }
         });
       });
-      return Object.assign({}, t, { rows });
+      // removed columns are left out of the result (headers, rows and column widths)
+      const on = t.headers.map((h, c) => settings.treats[t.id][c] !== 'drop');
+      if (on.every(Boolean)) return Object.assign({}, t, { rows });
+      return Object.assign({}, t, { headers: t.headers.filter((h, c) => on[c]), rows: rows.map(r => r.filter((x, c) => on[c])), cols: t.cols ? Array.from({ length: t.headers.length }, (x, c) => t.cols[c]).filter((x, c) => on[c]) : t.cols });
     });
     return { tables: out, shift, treat: gTreat, groups: g };
   }
@@ -1611,10 +1832,10 @@ function makeDefaults(){
   const t = today(), [y, m] = SD.ymd(t);
   return { ind: 'retail', inds: ['retail'], sizes: {}, start: SD.serial(y - 2, 1, 1), end: SD.serial(y, m, 1) - 1, seed: 1, style: 'udf', measures: true, off: {}, tab: {} };
 }
-const state = { mode: 'mask', example: false, tables: [], treats: {}, sugs: [], manual: [], seed: randSeed(), prevTable: '', prevSide: 'after', make: makeDefaults(), masked: null, ver: 0, maskedVer: -1 };
+const state = { mode: 'mask', names: 'chars', example: false, tables: [], treats: {}, sugs: [], manual: [], seed: randSeed(), prevTable: '', prevSide: 'after', make: makeDefaults(), masked: null, ver: 0, maskedVer: -1 };
 let tid = 0;
 function persist(){
-  store.set('mode', state.mode); store.set('mask', JSON.stringify({ seed: state.seed })); store.set('make', JSON.stringify(state.make));
+  store.set('mode', state.mode); store.set('names', state.names); store.set('mask', JSON.stringify({ seed: state.seed })); store.set('make', JSON.stringify(state.make));
 }
 function leaveExample(){ if (!state.example) return; state.example = false; state.tables = []; state.treats = {}; state.sugs = []; state.manual = []; showBanner(); }
 function showBanner(){ $('exampleBanner').hidden = !(state.example && state.mode === 'mask'); }
@@ -1679,7 +1900,7 @@ function colName(t, c){ const dup = state.tables.filter(x => x.sheet === t.sheet
 
 /* ---------- mask: render ---------- */
 function maskResult(){
-  if (state.maskedVer !== state.ver) { state.masked = state.tables.length ? SDM.run(state.tables, { seed: state.seed, treats: state.treats, links: links() }) : null; state.maskedVer = state.ver; }
+  if (state.maskedVer !== state.ver) { state.masked = state.tables.length ? SDM.run(state.tables, { seed: state.seed, treats: state.treats, links: links(), names: state.names }) : null; state.maskedVer = state.ver; }
   return state.masked;
 }
 function renderFiles(){
@@ -1731,8 +1952,10 @@ function renderMaskOut(){
   if (!tableById(state.prevTable)) state.prevTable = state.tables[0].id;
   $('prevTable').innerHTML = state.tables.map(t => '<option value="' + t.id + '"' + (t.id === state.prevTable ? ' selected' : '') + '>' + esc(colName(t, 0).replace(/\[.*$/, '')) + '</option>').join('');
   const res = maskResult(), i = state.tables.findIndex(t => t.id === state.prevTable), t = state.tables[i];
-  const rows = state.prevSide === 'before' ? t.rows : res.tables[i].rows;
-  $('maskPreview').innerHTML = previewTable(t.headers, rows, 10) + '<p class="note">First ' + Math.min(10, rows.length) + ' of ' + rows.length.toLocaleString() + ' rows.</p>';
+  const side = state.prevSide === 'before' ? t : res.tables[i], rows = side.rows;
+  const gone = t.headers.filter((h, c) => state.treats[t.id][c] === 'drop');
+  $('maskPreview').innerHTML = (side.headers.length ? previewTable(side.headers, rows, 10) : msg('warn', 'Every column of this table is removed, so its sheet is empty.'))
+    + (gone.length ? '<p class="note">' + (state.prevSide === 'before' ? 'Removed from the download: ' : 'Removed: ') + gone.map(h => '<b>' + esc(h) + '</b>').join(', ') + '.</p>' : '') + '<p class="note">First ' + Math.min(10, rows.length) + ' of ' + rows.length.toLocaleString() + ' rows.</p>';
   const kept = state.tables.reduce((s, x) => s + state.treats[x.id].filter(v => v === 'keep').length, 0), total = state.tables.reduce((s, x) => s + x.headers.length, 0);
   $('maskMsg').innerHTML = kept === total ? msg('warn', 'Every column is set to <b>Keep as is</b>, so nothing changes. Pick what to change in Step 3.') : '';
   const files = Array.from(new Set(state.tables.map(x => x.file)));
@@ -1744,16 +1967,16 @@ function writeFile(file){
   const res = maskResult(), wb = XLSX.utils.book_new(), used = new Set();
   state.tables.forEach((t, i) => {
     if (t.file !== file) return;
-    const rows = res.tables[i].rows;
+    const rows = res.tables[i].rows, out = res.tables[i];
     const val = x => x.k === 'empty' ? null : x.k === 'tdate' ? SDM.formatTextDate(x.v, x.p) : x.k === 'date' ? x.v - (t.d1904 ? 1462 : 0) : x.v;
-    const ws = XLSX.utils.aoa_to_sheet([t.headers].concat(rows.map(r => r.map(val))));
+    const ws = XLSX.utils.aoa_to_sheet([out.headers].concat(rows.map(r => r.map(val))));
     rows.forEach((r, ri) => r.forEach((x, ci) => {
       const a = XLSX.utils.encode_cell({ r: ri + 1, c: ci }), c = ws[a];
       if (!c) return;
       if (x.k === 'date') { c.t = 'n'; c.z = x.z || 'yyyy-mm-dd'; }
       else if (x.k === 'num' && x.z && x.z !== 'General') c.z = x.z;
     }));
-    if (t.cols) ws['!cols'] = t.cols;
+    if (out.cols) ws['!cols'] = out.cols;
     let name = String(t.sheet).replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 31) || 'Sheet'; let n = 2; while (used.has(name.toLowerCase())) name = name.slice(0, 28) + ' ' + (n++); used.add(name.toLowerCase());
     XLSX.utils.book_append_sheet(wb, ws, name);
   });
@@ -1784,7 +2007,8 @@ function sourceSize(t, env){
   return s.grid.reduce((p, g) => p * (g.days ? g.days[1].f({}, env) - g.days[0].f({}, env) + 1 : Math.floor(g.n.f ? g.n.f({}, env) : g.n) + (g.from === 0 ? 1 : 0)), 1);
 }
 function makeModel(){
-  const m = state.make, inds = indsOf(m), key = JSON.stringify([inds, inds.map(id => m.sizes[id] || {}), m.start, m.end, m.seed]);
+  const m = state.make, inds = indsOf(m), key = JSON.stringify([inds, inds.map(id => m.sizes[id] || {}), m.start, m.end, m.seed, state.names]);
+  SD.names = state.names;
   if (makeCache.key === key) return makeCache;
   const ind = SD_IND.get(inds[0]), model = SD_IND.combine(inds), args = makeArgs(model), env = { p: args, seed: m.seed };
   const counts = {}, rows = {};
@@ -1821,6 +2045,7 @@ function hasMeasuresTable(){
 }
 function renderMake(){
   const m = state.make, inds = indsOf(m), ik = inds.join('+');
+  SD.names = state.names;
   $('industries').innerHTML = SD_IND.LIST.map(x => '<button type="button" class="ind" role="checkbox" aria-checked="' + inds.includes(x.id) + '" data-ind="' + x.id + '"><b>' + esc(x.name) + '</b><span>' + esc(x.blurb) + '</span><small>' + esc(x.kpis) + '</small></button>').join('');
   const model0 = SD_IND.combine(inds);
   const ren = model0.renamed.map(r => (r.kind === 'measure' ? 'measure ' : '') + '<b>' + esc(r.from) + '</b> from ' + esc(SD_IND.get(r.ind).name) + ' is <b>' + esc(r.to) + '</b>');
@@ -1879,21 +2104,23 @@ function renderMode(){
   document.querySelectorAll('.make-only').forEach(el => { el.hidden = state.mode !== 'make'; });
   showBanner();
 }
+function renderNames(){ document.querySelectorAll('input[name=namesMask],input[name=namesMake]').forEach(r => { r.checked = r.value === state.names; }); }
 function renderMask(){ renderFiles(); renderCols(); renderLinks(); renderMaskOut(); }
 // linked columns always share one choice: the first one in the group that changes anything
 function syncGroups(){
   const { g, by } = groupMembers();
   Object.values(by).forEach(ms => {
     if (ms.length < 2) return;
-    const tr = ms.map(m => { const [ti, ci] = m.split(':'); return state.treats[ti][+ci]; });
+    // a removed column keeps its own choice and doesn't decide the others'
+    const tr = ms.map(m => { const [ti, ci] = m.split(':'); return state.treats[ti][+ci]; }).filter(x => x !== 'drop');
     const pick = tr.find(x => x !== 'keep') || 'keep';
-    ms.forEach(m => { const [ti, ci] = m.split(':'); state.treats[ti][+ci] = pick; });
+    ms.forEach(m => { const [ti, ci] = m.split(':'); if (state.treats[ti][+ci] !== 'drop') state.treats[ti][+ci] = pick; });
   });
 }
-function changed(){ state.ver++; if (state.tables.length) syncGroups(); renderMode(); if (state.mode === 'mask') renderMask(); else renderMake(); }
+function changed(){ state.ver++; if (state.tables.length) syncGroups(); renderMode(); renderNames(); if (state.mode === 'mask') renderMask(); else renderMake(); }
 function resetAll(){
   state.example = false; state.tables = []; state.treats = {}; state.sugs = []; state.manual = []; state.seed = randSeed(); state.prevTable = ''; state.prevSide = 'after';
-  state.mode = 'mask'; state.make = makeDefaults(); $('fileMsg').innerHTML = ''; changed();
+  state.mode = 'mask'; state.names = 'chars'; state.make = makeDefaults(); $('fileMsg').innerHTML = ''; changed();
 }
 function loadExample(){
   state.example = true; state.tables = sdExample();
@@ -1902,12 +2129,14 @@ function loadExample(){
 }
 function init(){
   const mode = store.get('mode'); if (mode === 'make' || mode === 'mask') state.mode = mode;
+  const nm = store.get('names'); if (nm === 'chars' || nm === 'made') state.names = nm;
   try { const mk = JSON.parse(store.get('make') || 'null'); if (mk) state.make = Object.assign(makeDefaults(), mk); } catch (e) {}
   try { const ms = JSON.parse(store.get('mask') || 'null'); if (ms && ms.seed) state.seed = ms.seed; } catch (e) {}
   if (store.get('blank') !== '1') loadExample();
   changed(); persist();
 
   document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => { state.mode = r.value; changed(); persist(); }));
+  document.querySelectorAll('input[name=namesMask],input[name=namesMake]').forEach(r => r.addEventListener('change', () => { state.names = r.value; changed(); persist(); }));
   // mask
   const fileInput = $('fileInput');
   $('dropzone').addEventListener('click', () => fileInput.click());
@@ -1925,7 +2154,10 @@ function init(){
   $('colCards').addEventListener('change', e => {
     const s = e.target.closest('select[data-t]'); if (!s) return;
     const { g, by } = groupMembers(), me = s.dataset.t + ':' + s.dataset.c;
-    (by[g[me]] || [me]).forEach(m => { const [ti, ci] = m.split(':'); if (state.treats[ti]) state.treats[ti][+ci] = s.value; });
+    // Remove column changes only this column; any other choice goes to every linked column still in the download
+    const was = state.treats[s.dataset.t][+s.dataset.c];
+    if (s.value === 'drop' || was === 'drop') { state.treats[s.dataset.t][+s.dataset.c] = s.value; if (s.value === 'drop') { changed(); return; } }
+    (by[g[me]] || [me]).forEach(m => { const [ti, ci] = m.split(':'); if (state.treats[ti] && state.treats[ti][+ci] !== 'drop') state.treats[ti][+ci] = s.value; });
     changed();
   });
   $('linkList').addEventListener('change', e => { const c = e.target.closest('[data-sug]'); if (!c) return; state.sugs[+c.dataset.sug].on = c.checked; changed(); });

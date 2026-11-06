@@ -36,10 +36,10 @@ function makeDefaults(){
   const t = today(), [y, m] = SD.ymd(t);
   return { ind: 'retail', inds: ['retail'], sizes: {}, start: SD.serial(y - 2, 1, 1), end: SD.serial(y, m, 1) - 1, seed: 1, style: 'udf', measures: true, off: {}, tab: {} };
 }
-const state = { mode: 'mask', example: false, tables: [], treats: {}, sugs: [], manual: [], seed: randSeed(), prevTable: '', prevSide: 'after', make: makeDefaults(), masked: null, ver: 0, maskedVer: -1 };
+const state = { mode: 'mask', names: 'chars', example: false, tables: [], treats: {}, sugs: [], manual: [], seed: randSeed(), prevTable: '', prevSide: 'after', make: makeDefaults(), masked: null, ver: 0, maskedVer: -1 };
 let tid = 0;
 function persist(){
-  store.set('mode', state.mode); store.set('mask', JSON.stringify({ seed: state.seed })); store.set('make', JSON.stringify(state.make));
+  store.set('mode', state.mode); store.set('names', state.names); store.set('mask', JSON.stringify({ seed: state.seed })); store.set('make', JSON.stringify(state.make));
 }
 function leaveExample(){ if (!state.example) return; state.example = false; state.tables = []; state.treats = {}; state.sugs = []; state.manual = []; showBanner(); }
 function showBanner(){ $('exampleBanner').hidden = !(state.example && state.mode === 'mask'); }
@@ -104,7 +104,7 @@ function colName(t, c){ const dup = state.tables.filter(x => x.sheet === t.sheet
 
 /* ---------- mask: render ---------- */
 function maskResult(){
-  if (state.maskedVer !== state.ver) { state.masked = state.tables.length ? SDM.run(state.tables, { seed: state.seed, treats: state.treats, links: links() }) : null; state.maskedVer = state.ver; }
+  if (state.maskedVer !== state.ver) { state.masked = state.tables.length ? SDM.run(state.tables, { seed: state.seed, treats: state.treats, links: links(), names: state.names }) : null; state.maskedVer = state.ver; }
   return state.masked;
 }
 function renderFiles(){
@@ -156,8 +156,10 @@ function renderMaskOut(){
   if (!tableById(state.prevTable)) state.prevTable = state.tables[0].id;
   $('prevTable').innerHTML = state.tables.map(t => '<option value="' + t.id + '"' + (t.id === state.prevTable ? ' selected' : '') + '>' + esc(colName(t, 0).replace(/\[.*$/, '')) + '</option>').join('');
   const res = maskResult(), i = state.tables.findIndex(t => t.id === state.prevTable), t = state.tables[i];
-  const rows = state.prevSide === 'before' ? t.rows : res.tables[i].rows;
-  $('maskPreview').innerHTML = previewTable(t.headers, rows, 10) + '<p class="note">First ' + Math.min(10, rows.length) + ' of ' + rows.length.toLocaleString() + ' rows.</p>';
+  const side = state.prevSide === 'before' ? t : res.tables[i], rows = side.rows;
+  const gone = t.headers.filter((h, c) => state.treats[t.id][c] === 'drop');
+  $('maskPreview').innerHTML = (side.headers.length ? previewTable(side.headers, rows, 10) : msg('warn', 'Every column of this table is removed, so its sheet is empty.'))
+    + (gone.length ? '<p class="note">' + (state.prevSide === 'before' ? 'Removed from the download: ' : 'Removed: ') + gone.map(h => '<b>' + esc(h) + '</b>').join(', ') + '.</p>' : '') + '<p class="note">First ' + Math.min(10, rows.length) + ' of ' + rows.length.toLocaleString() + ' rows.</p>';
   const kept = state.tables.reduce((s, x) => s + state.treats[x.id].filter(v => v === 'keep').length, 0), total = state.tables.reduce((s, x) => s + x.headers.length, 0);
   $('maskMsg').innerHTML = kept === total ? msg('warn', 'Every column is set to <b>Keep as is</b>, so nothing changes. Pick what to change in Step 3.') : '';
   const files = Array.from(new Set(state.tables.map(x => x.file)));
@@ -169,16 +171,16 @@ function writeFile(file){
   const res = maskResult(), wb = XLSX.utils.book_new(), used = new Set();
   state.tables.forEach((t, i) => {
     if (t.file !== file) return;
-    const rows = res.tables[i].rows;
+    const rows = res.tables[i].rows, out = res.tables[i];
     const val = x => x.k === 'empty' ? null : x.k === 'tdate' ? SDM.formatTextDate(x.v, x.p) : x.k === 'date' ? x.v - (t.d1904 ? 1462 : 0) : x.v;
-    const ws = XLSX.utils.aoa_to_sheet([t.headers].concat(rows.map(r => r.map(val))));
+    const ws = XLSX.utils.aoa_to_sheet([out.headers].concat(rows.map(r => r.map(val))));
     rows.forEach((r, ri) => r.forEach((x, ci) => {
       const a = XLSX.utils.encode_cell({ r: ri + 1, c: ci }), c = ws[a];
       if (!c) return;
       if (x.k === 'date') { c.t = 'n'; c.z = x.z || 'yyyy-mm-dd'; }
       else if (x.k === 'num' && x.z && x.z !== 'General') c.z = x.z;
     }));
-    if (t.cols) ws['!cols'] = t.cols;
+    if (out.cols) ws['!cols'] = out.cols;
     let name = String(t.sheet).replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 31) || 'Sheet'; let n = 2; while (used.has(name.toLowerCase())) name = name.slice(0, 28) + ' ' + (n++); used.add(name.toLowerCase());
     XLSX.utils.book_append_sheet(wb, ws, name);
   });
@@ -209,7 +211,8 @@ function sourceSize(t, env){
   return s.grid.reduce((p, g) => p * (g.days ? g.days[1].f({}, env) - g.days[0].f({}, env) + 1 : Math.floor(g.n.f ? g.n.f({}, env) : g.n) + (g.from === 0 ? 1 : 0)), 1);
 }
 function makeModel(){
-  const m = state.make, inds = indsOf(m), key = JSON.stringify([inds, inds.map(id => m.sizes[id] || {}), m.start, m.end, m.seed]);
+  const m = state.make, inds = indsOf(m), key = JSON.stringify([inds, inds.map(id => m.sizes[id] || {}), m.start, m.end, m.seed, state.names]);
+  SD.names = state.names;
   if (makeCache.key === key) return makeCache;
   const ind = SD_IND.get(inds[0]), model = SD_IND.combine(inds), args = makeArgs(model), env = { p: args, seed: m.seed };
   const counts = {}, rows = {};
@@ -246,6 +249,7 @@ function hasMeasuresTable(){
 }
 function renderMake(){
   const m = state.make, inds = indsOf(m), ik = inds.join('+');
+  SD.names = state.names;
   $('industries').innerHTML = SD_IND.LIST.map(x => '<button type="button" class="ind" role="checkbox" aria-checked="' + inds.includes(x.id) + '" data-ind="' + x.id + '"><b>' + esc(x.name) + '</b><span>' + esc(x.blurb) + '</span><small>' + esc(x.kpis) + '</small></button>').join('');
   const model0 = SD_IND.combine(inds);
   const ren = model0.renamed.map(r => (r.kind === 'measure' ? 'measure ' : '') + '<b>' + esc(r.from) + '</b> from ' + esc(SD_IND.get(r.ind).name) + ' is <b>' + esc(r.to) + '</b>');
@@ -304,21 +308,23 @@ function renderMode(){
   document.querySelectorAll('.make-only').forEach(el => { el.hidden = state.mode !== 'make'; });
   showBanner();
 }
+function renderNames(){ document.querySelectorAll('input[name=namesMask],input[name=namesMake]').forEach(r => { r.checked = r.value === state.names; }); }
 function renderMask(){ renderFiles(); renderCols(); renderLinks(); renderMaskOut(); }
 // linked columns always share one choice: the first one in the group that changes anything
 function syncGroups(){
   const { g, by } = groupMembers();
   Object.values(by).forEach(ms => {
     if (ms.length < 2) return;
-    const tr = ms.map(m => { const [ti, ci] = m.split(':'); return state.treats[ti][+ci]; });
+    // a removed column keeps its own choice and doesn't decide the others'
+    const tr = ms.map(m => { const [ti, ci] = m.split(':'); return state.treats[ti][+ci]; }).filter(x => x !== 'drop');
     const pick = tr.find(x => x !== 'keep') || 'keep';
-    ms.forEach(m => { const [ti, ci] = m.split(':'); state.treats[ti][+ci] = pick; });
+    ms.forEach(m => { const [ti, ci] = m.split(':'); if (state.treats[ti][+ci] !== 'drop') state.treats[ti][+ci] = pick; });
   });
 }
-function changed(){ state.ver++; if (state.tables.length) syncGroups(); renderMode(); if (state.mode === 'mask') renderMask(); else renderMake(); }
+function changed(){ state.ver++; if (state.tables.length) syncGroups(); renderMode(); renderNames(); if (state.mode === 'mask') renderMask(); else renderMake(); }
 function resetAll(){
   state.example = false; state.tables = []; state.treats = {}; state.sugs = []; state.manual = []; state.seed = randSeed(); state.prevTable = ''; state.prevSide = 'after';
-  state.mode = 'mask'; state.make = makeDefaults(); $('fileMsg').innerHTML = ''; changed();
+  state.mode = 'mask'; state.names = 'chars'; state.make = makeDefaults(); $('fileMsg').innerHTML = ''; changed();
 }
 function loadExample(){
   state.example = true; state.tables = sdExample();
@@ -327,12 +333,14 @@ function loadExample(){
 }
 function init(){
   const mode = store.get('mode'); if (mode === 'make' || mode === 'mask') state.mode = mode;
+  const nm = store.get('names'); if (nm === 'chars' || nm === 'made') state.names = nm;
   try { const mk = JSON.parse(store.get('make') || 'null'); if (mk) state.make = Object.assign(makeDefaults(), mk); } catch (e) {}
   try { const ms = JSON.parse(store.get('mask') || 'null'); if (ms && ms.seed) state.seed = ms.seed; } catch (e) {}
   if (store.get('blank') !== '1') loadExample();
   changed(); persist();
 
   document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => { state.mode = r.value; changed(); persist(); }));
+  document.querySelectorAll('input[name=namesMask],input[name=namesMake]').forEach(r => r.addEventListener('change', () => { state.names = r.value; changed(); persist(); }));
   // mask
   const fileInput = $('fileInput');
   $('dropzone').addEventListener('click', () => fileInput.click());
@@ -350,7 +358,10 @@ function init(){
   $('colCards').addEventListener('change', e => {
     const s = e.target.closest('select[data-t]'); if (!s) return;
     const { g, by } = groupMembers(), me = s.dataset.t + ':' + s.dataset.c;
-    (by[g[me]] || [me]).forEach(m => { const [ti, ci] = m.split(':'); if (state.treats[ti]) state.treats[ti][+ci] = s.value; });
+    // Remove column changes only this column; any other choice goes to every linked column still in the download
+    const was = state.treats[s.dataset.t][+s.dataset.c];
+    if (s.value === 'drop' || was === 'drop') { state.treats[s.dataset.t][+s.dataset.c] = s.value; if (s.value === 'drop') { changed(); return; } }
+    (by[g[me]] || [me]).forEach(m => { const [ti, ci] = m.split(':'); if (state.treats[ti] && state.treats[ti][+ci] !== 'drop') state.treats[ti][+ci] = s.value; });
     changed();
   });
   $('linkList').addEventListener('change', e => { const c = e.target.closest('[data-sug]'); if (!c) return; state.sugs[+c.dataset.sug].on = c.checked; changed(); });
