@@ -551,7 +551,7 @@ const TAB = '\t';
 
 const CLEAN = (col, tabRepl) => 'SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( ' + col + ', UNICHAR ( 13 ), "" ), UNICHAR ( 10 ), UNICHAR ( 8629 ) ), UNICHAR ( 9 ), "' + tabRepl + '" )';
 const DAX_QUERY = [
-'// SF Power BI Toolkit: model export',
+'// Foster BI Toolkit: model export',
 '// Run in DAX query view, then select Copy above the results grid.',
 'EVALUATE',
 '// Lookups that find which remote model (if any) each table comes from',
@@ -3756,7 +3756,7 @@ init();
 })();
 
 /*SUITE-START*/
-/* ---------- SF Power BI Toolkit: one model export shared by every page on the site ---------- */
+/* ---------- Foster BI Toolkit: one model export shared by every page on the site ---------- */
 (function(){
   const KEY = 'sfpbi.shared.model';
   const HOME = 'index.html';

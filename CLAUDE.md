@@ -1,4 +1,4 @@
-# SF Power BI Toolkit
+# Foster BI Toolkit
 
 Single-file HTML tools for Power BI developers, published with GitHub Pages at
 https://fosterbiservices.github.io/Power-BI-Toolkit/ . People are already testing it, so
@@ -35,7 +35,7 @@ prompt the user takes to Copilot, then check the reply pasted back. Nothing call
 - Tools that read the model use the **shared model export**: one DAX query the user runs once
   in DAX query view. It's saved on the home page and every tool picks it up (see suite.js).
 - Home link and **Switch tool** menu on every page (added by suite.js).
-- **Branding: Foster BI Services** (the product stays "SF Power BI Toolkit"). Logo files are in `src/brand/`
+- **Branding: Foster BI Services** (the product is "Foster BI Toolkit", renamed from SF Power BI Toolkit in Nov 2026; the repo and link stay Power-BI-Toolkit). Logo files are in `src/brand/`
   (from the owner's logo redesign, content-credential metadata stripped). Colors: navy `#0A2D5A` (`--brand`, `--band`,
   light `--accent`), gold `#F2A900` (`--gold`, dark `--accent`), dark gold `#B07A00` (the logo's SERVICES). Tool pages show
   the square icon in the banner and as the favicon; the home page shows the white full logo (`@@HOMELOGO@@` in

@@ -399,7 +399,7 @@ const TAB = '\t';
 
 const CLEAN = (col, tabRepl) => 'SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( ' + col + ', UNICHAR ( 13 ), "" ), UNICHAR ( 10 ), UNICHAR ( 8629 ) ), UNICHAR ( 9 ), "' + tabRepl + '" )';
 const DAX_QUERY = [
-'// SF Power BI Toolkit: model export',
+'// Foster BI Toolkit: model export',
 '// Run in DAX query view, then select Copy above the results grid.',
 'EVALUATE',
 '// Lookups that find which remote model (if any) each table comes from',
@@ -1702,7 +1702,7 @@ const RLS = (() => {
   function testQuery(roles, m, user){
     const u = '"' + String(user || 'someone@contoso.com').replace(/"/g, '""') + '"';
     const tables = m ? dataTables(m) : [];
-    const out = ['// SF Power BI Toolkit: RLS role test', '// Rows each table shows for each role, next to all rows. The test user replaces USERPRINCIPALNAME ().',
+    const out = ['// Foster BI Toolkit: RLS role test', '// Rows each table shows for each role, next to all rows. The test user replaces USERPRINCIPALNAME ().',
       '// This approximates RLS with filters; confirm with Modeling > View as in Power BI Desktop.', 'DEFINE', TAB + 'VAR _testUser = ' + u, ''];
     roles.forEach(role => {
       const comp = compileRole(role, m);
@@ -1915,7 +1915,7 @@ init();
 })();
 
 /*SUITE-START*/
-/* ---------- SF Power BI Toolkit: one model export shared by every page on the site ---------- */
+/* ---------- Foster BI Toolkit: one model export shared by every page on the site ---------- */
 (function(){
   const KEY = 'sfpbi.shared.model';
   const HOME = 'index.html';

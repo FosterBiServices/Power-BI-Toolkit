@@ -382,7 +382,7 @@ const TAB = '\t';
 
 const CLEAN = (col, tabRepl) => 'SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( ' + col + ', UNICHAR ( 13 ), "" ), UNICHAR ( 10 ), UNICHAR ( 8629 ) ), UNICHAR ( 9 ), "' + tabRepl + '" )';
 const DAX_QUERY = [
-'// SF Power BI Toolkit: model export',
+'// Foster BI Toolkit: model export',
 '// Run in DAX query view, then select Copy above the results grid.',
 'EVALUATE',
 '// Lookups that find which remote model (if any) each table comes from',
@@ -2609,7 +2609,7 @@ function render(){
   if (!project) { state.html = ''; $('outWait').className = 'msg ' + (error ? 'err' : 'info'); $('outWait').innerHTML = error ? 'Fix the problem in Step 1 to see the document.' : 'Choose a project folder or paste a model export in Step 1.'; return; }
   const note = project.source === 'export' ? 'Documented from the model export, so Power Query, data sources and report pages aren’t included.' : '';
   const today = new Date(); const date = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-  state.html = MD.generateHtml(project, o, { css: DOC_CSS, footer: 'Generated locally with the SF Power BI Toolkit · Model Documenter.', note, date });
+  state.html = MD.generateHtml(project, o, { css: DOC_CSS, footer: 'Generated locally with the Foster BI Toolkit · Model Documenter.', note, date });
   state.fileName = MD.defaultFilename(project, o).replace(/[<>:"\/\\|?*\x00-\x1f]/g, '-');
   $('fileName').textContent = state.fileName;
   const tables = MD.scopeTables(project, o);
@@ -2725,7 +2725,7 @@ init();
 })();
 
 /*SUITE-START*/
-/* ---------- SF Power BI Toolkit: one model export shared by every page on the site ---------- */
+/* ---------- Foster BI Toolkit: one model export shared by every page on the site ---------- */
 (function(){
   const KEY = 'sfpbi.shared.model';
   const HOME = 'index.html';

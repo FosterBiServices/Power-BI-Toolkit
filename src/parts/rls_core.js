@@ -186,7 +186,7 @@ const RLS = (() => {
   function testQuery(roles, m, user){
     const u = '"' + String(user || 'someone@contoso.com').replace(/"/g, '""') + '"';
     const tables = m ? dataTables(m) : [];
-    const out = ['// SF Power BI Toolkit: RLS role test', '// Rows each table shows for each role, next to all rows. The test user replaces USERPRINCIPALNAME ().',
+    const out = ['// Foster BI Toolkit: RLS role test', '// Rows each table shows for each role, next to all rows. The test user replaces USERPRINCIPALNAME ().',
       '// This approximates RLS with filters; confirm with Modeling > View as in Power BI Desktop.', 'DEFINE', TAB + 'VAR _testUser = ' + u, ''];
     roles.forEach(role => {
       const comp = compileRole(role, m);
