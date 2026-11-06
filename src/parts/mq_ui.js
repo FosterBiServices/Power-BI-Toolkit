@@ -770,6 +770,12 @@ function init(){
     try { await loadPbip(item.name, list); } catch (err) { $('pbipMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); }
   });
   $('pbipPick').addEventListener('change', () => usePbipModel(+$('pbipPick').value));
+  // the PBIP folder connected on the home page (or in any tool) is offered here too, so it isn't picked again
+  setTimeout(async () => {
+    const S = window.SF_SUITE, d = S && S.pbipStored ? await S.pbipStored().catch(() => null) : null; if (!d) return;
+    const b = $('useSharedPbip'); b.textContent = 'Use ' + d.name; b.title = 'The PBIP folder connected for every tool'; b.hidden = false;
+    b.addEventListener('click', async () => { const x = await S.pbipStored().catch(() => null); if (!x) { b.hidden = true; return; } try { await loadPbip(x.root, x.list); } catch (err) { $('pbipMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc(err.message || err)); } });
+  }, 0);
 
   $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); });
   document.addEventListener('click', e => {

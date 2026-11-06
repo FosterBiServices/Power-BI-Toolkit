@@ -61,7 +61,11 @@ Grouped in the order a report gets built, the same as on the home page and in ea
 ## Getting started
 
 1. Open the [home page](https://fosterbiservices.github.io/Power-BI-Toolkit/).
-2. **Connect your model once** (only for the tools that use it). Open **Connect your model once** at the top: copy the DAX query, run it in **DAX query view** in Power BI Desktop, select **Copy** above the results, and paste them back. The query reads the model's definition (tables, columns, measures, relationships), not your data. It's saved in your browser and every tool picks it up as it opens. If your report is saved as a Power BI Project (PBIP), you can choose its folder in any tool's **Connect your model** step instead.
+2. **Connect your model once** (only for the tools that use it). Open **Connect your model once** at the top and choose how:
+   - **PBIP folder**: if your report is saved as a Power BI Project, choose its folder. The model is read straight from the files in your browser (nothing is uploaded), and the tools that check report pages, theme files or Power Query use the same folder, so you don't pick it again. After you change the model, choose **Read it again**.
+   - **Model export**: copy the DAX query, run it in **DAX query view** in Power BI Desktop, select **Copy** above the results, and paste them back. The query reads the model's definition (tables, columns, measures, relationships), not your data.
+
+   Either way it's saved in your browser and every tool picks it up as it opens. You can also connect in any tool's **Connect your model** step.
 3. Choose a tool. Each one walks you through its own numbered steps and ends with **What next** links to the tools people usually use after it.
 
 Tip: rename the query tab in DAX query view (for example *Toolkit export*) and keep it. It's saved with the report, so refreshing the export later is just **Run** and **Copy**.

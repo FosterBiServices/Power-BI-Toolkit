@@ -2490,8 +2490,10 @@ init();
   const S = window.SF_SUITE;
   const NL = '↵';
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const SKIP = new Set(['.git', 'node_modules', '.pbi', '.vs', 'StaticResources', 'RegisteredResources']);
+  const SKIP = new Set(['.git', 'node_modules', '.pbi', '.vs']);
   const skipDir = n => SKIP.has(n) || /\.Dataset$/i.test(n);
+  // a report's StaticResources (its theme files) are read and kept for Theme Builder, and left out for the other pages
+  const RES = /\/(StaticResources|RegisteredResources)\//i;
   const wanted = p => /\.SemanticModel\/(definition\/.+\.tmdl|model\.bim)$/i.test(p);
   const decode = async file => {
     const buf = await file.arrayBuffer();
@@ -2680,11 +2682,11 @@ init();
   // The folder's files (as text) from the last PBIP read, next to the handle, so pages that read report pages or
   // the whole project open on the same folder. Valid while the shared export is still the one read from it.
   const saveFiles = rec => idb((st, res) => { const r = st.put(rec, 'pbipFiles'); r.onsuccess = () => res(); r.onerror = () => res(); }).catch(() => {});
-  S.pbipStored = async () => {
+  S.pbipStored = async opt => {
     const v = S.get(); if (!v || v.source !== 'pbip' || !window.indexedDB) return null;
     const rec = await idb((st, res) => { const r = st.get('pbipFiles'); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); }).catch(() => null);
     if (!rec || rec.savedAt !== v.savedAt) return null;
-    return { root: rec.root, name: rec.name, savedAt: rec.savedAt, list: rec.files.map(f => ({ path: f.path, file: new File([f.text], f.path.split('/').pop()) })) };
+    return { root: rec.root, name: rec.name, savedAt: rec.savedAt, list: rec.files.filter(f => (opt && opt.resources) || !RES.test('/' + f.path)).map(f => ({ path: f.path, file: new File([f.text], f.path.split('/').pop()) })) };
   };
   // Read a PBIP folder for every tool: its model becomes the shared export (source 'pbip') and its files are kept.
   // list: [{ path, file }]. Returns S.pbipExport's result plus shared: true/false.
@@ -2696,6 +2698,34 @@ init();
     r.shared = S.set(r.text, r.name, 'pbip');
     if (r.shared) { if (handle) await saveHandle(handle); await saveFiles({ root, name: r.name, savedAt: S.get().savedAt, files }); }
     return r;
+  };
+  // Picking a folder, the same way in every tool's Connect step and on the home page. Each gives { root, list, handle },
+  // { cancel: true } when the person backed out, or null when the browser can't (use the hidden folder input instead).
+  S.pbipPick = async id => {
+    if (!window.showDirectoryPicker) return null;
+    let dir; try { dir = await window.showDirectoryPicker({ id, mode: 'read' }); } catch (e) { return e && e.name === 'AbortError' ? { cancel: true } : null; }
+    const list = []; await walkHandle(dir, dir.name, list); return { root: dir.name, list, handle: dir };
+  };
+  // the folder the shared model was read from, when the browser still has its handle ("Read it again")
+  S.pbipAgainHandle = async () => { const v = S.get(), h = window.showDirectoryPicker && v && v.source === 'pbip' ? await getHandle() : null; return h && h.name === v.name ? h : null; };
+  S.pbipReadAgain = async () => {
+    const dir = await getHandle(); if (!dir) return null;
+    if ((await dir.queryPermission({ mode: 'read' })) !== 'granted' && (await dir.requestPermission({ mode: 'read' })) !== 'granted') return { cancel: true };
+    const list = []; await walkHandle(dir, dir.name, list); return { root: dir.name, list, handle: dir };
+  };
+  S.pbipFromInput = input => {
+    const fl = [...input.files]; if (!fl.length) return null;
+    const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
+    return { root, list: fl.filter(f => FILE_RE.test(f.name)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f })) };
+  };
+  // a dropped folder; { notFolder: true } for a dropped file
+  S.pbipFromDrop = async e => {
+    const it0 = [...(e.dataTransfer.items || [])][0], hp = it0 && it0.getAsFileSystemHandle ? it0.getAsFileSystemHandle().catch(() => null) : null;
+    const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
+    if (!item || !item.isDirectory) return { notFolder: true };
+    const list = []; await walkEntry(item, '', list);
+    const h = hp ? await hp : null;
+    return { root: item.name, list: list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file })), handle: h && h.kind === 'directory' ? h : null };
   };
   // cfg (from S.hook): { input, prefix, mode, connect: { step: h2 id of the step that gets the choice, none: text for "No model" or false,
   //   exportOnly: [selectors shown only for the export], title, lede, retitle: { h2 id: text } } }
@@ -2718,7 +2748,7 @@ init();
     const pane = wrap.querySelector('.sc-pbip'), msg = wrap.querySelector('.sc-msg'), input = wrap.querySelector('input[type=file]'), drop = wrap.querySelector('.sc-drop'), again = wrap.querySelector('[data-sc-again]');
     let onShared = () => {};
     // "Read it again" shows when the shared model came from the folder the browser still has a handle for
-    const showAgain = async () => { const v = S.get(), h = window.showDirectoryPicker && v && v.source === 'pbip' ? await getHandle() : null; again.hidden = !(h && h.name === v.name); };
+    const showAgain = async () => { again.hidden = !(await S.pbipAgainHandle()); };
     const usingMsg = v => '<div class="msg ok">&#10003; Using <b>' + esc(v.name) + '</b>, read from its PBIP folder ' + esc(new Date(v.savedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })) + '. Every tool uses it until you choose another folder or paste an export. After you change the model, read it again.</div>';
     const exportEls = () => [ta, bar].concat((c.exportOnly || []).flatMap(s => [...document.querySelectorAll(s)])).filter(Boolean);
     let choice = get('connect') || '', stash = '';
@@ -2756,7 +2786,7 @@ init();
       msg.innerHTML = '<div class="msg ' + (noDates ? 'warn' : 'ok') + '">' + (noDates ? '' : '&#10003; ') + 'Read <b>' + esc(r.name) + '</b>: ' + r.tables + ' tables, ' + r.measures + ' measures.' + (noDates ? ' It has no date columns, so set the years yourself in the next step.' : '') + (r.others.length ? ' This folder has more models (' + esc(r.others.join(', ')) + '); choose that project&rsquo;s own folder to use one of them.' : '') + (shared ? ' Every tool uses it now, so you don&rsquo;t connect again in the others.' : ' It&rsquo;s too large to share with the other tools (browser storage limit).') + ' Read it again after you change the model.</div>';
       render();
       // pages that also check report pages read them from the same folder
-      if (c.report) { document.dispatchEvent(new CustomEvent('sf-pbip-folder', { detail: { root, list } })); if (shared) set('repFrom', String(S.get().savedAt)); }
+      if (c.report) { document.dispatchEvent(new CustomEvent('sf-pbip-folder', { detail: { root, list: list.filter(x => !RES.test('/' + x.path)) } })); if (shared) set('repFrom', String(S.get().savedAt)); }
     };
     // ...and when the folder was read in another tool, from the files kept with it (once per read, so Remove sticks)
     if (c.report) setTimeout(async () => {
@@ -2767,34 +2797,30 @@ init();
     }, 0);
     const fail = e => { msg.innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(e.message || e) + '</div>'; };
     wrap.querySelector('[data-sc-pick]').addEventListener('click', async () => {
-      if (window.showDirectoryPicker) {
-        let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-' + cfg.prefix.replace(/\W/g, ''), mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; input.click(); return; }
-        const list = []; try { await walkHandle(dir, dir.name, list); await load(dir.name, list, dir); } catch (e) { fail(e); }
-      } else input.click();
+      let r; try { r = await S.pbipPick('sf-' + cfg.prefix.replace(/\W/g, '')); } catch (e) { fail(e); return; }
+      if (!r) { input.click(); return; }
+      if (!r.cancel) try { await load(r.root, r.list, r.handle); } catch (e) { fail(e); }
     });
     again.addEventListener('click', async () => {
-      const dir = await getHandle(); if (!dir) { again.hidden = true; return; }
       try {
-        if ((await dir.queryPermission({ mode: 'read' })) !== 'granted' && (await dir.requestPermission({ mode: 'read' })) !== 'granted') return;
-        const list = []; await walkHandle(dir, dir.name, list); await load(dir.name, list, dir);
+        const r = await S.pbipReadAgain(); if (!r) { again.hidden = true; return; }
+        if (!r.cancel) await load(r.root, r.list, r.handle);
       } catch (e) { msg.innerHTML = '<div class="msg warn">The folder couldn&rsquo;t be read again (it may have moved). Choose it again.</div>'; again.hidden = true; }
     });
     input.addEventListener('change', async () => {
-      const fl = [...input.files]; if (!fl.length) return;
-      const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
-      try { await load(root, fl.filter(f => FILE_RE.test(f.name)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }))); } catch (e) { fail(e); }
+      const r = S.pbipFromInput(input); if (!r) return;
+      try { await load(r.root, r.list); } catch (e) { fail(e); }
       input.value = '';
     });
     ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
     ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
     drop.addEventListener('drop', async e => {
       e.preventDefault();
-      const it0 = [...(e.dataTransfer.items || [])][0], hp = it0 && it0.getAsFileSystemHandle ? it0.getAsFileSystemHandle().catch(() => null) : null;
-      const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
-      if (!item || !item.isDirectory) { msg.innerHTML = '<div class="msg warn">Drop the project <b>folder</b>, not a file inside it.</div>'; return; }
-      const list = []; await walkEntry(item, '', list);
-      const h = hp ? await hp : null;
-      try { await load(item.name, list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file })), h && h.kind === 'directory' ? h : null); } catch (err) { fail(err); }
+      try {
+        const r = await S.pbipFromDrop(e);
+        if (r.notFolder) { msg.innerHTML = '<div class="msg warn">Drop the project <b>folder</b>, not a file inside it.</div>'; return; }
+        await load(r.root, r.list, r.handle);
+      } catch (err) { fail(err); }
     });
     // typing or pasting an export means the export; Clear entries (an empty, flagged page) starts the choice again
     ta.addEventListener('input', e => { if (e.isTrusted && choice !== 'export' && ta.value.trim()) { choice = 'export'; set('connect', 'export'); render(); } });

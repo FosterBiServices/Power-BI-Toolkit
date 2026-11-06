@@ -521,6 +521,13 @@ function init(){
     useTheme(t.text, mode, msg);
   });
   $('pickReportTheme').addEventListener('click', () => $('reportThemeInput').click());
+  // the PBIP folder connected on the home page (or in any tool): its theme and visuals, without picking it again
+  setTimeout(async () => {
+    const S = window.SF_SUITE, shared = () => S && S.pbipStored ? S.pbipStored({ resources: true }).catch(() => null) : Promise.resolve(null);
+    const d = await shared(); if (!d || !d.list.some(x => /\.Report\//i.test(x.path))) return;
+    const use = async how => { const x = await shared(); if (!x) return; const files = await Promise.all(x.list.filter(f => /\.json$/i.test(f.path)).map(f => f.file.text().then(text => ({ path: f.path, text }), () => null))); readFiles(files.filter(Boolean), how); };
+    [['useSharedTheme', 'step1'], ['useSharedReport', 'folder']].forEach(([id, how]) => { const b = $(id); b.textContent = 'Use ' + d.name; b.title = 'The PBIP folder connected for every tool'; b.hidden = false; b.addEventListener('click', () => use(how)); });
+  }, 0);
   $('reportThemeInput').addEventListener('change', e => { const fl = e.target.files; if (!fl || !fl.length) return; readAll(fl).then(files => { readFiles(files, 'step1'); e.target.value = ''; }); });
   $('openTheme').addEventListener('click', () => $('themeFile').click());
   $('themeFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (!f) return; f.text().then(t => useTheme(t), () => {}); e.target.value = ''; });

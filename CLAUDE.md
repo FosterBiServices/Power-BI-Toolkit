@@ -175,8 +175,12 @@ Things to know:
   page's folder walk reads `.json`, `.pbir` and `.pbip` too and doesn't skip `.Report` folders.
 - Home link and Switch tool menu, grouped by `S.GROUPS` (Design the report, Shape the data, Build the
   model, Check it, Explain it: the order a report gets built). `S.TOOLS` is the flat list made from it.
-  The home page shows the same groups, under a **Connect your model once** box (the export query and
-  paste) that folds to one status line once a model is saved.
+  The home page shows the same groups, under a **Connect your model once** box (PBIP folder or Model export, the
+  choice kept as `sfpbi.home.connect`) that folds to one status line once a model is saved. Its PBIP folder goes
+  through `S.pbipShare` like a tool's, so every tool opens on it. Folder picking is shared: `S.pbipPick`,
+  `S.pbipReadAgain`, `S.pbipAgainHandle`, `S.pbipFromInput`, `S.pbipFromDrop`. The stored files include the report's
+  StaticResources/RegisteredResources JSON (theme files) only for `S.pbipStored({ resources: true })`; Power Query
+  Explainer and Theme Builder offer **Use <model>** for the stored folder. Check: `homepbiptest.js`.
 - **What next** links above every tool's footer (`S.NEXT`).
 - Prompts as files: for every page in `PROMPTS` (prompt element → reply element) each prompt
   box gets **Download file**, a "Send it to Copilot as a file" note, and "Open a reply file"

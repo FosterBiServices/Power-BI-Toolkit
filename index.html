@@ -284,8 +284,28 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
   <div class="msg warn disc-top" role="note"><b>Check everything before you use it.</b> AI can make mistakes, and generated output can be wrong. The toolkit is provided as is, without warranty, and you use it at your own risk. <a href="#disclaimer">Read the full disclaimer</a>.</div>
 
   <details class="connect" id="connectBox">
-    <summary><span class="cn-title" id="connectTitle">Connect your model once</span><span class="cn-sub" id="connectSub">Tools marked <span class="tag exp">Uses your model</span> read it. Export it once here and every tool picks it up. The rest work without it.</span></summary>
+    <summary><span class="cn-title" id="connectTitle">Connect your model once</span><span class="cn-sub" id="connectSub">Tools marked <span class="tag exp">Uses your model</span> read it. Connect it once here and every tool picks it up. The rest work without it.</span></summary>
     <div class="connect-body">
+      <div class="sc-choose" id="homeChoose" role="radiogroup" aria-label="How to connect your model">
+        <button type="button" role="radio" aria-checked="false" data-hc="pbip"><span class="tn">PBIP folder</span><span class="td">Your report saved as a Power BI Project. The model and report pages are read straight from the folder.</span></button>
+        <button type="button" role="radio" aria-checked="false" data-hc="export"><span class="tn">Model export</span><span class="td">Run one DAX query in DAX query view and paste the results.</span></button>
+      </div>
+
+      <section class="step" aria-labelledby="h0s" id="homePbip" hidden>
+        <div class="step-num">Step<b>1</b></div>
+        <div class="step-body">
+          <div class="step-head">
+            <h2 id="h0s">Choose your PBIP folder</h2>
+            <p>The folder with your <b>.pbip</b> file (in Power BI Desktop: <b>File &gt; Save as &gt; Power BI project files</b>). Every tool then uses its model, and the tools that check report pages, theme files or Power Query read them from the same folder, so you don&rsquo;t pick it again.</p>
+          </div>
+          <div class="sc-row"><button type="button" class="btn primary" id="homePick">Choose a PBIP folder</button><button type="button" class="btn" id="homeAgain" hidden>Read it again</button><span class="small muted">or drop the project folder below. The files are read in this page and never uploaded.</span></div>
+          <div class="sc-drop" id="homeDrop">Drop the project folder here</div>
+          <input type="file" id="homeFolder" webkitdirectory multiple hidden>
+          <div id="homePbipMsg" role="status"></div>
+        </div>
+      </section>
+
+      <div class="hc-export" id="homeExport" hidden>
       <section class="step" aria-labelledby="h1s">
         <div class="step-num">Step<b>1</b></div>
         <div class="step-body">
@@ -316,15 +336,16 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
           <div class="field"><label for="modelName">Model name <span class="muted">(optional, shown in each tool)</span></label><input type="text" id="modelName" placeholder="Sales model" autocomplete="off"></div>
           <textarea id="exportInput" class="big" spellcheck="false" aria-label="Model export" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
           <div id="saveMsg"></div>
-          <div class="saved" id="saved" hidden>
-            <div class="saved-head"><span class="saved-title">&#10003; Saved model export</span><span id="savedWhen" class="muted"></span></div>
-            <div class="stats" id="savedStats"></div>
-            <p class="note small" id="savedHist" hidden></p>
-            <div class="reply-actions"><button type="button" class="btn" id="clearSaved">Remove the saved export</button></div>
-          </div>
         </div>
       </section>
-      <p class="note">Saved your report as a Power BI Project (PBIP)? You can skip the export: choose <b>PBIP folder</b> in any tool&rsquo;s <b>Connect your model</b> step, and every other tool picks it up too.</p>
+      </div>
+      <div class="saved" id="saved" hidden>
+        <div class="saved-head"><span class="saved-title" id="savedTitle">&#10003; Saved model export</span><span id="savedWhen" class="muted"></span></div>
+        <div class="stats" id="savedStats"></div>
+        <p class="note small" id="savedHist" hidden></p>
+        <div class="reply-actions"><button type="button" class="btn" id="clearSaved">Remove the saved model</button></div>
+      </div>
+      <p class="note">You can also connect inside any tool, in its <b>Connect your model</b> step. Whichever way you connect, every other tool picks it up.</p>
     </div>
   </details>
 
@@ -334,8 +355,8 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
     <h2>Good to know</h2>
     <ul>
       <li><b>Nothing leaves your browser.</b> The pages don&rsquo;t send data anywhere. Prompts only reach Copilot when you paste them yourself.</li>
-      <li><b>Where the export is kept:</b> in this browser&rsquo;s storage for this site, so it&rsquo;s there next time on this computer, but not on another computer or in another browser.</li>
-      <li><b>One export at a time.</b> Pasting a model export into any tool also replaces the saved one, so every tool stays on the same model.</li>
+      <li><b>Where the model is kept:</b> in this browser&rsquo;s storage for this site, so it&rsquo;s there next time on this computer, but not on another computer or in another browser. A PBIP folder&rsquo;s files are kept the same way (as text, never uploaded); after you change the model in Desktop, choose <b>Read it again</b>.</li>
+      <li><b>One model at a time.</b> Reading a PBIP folder or pasting a model export, here or in any tool, replaces the saved one, so every tool stays on the same model.</li>
       <li><b>Each tool keeps its own work</b> (requests, replies, settings). Its <b>Clear entries</b> button empties that tool only, and the saved export stays until you remove it here. To empty every tool and remove the saved export at once, choose <b>Clear all pages</b> there or below.</li>
       <li><b>The Power Query Explainer</b> reads Power Query code, so its whole-model mode has its own export query. The <b>Date Table Generator</b> fills its date-column list from the saved export.</li>
       <li><b>The Model Documenter</b> uses the saved export for a quick document, or reads a PBIP project folder in the browser for the full one (Power Query, sources and report pages). The folder&rsquo;s files are read on the page and never uploaded.</li>
@@ -1846,8 +1867,10 @@ function testQuery(measures){
   const S = window.SF_SUITE;
   const NL = '↵';
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const SKIP = new Set(['.git', 'node_modules', '.pbi', '.vs', 'StaticResources', 'RegisteredResources']);
+  const SKIP = new Set(['.git', 'node_modules', '.pbi', '.vs']);
   const skipDir = n => SKIP.has(n) || /\.Dataset$/i.test(n);
+  // a report's StaticResources (its theme files) are read and kept for Theme Builder, and left out for the other pages
+  const RES = /\/(StaticResources|RegisteredResources)\//i;
   const wanted = p => /\.SemanticModel\/(definition\/.+\.tmdl|model\.bim)$/i.test(p);
   const decode = async file => {
     const buf = await file.arrayBuffer();
@@ -2036,11 +2059,11 @@ function testQuery(measures){
   // The folder's files (as text) from the last PBIP read, next to the handle, so pages that read report pages or
   // the whole project open on the same folder. Valid while the shared export is still the one read from it.
   const saveFiles = rec => idb((st, res) => { const r = st.put(rec, 'pbipFiles'); r.onsuccess = () => res(); r.onerror = () => res(); }).catch(() => {});
-  S.pbipStored = async () => {
+  S.pbipStored = async opt => {
     const v = S.get(); if (!v || v.source !== 'pbip' || !window.indexedDB) return null;
     const rec = await idb((st, res) => { const r = st.get('pbipFiles'); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); }).catch(() => null);
     if (!rec || rec.savedAt !== v.savedAt) return null;
-    return { root: rec.root, name: rec.name, savedAt: rec.savedAt, list: rec.files.map(f => ({ path: f.path, file: new File([f.text], f.path.split('/').pop()) })) };
+    return { root: rec.root, name: rec.name, savedAt: rec.savedAt, list: rec.files.filter(f => (opt && opt.resources) || !RES.test('/' + f.path)).map(f => ({ path: f.path, file: new File([f.text], f.path.split('/').pop()) })) };
   };
   // Read a PBIP folder for every tool: its model becomes the shared export (source 'pbip') and its files are kept.
   // list: [{ path, file }]. Returns S.pbipExport's result plus shared: true/false.
@@ -2052,6 +2075,34 @@ function testQuery(measures){
     r.shared = S.set(r.text, r.name, 'pbip');
     if (r.shared) { if (handle) await saveHandle(handle); await saveFiles({ root, name: r.name, savedAt: S.get().savedAt, files }); }
     return r;
+  };
+  // Picking a folder, the same way in every tool's Connect step and on the home page. Each gives { root, list, handle },
+  // { cancel: true } when the person backed out, or null when the browser can't (use the hidden folder input instead).
+  S.pbipPick = async id => {
+    if (!window.showDirectoryPicker) return null;
+    let dir; try { dir = await window.showDirectoryPicker({ id, mode: 'read' }); } catch (e) { return e && e.name === 'AbortError' ? { cancel: true } : null; }
+    const list = []; await walkHandle(dir, dir.name, list); return { root: dir.name, list, handle: dir };
+  };
+  // the folder the shared model was read from, when the browser still has its handle ("Read it again")
+  S.pbipAgainHandle = async () => { const v = S.get(), h = window.showDirectoryPicker && v && v.source === 'pbip' ? await getHandle() : null; return h && h.name === v.name ? h : null; };
+  S.pbipReadAgain = async () => {
+    const dir = await getHandle(); if (!dir) return null;
+    if ((await dir.queryPermission({ mode: 'read' })) !== 'granted' && (await dir.requestPermission({ mode: 'read' })) !== 'granted') return { cancel: true };
+    const list = []; await walkHandle(dir, dir.name, list); return { root: dir.name, list, handle: dir };
+  };
+  S.pbipFromInput = input => {
+    const fl = [...input.files]; if (!fl.length) return null;
+    const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
+    return { root, list: fl.filter(f => FILE_RE.test(f.name)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f })) };
+  };
+  // a dropped folder; { notFolder: true } for a dropped file
+  S.pbipFromDrop = async e => {
+    const it0 = [...(e.dataTransfer.items || [])][0], hp = it0 && it0.getAsFileSystemHandle ? it0.getAsFileSystemHandle().catch(() => null) : null;
+    const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
+    if (!item || !item.isDirectory) return { notFolder: true };
+    const list = []; await walkEntry(item, '', list);
+    const h = hp ? await hp : null;
+    return { root: item.name, list: list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file })), handle: h && h.kind === 'directory' ? h : null };
   };
   // cfg (from S.hook): { input, prefix, mode, connect: { step: h2 id of the step that gets the choice, none: text for "No model" or false,
   //   exportOnly: [selectors shown only for the export], title, lede, retitle: { h2 id: text } } }
@@ -2074,7 +2125,7 @@ function testQuery(measures){
     const pane = wrap.querySelector('.sc-pbip'), msg = wrap.querySelector('.sc-msg'), input = wrap.querySelector('input[type=file]'), drop = wrap.querySelector('.sc-drop'), again = wrap.querySelector('[data-sc-again]');
     let onShared = () => {};
     // "Read it again" shows when the shared model came from the folder the browser still has a handle for
-    const showAgain = async () => { const v = S.get(), h = window.showDirectoryPicker && v && v.source === 'pbip' ? await getHandle() : null; again.hidden = !(h && h.name === v.name); };
+    const showAgain = async () => { again.hidden = !(await S.pbipAgainHandle()); };
     const usingMsg = v => '<div class="msg ok">&#10003; Using <b>' + esc(v.name) + '</b>, read from its PBIP folder ' + esc(new Date(v.savedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })) + '. Every tool uses it until you choose another folder or paste an export. After you change the model, read it again.</div>';
     const exportEls = () => [ta, bar].concat((c.exportOnly || []).flatMap(s => [...document.querySelectorAll(s)])).filter(Boolean);
     let choice = get('connect') || '', stash = '';
@@ -2112,7 +2163,7 @@ function testQuery(measures){
       msg.innerHTML = '<div class="msg ' + (noDates ? 'warn' : 'ok') + '">' + (noDates ? '' : '&#10003; ') + 'Read <b>' + esc(r.name) + '</b>: ' + r.tables + ' tables, ' + r.measures + ' measures.' + (noDates ? ' It has no date columns, so set the years yourself in the next step.' : '') + (r.others.length ? ' This folder has more models (' + esc(r.others.join(', ')) + '); choose that project&rsquo;s own folder to use one of them.' : '') + (shared ? ' Every tool uses it now, so you don&rsquo;t connect again in the others.' : ' It&rsquo;s too large to share with the other tools (browser storage limit).') + ' Read it again after you change the model.</div>';
       render();
       // pages that also check report pages read them from the same folder
-      if (c.report) { document.dispatchEvent(new CustomEvent('sf-pbip-folder', { detail: { root, list } })); if (shared) set('repFrom', String(S.get().savedAt)); }
+      if (c.report) { document.dispatchEvent(new CustomEvent('sf-pbip-folder', { detail: { root, list: list.filter(x => !RES.test('/' + x.path)) } })); if (shared) set('repFrom', String(S.get().savedAt)); }
     };
     // ...and when the folder was read in another tool, from the files kept with it (once per read, so Remove sticks)
     if (c.report) setTimeout(async () => {
@@ -2123,34 +2174,30 @@ function testQuery(measures){
     }, 0);
     const fail = e => { msg.innerHTML = '<div class="msg err">The folder couldn&rsquo;t be read: ' + esc(e.message || e) + '</div>'; };
     wrap.querySelector('[data-sc-pick]').addEventListener('click', async () => {
-      if (window.showDirectoryPicker) {
-        let dir; try { dir = await window.showDirectoryPicker({ id: 'sf-' + cfg.prefix.replace(/\W/g, ''), mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; input.click(); return; }
-        const list = []; try { await walkHandle(dir, dir.name, list); await load(dir.name, list, dir); } catch (e) { fail(e); }
-      } else input.click();
+      let r; try { r = await S.pbipPick('sf-' + cfg.prefix.replace(/\W/g, '')); } catch (e) { fail(e); return; }
+      if (!r) { input.click(); return; }
+      if (!r.cancel) try { await load(r.root, r.list, r.handle); } catch (e) { fail(e); }
     });
     again.addEventListener('click', async () => {
-      const dir = await getHandle(); if (!dir) { again.hidden = true; return; }
       try {
-        if ((await dir.queryPermission({ mode: 'read' })) !== 'granted' && (await dir.requestPermission({ mode: 'read' })) !== 'granted') return;
-        const list = []; await walkHandle(dir, dir.name, list); await load(dir.name, list, dir);
+        const r = await S.pbipReadAgain(); if (!r) { again.hidden = true; return; }
+        if (!r.cancel) await load(r.root, r.list, r.handle);
       } catch (e) { msg.innerHTML = '<div class="msg warn">The folder couldn&rsquo;t be read again (it may have moved). Choose it again.</div>'; again.hidden = true; }
     });
     input.addEventListener('change', async () => {
-      const fl = [...input.files]; if (!fl.length) return;
-      const root = (fl[0].webkitRelativePath || fl[0].name).split('/')[0];
-      try { await load(root, fl.filter(f => FILE_RE.test(f.name)).map(f => ({ path: f.webkitRelativePath || (root + '/' + f.name), file: f }))); } catch (e) { fail(e); }
+      const r = S.pbipFromInput(input); if (!r) return;
+      try { await load(r.root, r.list); } catch (e) { fail(e); }
       input.value = '';
     });
     ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
     ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
     drop.addEventListener('drop', async e => {
       e.preventDefault();
-      const it0 = [...(e.dataTransfer.items || [])][0], hp = it0 && it0.getAsFileSystemHandle ? it0.getAsFileSystemHandle().catch(() => null) : null;
-      const item = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(Boolean);
-      if (!item || !item.isDirectory) { msg.innerHTML = '<div class="msg warn">Drop the project <b>folder</b>, not a file inside it.</div>'; return; }
-      const list = []; await walkEntry(item, '', list);
-      const h = hp ? await hp : null;
-      try { await load(item.name, list.map(x => ({ path: x.path.replace(/^\//, ''), file: x.file })), h && h.kind === 'directory' ? h : null); } catch (err) { fail(err); }
+      try {
+        const r = await S.pbipFromDrop(e);
+        if (r.notFolder) { msg.innerHTML = '<div class="msg warn">Drop the project <b>folder</b>, not a file inside it.</div>'; return; }
+        await load(r.root, r.list, r.handle);
+      } catch (err) { fail(err); }
     });
     // typing or pasting an export means the export; Clear entries (an empty, flagged page) starts the choice again
     ta.addEventListener('input', e => { if (e.isTrusted && choice !== 'export' && ta.value.trim()) { choice = 'export'; set('connect', 'export'); render(); } });
@@ -2233,18 +2280,47 @@ function renderSaved(){
   // (a paste keeps it open, so the confirmation stays in view)
   if (wasSaved === undefined || (wasSaved && !v)) $('connectBox').open = !v;
   wasSaved = !!v;
-  if (!v) { $('connectTitle').textContent = 'Connect your model once'; $('connectSub').innerHTML = 'Tools marked ' + TAG.exp + ' read it. Export it once here and every tool picks it up. The rest work without it.'; return; }
+  if (!v) { $('connectTitle').textContent = 'Connect your model once'; $('connectSub').innerHTML = 'Tools marked ' + TAG.exp + ' read it. Connect a PBIP folder or paste the model export once here, and every tool picks it up. The rest work without it.'; $('homeAgain').hidden = true; renderChoice(); return; }
+  const pb = v.source === 'pbip';
+  if (pb && !choice) choice = 'pbip';
+  if (!pb && !choice) choice = 'export';
+  renderChoice();
+  $('savedTitle').innerHTML = '&#10003; ' + (pb ? 'Connected PBIP folder' : 'Saved model export');
+  $('clearSaved').textContent = pb ? 'Disconnect the folder' : 'Remove the saved export';
+  SF_SUITE.pbipAgainHandle().then(h => { $('homeAgain').hidden = !h; });
   const m = parseModel(v.text);
   $('connectTitle').innerHTML = '&#10003; Connected: ' + esc(v.name || 'your model');
   $('connectSub').textContent = m.tables.length + ' tables, ' + m.measures.length + ' measures, ' + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + new Date(v.savedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) + '. Every tool marked Uses your model reads it. Open to replace or remove it.';
   const d = new Date(v.savedAt);
   $('savedWhen').textContent = (v.name ? v.name + ' · ' : '') + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   $('savedStats').innerHTML = '<span class="stat"><b>' + m.tables.length + '</b> tables</span><span class="stat"><b>' + m.columns.length + '</b> columns</span><span class="stat"><b>' + m.measures.length + '</b> measures</span><span class="stat"><b>' + m.rels.length + '</b> relationships</span>' + (m.composite ? '<span class="stat remote">Composite model</span>' : '');
-  if (!$('modelName').value) $('modelName').value = v.name || '';
+  if (!$('modelName').value && !pb) $('modelName').value = v.name || '';
   const h = SF_SUITE.history ? SF_SUITE.history().length : 0;
   $('savedHist').hidden = !h;
   $('savedHist').innerHTML = h ? h + ' earlier export' + (h === 1 ? ' is' : 's are') + ' kept too, so <a href="model-compare.html">Model Compare</a> can show what changed. Saving a new export keeps the one it replaces.' : '';
 }
+// PBIP folder or model export: which one the connect box shows (remembered; a saved model picks its own)
+let choice = '';
+try { choice = localStorage.getItem('sfpbi.home.connect') || ''; } catch (e) {}
+function renderChoice(){
+  document.querySelectorAll('#homeChoose [data-hc]').forEach(b => b.setAttribute('aria-checked', b.dataset.hc === choice));
+  $('homePbip').hidden = choice !== 'pbip';
+  $('homeExport').hidden = choice !== 'export';
+}
+function choose(v){ choice = v; try { localStorage.setItem('sfpbi.home.connect', v); } catch (e) {} renderChoice(); }
+async function readFolder(r){
+  if (!r || r.cancel) return;
+  if (r.notFolder) { $('homePbipMsg').innerHTML = msg('warn', 'Drop the project <b>folder</b>, not a file inside it.'); return; }
+  $('homePbipMsg').innerHTML = msg('info', 'Reading &ldquo;' + esc(r.root) + '&rdquo;&hellip;');
+  const res = await SF_SUITE.pbipShare(r.root, r.list, r.handle);
+  if (res.error) { $('homePbipMsg').innerHTML = msg('err', esc(res.error)); return; }
+  $('homePbipMsg').innerHTML = res.shared
+    ? msg('ok', '&#10003; Read <b>' + esc(res.name) + '</b>: ' + res.tables + ' tables, ' + res.measures + ' measures. Open any tool below and it&rsquo;s already connected.' + (res.others.length ? ' This folder has more models (' + esc(res.others.join(', ')) + '); choose that project&rsquo;s own folder to use one of them.' : ''))
+    : msg('err', 'This model is too large to save in the browser (the limit is about 5 MB). Connect it in each tool instead.');
+  $('saveMsg').innerHTML = ''; $('modelName').value = '';
+  renderSaved();
+}
+const folderFail = e => { $('homePbipMsg').innerHTML = msg('err', 'The folder couldn&rsquo;t be read: ' + esc((e && e.message) || e)); };
 function renderTools(){
   // a model tag first (needed, optional or not needed), then the Copilot tag
   const modelTag = t => t.tags.includes('files') ? 'files' : !t.free ? 'exp' : t.tags.some(x => x === 'exp' || x === 'dates' || x === 'opt') ? 'opt' : 'free';
@@ -2267,13 +2343,34 @@ function init(){
   $('queryView').textContent = DAX_QUERY;
   $('copyQuery').addEventListener('click', e => copyText(DAX_QUERY, e.currentTarget));
   $('exportInput').addEventListener('input', save);
-  $('modelName').addEventListener('input', () => { const v = SF_SUITE.get(); if (v) { SF_SUITE.set(v.text, $('modelName').value.trim()); renderSaved(); } });
-  $('clearSaved').addEventListener('click', () => { SF_SUITE.clear(); $('modelName').value = ''; $('saveMsg').innerHTML = msg('info', 'The saved export is removed. Each tool keeps its own copy until you clear that tool.'); renderSaved(); });
+  $('modelName').addEventListener('input', () => { const v = SF_SUITE.get(); if (v && v.source !== 'pbip') { SF_SUITE.set(v.text, $('modelName').value.trim()); renderSaved(); } });
+  $('clearSaved').addEventListener('click', () => {
+    const pb = (SF_SUITE.get() || {}).source === 'pbip';
+    SF_SUITE.clear(); $('modelName').value = ''; $('homePbipMsg').innerHTML = '';
+    $(pb ? 'homePbipMsg' : 'saveMsg').innerHTML = msg('info', (pb ? 'The folder is disconnected.' : 'The saved export is removed.') + ' Each tool keeps its own copy until you clear that tool.');
+    renderSaved();
+  });
+  $('homeChoose').addEventListener('click', e => { const b = e.target.closest('[data-hc]'); if (b) choose(b.dataset.hc); });
+  $('homePick').addEventListener('click', async () => {
+    let r; try { r = await SF_SUITE.pbipPick('sf-home'); } catch (e) { folderFail(e); return; }
+    if (!r) { $('homeFolder').click(); return; }
+    try { await readFolder(r); } catch (e) { folderFail(e); }
+  });
+  $('homeAgain').addEventListener('click', async () => {
+    try { const r = await SF_SUITE.pbipReadAgain(); if (!r) { $('homeAgain').hidden = true; return; } await readFolder(r); }
+    catch (e) { $('homePbipMsg').innerHTML = msg('warn', 'The folder couldn&rsquo;t be read again (it may have moved). Choose it again.'); $('homeAgain').hidden = true; }
+  });
+  $('homeFolder').addEventListener('change', async () => { try { await readFolder(SF_SUITE.pbipFromInput($('homeFolder'))); } catch (e) { folderFail(e); } $('homeFolder').value = ''; });
+  const drop = $('homeDrop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
+  drop.addEventListener('drop', async e => { e.preventDefault(); try { await readFolder(await SF_SUITE.pbipFromDrop(e)); } catch (err) { folderFail(err); } });
   window.addEventListener('storage', renderSaved);
   const showClear = on => { $('homeClearConfirm').hidden = !on; $('homeClearAll').hidden = on; $('homeClearAll').setAttribute('aria-expanded', on); if (on) { $('homeClearDone').textContent = ''; $('homeClearNo').focus(); } };
   $('homeClearAll').addEventListener('click', () => showClear(true));
   $('homeClearNo').addEventListener('click', () => { showClear(false); $('homeClearAll').focus(); });
-  $('homeClearYes').addEventListener('click', () => { SF_SUITE.clearAll(); $('modelName').value = ''; $('exportInput').value = ''; $('saveMsg').innerHTML = ''; renderSaved(); showClear(false); $('homeClearDone').textContent = 'Every tool is empty and the saved export is removed.'; });
+  $('homeClearYes').addEventListener('click', () => { SF_SUITE.clearAll(); choice = ''; $('modelName').value = ''; $('exportInput').value = ''; $('saveMsg').innerHTML = ''; $('homePbipMsg').innerHTML = ''; renderSaved(); showClear(false); $('homeClearDone').textContent = 'Every tool is empty and the saved export is removed.'; });
+  const v0 = SF_SUITE.get(); if (v0) choice = v0.source === 'pbip' ? 'pbip' : 'export';
   renderTools(); renderSaved();
 }
 init();
