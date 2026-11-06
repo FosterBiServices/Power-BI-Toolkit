@@ -39,7 +39,8 @@ prompt the user takes to Copilot, then check the reply pasted back. Nothing call
   (from the owner's logo redesign, content-credential metadata stripped). Colors: navy `#0A2D5A` (`--brand`, `--band`,
   light `--accent`), gold `#F2A900` (`--gold`, dark `--accent`), dark gold `#B07A00` (the logo's SERVICES). Tool pages show
   the square icon in the banner and as the favicon; the home page shows the white full logo (`@@HOMELOGO@@` in
-  home_body.html, filled by build_site.py from `src/brand/foster-bi-logo-services-white.svg`). The old SF shield is gone.
+  home_body.html, filled by build_site.py from `src/brand/foster-bi-logo-services-white.svg`). Every banner has a faint grid of
+  rounded squares on the right, fading to the left (as on the Foster BI site header), in the `.brandbar` background. The old SF shield is gone.
 - The disclaimer on the home page stays.
 - No green, red or amber in **suggested colors** (palettes, themes, wireframes); they read as
   good, bad and warning. UI status colors for ok, error and warning are fine. KPI Visualizer's
