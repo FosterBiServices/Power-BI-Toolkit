@@ -109,10 +109,15 @@ Things to know:
   DAX rules found in Desktop: `key` can't be a function parameter name (hence `row_key`), and a
   TRUE/FALSE column can't hold BLANK (it turns FALSE), so boolean columns use `and(...)`, never
   `iff(..., blank())`, or the preview won't match.
+  **Write it as** defaults to **Plain calculated tables** (no preview feature or 1702 upgrade; a user's Desktop didn't offer the
+  upgrade and they needed Tabular Editor). Make new data settings and the mode are kept per visit (`sessionStorage`, survive a
+  reload in the tab); a new visit starts from the defaults (the owner: an earlier session is often another report). Names and the
+  masking seed stay in `localStorage`.
   Measures all go in a `_Measures` table, with a display folder named for the table each one counts
-  (the owner's choice). The page checks the model saved on the home page: if it has `_Measures`, the
-  script uses `ref table _Measures` (adds, keeps what's there); otherwise it creates the table. The
-  user can switch. Measures whose tables (or measures) are left out of the script are dropped, and the page says which
+  (the owner's choice). The page asks **Where will you paste the script?** every visit: **A new blank report** (the default,
+  writes `table _Measures`) or **A report with a _Measures table** (writes `ref table _Measures`: adds, keeps what's there; Apply
+  fails with "the parent '_Measures' ... cannot be located" in a report without one). The answer is never saved and never guessed
+  from the model saved on the home page (the owner: an earlier session is often another day and another report). Measures whose tables (or measures) are left out of the script are dropped, and the page says which
   (and which relationships) under the table list (`SD.leftOut`).
   Several industries can go in one model (`SD_IND.combine`, `state.make.inds` in the order picked). They share one Date
   table; a table or measure name an earlier industry already uses gets the industry's name in front (`Finance Customers`,

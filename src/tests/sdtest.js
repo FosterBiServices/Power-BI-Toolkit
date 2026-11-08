@@ -23,6 +23,8 @@ const { chromium } = require('playwright');
   console.log('staff masked hire', staffHire[0], '(a whole number of weeks from 15/01/2020) | Manager ID still finds Employee ID', staffHire[1]);
   // make new data
   await p.click('label.mode:has(input[value=make])'); await p.waitForTimeout(300);
+  console.log('default style', await p.evaluate(() => state.make.style), '(expect inline: plain tables need no settings)');
+  await p.click('label:has(input[name=style][value=udf])'); await p.waitForTimeout(150);
   // industry cards add or remove an industry; pick only one by unticking the others
   const only = async id => {
     if (await p.getAttribute('[data-ind="' + id + '"]', 'aria-checked') !== 'true') await p.click('[data-ind="' + id + '"]');
@@ -39,7 +41,10 @@ const { chromium } = require('playwright');
   console.log('measures table:', await p.evaluate(() => (state.tmdl.match(/^\t(ref )?table _Measures$/m) || ['none'])[0].trim()), '(expect table _Measures)',
     '| folders', await p.evaluate(() => Array.from(new Set((state.tmdl.match(/displayFolder: .*/g) || []).map(x => x.slice(15)))).join(',')));
   await p.evaluate(() => { localStorage.setItem('sfpbi.shared.model', JSON.stringify({ text: 'Kind\tTable\tName\nTable\t_Measures\t_Measures\nTable\tSales\tSales' })); changed(); });
-  console.log('with a saved _Measures:', await p.evaluate(() => (state.tmdl.match(/^\t(ref )?table _Measures$/m) || ['none'])[0].trim()), '(expect ref table _Measures) |', await p.evaluate(() => $('mtNote').textContent.slice(0, 40)));
+  console.log('with a saved _Measures:', await p.evaluate(() => (state.tmdl.match(/^\t(ref )?table _Measures$/m) || ['none'])[0].trim()), '(expect table _Measures: Create stays the default) |', await p.evaluate(() => $('mtNote').textContent.slice(0, 60)));
+  await p.click('label:has(input[name=mtable][value=add])'); await p.waitForTimeout(150);
+  console.log('Add to my _Measures:', await p.evaluate(() => (state.tmdl.match(/^\t(ref )?table _Measures$/m) || ['none'])[0].trim()), '(expect ref table _Measures)');
+  await p.click('label:has(input[name=mtable][value=new])'); await p.waitForTimeout(150);
   await p.evaluate(() => { localStorage.removeItem('sfpbi.shared.model'); changed(); });
   console.log('plain tables: functions', await p.evaluate(() => (state.tmdl.match(/^\tfunction /gm) || []).length), '(expect 0) | VAR seed', await p.evaluate(() => /VAR seed = 1/.test(state.tmdl)));
   // plain tables: a table with no settings (Accounts, Departments) must not start with a bare RETURN
@@ -75,6 +80,13 @@ const { chromium } = require('playwright');
   await p.screenshot({ path: __dirname + '/sd_mask.png', fullPage: true });
   await p.click('#clearEntries'); await p.click('#clearYes'); await p.waitForTimeout(300);
   console.log('after clear: tables', await p.$$eval('.tcard', x => x.length), '| mode', await p.evaluate(() => state.mode));
+  // a new visit (new tab) starts Make new data from the defaults, even with settings left by an older version
+  { const p2 = await ctx.newPage(); await p2.goto('http://localhost:8765/sample-data-maker.html');
+    await p2.evaluate(() => { sessionStorage.clear(); localStorage.removeItem('ksd.blank'); localStorage.setItem('ksd.make', JSON.stringify({ inds: ['hr'], ind: 'hr', style: 'udf' })); localStorage.setItem('ksd.mode', 'make'); });
+    await p2.reload(); await p2.waitForTimeout(600);
+    console.log('new visit:', await p2.evaluate(() => state.mode + ' ' + state.make.inds.join('+') + ' ' + state.make.style), '(expect mask retail inline)');
+    await p2.click('label.mode:has(input[value=make])'); await p2.click('[data-ind="hr"]'); await p2.reload(); await p2.waitForTimeout(600);
+    console.log('reload in the same tab keeps:', await p2.evaluate(() => state.mode + ' ' + state.make.inds.join('+')), '(expect make retail+hr)'); await p2.close(); }
   await p.reload(); await p.waitForTimeout(600); console.log('reload stays empty', await p.$$eval('.tcard', x => x.length) === 0, '| banner', await p.isVisible('#exampleBanner'));
   console.log('errors', errs); await b.close();
 })();
