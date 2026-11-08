@@ -294,8 +294,11 @@ function renderMake(){
   $('makeCols').innerHTML = '<div class="tablewrap"><table><thead><tr><th>Column</th><th>Type</th><th>What it holds</th></tr></thead><tbody>'
     + t.meta.map(x => '<tr><td class="nm">' + esc(x.n) + (x.h ? ' <span class="muted">(hidden)</span>' : '') + '</td><td class="fmt">' + ({ int: 'Whole number', dec: 'Decimal', text: 'Text', date: 'Date', bool: 'True/false' })[x.t] + '</td><td>' + esc(x.d) + '</td></tr>').join('')
     + '</tbody></table></div>' + (ms.length ? '<h3 class="sub">Measures</h3><div class="tablewrap"><table><thead><tr><th>Measure</th><th>What it shows</th></tr></thead><tbody>' + ms.map(x => '<tr><td class="nm">' + esc(x.n) + '</td><td>' + esc(x.d) + '</td></tr>').join('') + '</tbody></table></div>' : '');
-  const steps = (m.style === 'udf' ? ['In Power BI Desktop, go to <b>File</b> &gt; <b>Options and settings</b> &gt; <b>Options</b> &gt; <b>Preview features</b>, turn on <b>DAX user-defined functions</b> and restart Desktop.'] : [])
-    .concat(['Open a report (a new blank one works) and go to <b>TMDL view</b>.', 'Paste the script into a new tab and select <b>Apply</b>.', 'If a table shows no rows, select <b>Refresh</b> on the Home tab.']);
+  const steps = (m.style === 'udf' ? ['In Power BI Desktop, go to <b>File</b> &gt; <b>Options and settings</b> &gt; <b>Options</b> &gt; <b>Preview features</b>. If <b>DAX user-defined functions</b> is listed, turn it on and restart Desktop.'] : [])
+    .concat(['Open a report (a new blank one works) and go to <b>TMDL view</b>.',
+      'Paste the script into a new tab and select <b>Apply</b>.' + (m.style === 'udf' ? ' Before you apply, the Problems list says it cannot find the ' + SD.PKG + ' functions. That&rsquo;s expected: the script adds them.' : ''),
+      ...(m.style === 'udf' ? ['If Desktop asks to upgrade the compatibility level (DAX functions need 1702), select <b>Yes</b>.'] : []),
+      'When the yellow bar says calculated objects need to be refreshed, select <b>Refresh now</b>.']);
   $('applySteps').innerHTML = steps.map(s => '<li>' + s + '</li>').join('');
   state.tmdl = SD.script(c.model, { mode: m.style, args: c.args, measures: m.measures, measureTable: mt, tables: on.map(x => x.name) });
   $('tmdlView').innerHTML = hlTmdl(state.tmdl);

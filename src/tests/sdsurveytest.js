@@ -43,6 +43,13 @@ const { chromium } = require('playwright');
   // all three in one model: one Date, the later surveys' tables renamed
   const all = await p.evaluate(() => { const m = SD_IND.combine(['svyhealth', 'svyretail', 'svyservice']); return { t: m.tables.map(t => t.name).join(', '), s: m.sizes.map(s => s[0]).join(', '), mx: (m.measures['Retail Survey Answers'] || []).find(x => x.n === 'Retail Survey Average Score').x }; });
   console.log('all three:', all.t); console.log('  sizes', all.s); console.log('  renamed measure', all.mx);
+  // function names: Desktop reads some words as keywords when they are a segment of a function name (Name, KPI, Text),
+  // and every call to the function then fails ("The syntax for 'Name' is incorrect"), found in Desktop Nov 2026
+  const reserved = await p.evaluate(() => { const m = SD_IND.combine(SD_IND.LIST.map(x => x.id)), args = makeArgs(m), bad = new Set();
+    const t = SD.script(m, { mode: 'udf', args, measures: true, measureTable: 'new' });
+    (t.match(/^\tfunction '?[^ ']+/gm) || []).forEach(f => f.replace(/^\tfunction '?/, '').split('.').forEach(seg => { if (/^(Name|KPI|Text)$/i.test(seg)) bad.add(f.trim()); }));
+    return Array.from(bad); });
+  console.log('function names with a reserved segment', reserved, '(expect [])');
   // the page: pick the healthcare survey card
   await p.click('label.mode:has(input[value=make])'); await p.waitForTimeout(200);
   await p.click('[data-ind="svyhealth"]'); await p.click('[data-ind="retail"]'); await p.waitForTimeout(200);
