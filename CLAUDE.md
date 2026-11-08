@@ -119,6 +119,11 @@ Things to know:
   (`num_customers`) becomes one per industry (`num_customers_retail`, `num_customers_finance`): `SD.pmap` renames
   settings while an industry is built, so builders must call `P()` and `n()` inside the industry function, not at load.
   Per-industry choices (`off`, `tab`) are saved under the industries joined with `+`; sizes stay per industry.
+  Surveys (`svyhealth`, `svyretail`, `svyservice`, built by `survey(cfg)` in sd_ind.js): Respondents, Questions (a DATATABLE),
+  Responses and Answers (one row per question answered, long format; Score 1-5, 0-10 for NPS, 1/0 for Yes/No, blank for
+  comments; Answer as text; Sentiment for comments). Each response has a hidden satisfaction (`_sat`) its answers, NPS and
+  comment lean on, and each question its own bias. Answers rebuilds the response from its key, as Applications does in HR.
+  Check: `sdsurveytest.js`.
   In plain calculated tables the settings are VARs chained straight into the table's own `VAR _Rows ... RETURN` (no
   RETURN of their own, since a table with no settings would start with a bare RETURN, which Desktop rejects).
 - `src/pages/sheet-recon.html` is a finished page (built in another chat) with a `@@SUITE@@`
@@ -244,6 +249,7 @@ through both.
 - Power Query Writer's fx functions TMDL script (`PWF.tmdl`): applying it in TMDL view, and the functions without their
   Documentation wrapper (fxTests.pq, 45 checks).
 
+- Sample Data Maker's surveys: their TMDL script and DAX in Desktop (checked only against the page preview).
 - Sample Data Maker's character names in the DAX (PATHITEM over one long `|` text, MID for Gender), in both modes.
 - Sample Data Maker: a script with two or more industries combined (renamed tables and measures, per-industry sizes),
   and the plain calculated tables after the RETURN fix (Accounts, Cost Centers and Departments failed before it).

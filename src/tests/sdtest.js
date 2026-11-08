@@ -29,7 +29,7 @@ const { chromium } = require('playwright');
     for (const o of await p.$$eval('[data-ind][aria-checked=true]', x => x.map(b => b.dataset.ind))) if (o !== id) await p.click('[data-ind="' + o + '"]');
     await p.waitForTimeout(150);
   };
-  for (const id of ['retail', 'hr', 'finance', 'health', 'mfg', 'service']) {
+  for (const id of ['retail', 'hr', 'finance', 'health', 'mfg', 'service', 'svyhealth', 'svyretail', 'svyservice']) {
     await only(id);
     const r = await p.evaluate(() => ({ tabs: document.querySelectorAll('#makeTabs [data-tab]').length, rows: document.querySelectorAll('#makePreview tbody tr').length, t: state.tmdl }));
     console.log(id, 'tables', r.tabs, '| preview rows', r.rows, '| functions', (r.t.match(/^\tfunction /gm) || []).length, '| relationships', (r.t.match(/^\trelationship /gm) || []).length, '| measures', (r.t.match(/^\t\tmeasure /gm) || []).length, '| DataGoblins', /DataGoblins/.test(r.t));
