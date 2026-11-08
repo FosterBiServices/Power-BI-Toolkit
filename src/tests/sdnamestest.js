@@ -32,7 +32,7 @@ const { chromium } = require('playwright');
   // Remove column back to something else follows the linked columns again
   await p.selectOption('select[data-t] >> nth=0', 'drop'); await p.selectOption('select[data-t] >> nth=0', 'keep'); await p.waitForTimeout(100);
   // make: HR employees are characters, coach names first, gender from the character
-  await p.click('label.mode:has(input[value=make])'); await p.click('[data-ind="hr"]'); await p.click('[data-ind="retail"]'); await p.waitForTimeout(300);
+  await p.click('label.mode:has(input[value=make])'); await p.click('[data-ind="hr"]'); await p.click('[data-ind="retail"]'); await p.click('label:has(input[name=style][value=udf])'); await p.waitForTimeout(300);
   const mk = await p.evaluate(() => { const c = makeModel(), t = c.model.tables.find(x => x.name === 'Employees'), rows = SD.tableRows(t, { p: c.args, seed: state.make.seed }), ch = SD.chars();
     const full = SD_NAMES.COACH.concat(SD_NAMES.MEMBER), fem = new Map(full.map(x => [x[0] + ' ' + x[1], !!x[2]])), coach = new Set(SD_NAMES.COACH.map(x => x[0] + ' ' + x[1]));
     return { n: rows.length, coach: rows.slice(0, Math.min(70, rows.length)).every(r => coach.has(r.Employee)), distinct: new Set(rows.map(r => r.Employee)).size, gender: rows.every(r => !fem.has(r.Employee) || (fem.get(r.Employee) ? 'Female' : 'Male') === r.Gender),

@@ -6,6 +6,12 @@ const store = {
   set(k, v){ try { localStorage.setItem(PREFIX + k, v); } catch (e) {} },
   del(k){ try { localStorage.removeItem(PREFIX + k); } catch (e) {} }
 };
+// Make new data settings and the mode last only for this visit (this tab), so a new visit starts from the
+// defaults instead of choices made for another day's report. Names and the masking seed are kept.
+const visit = {
+  get(k){ try { return sessionStorage.getItem(PREFIX + k); } catch (e) { return null; } },
+  set(k, v){ try { sessionStorage.setItem(PREFIX + k, v); } catch (e) {} }
+};
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function msg(level, html){ return '<div class="msg ' + level + '">' + html + '</div>'; }
 function copyText(text, btn){
@@ -34,12 +40,13 @@ const serialOf = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
 /* ---------- state ---------- */
 function makeDefaults(){
   const t = today(), [y, m] = SD.ymd(t);
-  return { ind: 'retail', inds: ['retail'], sizes: {}, start: SD.serial(y - 2, 1, 1), end: SD.serial(y, m, 1) - 1, seed: 1, style: 'udf', measures: true, off: {}, tab: {} };
+  return { ind: 'retail', inds: ['retail'], sizes: {}, start: SD.serial(y - 2, 1, 1), end: SD.serial(y, m, 1) - 1, seed: 1, style: 'inline', measures: true, off: {}, tab: {} };
 }
 const state = { mode: 'mask', names: 'chars', example: false, tables: [], treats: {}, sugs: [], manual: [], seed: randSeed(), prevTable: '', prevSide: 'after', make: makeDefaults(), masked: null, ver: 0, maskedVer: -1 };
 let tid = 0;
 function persist(){
-  store.set('mode', state.mode); store.set('names', state.names); store.set('mask', JSON.stringify({ seed: state.seed })); store.set('make', JSON.stringify(state.make));
+  visit.set('mode', state.mode); store.set('names', state.names); store.set('mask', JSON.stringify({ seed: state.seed })); visit.set('make', JSON.stringify(state.make));
+  store.del('mode'); store.del('make');
 }
 function leaveExample(){ if (!state.example) return; state.example = false; state.tables = []; state.treats = {}; state.sugs = []; state.manual = []; showBanner(); }
 function showBanner(){ $('exampleBanner').hidden = !(state.example && state.mode === 'mask'); }
@@ -256,8 +263,8 @@ function renderMake(){
     ? 'The measures are added to your report&rsquo;s <code>_Measures</code> table, and nothing in it is removed. If the report has no <code>_Measures</code> table, Apply fails with &ldquo;the parent &lsquo;_Measures&rsquo; cannot be located&rdquo;.'
     : 'The script creates a <code>_Measures</code> table. Pasted into a report that already has one, it replaces that table and the measures in it.';
   $('styleNote').innerHTML = m.style === 'udf'
-    ? 'One DAX function per table (named <code>' + SD.PKG + '.&hellip;</code>), and each table calls its function. Needs DAX user-defined functions, a preview feature in Power BI Desktop.'
-    : 'Each table holds its own DAX, with no functions. Works in any recent Power BI Desktop.';
+    ? 'One DAX function per table (named <code>' + SD.PKG + '.&hellip;</code>), and each table calls its function. Needs DAX user-defined functions, a preview feature in Power BI Desktop, and compatibility level 1702. If Desktop doesn&rsquo;t offer the upgrade, use <b>Plain calculated tables</b>.'
+    : 'Each table holds its own DAX, with no functions. Works in any recent Power BI Desktop, with no settings to change.';
   const errs = validMake();
   const sizeErr = model0.sizes.filter(s => { const v = sizeOf(s[4], s[5], s[2]); return !(Number.isInteger(v) && v >= 1 && v <= s[3]); }).map(s => esc(s[1]) + ' is a whole number from 1 to ' + s[3].toLocaleString() + '.');
   const all = errs.concat(sizeErr);
@@ -323,9 +330,9 @@ function loadExample(){
   refreshLinks();
 }
 function init(){
-  const mode = store.get('mode'); if (mode === 'make' || mode === 'mask') state.mode = mode;
+  const mode = visit.get('mode'); if (mode === 'make' || mode === 'mask') state.mode = mode;
   const nm = store.get('names'); if (nm === 'chars' || nm === 'made') state.names = nm;
-  try { const mk = JSON.parse(store.get('make') || 'null'); if (mk) state.make = Object.assign(makeDefaults(), mk); } catch (e) {}
+  try { const mk = JSON.parse(visit.get('make') || 'null'); if (mk) state.make = Object.assign(makeDefaults(), mk); } catch (e) {}
   try { const ms = JSON.parse(store.get('mask') || 'null'); if (ms && ms.seed) state.seed = ms.seed; } catch (e) {}
   if (store.get('blank') !== '1') loadExample();
   changed(); persist();
@@ -409,6 +416,7 @@ init();
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !box.hidden) { show(false); btn.focus(); } });
   $('clearYes').addEventListener('click', () => {
     try { Object.keys(localStorage).filter(k => k.startsWith(PREFIX)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    try { Object.keys(sessionStorage).filter(k => k.startsWith(PREFIX)).forEach(k => sessionStorage.removeItem(k)); } catch (e) {}
     resetAll();
     store.set('blank', '1');
     persist();
