@@ -2225,13 +2225,14 @@ function renderMake(){
   document.querySelectorAll('input[name=style]').forEach(r => { r.checked = r.value === m.style; });
   $('addMeasures').checked = m.measures;
   const found = hasMeasuresTable();
-  const mt = m.mtable || (found ? 'add' : 'new');
+  // Create is the default: the saved model may be another report, and a new blank report never has _Measures
+  const mt = m.mtable || 'new';
   document.querySelectorAll('input[name=mtable]').forEach(r => { r.checked = r.value === mt; });
   $('mtField').hidden = $('mtNote').hidden = !m.measures;
-  $('mtNote').innerHTML = found === null
-    ? 'No saved model to check. If your report already has a <code>_Measures</code> table, choose <b>Add to my _Measures</b>, or Power BI replaces it and the measures in it.'
-    : found ? 'Your saved model has a <code>_Measures</code> table, so the measures are added to it and nothing in it is removed.'
-      : 'Your saved model has no <code>_Measures</code> table, so the script creates one.';
+  $('mtNote').innerHTML = mt === 'add'
+    ? 'The report you paste into needs a <code>_Measures</code> table. Without one, Apply says the parent <code>_Measures</code> cannot be located: choose <b>Create _Measures</b>.'
+    : (found ? 'Your saved model has a <code>_Measures</code> table. If you paste into that report, choose <b>Add to my _Measures</b>, or Power BI replaces the table and the measures in it. ' : 'If you paste into a report that already has a <code>_Measures</code> table, choose <b>Add to my _Measures</b>, or Power BI replaces the table and the measures in it. ')
+      + 'For a new blank report, keep <b>Create _Measures</b>.';
   $('styleNote').innerHTML = m.style === 'udf'
     ? 'One DAX function per table (named <code>' + SD.PKG + '.&hellip;</code>), and each table calls its function. Needs DAX user-defined functions, a preview feature in Power BI Desktop.'
     : 'Each table holds its own DAX, with no functions. Works in any recent Power BI Desktop.';

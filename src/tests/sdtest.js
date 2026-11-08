@@ -39,7 +39,10 @@ const { chromium } = require('playwright');
   console.log('measures table:', await p.evaluate(() => (state.tmdl.match(/^\t(ref )?table _Measures$/m) || ['none'])[0].trim()), '(expect table _Measures)',
     '| folders', await p.evaluate(() => Array.from(new Set((state.tmdl.match(/displayFolder: .*/g) || []).map(x => x.slice(15)))).join(',')));
   await p.evaluate(() => { localStorage.setItem('sfpbi.shared.model', JSON.stringify({ text: 'Kind\tTable\tName\nTable\t_Measures\t_Measures\nTable\tSales\tSales' })); changed(); });
-  console.log('with a saved _Measures:', await p.evaluate(() => (state.tmdl.match(/^\t(ref )?table _Measures$/m) || ['none'])[0].trim()), '(expect ref table _Measures) |', await p.evaluate(() => $('mtNote').textContent.slice(0, 40)));
+  console.log('with a saved _Measures:', await p.evaluate(() => (state.tmdl.match(/^\t(ref )?table _Measures$/m) || ['none'])[0].trim()), '(expect table _Measures: Create stays the default) |', await p.evaluate(() => $('mtNote').textContent.slice(0, 60)));
+  await p.click('label:has(input[name=mtable][value=add])'); await p.waitForTimeout(150);
+  console.log('Add to my _Measures:', await p.evaluate(() => (state.tmdl.match(/^\t(ref )?table _Measures$/m) || ['none'])[0].trim()), '(expect ref table _Measures)');
+  await p.click('label:has(input[name=mtable][value=new])'); await p.waitForTimeout(150);
   await p.evaluate(() => { localStorage.removeItem('sfpbi.shared.model'); changed(); });
   console.log('plain tables: functions', await p.evaluate(() => (state.tmdl.match(/^\tfunction /gm) || []).length), '(expect 0) | VAR seed', await p.evaluate(() => /VAR seed = 1/.test(state.tmdl)));
   // plain tables: a table with no settings (Accounts, Departments) must not start with a bare RETURN

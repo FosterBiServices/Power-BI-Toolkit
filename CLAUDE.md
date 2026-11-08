@@ -110,9 +110,9 @@ Things to know:
   TRUE/FALSE column can't hold BLANK (it turns FALSE), so boolean columns use `and(...)`, never
   `iff(..., blank())`, or the preview won't match.
   Measures all go in a `_Measures` table, with a display folder named for the table each one counts
-  (the owner's choice). The page checks the model saved on the home page: if it has `_Measures`, the
-  script uses `ref table _Measures` (adds, keeps what's there); otherwise it creates the table. The
-  user can switch. Measures whose tables (or measures) are left out of the script are dropped, and the page says which
+  (the owner's choice). **Create _Measures** is the default (a new blank report has none); **Add to my _Measures**
+  writes `ref table _Measures` (adds, keeps what's there), and Apply fails ("the parent '_Measures' ... cannot be located")
+  in a report without one. The note says when the model saved on the home page has `_Measures` (it may be another report). Measures whose tables (or measures) are left out of the script are dropped, and the page says which
   (and which relationships) under the table list (`SD.leftOut`).
   Several industries can go in one model (`SD_IND.combine`, `state.make.inds` in the order picked). They share one Date
   table; a table or measure name an earlier industry already uses gets the industry's name in front (`Finance Customers`,
