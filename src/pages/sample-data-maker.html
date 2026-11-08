@@ -464,10 +464,10 @@ section.dim .step-body>*:not(.step-head){opacity:.45;pointer-events:none}
         </span></div>
       <p class="note" id="styleNote"></p>
       <label class="c"><input type="checkbox" id="addMeasures"> Add starter measures</label>
-      <div class="field" id="mtField"><span class="flabel">Measures go in a <code>_Measures</code> table, in a folder for each table</span>
-        <span class="seg" role="radiogroup" aria-label="Measures table">
-          <label><input type="radio" name="mtable" value="new"><span>Create _Measures</span></label>
-          <label><input type="radio" name="mtable" value="add"><span>Add to my _Measures</span></label>
+      <div class="field" id="mtField"><span class="flabel">Where will you paste the script? (Measures go in a <code>_Measures</code> table, in a folder for each table.)</span>
+        <span class="seg" role="radiogroup" aria-label="Where the script goes">
+          <label><input type="radio" name="mtable" value="new"><span>A new blank report</span></label>
+          <label><input type="radio" name="mtable" value="add"><span>A report with a _Measures table</span></label>
         </span></div>
       <p class="note" id="mtNote"></p>
     </div>
@@ -2199,19 +2199,9 @@ function validMake(){
   if (!(m.seed >= 1 && m.seed <= 999999999 && Number.isInteger(m.seed))) e.push('The seed is a whole number from 1 to 999,999,999.');
   return e;
 }
-// does the model saved on the home page (export or PBIP folder) have a _Measures table? null when none is saved
-function hasMeasuresTable(){
-  let v = null; try { v = JSON.parse(localStorage.getItem('sfpbi.shared.model') || 'null'); } catch (e) {}
-  if (!v || !v.text) return null;
-  const cell = x => x.replace(/^"|"$/g, '').replace(/^.*\[|\]$/g, '').trim();
-  let ti = -1;
-  for (const l of v.text.replace(/\r/g, '').split('\n')) {
-    const c = l.split('\t').map(cell);
-    if (ti < 0) { if (c.some(x => x.toLowerCase() === 'kind')) ti = c.findIndex(x => x.toLowerCase() === 'table'); continue; }
-    if (c[ti] === SD.MEASURES) return true;
-  }
-  return false;
-}
+// where the script goes: a new blank report ('new', the default) or a report that already has _Measures ('add').
+// Asked every time and never saved, and never guessed from the model saved on the home page (often another report)
+let mtChoice = 'new';
 function renderMake(){
   const m = state.make, inds = indsOf(m), ik = inds.join('+');
   SD.names = state.names;
@@ -2224,15 +2214,12 @@ function renderMake(){
   $('startDate').value = m.start === null ? '' : isoOf(m.start); $('endDate').value = m.end === null ? '' : isoOf(m.end); $('makeSeed').value = m.seed;
   document.querySelectorAll('input[name=style]').forEach(r => { r.checked = r.value === m.style; });
   $('addMeasures').checked = m.measures;
-  const found = hasMeasuresTable();
-  // Create is the default: the saved model may be another report, and a new blank report never has _Measures
-  const mt = m.mtable || 'new';
+  const mt = mtChoice;
   document.querySelectorAll('input[name=mtable]').forEach(r => { r.checked = r.value === mt; });
   $('mtField').hidden = $('mtNote').hidden = !m.measures;
   $('mtNote').innerHTML = mt === 'add'
-    ? 'The report you paste into needs a <code>_Measures</code> table. Without one, Apply says the parent <code>_Measures</code> cannot be located: choose <b>Create _Measures</b>.'
-    : (found ? 'Your saved model has a <code>_Measures</code> table. If you paste into that report, choose <b>Add to my _Measures</b>, or Power BI replaces the table and the measures in it. ' : 'If you paste into a report that already has a <code>_Measures</code> table, choose <b>Add to my _Measures</b>, or Power BI replaces the table and the measures in it. ')
-      + 'For a new blank report, keep <b>Create _Measures</b>.';
+    ? 'The measures are added to your report&rsquo;s <code>_Measures</code> table, and nothing in it is removed. If the report has no <code>_Measures</code> table, Apply fails with &ldquo;the parent &lsquo;_Measures&rsquo; cannot be located&rdquo;.'
+    : 'The script creates a <code>_Measures</code> table. Pasted into a report that already has one, it replaces that table and the measures in it.';
   $('styleNote').innerHTML = m.style === 'udf'
     ? 'One DAX function per table (named <code>' + SD.PKG + '.&hellip;</code>), and each table calls its function. Needs DAX user-defined functions, a preview feature in Power BI Desktop.'
     : 'Each table holds its own DAX, with no functions. Works in any recent Power BI Desktop.';
@@ -2369,7 +2356,7 @@ function init(){
   $('makeSeed').addEventListener('change', () => mk(m => { m.seed = Math.floor(+$('makeSeed').value); }));
   document.querySelectorAll('input[name=style]').forEach(r => r.addEventListener('change', () => mk(m => { m.style = r.value; })));
   $('addMeasures').addEventListener('change', () => mk(m => { m.measures = $('addMeasures').checked; }));
-  document.querySelectorAll('input[name=mtable]').forEach(r => r.addEventListener('change', () => mk(m => { m.mtable = r.value; })));
+  document.querySelectorAll('input[name=mtable]').forEach(r => r.addEventListener('change', () => mk(() => { mtChoice = r.value; })));
   $('tablePicks').addEventListener('change', e => { const c = e.target.closest('[data-tbl]'); if (!c) return; mk(m => { const ik = indKey(m), o = m.off[ik] = (Array.isArray(m.off[ik]) ? m.off[ik] : []).filter(x => x !== c.dataset.tbl); if (!c.checked) o.push(c.dataset.tbl); }); });
   $('makeTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) mk(m => { m.tab[indKey(m)] = b.dataset.tab; }); });
   $('copyTmdl').addEventListener('click', () => { if (state.tmdl) copyText(state.tmdl, $('copyTmdl')); });
