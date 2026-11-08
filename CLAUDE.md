@@ -102,7 +102,8 @@ Things to know:
   before MEMBER, with 1 marking women for Gender), or the old made-up names (`state.names`, saved as `ksd.names`, one choice
   for both modes; `SD.names` is set before an industry is built). `SD.nameIndex(k, off)`, `SD.person`, `SD.gender`: keys 1, 2,
   3... take the coach names first in a seed-shuffled order, then the rest, then mixed first and last names. In the DAX each
-  name list is one `|` text read with PATHITEM (functions `...Character.Name` / `...Character.Gender` in DAX functions mode).
+  name list is one `|` text read with PATHITEM (functions `...Character.FullName` / `...Character.Gender` in DAX functions mode; `Name` can't be a
+  segment of a function name, Desktop reads it as a keyword, found Nov 2026).
   Masking gives the n-th person the n-th character the same way. Mask mode's **Remove column** (`drop`) leaves a column out of
   the download (columns added in Power Query), and never decides what its linked columns become. Check: `sdnamestest.js`.
   DAX rules found in Desktop: `key` can't be a function parameter name (hence `row_key`), and a
@@ -119,6 +120,13 @@ Things to know:
   (`num_customers`) becomes one per industry (`num_customers_retail`, `num_customers_finance`): `SD.pmap` renames
   settings while an industry is built, so builders must call `P()` and `n()` inside the industry function, not at load.
   Per-industry choices (`off`, `tab`) are saved under the industries joined with `+`; sizes stay per industry.
+  Surveys (`svyhealth`, `svyretail`, `svyservice`, built by `survey(cfg)` in sd_ind.js): Respondents, Questions (a DATATABLE),
+  Responses and Answers (one row per question answered, long format; Score 1-5, 0-10 for NPS, 1/0 for Yes/No, blank for
+  comments; Answer as text; Sentiment for comments). Each response has a hidden satisfaction (`_sat`) its answers, NPS and
+  comment lean on, and each question its own bias. Answers rebuilds the response from its key, as Applications does in HR.
+  Check: `sdsurveytest.js`. Checked in Desktop (Nov 2026): each survey's DAX functions script pasted into TMDL view of a blank
+  report (Desktop offers the 1702 upgrade, then Refresh now) and all nine industries in one script, as functions and as plain
+  tables: every table Ready, every measure Ready, row counts, sums and distinct counts the same as the page preview.
   In plain calculated tables the settings are VARs chained straight into the table's own `VAR _Rows ... RETURN` (no
   RETURN of their own, since a table with no settings would start with a bare RETURN, which Desktop rejects).
 - `src/pages/sheet-recon.html` is a finished page (built in another chat) with a `@@SUITE@@`
@@ -244,15 +252,11 @@ through both.
 - Power Query Writer's fx functions TMDL script (`PWF.tmdl`): applying it in TMDL view, and the functions without their
   Documentation wrapper (fxTests.pq, 45 checks).
 
-- Sample Data Maker's character names in the DAX (PATHITEM over one long `|` text, MID for Gender), in both modes.
-- Sample Data Maker: a script with two or more industries combined (renamed tables and measures, per-industry sizes),
-  and the plain calculated tables after the RETURN fix (Accounts, Cost Centers and Departments failed before it).
 - Prompt files in Copilot (attaching the downloaded prompt; Copilot's file reply).
 - Prep for AI Writer's culture script: applying it in TMDL view (Preview should show only the culture), and whether Desktop keeps
   an entity the page added for a field it hadn't indexed yet.
-- Sample Data Maker's Make new data: applying the TMDL script in TMDL view (tables, relationships,
-  measures), including `ref table _Measures` into a report that already has one. The DAX itself is checked: every table function of all six industries, run as a DAX
-  query in Desktop (Oct 2026), gave the same row counts, sums and distinct counts as the page preview.
+- Sample Data Maker's Make new data: `ref table _Measures` into a report that already has one. (Applying the script in TMDL
+  view is checked, Nov 2026: see Sample Data Maker above.)
 - KPI Visualizer's reusable card functions (`kv_fn.js`): applying the TMDL script in TMDL view, and the HTML
   cards' hover tooltips in the HTML Content visual. The first version (43 functions, with Color and format helpers) ran as
   DAX queries on a real model in Desktop (Oct 2026), but its TMDL failed to apply (expression indented at the properties'

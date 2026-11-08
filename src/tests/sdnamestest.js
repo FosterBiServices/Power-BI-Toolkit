@@ -36,8 +36,8 @@ const { chromium } = require('playwright');
   const mk = await p.evaluate(() => { const c = makeModel(), t = c.model.tables.find(x => x.name === 'Employees'), rows = SD.tableRows(t, { p: c.args, seed: state.make.seed }), ch = SD.chars();
     const full = SD_NAMES.COACH.concat(SD_NAMES.MEMBER), fem = new Map(full.map(x => [x[0] + ' ' + x[1], !!x[2]])), coach = new Set(SD_NAMES.COACH.map(x => x[0] + ' ' + x[1]));
     return { n: rows.length, coach: rows.slice(0, Math.min(70, rows.length)).every(r => coach.has(r.Employee)), distinct: new Set(rows.map(r => r.Employee)).size, gender: rows.every(r => !fem.has(r.Employee) || (fem.get(r.Employee) ? 'Female' : 'Male') === r.Gender),
-      sample: rows.slice(0, 3).map(r => r.Employee + ' (' + r.Gender + ')').join(', '), udf: /function 'FosterBIServices\.SampleData\.Character\.Name'|function FosterBIServices\.SampleData\.Character\.Name/.test(state.tmdl) || state.tmdl.includes('Character.Name = ```') }; });
-  console.log('HR employees', mk.n, '| first 70 coach', mk.coach, '| distinct', mk.distinct, '| gender matches', mk.gender, '|', mk.sample, '| Character.Name function', mk.udf);
+      sample: rows.slice(0, 3).map(r => r.Employee + ' (' + r.Gender + ')').join(', '), udf: /function 'FosterBIServices\.SampleData\.Character\.FullName'|function FosterBIServices\.SampleData\.Character\.FullName/.test(state.tmdl) || state.tmdl.includes('Character.FullName = ```') }; });
+  console.log('HR employees', mk.n, '| first 70 coach', mk.coach, '| distinct', mk.distinct, '| gender matches', mk.gender, '|', mk.sample, '| Character.FullName function', mk.udf);
   await p.click('label:has(input[name=style][value=inline])'); await p.waitForTimeout(200);
   console.log('plain tables: PATHITEM', await p.evaluate(() => /PATHITEM\( "Rachel\|Monica/.test(state.tmdl)), '| no functions', await p.evaluate(() => !/^\tfunction /m.test(state.tmdl)));
   await p.click('label:has(input[name=namesMake][value=made])'); await p.waitForTimeout(200);

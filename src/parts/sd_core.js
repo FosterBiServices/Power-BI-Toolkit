@@ -124,7 +124,7 @@ const SD = (() => {
     }
     return chars;
   };
-  const CHAR_NAME = PKG + '.Character.Name', CHAR_GENDER = PKG + '.Character.Gender';
+  const CHAR_NAME = PKG + '.Character.FullName', CHAR_GENDER = PKG + '.Character.Gender';
   const nameDax = (x, ch) => 'PATHITEM( ' + q(ch.first.join('|')) + ', MOD( ' + x + ', ' + ch.n + ' ) + 1 ) & " " & PATHITEM( ' + q(ch.last.join('|')) + ', MOD( ' + x + ' + INT( ' + x + ' / ' + ch.n + ' ), ' + ch.n + ' ) + 1 )';
   const genderDax = (x, ch) => 'IF( MID( ' + q(ch.fem) + ', MOD( ' + x + ', ' + ch.n + ' ) + 1, 1 ) = "F", "Female", "Male" )';
   // the name index of a whole-number key; off gives another set of people (providers, agents) for the same keys

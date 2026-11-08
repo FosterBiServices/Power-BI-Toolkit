@@ -785,7 +785,7 @@ const SD = (() => {
     }
     return chars;
   };
-  const CHAR_NAME = PKG + '.Character.Name', CHAR_GENDER = PKG + '.Character.Gender';
+  const CHAR_NAME = PKG + '.Character.FullName', CHAR_GENDER = PKG + '.Character.Gender';
   const nameDax = (x, ch) => 'PATHITEM( ' + q(ch.first.join('|')) + ', MOD( ' + x + ', ' + ch.n + ' ) + 1 ) & " " & PATHITEM( ' + q(ch.last.join('|')) + ', MOD( ' + x + ' + INT( ' + x + ' / ' + ch.n + ' ), ' + ch.n + ' ) + 1 )';
   const genderDax = (x, ch) => 'IF( MID( ' + q(ch.fem) + ', MOD( ' + x + ', ' + ch.n + ' ) + 1, 1 ) = "F", "Female", "Male" )';
   // the name index of a whole-number key; off gives another set of people (providers, agents) for the same keys
@@ -1442,16 +1442,185 @@ const SD_IND = (() => {
     sizes: [['num_tickets', 'Tickets', 10000, 100000], ['num_customers', 'Customers', 800, 3600], ['num_agents', 'Agents', 30, 900]]
   });
 
+  /* ---------- Surveys: healthcare, retail and customer service ----------
+     Each survey has the same four tables: Respondents, Questions (the survey itself), Responses (one row per survey
+     sent back) and Answers (one row per question answered, in long format, the shape Power BI likes best).
+     Every response has a hidden satisfaction (_sat) that its answers lean on, so the scores, the NPS and the
+     comments agree with each other. Each question has its own lean (bias), so some score lower (wait time, price).
+     Some responses stop part way (Completed is FALSE) and comment boxes are often left empty. */
+  const SCALES = { Rating: ['Very poor', 'Poor', 'Fair', 'Good', 'Excellent'], Agreement: ['Strongly disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly agree'],
+    Ease: ['Very difficult', 'Difficult', 'Neither easy nor difficult', 'Easy', 'Very easy'] };
+  const SCALE_OF = t => SCALES[t] ? '1 to 5' : t === 'NPS' ? '0 to 10' : t === 'Yes/No' ? 'Yes/No' : 'Text';
+  /* cfg: { id: function segment, noun: what a respondent is, people: [cols, meta], resp: [cols, meta] (its _d column
+     is the dimension that moves satisfaction, adj the lean for each of its values), questions: [[short, question,
+     section, type, bias, skip]], comments: { pos, neu, neg }, extra: more measures, adj, npsLift: how far up NPS leans, channels: [[how it was answered, weight]] } */
+  const survey = cfg => {
+    const fn = PKG + '.' + cfg.id + '.', Q = cfg.questions, NQ = Q.length, npsQ = Q.findIndex(q => q[3] === 'NPS') + 1;
+    const qAt = i => Q.map(q => q[i]);
+    // a response, worked out from its key (k), so Answers can rebuild it (Answers needs only _d, the first column)
+    const respCols = all => [...(all ? cfg.resp[0] : cfg.resp[0].slice(0, 1)), ['_sat', add(pow(R(k, 11), 0.45), at(cfg.adj, sub(C('_d'), 1)))],
+      ['Completed', ge(R(k, 5), 0.12)], ['_answered', iff(C('Completed'), NQ, add(1, int(mul(R(k, 6), NQ - 1))))],
+      ['_nps', min(10, max(0, int(mul(add(add(mul(C('_sat'), 0.85), mul(R(k, 12), 0.3)), cfg.npsLift - 0.05), 11))))]];
+    const qn = C('Question Number'), ak = C('_ak');
+    return {
+      tables: [
+        { name: 'Respondents', fn: fn + 'Respondents', params: [n('num_respondents'), ['end_date', 'DATETIME'], seedP], desc: cfg.peopleDesc,
+          stages: [{ series: P('num_respondents') }, { cols: [['RespondentKey', k], ['_ni', nameIndex(k)], ['Respondent', person(C('_ni'))], ['Gender', SD.gender(C('_ni'))],
+            ['_age', add(18, int(mul(pow(R(k, 1), 1.1), 70)))],
+            ['Age Band', iff(lt(C('_age'), 25), '18-24', iff(lt(C('_age'), 35), '25-34', iff(lt(C('_age'), 50), '35-49', iff(lt(C('_age'), 65), '50-64', '65+'))))],
+            ...cfg.people[0], ['Region', pick(REGIONS, R(k, 4))]] }],
+          meta: [key('RespondentKey', 'Key that links to Responses.'), col('Respondent', 'text', 'Full name of the ' + cfg.noun + '.'), col('Gender', 'text', 'Female or Male.'),
+            col('Age Band', 'text', '18-24, 25-34, 35-49, 50-64 or 65+.'), ...cfg.people[1], col('Region', 'text', 'North, South, East, West or Central.')] },
+        { name: 'Questions', fn: fn + 'Questions', params: [], desc: 'The survey: one row per question, with its section, type and answer scale.',
+          stages: [{ data: { cols: [['QuestionKey', 'int'], ['Short Name', 'text'], ['Question', 'text'], ['Section', 'text'], ['Question Type', 'text'], ['Scale', 'text']],
+            rows: Q.map((q, i) => [i + 1, q[0], q[1], q[2], q[3], SCALE_OF(q[3])]) } }],
+          meta: [key('QuestionKey', 'Key that links to Answers. Also the order the questions are asked in.'), col('Short Name', 'text', 'A short label for visuals.', { s: 'QuestionKey' }),
+            col('Question', 'text', 'The question as the respondent saw it.', { s: 'QuestionKey' }), col('Section', 'text', 'Part of the survey the question is in.'),
+            col('Question Type', 'text', 'Rating, Agreement, Ease (1 to 5), NPS (0 to 10), Yes/No or Comment.'), col('Scale', 'text', '1 to 5, 0 to 10, Yes/No or Text.')] },
+        { name: 'Responses', fn: fn + 'Responses', params: [n('num_responses'), ...dts, n('num_respondents'), seedP], desc: 'Survey responses: one row per survey sent back, with when, how, whether it was finished and the NPS score.',
+          stages: [{ series: P('num_responses') }, { cols: respCols(true) }, { cols: [['ResponseKey', k], ['Response ID', cat('R-', pad(add(100000, k), '000000'))],
+            ['RespondentKey', add(int(mul(pow(R(k, 1), 1.3), P('num_respondents'))), 1)], ['Response Date', dateIn(k, 3, 0.95)],
+            ['Survey Channel', wpick(cfg.channels, R(k, 4))],
+            ['Questions Answered', C('_answered')],
+            ['NPS Score', iff(ge(C('_answered'), npsQ), C('_nps'), blank())],
+            ['NPS Group', iff(lt(C('_answered'), npsQ), blank(), iff(ge(C('_nps'), 9), 'Promoter', iff(ge(C('_nps'), 7), 'Passive', 'Detractor')))]] }],
+          meta: [key('ResponseKey', 'Key that links to Answers.'), col('Response ID', 'text', 'Response number.'), key('RespondentKey', 'Links to Respondents.'),
+            col('Response Date', 'date', 'When the survey was sent back. Links to Date.'), col('Survey Channel', 'text', 'How the survey was answered.'), ...cfg.resp[1],
+            col('Completed', 'bool', 'TRUE when every question was reached; FALSE when the respondent stopped part way.'),
+            col('Questions Answered', 'int', 'How far the respondent got, in questions (1 to ' + NQ + ').', { f: '0' }),
+            col('NPS Score', 'int', 'Likelihood to recommend, 0 to 10. Blank when they stopped before that question.', { f: '0' }),
+            col('NPS Group', 'text', 'Promoter (9-10), Passive (7-8) or Detractor (0-6).')] },
+        { name: 'Answers', fn: fn + 'Answers', params: [n('num_responses'), seedP], desc: 'Answers: one row per question answered on a response, with the score and the answer as text (comments included).',
+          stages: [{ series: P('num_responses') }, { cols: respCols() }, { expand: lit(NQ), as: 'Question Number' },
+            { cols: [['_ak', add(mul(k, 100), qn)], ['_t', at(qAt(3), sub(qn, 1))],
+              ['_v', add(add(mul(C('_sat'), 0.7), mul(R(ak, 1), 0.3)), at(qAt(4), sub(qn, 1)))]] },
+            { filter: and(le(qn, C('_answered')), ge(R(ak, 2), at(qAt(5), sub(qn, 1)))) },
+            { cols: [['AnswerKey', ak], ['ResponseKey', k], ['QuestionKey', qn],
+              ['Score', iff(eq(C('_t'), 'NPS'), C('_nps'), iff(eq(C('_t'), 'Yes/No'), iff(gt(C('_v'), 0.42), 1, 0), iff(eq(C('_t'), 'Comment'), blank(), max(1, min(5, add(1, int(mul(C('_v'), 5))))))))],
+              ['Sentiment', iff(eq(C('_t'), 'Comment'), iff(ge(C('_v'), 0.68), 'Positive', iff(ge(C('_v'), 0.45), 'Neutral', 'Negative')), blank())]] },
+            { cols: [['Answer', iff(eq(C('_t'), 'Comment'),
+              iff(eq(C('Sentiment'), 'Positive'), pick(cfg.comments.pos, R(ak, 3)), iff(eq(C('Sentiment'), 'Neutral'), pick(cfg.comments.neu, R(ak, 3)), pick(cfg.comments.neg, R(ak, 3)))),
+              iff(eq(C('_t'), 'NPS'), cat('', C('Score')), iff(eq(C('_t'), 'Yes/No'), iff(eq(C('Score'), 1), 'Yes', 'No'),
+                iff(eq(C('_t'), 'Rating'), at(SCALES.Rating, sub(C('Score'), 1)), iff(eq(C('_t'), 'Agreement'), at(SCALES.Agreement, sub(C('Score'), 1)), at(SCALES.Ease, sub(C('Score'), 1)))))))]] }],
+          meta: [key('AnswerKey', 'Answer number.'), key('ResponseKey', 'Links to Responses.'), key('QuestionKey', 'Links to Questions.'),
+            col('Score', 'int', '1 to 5 (5 is best), 0 to 10 for NPS, 1 or 0 for Yes or No. Blank for comments.', { f: '0' }),
+            col('Answer', 'text', 'The answer as the respondent picked it, or their comment.'),
+            col('Sentiment', 'text', 'Positive, Neutral or Negative, for comments. Blank for other questions.')] },
+        dateTable()],
+      rels: [['Responses', 'RespondentKey', 'Respondents', 'RespondentKey'], ['Answers', 'ResponseKey', 'Responses', 'ResponseKey'],
+        ['Answers', 'QuestionKey', 'Questions', 'QuestionKey'], ['Responses', 'Response Date', 'Date', 'Date']],
+      measures: { Responses: [
+        { n: 'Response Count', x: 'COUNTROWS( Responses )', f: '#,0', d: 'Surveys sent back.' },
+        { n: 'Respondent Count', x: 'DISTINCTCOUNT( Responses[RespondentKey] )', f: '#,0', d: 'Different people who answered.' },
+        { n: 'Completion Rate %', x: 'DIVIDE( CALCULATE( COUNTROWS( Responses ), Responses[Completed] = TRUE() ), [Response Count] )', f: '0.0%', d: 'Responses where every question was reached.' },
+        { n: 'Promoters %', x: 'DIVIDE( CALCULATE( COUNTROWS( Responses ), Responses[NPS Group] = "Promoter" ), CALCULATE( COUNTROWS( Responses ), NOT ISBLANK( Responses[NPS Score] ) ) )', f: '0.0%', d: 'Share of NPS answers that scored 9 or 10.' },
+        { n: 'Detractors %', x: 'DIVIDE( CALCULATE( COUNTROWS( Responses ), Responses[NPS Group] = "Detractor" ), CALCULATE( COUNTROWS( Responses ), NOT ISBLANK( Responses[NPS Score] ) ) )', f: '0.0%', d: 'Share of NPS answers that scored 0 to 6.' },
+        { n: 'NPS', x: '( [Promoters %] - [Detractors %] ) * 100', f: '0', d: 'Net Promoter Score: promoters less detractors, from -100 to 100.' }],
+        Answers: [
+        { n: 'Answer Count', x: 'COUNTROWS( Answers )', f: '#,0', d: 'Questions answered.' },
+        { n: 'Average Score', x: 'CALCULATE( AVERAGE( Answers[Score] ), Questions[Scale] = "1 to 5" )', f: '0.00', d: 'Average of the 1 to 5 answers (5 is best).' },
+        { n: 'Top 2 Box %', x: 'DIVIDE( CALCULATE( COUNTROWS( Answers ), Questions[Scale] = "1 to 5", Answers[Score] >= 4 ), CALCULATE( COUNTROWS( Answers ), Questions[Scale] = "1 to 5" ) )', f: '0.0%', d: 'Share of 1 to 5 answers that were a 4 or 5.' },
+        { n: 'Bottom 2 Box %', x: 'DIVIDE( CALCULATE( COUNTROWS( Answers ), Questions[Scale] = "1 to 5", Answers[Score] <= 2 ), CALCULATE( COUNTROWS( Answers ), Questions[Scale] = "1 to 5" ) )', f: '0.0%', d: 'Share of 1 to 5 answers that were a 1 or 2.' },
+        { n: 'Yes %', x: 'DIVIDE( CALCULATE( COUNTROWS( Answers ), Questions[Scale] = "Yes/No", Answers[Score] = 1 ), CALCULATE( COUNTROWS( Answers ), Questions[Scale] = "Yes/No" ) )', f: '0.0%', d: 'Share of Yes or No answers that were Yes.' },
+        { n: 'Comment Count', x: 'CALCULATE( COUNTROWS( Answers ), Questions[Question Type] = "Comment" )', f: '#,0', d: 'Comments left.' },
+        { n: 'Negative Comments %', x: 'DIVIDE( CALCULATE( COUNTROWS( Answers ), Answers[Sentiment] = "Negative" ), [Comment Count] )', f: '0.0%', d: 'Share of comments that were negative.' },
+        ...cfg.extra] },
+      sizes: [['num_responses', 'Responses', 2000, 30000], ['num_respondents', 'Respondents', 1200, 3600]]
+    };
+  };
+  // Top 2 Box % of question 1, the survey's overall question
+  const q1Top = (nm, d) => ({ n: nm, x: 'DIVIDE( CALCULATE( COUNTROWS( Answers ), Answers[QuestionKey] = 1, Answers[Score] >= 4 ), CALCULATE( COUNTROWS( Answers ), Answers[QuestionKey] = 1 ) )', f: '0.0%', d });
+  const healthSurvey = () => survey({ id: 'HealthSurvey', noun: 'patient', peopleDesc: 'Patients who answered the survey, with age band, gender, insurance and region.',
+    people: [[['Insurance', wpick([['Commercial', 45], ['Medicare', 25], ['Medicaid', 18], ['Self-pay', 7], ['Other', 5]], R(k, 3))]],
+      [col('Insurance', 'text', 'Who pays: Commercial, Medicare, Medicaid, Self-pay or Other.')]],
+    resp: [[['_d', wpick([[1, 55], [2, 20], [3, 15], [4, 10]], R(k, 2))], ['Visit Type', at(['Outpatient', 'Inpatient', 'Emergency', 'Telehealth'], sub(C('_d'), 1))],
+      ['Department', iff(eq(C('_d'), 3), 'Emergency Medicine', pick(['Cardiology', 'Orthopedics', 'Pediatrics', 'Internal Medicine', 'Oncology', 'Neurology', 'General Surgery'], R(k, 7)))],
+      ['Facility', iff(eq(C('_d'), 4), 'Virtual care', wpick([['Main Hospital', 50], ['North Clinic', 20], ['East Clinic', 15], ['Riverside Clinic', 15]], R(k, 8)))]],
+      [col('Visit Type', 'text', 'Outpatient, Inpatient, Emergency or Telehealth.'), col('Department', 'text', 'Department that gave the care.'), col('Facility', 'text', 'Where the care took place.')]],
+    adj: [0.02, -0.03, -0.14, 0.04], npsLift: 0.1,
+    channels: [['Email', 45], ['Text message', 30], ['Phone', 15], ['Paper', 10]],
+    questions: [
+      ['Overall care', 'Overall, how would you rate the care you received?', 'Overall', 'Rating', 0, 0],
+      ['Booking', 'How easy was it to get an appointment?', 'Access', 'Ease', -0.05, 0.03],
+      ['Wait time', 'How would you rate the time you waited to be seen?', 'Access', 'Rating', -0.2, 0.03],
+      ['Staff courtesy', 'Staff treated me with courtesy and respect.', 'Staff', 'Agreement', 0.1, 0.03],
+      ['Clear explanations', 'My doctor explained things in a way I could understand.', 'Doctor', 'Agreement', 0.05, 0.03],
+      ['Listened', 'My doctor listened carefully to me.', 'Doctor', 'Agreement', 0.05, 0.03],
+      ['Cleanliness', 'How would you rate the cleanliness of the facility?', 'Facility', 'Rating', 0.05, 0.05],
+      ['Discharge instructions', 'Were you given clear instructions for after your visit?', 'Follow-up', 'Yes/No', 0.05, 0.04],
+      ['Cost explained', 'Did you know what your visit would cost before it?', 'Billing', 'Yes/No', -0.25, 0.06],
+      ['Recommend', 'How likely are you to recommend us to friends and family?', 'Overall', 'NPS', 0, 0],
+      ['Comments', 'Is there anything else you would like to tell us about your visit?', 'Comments', 'Comment', 0, 0.6]],
+    comments: {
+      pos: ['The nurses were wonderful and kept me informed.', 'Dr. took the time to answer all my questions.', 'Quick and friendly service from check-in to check-out.', 'Very clean and calm. I felt well cared for.', 'Booking online was easy and I was seen on time.', 'Everyone was kind and professional.'],
+      neu: ['Care was fine but the waiting room was crowded.', 'Good doctor, but parking was hard to find.', 'It took a while to get an appointment, the visit itself was good.', 'Billing letter was confusing, care was okay.', 'Average experience overall.'],
+      neg: ['I waited over two hours to be seen.', 'Nobody explained my bill or what it would cost.', 'Staff seemed rushed and did not listen.', 'I was never called back with my results.', 'Hard to get an appointment and the phone line was always busy.', 'Discharge instructions were unclear.'] },
+    extra: [q1Top('Overall Care Top Box %', 'Share of patients who rated their overall care Good or Excellent.')] });
+  const retailSurvey = () => survey({ id: 'RetailSurvey', noun: 'shopper', peopleDesc: 'Shoppers who answered the survey, with age band, gender, loyalty tier and region.',
+    people: [[['Loyalty Tier', wpick([['None', 40], ['Silver', 30], ['Gold', 20], ['Platinum', 10]], R(k, 3))]],
+      [col('Loyalty Tier', 'text', 'None, Silver, Gold or Platinum.')]],
+    resp: [[['_d', wpick([[1, 50], [2, 30], [3, 12], [4, 8]], R(k, 2))], ['Shopping Channel', at(['In store', 'Online', 'Mobile app', 'Click and collect'], sub(C('_d'), 1))],
+      ['Category', wpick([['Electronics', 25], ['Home', 30], ['Outdoor', 20], ['Apparel', 25]], R(k, 7))],
+      ['Store', iff(or(eq(C('_d'), 1), eq(C('_d'), 4)), cat('Store ', pad(add(int(mul(R(k, 8), 12)), 1), '00')), 'Online')]],
+      [col('Shopping Channel', 'text', 'In store, Online, Mobile app or Click and collect.'), col('Category', 'text', 'Electronics, Home, Outdoor or Apparel: what they bought.'), col('Store', 'text', 'Store the visit or pickup was at; Online for online and app orders.')]],
+    adj: [0, -0.02, 0.03, -0.08], npsLift: 0.05,
+    channels: [['Email', 40], ['Receipt link', 30], ['Mobile app', 20], ['Text message', 10]],
+    questions: [
+      ['Overall experience', 'Overall, how would you rate your shopping experience?', 'Overall', 'Rating', 0, 0],
+      ['Easy to find', 'It was easy to find what I was looking for.', 'Shopping', 'Agreement', -0.05, 0.03],
+      ['Value for money', 'The products were good value for money.', 'Price', 'Agreement', -0.15, 0.03],
+      ['Helpful staff', 'Staff were friendly and helpful.', 'Staff', 'Agreement', 0.05, 0.08],
+      ['Checkout', 'How easy was checkout?', 'Checkout', 'Ease', 0, 0.03],
+      ['Product quality', 'How would you rate the quality of what you bought?', 'Product', 'Rating', 0.05, 0.04],
+      ['In stock', 'Was everything you wanted in stock?', 'Product', 'Yes/No', -0.1, 0.04],
+      ['Return again', 'I will shop with you again.', 'Loyalty', 'Agreement', 0.05, 0.03],
+      ['Recommend', 'How likely are you to recommend us to a friend?', 'Overall', 'NPS', 0, 0],
+      ['Comments', 'Is there anything we could do better?', 'Comments', 'Comment', 0, 0.65]],
+    comments: {
+      pos: ['Great prices and the staff were really helpful.', 'Found everything I needed quickly.', 'Checkout was fast and easy.', 'Love the new store layout.', 'Delivery came a day early. Very happy.', 'Quality is excellent for the price.'],
+      neu: ['Good range, but a bit pricey.', 'Store was fine, the lines were long at the weekend.', 'Website is okay, search could be better.', 'Item was fine. Packaging was more than needed.', 'Nothing special, nothing wrong.'],
+      neg: ['The item I wanted was out of stock again.', 'Nobody was around to help me.', 'Checkout took far too long.', 'The product broke after a week.', 'Delivery was late and nobody told me.', 'Prices have gone up a lot.'] },
+    extra: [q1Top('Overall Satisfaction %', 'Share of shoppers who rated their experience Good or Excellent.')] });
+  const serviceSurvey = () => survey({ id: 'ServiceSurvey', noun: 'customer', peopleDesc: 'Customers who answered the survey after contacting support, with their company, segment and plan.',
+    people: [[['Company', company(k, 20)], ['Segment', wpick([['Enterprise', 15], ['Mid-market', 35], ['Small business', 50]], R(k, 3))], ['Plan', wpick([['Basic', 45], ['Standard', 35], ['Premium', 20]], R(k, 5))]],
+      [col('Company', 'text', 'Company the customer works for.'), col('Segment', 'text', 'Enterprise, Mid-market or Small business.'), col('Plan', 'text', 'Basic, Standard or Premium.')]],
+    resp: [[['_d', wpick([[1, 35], [2, 30], [3, 25], [4, 10]], R(k, 2))], ['Contact Channel', at(['Phone', 'Email', 'Chat', 'Web form'], sub(C('_d'), 1))],
+      ['Team', pick(['Billing', 'Technical', 'Accounts', 'General'], R(k, 7))], ['Agent', person(nameIndex(add(int(mul(R(k, 8), 24)), 1), 900))],
+      ['Contacts to Resolve', wpick([[1, 62], [2, 23], [3, 10], [4, 5]], R(k, 9))]],
+      [col('Contact Channel', 'text', 'Phone, Email, Chat or Web form: how they reached support.'), col('Team', 'text', 'Billing, Technical, Accounts or General.'), col('Agent', 'text', 'Agent who handled the contact.'),
+        col('Contacts to Resolve', 'int', 'How many times they had to get in touch, 1 to 4.', { f: '0' })]],
+    adj: [0.02, -0.06, 0.04, -0.1], npsLift: 0.02,
+    channels: [['Email', 55], ['After chat', 25], ['Text message', 15], ['Phone', 5]],
+    questions: [
+      ['Satisfaction', 'How satisfied were you with the support you received?', 'Overall', 'Rating', 0, 0],
+      ['Understood issue', 'The agent understood my issue.', 'Agent', 'Agreement', 0.05, 0.03],
+      ['Knowledgeable', 'The agent was knowledgeable.', 'Agent', 'Agreement', 0.05, 0.03],
+      ['Quick answer', 'I got an answer quickly.', 'Speed', 'Agreement', -0.15, 0.03],
+      ['Easy to reach', 'It was easy to reach the right person.', 'Access', 'Agreement', -0.1, 0.03],
+      ['Effort', 'How easy was it to get your issue sorted?', 'Effort', 'Ease', -0.03, 0.02],
+      ['Resolved', 'Was your issue resolved?', 'Outcome', 'Yes/No', 0.02, 0.02],
+      ['Recommend', 'How likely are you to recommend us to a colleague?', 'Overall', 'NPS', 0, 0],
+      ['Comments', 'How could we have helped you better?', 'Comments', 'Comment', 0, 0.6]],
+    comments: {
+      pos: ['The agent fixed it on the first call.', 'Fast, friendly and knew exactly what to do.', 'Chat support was quick and clear.', 'Thank you for following up so quickly.', 'Problem solved in minutes.', 'Very patient and explained every step.'],
+      neu: ['Got there in the end, it took a couple of emails.', 'Fine, but I had to repeat my account details.', 'Helpful once I reached someone.', 'Answer was correct but a bit slow.', 'Okay experience.'],
+      neg: ['I was passed between three teams.', 'Waited on hold for 40 minutes.', 'My issue is still not fixed.', 'Nobody replied to my email for days.', 'The agent did not understand the problem.', 'I had to explain everything again each time.'] },
+    extra: [q1Top('CSAT %', 'Share of customers who rated the support Good or Excellent (customer satisfaction).'),
+      { n: 'Customer Effort Score', x: 'CALCULATE( AVERAGE( Answers[Score] ), Questions[Question Type] = "Ease" )', f: '0.00', d: 'Average of the ease question, 1 (very difficult) to 5 (very easy).' }] });
+
   const LIST = [
     { id: 'retail', name: 'Retail sales', blurb: 'Orders, customers, products and stores.', kpis: 'Sales, gross margin, orders, average order value, units, active customers.', make: retail },
     { id: 'hr', name: 'HR', blurb: 'Employees, absences, job openings, applicants and interviews.', kpis: 'Headcount, hires, terminations, turnover, salary, tenure, absence days, open requisitions, days to fill, applications, interviews, offer acceptance.', make: hr },
     { id: 'finance', name: 'Finance', blurb: 'General ledger actuals and budget, customers and invoices.', kpis: 'Actual, budget, variance, revenue, gross margin, net income, receivables, days to pay.', make: finance },
     { id: 'health', name: 'Healthcare', blurb: 'Patients, providers and encounters.', kpis: 'Encounters, length of stay, readmission rate, ED wait, satisfaction, collection rate.', make: health },
     { id: 'mfg', name: 'Manufacturing', blurb: 'Production by machine and shift, products and machines.', kpis: 'Units, scrap rate, downtime, availability, performance, quality, OEE.', make: manufacturing },
-    { id: 'service', name: 'Customer service', blurb: 'Tickets, agents and customers.', kpis: 'Tickets, backlog, first response, resolution time, SLA met, CSAT, reopen rate.', make: service }
+    { id: 'service', name: 'Customer service', blurb: 'Tickets, agents and customers.', kpis: 'Tickets, backlog, first response, resolution time, SLA met, CSAT, reopen rate.', make: service },
+    { id: 'svyhealth', name: 'Healthcare survey', blurb: 'Patient experience survey: patients, questions, responses and answers.', kpis: 'Responses, completion rate, NPS, average score, top 2 box, yes %, comments and their sentiment.', make: healthSurvey },
+    { id: 'svyretail', name: 'Retail survey', blurb: 'Shopper satisfaction survey: shoppers, questions, responses and answers.', kpis: 'Responses, completion rate, NPS, satisfaction, top 2 box, in stock %, comments and their sentiment.', make: retailSurvey },
+    { id: 'svyservice', name: 'Customer service survey', blurb: 'After-contact survey: customers, questions, responses and answers.', kpis: 'Responses, CSAT, NPS, customer effort score, resolved %, comments and their sentiment.', make: serviceSurvey }
   ];
   const get = id => LIST.find(x => x.id === id) || LIST[0];
-  const SHORT = { retail: 'Retail', hr: 'HR', finance: 'Finance', health: 'Health', mfg: 'Manufacturing', service: 'Service' };
+  const SHORT = { retail: 'Retail', hr: 'HR', finance: 'Finance', health: 'Health', mfg: 'Manufacturing', service: 'Service', svyhealth: 'Health Survey', svyretail: 'Retail Survey', svyservice: 'Service Survey' };
 
   /* Two or more industries in one model. They share one Date table. A table or measure name an earlier industry
      already uses gets the industry's name in front (Finance Customers, Finance Gross Margin %), and its measures
@@ -2090,8 +2259,11 @@ function renderMake(){
   $('makeCols').innerHTML = '<div class="tablewrap"><table><thead><tr><th>Column</th><th>Type</th><th>What it holds</th></tr></thead><tbody>'
     + t.meta.map(x => '<tr><td class="nm">' + esc(x.n) + (x.h ? ' <span class="muted">(hidden)</span>' : '') + '</td><td class="fmt">' + ({ int: 'Whole number', dec: 'Decimal', text: 'Text', date: 'Date', bool: 'True/false' })[x.t] + '</td><td>' + esc(x.d) + '</td></tr>').join('')
     + '</tbody></table></div>' + (ms.length ? '<h3 class="sub">Measures</h3><div class="tablewrap"><table><thead><tr><th>Measure</th><th>What it shows</th></tr></thead><tbody>' + ms.map(x => '<tr><td class="nm">' + esc(x.n) + '</td><td>' + esc(x.d) + '</td></tr>').join('') + '</tbody></table></div>' : '');
-  const steps = (m.style === 'udf' ? ['In Power BI Desktop, go to <b>File</b> &gt; <b>Options and settings</b> &gt; <b>Options</b> &gt; <b>Preview features</b>, turn on <b>DAX user-defined functions</b> and restart Desktop.'] : [])
-    .concat(['Open a report (a new blank one works) and go to <b>TMDL view</b>.', 'Paste the script into a new tab and select <b>Apply</b>.', 'If a table shows no rows, select <b>Refresh</b> on the Home tab.']);
+  const steps = (m.style === 'udf' ? ['In Power BI Desktop, go to <b>File</b> &gt; <b>Options and settings</b> &gt; <b>Options</b> &gt; <b>Preview features</b>. If <b>DAX user-defined functions</b> is listed, turn it on and restart Desktop.'] : [])
+    .concat(['Open a report (a new blank one works) and go to <b>TMDL view</b>.',
+      'Paste the script into a new tab and select <b>Apply</b>.' + (m.style === 'udf' ? ' Before you apply, the Problems list says it cannot find the ' + SD.PKG + ' functions. That&rsquo;s expected: the script adds them.' : ''),
+      ...(m.style === 'udf' ? ['If Desktop asks to upgrade the compatibility level (DAX functions need 1702), select <b>Yes</b>.'] : []),
+      'When the yellow bar says calculated objects need to be refreshed, select <b>Refresh now</b>.']);
   $('applySteps').innerHTML = steps.map(s => '<li>' + s + '</li>').join('');
   state.tmdl = SD.script(c.model, { mode: m.style, args: c.args, measures: m.measures, measureTable: mt, tables: on.map(x => x.name) });
   $('tmdlView').innerHTML = hlTmdl(state.tmdl);
