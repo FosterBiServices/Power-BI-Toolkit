@@ -177,7 +177,7 @@ const PW = (() => {
   }
 
   const VALIDATION = ['It is syntactically valid Power Query M.', 'Every function has the required arguments.', 'Every each expression uses the correct context: _ for the current value or [Column] for row context.',
-    'All parentheses (), braces {}, brackets [], quotes, and commas are correctly paired and positioned.', 'Every step references an existing earlier step.', 'The in expression returns the final step.',
+    'All parentheses (), braces {}, brackets [], quotes, and commas are correctly paired and positioned.', 'Every step references an existing earlier step.', 'The query starts with let and ends with in followed by the name of the final step; every let written inside a step has its own in.',
     'No step was added solely because it appeared in an example or rule when the TASK did not require that operation.', 'No columns, types, values, paths, URLs, parameters, or business rules were invented.',
     'The query performs everything in TASK and nothing beyond TASK.'];
   const FN_CHECK = 'Every function called by name is a Power Query function or is listed under FUNCTIONS THAT ALREADY EXIST.';
