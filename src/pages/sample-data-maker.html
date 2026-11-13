@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="lib/xlsx.full.min.js"></script>
 <style>
 :root{
   --brand:#0A2D5A;
@@ -2043,7 +2043,7 @@ function sheetToTable(ws, file, sheet, csv, d1904){
 }
 async function readFile(f){
   const csv = /\.(csv|tsv|txt)$/i.test(f.name);
-  if (typeof XLSX === 'undefined') throw new Error('The spreadsheet reader didn’t load. Check your internet connection and reload the page.');
+  if (typeof XLSX === 'undefined') throw new Error('The spreadsheet reader didn’t load. Reload the page.');
   const wb = csv ? XLSX.read(await f.text(), { type: 'string', raw: true, FS: /\.tsv$/i.test(f.name) ? '\t' : undefined }) : XLSX.read(await f.arrayBuffer(), { type: 'array', cellNF: true, cellDates: false });
   const d1904 = !!(wb.Workbook && wb.Workbook.WBProps && wb.Workbook.WBProps.date1904);
   return wb.SheetNames.map(s => sheetToTable(wb.Sheets[s], f.name, csv ? f.name.replace(/\.[^.]+$/, '') : s, csv, d1904)).filter(Boolean);

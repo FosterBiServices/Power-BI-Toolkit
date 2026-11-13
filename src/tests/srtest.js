@@ -3,8 +3,6 @@ const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1280, height: 900 } })).newPage(); const errs = [];
   p.on('pageerror', e => errs.push(e.message));
-  // Offline? Point XLSX_FILE at a local xlsx.full.min.js (0.18.5) to stand in for the CDN copy.
-  if (process.env.XLSX_FILE) await p.route(/cdnjs\.cloudflare\.com.*xlsx/, r => r.fulfill({ path: process.env.XLSX_FILE, contentType: 'application/javascript' }));
   await p.goto('http://localhost:8765/sheet-recon.html'); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(1200);
   const vis = () => p.$$eval('#mapBody tr[data-i]', r => r.filter(x => !x.hidden).length);
   console.log('example rows', await vis(), '(expect 7)');

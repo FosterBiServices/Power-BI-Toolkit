@@ -78,7 +78,7 @@ function sheetToTable(ws, file, sheet, csv, d1904){
 }
 async function readFile(f){
   const csv = /\.(csv|tsv|txt)$/i.test(f.name);
-  if (typeof XLSX === 'undefined') throw new Error('The spreadsheet reader didn’t load. Check your internet connection and reload the page.');
+  if (typeof XLSX === 'undefined') throw new Error('The spreadsheet reader didn’t load. Reload the page.');
   const wb = csv ? XLSX.read(await f.text(), { type: 'string', raw: true, FS: /\.tsv$/i.test(f.name) ? '\t' : undefined }) : XLSX.read(await f.arrayBuffer(), { type: 'array', cellNF: true, cellDates: false });
   const d1904 = !!(wb.Workbook && wb.Workbook.WBProps && wb.Workbook.WBProps.date1904);
   return wb.SheetNames.map(s => sheetToTable(wb.Sheets[s], f.name, csv ? f.name.replace(/\.[^.]+$/, '') : s, csv, d1904)).filter(Boolean);

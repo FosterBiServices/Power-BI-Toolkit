@@ -45,7 +45,6 @@ if (!process.env.FUZZ_PAGES) {
   for (const page of PAGES) {
     const b = await chromium.launch();
     const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'] });
-    if (process.env.XLSX_FILE) await ctx.route(/cdnjs\.cloudflare\.com.*xlsx/, r => r.fulfill({ path: process.env.XLSX_FILE, contentType: 'application/javascript' }));
     // stay on the page: links don't navigate during the check
     await ctx.addInitScript(() => document.addEventListener('click', e => { const a = e.target.closest('a[href]'); if (a && !a.download) e.preventDefault(); }, true));
     let ran = 0; await ctx.exposeBinding('__xss', () => { ran++; });
