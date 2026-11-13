@@ -61,19 +61,35 @@ function parseM(src){
   if (letIdx < 0) { res.noLet = true; res.error = 'No "let ... in" block was found. Paste the whole query from the Advanced Editor, starting with "let".'; return res; }
   res.hasLet = true;
   res.header = src.slice(0, toks[letIdx].s);
-  depth = 0; let letDepth = 1, start = letIdx + 1, inIdx = -1;
+  // Each bracket level counts its own open lets. An "in" closes a let only at the level that opened it, so a word
+  // in a column name such as [Amount in USD] or type table [Sign in = text] is part of the name, not the keyword.
+  // A "let" inside a name is dropped when its [ ] closes; one left open inside ( ) or { } is an error.
+  const frames = [{ lets: 1, opens: [] }], inner = [];
+  let start = letIdx + 1, inIdx = -1, lastIn = -1;
   const chunks = [];
   for (let k = letIdx + 1; k < toks.length; k++) {
-    const t = toks[k];
-    if (t.t === 'punct' && '([{'.includes(t.v)) depth++;
-    else if (t.t === 'punct' && ')]}'.includes(t.v)) depth--;
-    else if (t.t === 'id' && t.v === 'let') letDepth++;
-    else if (t.t === 'id' && t.v === 'in') {
-      letDepth--;
-      if (letDepth === 0 && depth === 0) { chunks.push([start, k]); inIdx = k; break; }
-    } else if (t.t === 'punct' && t.v === ',' && depth === 0 && letDepth === 1) { chunks.push([start, k]); start = k + 1; }
+    const t = toks[k], top = frames[frames.length - 1];
+    if (t.t === 'punct' && '([{'.includes(t.v)) frames.push({ lets: 0, opens: [], br: t.v });
+    else if (t.t === 'punct' && ')]}'.includes(t.v)) {
+      const f = frames.pop();
+      if (f.lets && f.br !== '[') { res.error = 'The "let" on line ' + lineOf(src, f.opens[f.opens.length - 1].s) + ' has no matching "in" before the "' + t.v + '" on line ' + lineOf(src, t.s) + '. Add "in" and the name of its last step.'; return res; }
+    }
+    else if (t.t === 'id' && t.v === 'let') { top.lets++; top.opens.push(t); if (frames.length === 1) inner.push(t); }
+    else if (t.t === 'id' && t.v === 'in' && top.lets > 0) {
+      top.lets--; top.opens.pop();
+      if (frames.length === 1) lastIn = k;
+      if (frames.length === 1 && top.lets === 0) { chunks.push([start, k]); inIdx = k; break; }
+    } else if (t.t === 'punct' && t.v === ',' && frames.length === 1 && top.lets === 1) { chunks.push([start, k]); start = k + 1; }
   }
-  if (inIdx < 0) { res.error = 'The "let" block has no matching "in". Check that the query ends with "in" and the name of the last step.'; return res; }
+  if (inIdx < 0) {
+    const last = toks.filter(t => t.t !== 'ws' && t.t !== 'comment').pop();
+    res.error = lastIn < 0 && last && last.v === ','
+      ? 'The query stops after a comma, with no "in" line: it looks cut off. Ask Copilot for the rest of the query (or for it as a .txt file), or add "in" and the name of the last step.'
+      : lastIn < 0
+      ? 'The query has no "in" line after its steps. It may be cut off: check that it ends with "in" and the name of the last step.'
+      : 'A step starts its own "let" (line ' + inner.map(t => lineOf(src, t.s)).join(', ') + ') without its own "in", so it uses up the query’s "in". Add "in" and the name of that step’s last value.';
+    return res;
+  }
   const names = [];
   for (const [a, b] of chunks) {
     let k = a; while (k < b && (toks[k].t === 'ws' || toks[k].t === 'comment')) k++;

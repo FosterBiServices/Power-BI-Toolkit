@@ -347,6 +347,10 @@ to the real one) and argument counts (`ARITY`, about 350 functions); `[Column]` 
 brackets and quotes are already reported by parseM. The prompt now asks for MissingField.Ignore when the TASK removes
 named columns and forbids library names for steps (from the first real Copilot test, `src/tests/pw_reply_copilot.txt`).
 Check: `pwlinttest.js`.
+`parseM` (mq_core, shared with Power Query Explainer) counts lets per bracket level: an `in` closes a let only at the level that
+opened it, so `[Amount in USD]` or `type table [Sign in = text]` (unquoted column names with the word in or let) are names. Before
+(Nov 2026) these made every valid query read as "the let block has no matching in". A query that really lacks its `in` now says
+whether it looks cut off or which nested let is missing one; FINAL VALIDATION asks for let/in. Check: `pwletintest.js`.
 
 Power Query Writer fix loop (`PW.fixPrompt(inp, reply, findings, problem)`): under Step 4, "Didn't work in Power BI
 Desktop?" takes the Desktop error or a plain description; with it, or with any Fix/Check finding, the page writes a
