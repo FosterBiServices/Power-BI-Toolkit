@@ -70,7 +70,7 @@ Tip: rename the query tab in DAX query view (for example *Toolkit export*) and k
 
 - **Long prompts go to Copilot as a file.** Every Copilot prompt has a **Download file** button: attach the .txt in Copilot and send the short message the page gives you. Prompts ask Copilot for one reply, as a downloadable file if it's too long for the chat, and every reply box can open that file (.txt, .md, .json or Word).
 
-- **Your data stays with you.** The pages make no network requests with your content. The saved export lives in your browser's local storage for this site only, so it isn't shared with other browsers, other computers or other people.
+- **Your data stays with you.** The pages make no network requests with your content. The saved export lives in your browser's local storage for this site only, so it isn't shared with other browsers, other computers or other people. The [Data and privacy](https://fosterbiservices.github.io/Power-BI-Toolkit/data-and-privacy.html) page explains what is kept and who can see it.
 - **One export at a time.** Pasting a model export into any tool also replaces the saved one, so every tool stays on the same model. Remove it any time from the home page.
 - **Each tool keeps its own work** (requests, replies, settings) in your browser. **Clear entries** on a tool empties that tool only; its **Clear all pages** choice empties every tool and removes the saved export.
 - **Examples.** Every tool opens with customer and sales sample content so you can see how it works. Your own paste replaces it.
@@ -118,10 +118,12 @@ model-documenter.html
 model-linter.html
 rls-role-generator.html
 about-this-report.html
+data-and-privacy.html          What the toolkit keeps in your browser, and who can see it
+lib/xlsx.full.min.js           SheetJS 0.18.5 (Apache-2.0, lib/xlsx-LICENSE.txt), used by Sheet Recon and Sample Data Maker
 .nojekyll                      Tells GitHub Pages to serve the files as they are
 ```
 
-Each page is self-contained: styles, scripts and the shared-export code are inside the HTML file, so any single page can also be downloaded and opened on its own. Opened from a local folder, some browsers won't share the saved export between pages; the hosted site doesn't have that limitation.
+Each page is self-contained: styles, scripts and the shared-export code are inside the HTML file, so any single page can also be downloaded and opened on its own (Sheet Recon and Sample Data Maker also need `lib/xlsx.full.min.js` beside them). Opened from a local folder, some browsers won't share the saved export between pages; the hosted site doesn't have that limitation.
 
 ## Updating the site
 
