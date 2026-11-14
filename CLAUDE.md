@@ -59,7 +59,8 @@ src/parts/   pieces of each tool: <tool>_body.html, <tool>_core.js (logic), <too
 src/pages/   each tool page before the shared suite is added (input to build_site.py)
 src/build/   build_<tool>.py per tool, build_site.py, query_patch.py, _env.py (paths)
 src/build.py runs everything
-repo root    the published site; index.html, one .html per tool, README.md, .nojekyll
+repo root    the published site; index.html, one .html per tool, README.md, .nojekyll,
+             lib/ (SheetJS, served from here; not built)
 ```
 
 Rebuild everything: `python src/build.py` (Python 3, no packages needed). It rewrites the pages
@@ -242,9 +243,10 @@ node run.js srtest   # only checks whose file name contains "srtest"
 
 Each check prints what it saw and ends with `errors [...]`; empty means no page errors.
 Several print values with "(expect ...)" to compare. Screenshots land in `src/tests/` and are
-git-ignored; look at them when changing layout. Sheet Recon loads SheetJS from cdnjs, so it
-needs internet (or set `XLSX_FILE` to a local `xlsx.full.min.js` 0.18.5; `npm pack xlsx@0.18.5`
-has it in `package/dist/` when cdnjs is blocked but npm isn't).
+git-ignored; look at them when changing layout. Sheet Recon and Sample Data Maker load SheetJS
+0.18.5 from `lib/xlsx.full.min.js` in this repo (Apache-2.0, `lib/xlsx-LICENSE.txt`), never from a CDN: a script
+from another server could read everything the site saves in the browser. To update it, take
+`package/dist/xlsx.full.min.js` from `npm pack xlsx@<version>` and run srtest and sdtest.
 
 Two checks cover every page at once: `fuzztest.js` puts empty, junk, markup, broken exports and
 junk files into every field and presses every button (no script errors, and typed markup never

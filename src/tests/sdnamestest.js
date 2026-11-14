@@ -3,7 +3,6 @@ const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true }); const p = await ctx.newPage(); const errs = [];
   p.on('pageerror', e => errs.push(e.message));
-  if (process.env.XLSX_FILE) await p.route(/cdnjs\.cloudflare\.com.*xlsx/, r => r.fulfill({ path: process.env.XLSX_FILE, contentType: 'application/javascript' }));
   await p.goto('http://localhost:8765/sample-data-maker.html'); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(800);
   // mask: the example's 24 customers all get a different coach name
   const m1 = await p.evaluate(() => { const ch = SD.chars(), coach = new Set(SD_NAMES.COACH.map(x => x[0] + ' ' + x[1])), r = maskResult(), names = r.tables[0].rows.map(x => x[1].v);

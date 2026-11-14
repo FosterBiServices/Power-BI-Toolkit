@@ -4,8 +4,6 @@ const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true }); const p = await ctx.newPage(); const errs = [];
   p.on('pageerror', e => errs.push(e.message));
-  // Offline? Point XLSX_FILE at a local xlsx.full.min.js (0.18.5) to stand in for the CDN copy.
-  if (process.env.XLSX_FILE) await p.route(/cdnjs\.cloudflare\.com.*xlsx/, r => r.fulfill({ path: process.env.XLSX_FILE, contentType: 'application/javascript' }));
   await p.goto('http://localhost:8765/sample-data-maker.html'); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(800);
   console.log('example banner', await p.isVisible('#exampleBanner'), '| tables', await p.$$eval('.tcard', x => x.length), '(expect 3)', '| links', await p.$$eval('#linkList [data-sug]', x => x.length), '(expect 2)');
   console.log('choices', await p.$$eval('#colCards select', s => s.map(x => x.value).join(',')));

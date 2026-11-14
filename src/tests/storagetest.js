@@ -10,7 +10,6 @@ const JUNK = ['{"cut short', '[1,2', 'null', '42', '"text"', '{}', '[]', '{"rows
   const b = await chromium.launch(); const bad = [];
   for (const page of PAGES) {
     const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } }); const p = await ctx.newPage(); const errs = [];
-    if (process.env.XLSX_FILE) await p.route(/cdnjs\.cloudflare\.com.*xlsx/, r => r.fulfill({ path: process.env.XLSX_FILE, contentType: 'application/javascript' }));
     p.on('pageerror', e => errs.push(e.message.split('\n')[0] + ' @' + ((e.stack || '').split('\n').find(l => /at /.test(l)) || '').trim().replace(/http:\/\/localhost:8765\//, '').replace(/^at /, '')));
     const url = 'http://localhost:8765/' + page + '.html';
     await p.goto(url); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(300);

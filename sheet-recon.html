@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="lib/xlsx.full.min.js"></script>
 <style>
 /* Foster BI Toolkit palette: brand navy band with a gold rule; source rows are navy/blue, target rows gold/amber. */
 :root{
@@ -266,7 +266,7 @@ td.d.focus{outline:2px solid var(--bad);outline-offset:-2px}
 
 <div id="libError" class="libfail" hidden>
   <h2>Sheet Recon couldn't start</h2>
-  <p>The spreadsheet library didn't load. It comes from cdnjs.cloudflare.com, so this page needs an internet connection the first time it opens. Check your connection or proxy, then reload.</p>
+  <p>The spreadsheet library didn't load. It is the file lib/xlsx.full.min.js on this site. Reload the page, and if it still fails, check that your network or proxy doesn't block it.</p>
 </div>
 
 <div id="app">
