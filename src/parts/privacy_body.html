@@ -1,0 +1,87 @@
+      @@LOGO@@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Data and privacy</h1>
+        <p class="lede">Where the toolkit keeps what you type, paste and open, and who can see it. Short version: it stays in your browser, on your computer.</p>
+      </div>
+    </div>
+  </header>
+
+  <section class="pv-sum" aria-labelledby="pvSum">
+    <h2 id="pvSum">In short</h2>
+    <ul>
+      <li><b>Nothing is uploaded.</b> Files, folders and pasted text are read on the page, in your browser. The toolkit has no server that receives them.</li>
+      <li><b>No AI calls, no tracking.</b> There are no analytics, ads, sign-ins or AI services in the pages. A Copilot prompt only reaches Copilot when you paste or attach it yourself.</li>
+      <li><b>Saved on your computer only.</b> What a tool remembers between visits is kept in this browser, for this site. It isn&rsquo;t on any other computer or browser, and Foster BI Services can&rsquo;t see it.</li>
+      <li><b>You can remove it any time.</b> <b>Clear entries</b> on a tool, or <b>Clear all pages</b> below.</li>
+    </ul>
+  </section>
+
+  <section class="pv" aria-labelledby="pvWhat">
+    <h2 id="pvWhat">What the toolkit keeps</h2>
+    <p>Most tools work on the design of a model, not its data. A model export lists table, column and measure names, formulas, descriptions and data source details. It holds no data rows, except small tables typed straight into the model or built by a formula.</p>
+    <div class="pv-table" role="region" aria-labelledby="pvWhat" tabindex="0">
+      <table>
+        <thead><tr><th scope="col">What</th><th scope="col">Where it&rsquo;s kept</th><th scope="col">For how long</th></tr></thead>
+        <tbody>
+          <tr><td>Your model export, shared by every tool, and the last few you replaced (Model Compare uses them)</td><td>This browser, for this site</td><td>Until you clear it</td></tr>
+          <tr><td>Each tool&rsquo;s own work: requests, pasted columns, scripts, prompts and Copilot replies</td><td>This browser, for this site</td><td>Until you clear it</td></tr>
+          <tr><td>A PBIP folder you picked: read-only access, and a copy of its model and report files as text</td><td>This browser, for this site</td><td>Until you clear it. The browser asks again before a later visit can read the folder.</td></tr>
+          <tr><td>Sample Data Maker settings</td><td>This browser tab</td><td>Until you close the tab</td></tr>
+          <tr><td>Spreadsheets opened in Sheet Recon or Sample Data Maker, and a logo in Theme Builder</td><td>The open page only, never saved</td><td>Until you close or reload the page</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="pv" aria-labelledby="pvNet">
+    <h2 id="pvNet">What the pages connect to</h2>
+    <ul>
+      <li><b>GitHub Pages</b> sends the pages, and the files they need, to your browser. It never receives what you do on them.</li>
+      <li><b>Google Fonts</b> sends the fonts. It sees that a page was opened, and from which IP address, like any website you visit.</li>
+      <li>Nothing else. The pages run no code from other servers.</li>
+    </ul>
+    <p>A few pages link to reference sites such as SQLBI. Nothing goes there unless you follow the link and paste something in yourself.</p>
+  </section>
+
+  <section class="pv" aria-labelledby="pvWho">
+    <h2 id="pvWho">Who can see it</h2>
+    <div class="pv-table" role="region" aria-labelledby="pvWho" tabindex="0">
+      <table>
+        <thead><tr><th scope="col">Who</th><th scope="col">Can they see it?</th></tr></thead>
+        <tbody>
+          <tr><td>Foster BI Services, GitHub, Google</td><td>No. Nothing is sent to them.</td></tr>
+          <tr><td>Microsoft Copilot</td><td>Only what you paste or attach, under your organization&rsquo;s Copilot terms.</td></tr>
+          <tr><td>Colleagues and other toolkit users</td><td>No. Each person&rsquo;s work stays in their own browser.</td></tr>
+          <tr><td>Anyone who uses this computer with the same browser profile</td><td>Yes, the same as your browser history.</td></tr>
+          <tr><td>Browser extensions allowed to read every site</td><td>Yes, as they can on any website.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="pv" aria-labelledby="pvSafe">
+    <h2 id="pvSafe">Keeping it safe</h2>
+    <p>The toolkit is built so your work has nowhere to go but your own screen. The risks that remain are the ones that come with any website, and each has a simple answer.</p>
+    <ul>
+      <li><b>Shared or unattended computers.</b> This is the main one. Choose <b>Clear all pages</b> when you finish on a shared computer, use a private (InPrivate or Incognito) window, and lock your screen when you step away.</li>
+      <li><b>Browser extensions.</b> Only install extensions your organization approves.</li>
+      <li><b>What you give Copilot.</b> Prompts carry names and formulas, not data rows, unless you add them. Follow your organization&rsquo;s AI policy, and only use AI tools it approves.</li>
+      <li><b>The code itself.</b> Every library the pages use is served from this site, not from another server. The pages are tested so that nothing typed or pasted into them can run as code. The code is public, so your IT team can review it: <a href="https://github.com/FosterBiServices/Power-BI-Toolkit" target="_blank" rel="noopener">github.com/FosterBiServices/Power-BI-Toolkit</a>.</li>
+    </ul>
+  </section>
+
+  <section class="pv pv-clear" aria-labelledby="pvClear">
+    <h2 id="pvClear">Clear your data</h2>
+    <ul>
+      <li><b>One tool:</b> <b>Clear entries</b> at the top of the tool. The page stays empty after a reload.</li>
+      <li><b>Every tool:</b> the button below, or <b>Clear all pages</b> in any tool&rsquo;s Clear entries. It empties every tool and removes the saved model export, the earlier exports and the PBIP folder access.</li>
+      <li><b>From your browser:</b> clearing this site&rsquo;s data in your browser settings removes it all too.</li>
+    </ul>
+    <div class="clear-all-home"><button type="button" class="btn" id="pvClearAll" aria-controls="pvClearConfirm" aria-expanded="false">Clear all pages</button>
+      <span id="pvClearConfirm" hidden><span>Empty every tool and remove the saved model export? It can&rsquo;t be undone.</span> <button type="button" class="btn danger" id="pvClearYes">Clear all pages</button> <button type="button" class="btn" id="pvClearNo">Cancel</button></span>
+      <span id="pvClearDone" role="status"></span></div>
+  </section>
+
+  <footer>A free toolkit from Foster BI Services. Everything runs in this page.</footer>
+</div>

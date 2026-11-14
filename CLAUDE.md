@@ -42,6 +42,10 @@ prompt the user takes to Copilot, then check the reply pasted back. Nothing call
   home_body.html, filled by build_site.py from `src/brand/foster-bi-logo-services-white.svg`). Every banner has a faint grid of
   rounded squares on the right, fading to the left (as on the Foster BI site header), in the `.brandbar` background. The old SF shield is gone.
 - The disclaimer on the home page stays.
+- **Data and privacy page** (`data-and-privacy.html`, from `src/parts/privacy_body.html` + `privacy_ui.js`, built in build_site.py): what
+  the toolkit keeps, where and who can see it, for users and their leadership. It is linked from the home disclaimer, Good to know,
+  the home footer and every tool's footer (suite.js). Risks are named at a high level with what to do about each; no storage key
+  names or how-to detail there. Update it when a tool starts keeping something new or the pages connect to anything new.
 - No green, red or amber in **suggested colors** (palettes, themes, wireframes); they read as
   good, bad and warning. UI status colors for ok, error and warning are fine. KPI Visualizer's
   KPI status colors default to Excel's good, neutral and bad styles (the owner's choice).

@@ -2064,6 +2064,7 @@ init();
     const nav = document.createElement('nav'); nav.id = 'suiteNav'; nav.className = 'suite-nav'; nav.setAttribute('aria-label', 'Toolkit');
     nav.innerHTML = '<a class="home" href="' + HOME + '"><span aria-hidden="true">&larr;</span> Toolkit home</a>'
       + '<label class="switch"><span>Switch tool</span><select id="suiteSwitch">'
+      + (S.TOOLS.some(t => t[0] === here) ? '' : '<option value="" selected disabled>Choose a tool</option>')
       + S.GROUPS.map(g => '<optgroup label="' + esc(g[0]) + '">' + g[1].map(t => '<option value="' + t[0] + '"' + (t[0] === here ? ' selected' : '') + '>' + esc(t[1]) + '</option>').join('') + '</optgroup>').join('')
       + '</select></label>';
     top.insertAdjacentElement('beforebegin', nav);
@@ -2076,7 +2077,7 @@ init();
   const AI_TOOLS = ['kpi-measure-builder.html', 'measure-describer.html', 'prep-for-ai-writer.html', 'dax-reviewer.html', 'power-query-explainer.html', 'about-this-report.html', 'power-query-writer.html'];
   if (!document.body.dataset.home && !document.getElementById('suiteDisc')) {
     const f = document.querySelector('footer');
-    if (f) { const d = document.createElement('span'); d.id = 'suiteDisc'; d.className = 'suite-disc'; d.innerHTML = 'Generated output can be wrong. Check all of it, and test changes on a copy of your model first. Provided as is, without warranty; you use it at your own discretion and risk. <a href="' + HOME + '#disclaimer">Full disclaimer</a>'; f.appendChild(d); }
+    if (f) { const d = document.createElement('span'); d.id = 'suiteDisc'; d.className = 'suite-disc'; d.innerHTML = 'Generated output can be wrong. Check all of it, and test changes on a copy of your model first. Provided as is, without warranty; you use it at your own discretion and risk. <a href="' + HOME + '#disclaimer">Full disclaimer</a> &middot; <a href="data-and-privacy.html">Data and privacy</a>'; f.appendChild(d); }
     const here2 = (location.pathname.split('/').pop() || '').toLowerCase();
     const hdr = document.querySelector('header.top');
     if (hdr && AI_TOOLS.includes(here2)) { const n = document.createElement('div'); n.className = 'msg warn suite-ai'; n.setAttribute('role', 'note'); n.innerHTML = '<b>AI can make mistakes.</b> This page checks Copilot&rsquo;s reply where it can, but not every error in logic or meaning. Review everything before you use it, only use AI tools your organization approves, and test on a copy of your model first. <a href="' + HOME + '#disclaimer">Disclaimer</a>'; hdr.insertAdjacentElement('afterend', n); }
