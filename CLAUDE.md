@@ -218,6 +218,7 @@ Things to know:
 | field-parameter-builder | kfp. | yes | no |
 | rls-role-generator | krl. | yes | no |
 | model-linter | kml. | yes, or a PBIP folder | no |
+| relationship-planner | krp. | yes, or a PBIP folder | no |
 | model-compare | kmc. | two exports | no |
 | model-documenter | kmdoc. | yes | no |
 | about-this-report | kab. | yes | optional |
@@ -381,6 +382,28 @@ h0, l3, title). Check: `lofixtest.js`.
 Model Linter skips measures that return text (labels, SVG images, HTML) in the format string check: the export flags
 them, a PBIP folder's Image URL and Web URL measures are flagged by suite.js, and `ML.returnsText` reads the expression
 for the rest. A date column on the one side of a relationship (Date[Date]) isn't a visible key; on the many side it's info.
+
+Relationship Planner (`rp_*`, prefix `krp.`): how filters flow, what-if changes, goals in plain words. `RP` in rp_core.js
+reads `parseModel` rows into `{ tables, rels (fromTable = many side, toTable = one side, card M:1/1:1/M:M, both, active, key), cols,
+dates, added }`. Filters go along active relationships from toTable to fromTable; back too when `both` or one-to-one (same rules as
+the RLS Role Generator's reach, minus its "maybe" for security). Ambiguity = more than one simple route between two tables
+(`ambiguity`, a bounded walk: MAX_STEPS 60000 per source, MAX_DEPTH 12; tables cut short are listed). Changes are
+`{ op: add|dir|active|remove }` applied to a copy (`apply`); a change that no longer matches the model is kept and flagged.
+Goals (`parseGoals`): one per line, "A should (not) filter B / every table / every fact table / every lookup table", "B is filtered
+by A", "except X, Y", "including Date", "no ambiguity"; table names match plural or singular, longest first. "Every table" leaves
+out date tables and tables with no relationships, and says so. Roles: fact (only on the many side), lookup, both, bridge (named
+`bridge_`/`_xref`, or only on the many side of 2+ relationships with one both ways), date (`isDateTable` or named Date/Calendar).
+Advice (`advise`, worked out when an item is opened) tries likely single changes (both ways on the blocking link only when it's the
+last hop into the target; a direct relationship when the target has the source's key column, never its own key or a bare `id`;
+leaving out a new link, single direction, turning off) and re-checks every goal with each: what it fixes, breaks, and which
+tables stop filtering (`lost`), ranked by fixes minus breaks minus half of what's lost. "No side effects" only when it costs nothing.
+DAX workarounds: a has-data visual filter measure, CROSSFILTER, USERELATIONSHIP, and TREATAS on a table's own key.
+**Plan a new table that many tables carry a key for** (`plan`, the owner's Location case): links one at a time, preferred tables
+first, then the link whose filter reaches the most tables the normal way (one side to many side, not back up a both-ways
+relationship), never one that makes a second route; rows say link, filtered through (whose key), conflict (the two routes) or not
+reached. Default carriers: connected tables except date tables and ones named as bridges. Check: `rptest.js`.
+Not checked in Power BI Desktop: whether Desktop's own ambiguity rules match the route count in every case (it refuses or
+deactivates a relationship that makes a second active route; checked by reasoning and on one real model's relationships only).
 
 Prep for AI Writer (for people without Fabric's Prep data for AI Copilot): Step 2's **Leave out helper tables and measures**
 (`state.skip`: tables, measures, display folders; `leaveOut(model, skip)`) removes them from the whole page (readiness checks,

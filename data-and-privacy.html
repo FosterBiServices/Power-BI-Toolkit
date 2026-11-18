@@ -459,6 +459,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       ['date-table-generator.html', 'Date Table Generator'],
       ['sample-data-maker.html', 'Sample Data Maker']]],
     ['Build the model', [
+      ['relationship-planner.html', 'Relationship Planner'],
       ['kpi-measure-builder.html', 'KPI Measure Builder'],
       ['time-intelligence-builder.html', 'Time Intelligence Builder'],
       ['field-parameter-builder.html', 'Field Parameter Builder'],
@@ -514,9 +515,10 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
     'kpi-measure-builder.html': [['dax-reviewer.html', 'Review a measure'], ['validation-query-builder.html', 'Check the results'], ['measure-describer.html', 'Describe the new measures']],
     'time-intelligence-builder.html': [['field-parameter-builder.html', 'Let readers switch between the new measures'], ['validation-query-builder.html', 'Check the results']],
     'field-parameter-builder.html': [['validation-query-builder.html', 'Check the results'], ['layout-designer.html', 'Plan the page it goes on']],
-    'rls-role-generator.html': [['model-linter.html', 'Check the model before you publish']],
+    'relationship-planner.html': [['rls-role-generator.html', 'Secure each table by its own key'], ['model-linter.html', 'Check the model before you publish'], ['model-compare.html', 'After the changes: see what changed in the model']],
+    'rls-role-generator.html': [['model-linter.html', 'Check the model before you publish'], ['relationship-planner.html', 'See which tables a filter really reaches']],
     'dax-reviewer.html': [['validation-query-builder.html', 'Check its results against a number you trust'], ['measure-describer.html', 'Write a description for it']],
-    'model-linter.html': [['model-documenter.html', 'Document the model'], ['model-compare.html', 'See what changed since the last export']],
+    'model-linter.html': [['model-documenter.html', 'Document the model'], ['model-compare.html', 'See what changed since the last export'], ['relationship-planner.html', 'See how filters flow and test relationship changes']],
     'validation-query-builder.html': [['sheet-recon.html', 'Compare the results with a source file']],
     'model-compare.html': [['model-documenter.html', 'Document the model as it is now']],
     'sheet-recon.html': [['validation-query-builder.html', 'Get the Power BI numbers to compare']],
@@ -1016,7 +1018,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
   };
 
   // ---------- Clear all pages: every tool's saved work, the saved export (and its history) and the remembered PBIP folder ----------
-  S.PREFIXES = ['kmb.', 'kmd.', 'kpa.', 'kdr.', 'kvq.', 'kti.', 'kfp.', 'krl.', 'kml.', 'kmc.', 'kmdoc.', 'kab.', 'kpw.', 'kpq.', 'kdt.', 'kkv.', 'kcp.', 'ktb.', 'klo.', 'ksr.', 'ksd.'];
+  S.PREFIXES = ['kmb.', 'kmd.', 'kpa.', 'kdr.', 'kvq.', 'kti.', 'kfp.', 'krl.', 'kml.', 'krp.', 'kmc.', 'kmdoc.', 'kab.', 'kpw.', 'kpq.', 'kdt.', 'kkv.', 'kcp.', 'ktb.', 'klo.', 'ksr.', 'ksd.'];
   S.clearAll = () => {
     try {
       Object.keys(localStorage).filter(k => k.startsWith('sfpbi.') || S.PREFIXES.some(p => k.startsWith(p))).forEach(k => localStorage.removeItem(k));

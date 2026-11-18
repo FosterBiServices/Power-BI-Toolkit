@@ -1,6 +1,7 @@
 
 /* ---------- home page ---------- */
 const TOOLS = [
+  { file: 'relationship-planner.html', name: 'Relationship Planner', desc: 'How filters flow through your model in plain words: which tables each table filters, which it doesn\u2019t and why. Try relationship changes first, write goals such as \u201cLocation should filter every table\u201d, and get each one checked with fixes tested on the whole model. Finds ambiguous routes and plans a new table that many tables carry a key for.', tags: ['exp', 'noai'] },
   { file: 'kpi-measure-builder.html', name: 'KPI Measure Builder', desc: 'Describe measures in plain English. Copilot writes the DAX; the page checks every name and outputs tab-indented TMDL into your measures folder.', tags: ['exp', 'ai'] },
   { file: 'measure-describer.html', name: 'Measure Describer', desc: 'Copilot writes descriptions for your measures in batches; you review them and save them to the model from DAX query view.', tags: ['exp', 'ai'] },
   { file: 'prep-for-ai-writer.html', name: 'Prep for AI Writer', desc: 'AI instructions, synonyms and table and column descriptions that help Copilot in Power BI answer questions about your model.', tags: ['exp', 'ai'] },

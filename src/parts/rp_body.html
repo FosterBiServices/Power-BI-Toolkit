@@ -1,0 +1,156 @@
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Relationship Planner</h1>
+        <p class="lede">See how filters flow through your model in plain words: which tables each table filters, which it doesn&rsquo;t, and why. Try relationship changes before you make them, write what you want (&ldquo;Location should filter every table&rdquo;), and get each goal checked, with fixes that are tested first. Ambiguous routes are found for you. No AI needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties the model export, your changes, goals and plan, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Connect your model in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> A sample customers and sales model, with a Region table being planned and four goals. Connect your own model in Step 1 to check yours.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Your model</h2>
+        <p>Only the relationships, tables and column names are read. Nothing about your data.</p>
+      </div>
+      <details class="extra" id="modelBox">
+        <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+        <div class="extra-body">
+          <ol class="how">
+            <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+            <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+          </ol>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+            <pre class="short" id="exportView"></pre>
+          </div>
+        </div>
+      </details>
+      <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+      <div class="stats" id="modelStats"></div>
+      <div id="modelMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">How filters flow</h2>
+        <p>Pick a table to see what slicing by it does. A filter goes from the one side of a relationship to the many side (Customer &rarr; Sales). A relationship set to both directions (&#8644;) also sends it back. Two routes to the same table is <b>ambiguity</b>: Power BI uses only one of them.</p>
+      </div>
+      <div id="health"></div>
+      <div class="pickrow">
+        <label class="lbl" for="fromSel">Slice by</label>
+        <select id="fromSel" aria-label="Table to slice by"></select>
+        <div class="seg" id="viewSeg" role="radiogroup" aria-label="Which model" hidden>
+          <label><input type="radio" name="view" value="before"><span>Your model</span></label>
+          <label><input type="radio" name="view" value="after" checked><span>With your changes</span></label>
+        </div>
+      </div>
+      <div id="flow"></div>
+      <div id="notReached"></div>
+      <details class="extra" id="allBox">
+        <summary>Every table at a glance <span class="muted">(how far each one&rsquo;s filters reach)</span></summary>
+        <div class="extra-body" id="allList"></div>
+      </details>
+      <details class="extra" id="relBox">
+        <summary>Every relationship, in words</summary>
+        <div class="extra-body" id="relList"></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Try changes</h2>
+        <p>Nothing changes in your model. Steps 2 and 4 show the result, and the steps to make the changes in Power BI Desktop are below.</p>
+      </div>
+      <div id="changeList"></div>
+      <div class="addbox">
+        <div class="addrow2">
+          <label class="lbl" for="chOp">Change</label>
+          <select id="chOp">
+            <option value="add">Add a relationship</option>
+            <option value="dir">Switch a relationship&rsquo;s direction</option>
+            <option value="active">Turn a relationship off or on</option>
+            <option value="remove">Remove a relationship</option>
+          </select>
+        </div>
+        <div id="chAdd" class="addgrid">
+          <div class="fld"><span class="lbl">One side (the lookup)</span><input type="text" id="chOneT" list="tableList" placeholder="Table, e.g. Location" aria-label="One side table"><input type="text" id="chOneC" list="oneCols" placeholder="Column, e.g. LocationKey" aria-label="One side column"></div>
+          <div class="fld"><span class="lbl">Many side (the table it filters)</span><input type="text" id="chManyT" list="tableList" placeholder="Table" aria-label="Many side table"><input type="text" id="chManyC" list="manyCols" placeholder="Column" aria-label="Many side column"></div>
+          <div class="fld"><span class="lbl">Cardinality</span><select id="chCard" aria-label="Cardinality"><option value="M:1">Many to one</option><option value="1:1">One to one</option><option value="M:M">Many to many</option></select></div>
+          <div class="fld"><span class="lbl">Cross filter</span><select id="chBoth" aria-label="Cross filter direction"><option value="0">Single</option><option value="1">Both</option></select></div>
+        </div>
+        <div id="chRel" class="addrow2" hidden><label class="lbl" for="chRelSel">Relationship</label><select id="chRelSel" aria-label="Relationship"></select></div>
+        <div class="addrow2"><button type="button" class="btn primary" id="chAddBtn">Add change</button><span id="chMsg" class="small"></span></div>
+        <datalist id="tableList"></datalist><datalist id="oneCols"></datalist><datalist id="manyCols"></datalist>
+      </div>
+      <details class="extra" id="planBox">
+        <summary>Plan a new table that many tables carry a key for <span class="muted">(Location, Region, Business unit&hellip;)</span></summary>
+        <div class="extra-body">
+          <p class="note">You&rsquo;re adding one table and putting its key on many tables. Relating it to all of them gives two routes into the same tables, so this finds the set of relationships that filters the most tables with no ambiguity, and says why each other table can&rsquo;t be linked.</p>
+          <div class="addgrid">
+            <div class="fld"><span class="lbl">New table</span><input type="text" id="plTable" placeholder="e.g. Location" aria-label="New table name"></div>
+            <div class="fld"><span class="lbl">Its key, added to the other tables</span><input type="text" id="plKey" placeholder="e.g. LocationKey" aria-label="Key column"></div>
+          </div>
+          <div class="fld"><span class="lbl">Link these first <span class="muted">(optional: the table whose key should drive the filter, e.g. Members rather than their Program)</span></span>
+            <div class="chips" id="plPrefer"></div>
+            <div class="addrow2"><input type="text" id="plPreferIn" list="tableList" placeholder="Table" aria-label="Table to link first"><button type="button" class="btn small" id="plPreferAdd">Add</button></div>
+          </div>
+          <details class="extra inner" id="plCarryBox">
+            <summary>Tables that will carry the key <span class="muted" id="plCarryCount"></span></summary>
+            <div class="extra-body"><p class="small"><button type="button" class="linkbtn" id="plAll">All</button> &middot; <button type="button" class="linkbtn" id="plNone">None</button> &middot; <button type="button" class="linkbtn" id="plDefault">Default</button> <span class="muted">(every connected table except date tables and ones named as bridges)</span></p><div class="carry" id="plCarry"></div></div>
+          </details>
+          <div id="planOut"></div>
+        </div>
+      </details>
+      <div id="changeEffect"></div>
+      <details class="extra" id="stepsBox">
+        <summary>How to make these changes in Power BI Desktop</summary>
+        <div class="extra-body">
+          <ol class="how" id="desktopSteps"></ol>
+          <p class="small"><button type="button" class="btn small" id="copySteps">Copy the steps</button></p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Check what you want</h2>
+        <p>One goal per line, in plain words: &ldquo;Location should filter every table except Date&rdquo;, &ldquo;Programs filters Members&rdquo;, &ldquo;Budget should not be filtered by Promotion&rdquo;, &ldquo;Date filters all fact tables&rdquo;. Open any table that fails for the reason and tested fixes. Ambiguity is always checked.</p>
+      </div>
+      <div class="quick">
+        <select id="qFrom" aria-label="Table that filters"></select>
+        <select id="qNeg" aria-label="Should or should not"><option value="">should filter</option><option value="1">should not filter</option></select>
+        <select id="qTo" aria-label="Tables it filters"></select>
+        <button type="button" class="btn small" id="qAdd">Add goal</button>
+      </div>
+      <textarea id="goalInput" class="mid" spellcheck="false" aria-label="Goals, one per line" placeholder="Location should filter every table except Date&#10;Programs filters Members&#10;Promotion should not filter Budget"></textarea>
+      <div id="goalResults"></div>
+      <p class="small"><button type="button" class="btn small" id="copySummary">Copy the results</button></p>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your model export is saved only in this browser.</footer>
+</div>

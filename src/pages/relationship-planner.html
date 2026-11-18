@@ -1,0 +1,2599 @@
+<title>Relationship Planner</title>
+<meta name="description" content="How filters flow through a Power BI model, in plain words: which tables each table filters and why not, what-if relationship changes, goals checked with tested fixes, and ambiguous routes found.">
+<link rel="icon" type="image/png" sizes="64x64" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAANwUlEQVR42uWbf4xc11XHP+fe92NmZ39lbSdx0sROiOPWrdMAbWgIEFSB0oq28AcrkUaggFRVSKhFIIEEKiZCIAGialEFqmijqGkVxCJB01ZpQQ0lKAoNBdqkSeMYQtwEJ65/rb07s/Peu/ce/nhvZufnesbxgk2u9LSrN2fe3HPu+fE933ufMDwEDgncFwAzc/AX7kL8z2jgdkT3CMyVMpfkUIU1VI6K4QnU/m3r6c98BQhwyMB9CuiAsr3jkKkUp3bL3T9nsL8O8jYRg2oADYPfvwSHgBi6c0a/EfB/0n7qob8c1HHAAMsWVvzsrcu7Qkj+Qkz802hAg1OUgKiAyCW8+l0vAFVUFMGIiQQxaCg+b0z+gfVvrpzo6NpjgNIq6S3LN1jSR8RE+9XlDlEDYrishwZUgkRJpMEd9mTvzp5a+a+OzlL9w9wbf/4KH4cnxET71OcFIjH/n4ZqITaJNbgjtjC3rz334Bk4hGH5WQGCi9wDYpOJlDdGsNYMX6bfWUTAGh15yUAiGis3EHBWRssZOU9uEonV54XYZJ+L3ANAYPnZ8vH1g/f8rLHJirrMIURbP0dobWRo4UZZhplGrat87gxFYYfTjSi1xHUnHVRo5xGo9IcyEMeeJApopV8rjyFI9fnmXxN56rHvym2RIZxEaRR8vrzx9Of+WrjzUFQ/feRfxUQHCS4Adivl87zgrW+6gZv37iZotUJaesXp1XX+4evPYC0UznLNQpMfuu4kQfu9ovCGf3zhalpFaeuZ2HHnja8S29CngBH4+ks7OXa2QRwFfBB+dO+r7GjkuLCpfmzg8Ik5nn51qc9YY4bHREaDe3pjad8Pyswtd98F9suoV4YcrncyQjvLuWnPbv7t4T+mniYj5e79zU/w4F99lcbCHI/84pe4Y99pQl4qA+AD2Dp8/NGb+dWH3wHAx973z3z4nc/jN8BWURQUTAKPH1ni3fffRbOdcPcP/Aefvedxgtt8nlKm6VPrlh/+s/fwwqk50tijKlvDBbEC/l2RBpaNtWgIAdl69V3hueaqJeppgnMeMdL1ROc8SRyxf+9uQqHM1wresNCk2RRyLwgKAt4LV4iyb+c5pAqBfTvPEdrC6oZgrZaFDCEplDcsNJmv5ayt17lp51lUhdMtIarkEAgB5lPP7vkNnj+xQA2/NVpRCWKsDd4vRwi3qwaqOn9ejOGcR1Wx1iA9DqNWyxApXDkpFQpvyiQV6CqLASNK7jYTZu4MRhRryiSHlJDOGqXwhlCtZu4MQr9clXrwCi5MCFFEpdSZ240g15cIb7J6LyJ9io/6vDfex8txceWmQmhi0IAg1xugMQ281RJnbfG59slu9ZyLKjc1SFeARjSV4RSiyJSZ3AVMz5I47zFiSOKorAqiRFZxQfBBuqvng+ADxLYLx4ltqO73hJQKLkBkN2t8bANBBRekb9JBoSZKZKbuUySafOUVG1tePXGGwnniqD9fWltWhRde/h4SC2tZzPH1GnuvakO+Ga8aFKnD0dXZbqY+ujqLnXmVJdHNQFSFBJ45XuNcO0Fs4OjqHCZSdjU2n4eWhfts03B8rU5kdCpPkJmD759YXkTIsoJ3fP/NvOn7riWEMvEpijWGU2fWeOSxfweUwlv2Lq1xx54T+J75CkoRLH9/5BrWshJwzqUFP7nvGLHxdDCiAlbg8aO7ePH0XNdjfuKmY+xoZF0vUIU4Ur5zfIFvvLxzEhxw4QZQwBrD+noLWu0eJFaNKKJxxRxaAaTMGVw+urLWagNIsD3aGaPEk/YiwSyGMEow0Ej8VMoDRNMIGxGyLGfn0gJX799TKSqoKsYY1pobvPTKSWppQlAljTxzNR2Z2HIXuunHSGBxzo3M8rkL3VBRVRZmCoyRoQpQeMX5rSvFazKAiFA4x5VLC3zlgY+wb+9uQlCMKQ2gQLPV5v2/9jG++k/fot6osbQwx8xMWlbZgdJ25myTc+stAOZnZ7hioTG0emKg1co4eWYNVaWWJly5Y758wCC8LjzHT63ivU5lBDPN6udZwf4br+XN+64jiSNqaUwSR6RJTBxZdizO8eO3vRnfzrHWUkuTsj5L/2WMUK9tQul6LcEYGZIToJaWnwVVamlcVqGBZwKkaUQU2amLYTRt3XA+EKrupvzxcgYhlOUqy4vurEpMIGM4G+3HDjoZrtAJ5LbVAJ0V7MR/7/3zocRLcVx0ukv1stJ/eg8wRggh4EPoW23nfQWIZBhwjkSh5783qS31NTC1kyNBQIyw3mpjjMEM0F+RLev9eiururly+taYofg0RvqUU8BEMlTfRQRPiQGkivPBEvha88DEBgghUK/VePq5o3z49+7n1gM3EHq8wIhw4sw5PvM3X6M2O4NznlOrazTq6ciVXFvf6CbLs+eahBBGdnjNjawqt4Zmq11xj/0GFCDLHUXhp85BUyHBzmg121C5/GCGrDXq3VUSAj4M77+IKEakC3sFJaiOYHHK3l97UlUIOjY5X0gCnioHiID3ARNb6rP1oc/ywuG8J7UxqkqzSEgjP8QAuyC4YJiJS2K1VcREJgw1Mgo0C9uVU+1Umv+LMiil9dMk5lN/8Mu89Y17y2aopySeObvOr9z3KQ7/58uoqfMbdz7F3bceZSPvMEJVuBjD7z/6Fr70nesBeO+Bo/z2O7/dEwalN9QTeOibe/joYwdJI0cUR+xYnMWIoddUHbL29Or61Bt3ExvAimFto8XbD97EPe/7sbFyy++6nd/5w89y1e6YD93xLNcu5hSb2AgfIJ2BD64f5uFn9gDwwdsOc9uNp8ham6SoKsQx7Go0+fS/7Odc27JzLqFRT/EjwiBNItZabbKsmCoULgAICT6EklgV0y1WzgesNV30Z0Rp5RGtrCB30uUEfSgJzdyb7r3cG3wmNHPBVqSGqpCE8hm9mx5lrrh4YCO6kC91Spv07JUa1aGdISNaXZukqEpJaA5yfbaS6yirPd+/rJDg5TYuyANGhUAIipf+Wh5Uupf03PM6THb6jpxucoJB6VLil4wBdMjVywkm1T2p9sqCCjOJYyZV4p5NTh8Um0JiN4mOxAZsqjS89iRBJY5hJnF9RjAijLLJhfZgExvAa6BeT/nWcy/yuYcfG1sGV778BMlsyulmxJ8+fmBsGfzkk/u7Ce+TT+5n52wxtgye3UhII0dzI6eWZmPLYJG77UWCHSCUOz+0N9gBQh2soKq0imhCIBSNBUKZ6wdC41Z7sD3flhBQLVcvFDnN9vpYKNwpU404H4LCCkRGSewmFJ6Ji5FQWFAase9CYanA2KgquO0h0JlS8J4P3ftTY5uhj97/BVbPNjHWkKbpls1Q7sp+Io4i5gagdW8ztNEuSiJGhMXFxthmaL3V3j4DlN3YBm87eBMf/8gvjZU7eWaNP/rECvM7FtixOEeSRCPbYWMMJ06dBWBhvsH8bG2o0RERamnCse+dwXvP3FyDpcXGyIZoDsiKgnzKPDA5K1zt6szO1MYSIpG1zM6koJudWVkyB3trhvJCcEoYFJRN7lErg4SgQwYoQdP/QjfYJT+NGcn/RdbivQ4bbpQ1R1r4/GLjFueSQYKXGSd6IUCol5TYrO1aUd16mbGiUxsgsmYkL1dubAhpEncL9tiYlMGDFDImVhhBvY/vUrc1BIIqSRpz+IX/5pkjL5EXjnZWkBeOLC8oKg7wa08+g60leO9pZ3l5cEH7rxCUjXbeffZGO+/W974LaGd5tekitLMC58LQMwGyzOGcnzojTL09nucFC3MNrt61uOXmaCcUosiORG3Ohe5qavfgxfDknfN934usLQ9nDUL1asdq2zZHO16QpgknT5/l5MvH2Wp7vDPhLCtGLkpvQ9WB0aO4+E5odRagqA5pIePlts0ARoR2O+dH3n5gywMSWk0qjixpmvT3vpXHtNs5obpvRJhp1EsFBmSzLKfo8ZZGPcVY0yfXOZ2W5W77PMCIsJHl7L/hGh598HeHjsh0xgd+68/59EN/x+ziLLuW5qnVkmEkKMLquRanVtcAWFyYZXF+pmuQXsXa7ZxXTqwSgjLXqHPlzvkRlabcrTp2/DSF89uEBEXwhefqXVcQR5bC+b5DUoV3JFHM3uuuRH3o7h6FMOLIipTVpLeyhKAjDKDVc0oeMqo4x2EkWNFp1oDzU3vA5FtrQpmFtZx030FJLMYIxahYZmR4j/x/0u9cJCSoBmhOdcRQznew8XKBggLQNIp+tzybpmFSSmwrtHd5IEENlKzSdw3KEyIGdAL+Wcu6LiJ4X3aEvX9VtXtQ8nyuOc0R2IveZ6hoqTNPGDGsqHrK94O2Xvkothw7fpqNLCeKLNZsvimSJjEiwvMvvoLEZfJzoUqGIn2XGKFwmw5XuIAYGZIzxuBC6JbbwpX0mhmUNVWb7MOE3q9G1SOGlW15YaLTK1hr+nqDTaJLaWdFN1xK4iNGBoGVCFle9KHGWhqXZxMG8EJRePJiIhzQ/8IEbM8rM70d4miGSYZ4hnG/16tUGHOgauLt8aFXZpaXLSsrvv6Wu79gotp71LUnemlq5I9pxQBdsrlPC4lqcXDtL258+6H3srxsDSsHyhMqLrpXfX5EbBKjWpyPFfI+DF+XuvI2idXnRyIX3QsYVg5o9RrpIdaee/CUl/wuVX9YojRGcZOWxku+5JVuH6v6w17yu9aee/AUHKJ6cbIzXtevznbG6/rl6d4nvH5en/8f0QHi4DsPnQIAAAAASUVORK5CYII=">
+<link rel="icon" type="image/svg+xml" sizes="any" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIHJ4PSIyMCIgZmlsbD0iIzBBMkQ1QSI+PC9yZWN0PjxyZWN0IHg9IjY4IiB5PSI0NCIgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiByeD0iMiIgZmlsbD0iI0ZGRkZGRiIgZmlsbC1vcGFjaXR5PSIwLjEyIj48L3JlY3Q+PHJlY3QgeD0iMzYiIHk9IjYwIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIiBmaWxsLW9wYWNpdHk9IjAuMTIiPjwvcmVjdD48cmVjdCB4PSI1MiIgeT0iNjAiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgcng9IjIiIGZpbGw9IiNGRkZGRkYiIGZpbGwtb3BhY2l0eT0iMC4xMiI+PC9yZWN0PjxyZWN0IHg9IjY4IiB5PSI2MCIgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiByeD0iMiIgZmlsbD0iI0ZGRkZGRiIgZmlsbC1vcGFjaXR5PSIwLjEyIj48L3JlY3Q+PHJlY3QgeD0iMzYiIHk9Ijc2IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIiBmaWxsLW9wYWNpdHk9IjAuMTIiPjwvcmVjdD48cmVjdCB4PSI1MiIgeT0iNzYiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgcng9IjIiIGZpbGw9IiNGRkZGRkYiIGZpbGwtb3BhY2l0eT0iMC4xMiI+PC9yZWN0PjxyZWN0IHg9IjY4IiB5PSI3NiIgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiByeD0iMiIgZmlsbD0iI0ZGRkZGRiIgZmlsbC1vcGFjaXR5PSIwLjEyIj48L3JlY3Q+PHJlY3QgeD0iMzYiIHk9IjI4IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIiBmaWxsLW9wYWNpdHk9IjAuMTIiPjwvcmVjdD48cmVjdCB4PSI1MiIgeT0iMjgiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgcng9IjIiIGZpbGw9IiNGRkZGRkYiIGZpbGwtb3BhY2l0eT0iMC4xMiI+PC9yZWN0PjxyZWN0IHg9IjY4IiB5PSIyOCIgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiByeD0iMiIgZmlsbD0iI0ZGRkZGRiIgZmlsbC1vcGFjaXR5PSIwLjEyIj48L3JlY3Q+PHJlY3QgeD0iMjAiIHk9IjEyIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIj48L3JlY3Q+PHJlY3QgeD0iMjAiIHk9IjI4IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIj48L3JlY3Q+PHJlY3QgeD0iMjAiIHk9IjQ0IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIj48L3JlY3Q+PHJlY3QgeD0iMjAiIHk9IjYwIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIj48L3JlY3Q+PHJlY3QgeD0iMjAiIHk9Ijc2IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIj48L3JlY3Q+PHJlY3QgeD0iMzYiIHk9IjEyIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRjJBOTAwIj48L3JlY3Q+PHJlY3QgeD0iNTIiIHk9IjEyIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRjJBOTAwIj48L3JlY3Q+PHJlY3QgeD0iNjgiIHk9IjEyIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRjJBOTAwIj48L3JlY3Q+PHJlY3QgeD0iMzYiIHk9IjQ0IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRjJBOTAwIj48L3JlY3Q+PHJlY3QgeD0iNTIiIHk9IjQ0IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRjJBOTAwIj48L3JlY3Q+PC9zdmc+">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --brand:#0A2D5A;
+  --gold:#F2A900;
+  --gold-ink:#1A1300;
+  --bg:#F2F5FA;
+  --surface:#FFFFFF;
+  --surface-2:#EAF0F8;
+  --ink:#121B2B;
+  --muted:#51607A;
+  --line:#D3DCE9;
+  --accent:#0A2D5A;
+  --accent-ink:#FFFFFF;
+  --accent-soft:#E2ECF8;
+  --code-bg:#F6F8FC;
+  --ok:#23734A; --ok-soft:#E1F1E7;
+  --warn:#8F5200; --warn-soft:#FBEFD9;
+  --err:#AF2A22; --err-soft:#FBE4E1;
+  --info:#2F5B8A; --info-soft:#E3ECF6;
+  --ws:#A3B2C8;
+  --band:#0A2D5A; --band-ink:#FFFFFF; --band-muted:#BFD3EE;
+  --sans:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans","Arial Narrow",-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0A1220; --surface:#111C2E; --surface-2:#172538; --ink:#E6ECF6; --muted:#9AA8BF;
+    --line:#24334B; --accent:#F2A900; --accent-ink:#1A1300; --accent-soft:#2A2410; --code-bg:#0D1726;
+    --ok:#6FCF97; --ok-soft:#1A3326; --warn:#F0B35A; --warn-soft:#3A2C14; --err:#F08A80; --err-soft:#3C1E1B;
+    --info:#8DB6E6; --info-soft:#1A2A40; --ws:#3D4F6B;
+    --band:#0A2D5A; --band-ink:#FFFFFF; --band-muted:#BFD3EE;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0A1220; --surface:#111C2E; --surface-2:#172538; --ink:#E6ECF6; --muted:#9AA8BF;
+  --line:#24334B; --accent:#F2A900; --accent-ink:#1A1300; --accent-soft:#2A2410; --code-bg:#0D1726;
+  --ok:#6FCF97; --ok-soft:#1A3326; --warn:#F0B35A; --warn-soft:#3A2C14; --err:#F08A80; --err-soft:#3C1E1B;
+  --info:#8DB6E6; --info-soft:#1A2A40; --ws:#3D4F6B;
+  --band:#0A2D5A; --band-ink:#FFFFFF; --band-muted:#BFD3EE;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 64px;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--cond);font-weight:600;line-height:1.2;text-wrap:balance;margin:0}
+h1{font-size:30px;letter-spacing:-.01em}
+h2{font-size:21px}
+h3{font-size:15px;font-weight:600}
+p{margin:0}
+code,.mono{font-family:var(--mono);font-size:.9em}
+a{color:var(--accent)}
+
+/* header */
+.top{display:flex;flex-direction:column;gap:14px}
+.brandbar{display:flex;gap:18px;align-items:center;background:linear-gradient(90deg,var(--band) 30%,color-mix(in srgb,var(--band) 25%,transparent)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='136' height='102'%3E%3Crect x='4' y='4' width='26' height='26' rx='5' fill='%23fff' fill-opacity='0.06'/%3E%3Crect x='38' y='4' width='26' height='26' rx='5' fill='%23fff' fill-opacity='0.09'/%3E%3Crect x='72' y='4' width='26' height='26' rx='5' fill='%23fff' fill-opacity='0.05'/%3E%3Crect x='106' y='4' width='26' height='26' rx='5' fill='%23fff' fill-opacity='0.07'/%3E%3Crect x='4' y='38' width='26' height='26' rx='5' fill='%23fff' fill-opacity='0.08'/%3E%3Crect x='38' y='38' width='26' height='26' rx='5' fill='%23fff' fill-opacity='0.05'/%3E%3Crect x='72' y='38' width='26' height='26' rx='5' fill='%23fff' fill-opacity='0.11'/%3E%3Crect x='106' y='38' width='26' height='26' rx='5' fill='%23fff' fill-opacity='0.06'/%3E%3Crect x='4' y='72' width='26' height='26' rx='5' fill='%23fff' fill-opacity='0.05'/%3E%3Crect x='38' y='72' width='26' height='26' rx='5' fill='%23fff' fill-opacity='0.07'/%3E%3Crect x='72' y='72' width='26' height='26' rx='5' fill='%23fff' fill-opacity='0.06'/%3E%3Crect x='106' y='72' width='26' height='26' rx='5' fill='%23fff' fill-opacity='0.09'/%3E%3C/svg%3E") right -4px top -4px/136px 102px,var(--band);color:var(--band-ink);border-radius:14px;padding:18px 22px;border-bottom:4px solid var(--gold)}
+.brandbar img{width:64px;height:64px;flex:none;border-radius:13px;box-shadow:0 0 0 1px rgba(255,255,255,.35),0 2px 6px rgba(0,0,0,.25)}
+.brandbar .txt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.brandbar .eyebrow{font-family:var(--cond);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.brandbar h1{color:var(--band-ink)}
+.lede{color:var(--band-muted);max-width:62ch}
+@media (max-width:520px){.brandbar{padding:14px 16px;gap:12px}.brandbar img{width:48px;height:48px;border-radius:10px}h1{font-size:25px}}
+.dest{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.dest .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;width:100%}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:12.5px;color:var(--muted);font-weight:500}
+input[type=text]{font-family:var(--mono);font-size:14px;color:var(--ink);background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:210px;max-width:100%}
+input[type=text]:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+
+.banner{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--info-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--info) 30%,transparent);border-radius:10px;padding:10px 14px;font-size:14px}
+.banner strong{color:var(--info)}
+.banner .btns{display:flex;gap:8px;flex-wrap:wrap}
+
+/* steps */
+.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;display:grid;grid-template-columns:92px minmax(0,1fr);gap:4px 18px}
+.step-num{font-family:var(--cond);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding-top:5px}
+.step-num b{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--gold);color:#0A2D5A;font-size:22px;line-height:1;letter-spacing:0;margin-top:8px}
+.step-body{display:flex;flex-direction:column;gap:14px;min-width:0}
+.step-head{display:flex;flex-direction:column;gap:4px}
+.step-head p{color:var(--muted);max-width:70ch}
+@media (max-width:640px){
+  .step{grid-template-columns:1fr;padding:16px}
+  .step-num{display:flex;align-items:center;gap:8px;padding-top:0}
+  .step-num b{width:28px;height:28px;font-size:15px;margin-top:0}
+}
+
+ol.how{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px;max-width:70ch}
+ol.how li::marker{color:var(--muted);font-variant-numeric:tabular-nums}
+.note{font-size:13.5px;color:var(--muted);max-width:74ch}
+
+/* code blocks */
+.codebox{position:relative;border:1px solid var(--line);border-radius:8px;background:var(--code-bg);min-width:0}
+.codebox-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:7px 8px 7px 12px;border-bottom:1px solid var(--line)}
+.codebox-bar .t{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.codebox-bar .r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+pre{margin:0;padding:12px 14px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.55;tab-size:4;-moz-tab-size:4;color:var(--ink);white-space:pre}
+pre.tall{max-height:420px}
+pre.short{max-height:260px}
+.ws-tab{color:var(--ws)}
+.tok-kw{color:var(--accent);font-weight:500}
+.tok-com{color:var(--muted);font-style:italic}
+.tok-str{color:var(--warn)}
+
+textarea{width:100%;font-family:var(--mono);font-size:13px;line-height:1.5;color:var(--ink);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;resize:vertical;tab-size:4}
+textarea.big{min-height:170px}
+textarea.mid{min-height:120px}
+textarea.req{font-family:var(--sans);font-size:14.5px;min-height:118px}
+
+/* buttons */
+button{font:inherit;cursor:pointer}
+.btn{font-family:var(--sans);font-size:13.5px;font-weight:500;border-radius:6px;padding:6px 12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08);color:var(--accent-ink)}
+.btn:focus-visible,.chip:focus-visible,.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.btn.done{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+
+/* summary chips */
+.stats{display:flex;flex-wrap:wrap;gap:8px}
+.stat{display:flex;align-items:baseline;gap:6px;background:var(--surface-2);border-radius:999px;padding:4px 12px;font-size:13.5px}
+.stat b{font-variant-numeric:tabular-nums;font-weight:600}
+.msg{font-size:13.5px;border-radius:8px;padding:8px 12px}
+.msg.err{background:var(--err-soft);color:var(--err)}
+.msg.warn{background:var(--warn-soft);color:var(--warn)}
+.msg.ok{background:var(--ok-soft);color:var(--ok)}
+
+/* table picker */
+.picker{display:flex;flex-direction:column;gap:8px}
+.picker-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--mono);font-size:12.5px;border-radius:999px;padding:4px 10px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.chip small{font-family:var(--sans);color:var(--muted);margin-left:4px}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font-size:13px;text-decoration:underline;text-underline-offset:2px}
+.chip.remote{border-style:dashed}
+.chip .src{font-family:var(--sans);font-size:11px;color:var(--info);margin-left:5px}
+details.extra{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+details.extra summary{cursor:pointer;padding:9px 12px;font-size:14px;font-weight:500}
+details.extra summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.extra-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:8px}
+.stat.remote{background:var(--info-soft);color:var(--info)}
+.details-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.detail-list{display:flex;flex-direction:column;gap:12px}
+.detail-list:empty{display:none}
+.dcard{border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px;background:var(--surface)}
+.dcard-head{display:flex;gap:10px;align-items:center}
+.dcard-head input{flex:1;width:auto;font-family:var(--sans);font-weight:500}
+.dtag{font-family:var(--cond);font-weight:600;font-size:13px;background:var(--gold);color:#0A2D5A;border-radius:6px;padding:3px 8px;flex:none}
+.dcard label.lab{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:500;color:var(--ink)}
+.dcard label.lab .hint{font-weight:400;color:var(--muted)}
+.dcard textarea{min-height:58px;font-family:var(--sans);font-size:14px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.dbox{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--code-bg);min-width:0}
+.dbox .t{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.dbox select{width:100%}
+select{font-family:var(--sans);font-size:13.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;max-width:100%}
+select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.addrow{display:flex;gap:6px}
+.addrow select{flex:1;min-width:0}
+.tchips{display:flex;flex-wrap:wrap;gap:5px}
+.tchip{font-family:var(--mono);font-size:12px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:999px;padding:2px 4px 2px 9px;display:inline-flex;gap:4px;align-items:center}
+.tchip button{border:0;background:none;color:var(--muted);font-size:14px;line-height:1;padding:0 4px;border-radius:50%}
+.tchip button:hover{color:var(--err)}
+.dpaths{font-size:13px;display:flex;flex-direction:column;gap:4px}
+.dpaths .no{color:var(--warn);font-weight:600}
+.dpaths .mono{font-size:12.5px}
+.tip{font-size:13.5px;color:var(--ink);background:var(--surface-2);border-radius:8px;padding:9px 12px;max-width:none}
+.tip b{color:var(--accent)}
+.vals{display:flex;flex-direction:column;gap:4px;margin:0;padding:0;list-style:none}
+.vals li{font-size:13px}
+.vals .mono{font-size:12.5px}
+.stat.limited{background:var(--warn-soft);color:var(--warn)}
+
+.opts{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14px}
+.opts label{display:flex;gap:7px;align-items:center}
+input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
+.count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.count.high{color:var(--warn)}
+
+/* segmented */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--surface)}
+.seg label{position:relative}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;padding:6px 12px;font-size:13.5px;color:var(--muted);cursor:pointer}
+.seg input:checked+span{background:var(--accent);color:var(--accent-ink)}
+
+/* review table */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.nm{font-family:var(--mono);font-size:13px;white-space:nowrap}
+td.fmt{font-family:var(--mono);font-size:12.5px;white-space:nowrap;color:var(--muted)}
+td ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:2px}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.replace{background:var(--info-soft);color:var(--info)}
+.pill.err{background:var(--err-soft);color:var(--err)}
+.pill.skip{background:var(--surface-2);color:var(--muted);border:1px dashed var(--line)}
+.muted{color:var(--muted)}
+
+.out-head{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.apply{font-size:14px;max-width:74ch}
+.apply ol{margin:6px 0 0;padding-left:1.3em;display:flex;flex-direction:column;gap:3px}
+.small{font-size:13px}
+footer{font-size:12.5px;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+/* ---------- Clear entries ---------- */
+.clear-btn{margin-left:auto;align-self:flex-start;flex:none;font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--band-ink);background:transparent;border:1px solid rgba(255,255,255,.55);border-radius:6px;padding:6px 12px;cursor:pointer}
+.clear-btn:hover{background:rgba(255,255,255,.12);border-color:#fff}
+.clear-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.clear-confirm{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--err-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--err) 35%,transparent);border-radius:10px;padding:10px 14px;font-size:14px}
+.clear-confirm b{color:var(--err)}
+.clear-confirm .btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn.danger{background:var(--err);border-color:var(--err);color:#fff}
+.btn.danger:hover{filter:brightness(1.08);color:#fff}
+@media (max-width:520px){.brandbar{flex-wrap:wrap}.clear-btn{margin-left:0}}
+/* ---------- Relationship Planner ---------- */
+.btn.small{padding:4px 10px;font-size:13px}
+.lbl{font-size:13px;font-weight:600;color:var(--muted)}
+.warntext{color:var(--warn)}
+.okc{color:var(--ok)}
+.healthbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.healthbar .hl{font-family:var(--cond);font-weight:600;font-size:15px;margin-right:4px}
+.stat.warnstat{background:var(--warn-soft);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
+.amblist{display:flex;flex-direction:column;gap:6px}
+#health{display:flex;flex-direction:column;gap:10px}
+details.adv{border:1px solid var(--line);border-radius:8px;background:var(--surface);min-width:0}
+details.adv>summary{padding:7px 12px;cursor:pointer;overflow-wrap:anywhere}
+details.adv[open]>summary{border-bottom:1px solid var(--line)}
+.adv-body{padding:8px 12px 10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.adv-body p{margin:0;overflow-wrap:anywhere}
+.adv-body .mono{font-family:var(--mono);font-size:12.5px}
+.fix-h{margin-top:4px!important}
+.fixrow{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:7px 10px;flex-wrap:wrap}
+.fixrow>div{min-width:0;flex:1 1 240px;overflow-wrap:anywhere}
+.fixrow.best{border-color:color-mix(in srgb,var(--ok) 45%,transparent);background:var(--ok-soft)}
+.pickrow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.pickrow select{max-width:100%;min-width:0}
+.flowsum{margin:0}
+.hops{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.hop{flex:1 1 170px;min-width:0;display:flex;flex-direction:column;gap:6px}
+.hop.src{flex:0 1 170px}
+.hop-h{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.tcard{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;background:var(--surface);padding:6px 10px;display:flex;flex-direction:column;gap:1px;min-width:0;overflow-wrap:anywhere}
+.tcard.src{border-left-color:var(--gold);background:var(--accent-soft)}
+.tcard.amb{border-left-color:var(--warn);background:var(--warn-soft)}
+.tcard.chg{border-style:dashed}
+.tcard .role{font-size:11.5px;color:var(--muted)}
+.tcard .via{font-size:12.5px;color:var(--muted)}
+.ambtag{font-size:11px;font-weight:700;color:var(--warn)}
+.nr-h{margin:8px 0 2px;font-weight:600;font-size:14px}
+ul.nr{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:3px;font-size:14px}
+ul.nr li{overflow-wrap:anywhere}
+ul.rels{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;font-size:14px}
+ul.rels li{overflow-wrap:anywhere}
+ul.rels li.off{opacity:.65}
+ul.rels .mono{font-family:var(--mono);font-size:12.5px}
+.chlist{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:6px}
+.chlist li{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.chlist li>span{min-width:0;flex:1 1 220px;overflow-wrap:anywhere}
+.chlist li.skip>span{color:var(--muted)}
+.addbox{border:1px dashed var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.addrow2{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}
+.addrow2 select,.addrow2 input{max-width:100%;min-width:0}
+.addgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.addgrid[hidden]{display:none}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld input[type=text],.addrow2 input[type=text]{font-family:var(--sans);font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--code-bg);color:var(--ink);width:100%;min-width:0;box-sizing:border-box}
+.addrow2 input[type=text]{width:220px}
+details.extra.inner{background:var(--surface-2)}
+.carry{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:4px 12px;font-size:13.5px}
+.ck{display:flex;gap:6px;align-items:baseline;overflow-wrap:anywhere;min-width:0}
+.ck input{accent-color:var(--accent)}
+.planhead{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.planhead p{margin:0;flex:1 1 260px}
+table.plan td.how{font-size:13px;overflow-wrap:anywhere}
+table.plan .mono{font-family:var(--mono);font-size:12px}
+tr.pl-link td:first-child{border-left:3px solid var(--ok)}
+tr.pl-conflict td:first-child,tr.pl-unreached td:first-child{border-left:3px solid var(--warn)}
+.fix{font-size:13.5px;line-height:1.55;background:var(--surface-2);border-radius:8px;padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+.fix p,.fix ul{margin:0}
+.fix ul{padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+.effect{background:var(--surface-2);border-radius:10px;padding:10px 14px;font-size:14px}
+.effect p{margin:0 0 4px}
+.effect ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:3px;overflow-wrap:anywhere}
+.quick{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.quick select{width:auto;max-width:100%;min-width:0}
+.pickrow select,.addrow2 select{width:auto}
+#goalResults{display:flex;flex-direction:column;gap:10px}
+.goal{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.goal.fail{border-left:4px solid var(--warn)}
+.goal.pass{border-left:4px solid var(--ok)}
+.goal.unk{border-left:4px solid var(--info)}
+.goal p{margin:0}
+.goal-h{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline}
+.gl{font-weight:600;flex:1 1 220px;min-width:0;overflow-wrap:anywhere}
+.gsum{font-size:13px;color:var(--muted)}
+.mark{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font-size:12px;font-weight:700;flex:none}
+.mark.ok{background:var(--ok-soft);color:var(--ok)}
+.mark.no{background:var(--warn-soft);color:var(--warn)}
+.mark.q{background:var(--info-soft);color:var(--info)}
+details.okl>summary{cursor:pointer;color:var(--ok)}
+.goal .tip{margin-top:4px}
+#planOut{display:flex;flex-direction:column;gap:10px}
+@media (max-width:520px){.hop,.hop.src{flex:1 1 100%}.addrow2 input[type=text]{width:100%}}
+
+</style>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="brandbar">
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIHJ4PSIyMCIgZmlsbD0iIzBBMkQ1QSI+PC9yZWN0PjxyZWN0IHg9IjY4IiB5PSI0NCIgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiByeD0iMiIgZmlsbD0iI0ZGRkZGRiIgZmlsbC1vcGFjaXR5PSIwLjEyIj48L3JlY3Q+PHJlY3QgeD0iMzYiIHk9IjYwIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIiBmaWxsLW9wYWNpdHk9IjAuMTIiPjwvcmVjdD48cmVjdCB4PSI1MiIgeT0iNjAiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgcng9IjIiIGZpbGw9IiNGRkZGRkYiIGZpbGwtb3BhY2l0eT0iMC4xMiI+PC9yZWN0PjxyZWN0IHg9IjY4IiB5PSI2MCIgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiByeD0iMiIgZmlsbD0iI0ZGRkZGRiIgZmlsbC1vcGFjaXR5PSIwLjEyIj48L3JlY3Q+PHJlY3QgeD0iMzYiIHk9Ijc2IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIiBmaWxsLW9wYWNpdHk9IjAuMTIiPjwvcmVjdD48cmVjdCB4PSI1MiIgeT0iNzYiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgcng9IjIiIGZpbGw9IiNGRkZGRkYiIGZpbGwtb3BhY2l0eT0iMC4xMiI+PC9yZWN0PjxyZWN0IHg9IjY4IiB5PSI3NiIgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiByeD0iMiIgZmlsbD0iI0ZGRkZGRiIgZmlsbC1vcGFjaXR5PSIwLjEyIj48L3JlY3Q+PHJlY3QgeD0iMzYiIHk9IjI4IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIiBmaWxsLW9wYWNpdHk9IjAuMTIiPjwvcmVjdD48cmVjdCB4PSI1MiIgeT0iMjgiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgcng9IjIiIGZpbGw9IiNGRkZGRkYiIGZpbGwtb3BhY2l0eT0iMC4xMiI+PC9yZWN0PjxyZWN0IHg9IjY4IiB5PSIyOCIgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiByeD0iMiIgZmlsbD0iI0ZGRkZGRiIgZmlsbC1vcGFjaXR5PSIwLjEyIj48L3JlY3Q+PHJlY3QgeD0iMjAiIHk9IjEyIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIj48L3JlY3Q+PHJlY3QgeD0iMjAiIHk9IjI4IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIj48L3JlY3Q+PHJlY3QgeD0iMjAiIHk9IjQ0IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIj48L3JlY3Q+PHJlY3QgeD0iMjAiIHk9IjYwIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIj48L3JlY3Q+PHJlY3QgeD0iMjAiIHk9Ijc2IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZGRkZGIj48L3JlY3Q+PHJlY3QgeD0iMzYiIHk9IjEyIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRjJBOTAwIj48L3JlY3Q+PHJlY3QgeD0iNTIiIHk9IjEyIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRjJBOTAwIj48L3JlY3Q+PHJlY3QgeD0iNjgiIHk9IjEyIiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRjJBOTAwIj48L3JlY3Q+PHJlY3QgeD0iMzYiIHk9IjQ0IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRjJBOTAwIj48L3JlY3Q+PHJlY3QgeD0iNTIiIHk9IjQ0IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRjJBOTAwIj48L3JlY3Q+PC9zdmc+" alt="Foster BI Services">
+      <div class="txt">
+        <span class="eyebrow">Power BI toolkit</span>
+        <h1>Relationship Planner</h1>
+        <p class="lede">See how filters flow through your model in plain words: which tables each table filters, which it doesn&rsquo;t, and why. Try relationship changes before you make them, write what you want (&ldquo;Location should filter every table&rdquo;), and get each goal checked, with fixes that are tested first. Ambiguous routes are found for you. No AI needed.</p>
+      </div>
+      <button type="button" class="clear-btn" id="clearEntries" aria-controls="clearConfirm" aria-expanded="false">Clear entries</button>
+    </div>
+    <div class="clear-confirm" id="clearConfirm" role="alertdialog" aria-labelledby="clearMsg" hidden>
+      <span id="clearMsg"><b>Clear all entries?</b> This empties the model export, your changes, goals and plan, and removes what this page saved in your browser. It can&rsquo;t be undone.</span>
+      <span class="btns"><button type="button" class="btn danger" id="clearYes">Clear entries</button><button type="button" class="btn" id="clearNo">Cancel</button></span>
+    </div>
+    <div class="clear-done msg ok" id="clearDone" role="status" hidden>Entries cleared. Connect your model in Step 1 to start again.</div>
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>Example loaded.</strong> A sample customers and sales model, with a Region table being planned and four goals. Connect your own model in Step 1 to check yours.</span>
+      <span class="btns"><button class="btn" id="clearAll" type="button">Clear entries</button></span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="step" aria-labelledby="s1">
+    <div class="step-num">Step<b>1</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s1">Your model</h2>
+        <p>Only the relationships, tables and column names are read. Nothing about your data.</p>
+      </div>
+      <details class="extra" id="modelBox">
+        <summary>The model export query <span class="muted">(the same one the other toolkit pages use)</span></summary>
+        <div class="extra-body">
+          <ol class="how">
+            <li>In Power BI Desktop, open <b>DAX query view</b>, paste this query and select <b>Run</b>.</li>
+            <li>Above the results grid, select <b>Copy</b>, then paste below.</li>
+          </ol>
+          <div class="codebox">
+            <div class="codebox-bar"><span class="t">DAX query: model export</span><span class="r"><button class="btn primary" type="button" data-copy="export">Copy query</button></span></div>
+            <pre class="short" id="exportView"></pre>
+          </div>
+        </div>
+      </details>
+      <textarea id="modelInput" class="mid" spellcheck="false" aria-label="Model export" placeholder="Paste the export results here (tab-separated, with headers)"></textarea>
+      <div class="stats" id="modelStats"></div>
+      <div id="modelMsg"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" aria-labelledby="s2">
+    <div class="step-num">Step<b>2</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s2">How filters flow</h2>
+        <p>Pick a table to see what slicing by it does. A filter goes from the one side of a relationship to the many side (Customer &rarr; Sales). A relationship set to both directions (&#8644;) also sends it back. Two routes to the same table is <b>ambiguity</b>: Power BI uses only one of them.</p>
+      </div>
+      <div id="health"></div>
+      <div class="pickrow">
+        <label class="lbl" for="fromSel">Slice by</label>
+        <select id="fromSel" aria-label="Table to slice by"></select>
+        <div class="seg" id="viewSeg" role="radiogroup" aria-label="Which model" hidden>
+          <label><input type="radio" name="view" value="before"><span>Your model</span></label>
+          <label><input type="radio" name="view" value="after" checked><span>With your changes</span></label>
+        </div>
+      </div>
+      <div id="flow"></div>
+      <div id="notReached"></div>
+      <details class="extra" id="allBox">
+        <summary>Every table at a glance <span class="muted">(how far each one&rsquo;s filters reach)</span></summary>
+        <div class="extra-body" id="allList"></div>
+      </details>
+      <details class="extra" id="relBox">
+        <summary>Every relationship, in words</summary>
+        <div class="extra-body" id="relList"></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" aria-labelledby="s3">
+    <div class="step-num">Step<b>3</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s3">Try changes</h2>
+        <p>Nothing changes in your model. Steps 2 and 4 show the result, and the steps to make the changes in Power BI Desktop are below.</p>
+      </div>
+      <div id="changeList"></div>
+      <div class="addbox">
+        <div class="addrow2">
+          <label class="lbl" for="chOp">Change</label>
+          <select id="chOp">
+            <option value="add">Add a relationship</option>
+            <option value="dir">Switch a relationship&rsquo;s direction</option>
+            <option value="active">Turn a relationship off or on</option>
+            <option value="remove">Remove a relationship</option>
+          </select>
+        </div>
+        <div id="chAdd" class="addgrid">
+          <div class="fld"><span class="lbl">One side (the lookup)</span><input type="text" id="chOneT" list="tableList" placeholder="Table, e.g. Location" aria-label="One side table"><input type="text" id="chOneC" list="oneCols" placeholder="Column, e.g. LocationKey" aria-label="One side column"></div>
+          <div class="fld"><span class="lbl">Many side (the table it filters)</span><input type="text" id="chManyT" list="tableList" placeholder="Table" aria-label="Many side table"><input type="text" id="chManyC" list="manyCols" placeholder="Column" aria-label="Many side column"></div>
+          <div class="fld"><span class="lbl">Cardinality</span><select id="chCard" aria-label="Cardinality"><option value="M:1">Many to one</option><option value="1:1">One to one</option><option value="M:M">Many to many</option></select></div>
+          <div class="fld"><span class="lbl">Cross filter</span><select id="chBoth" aria-label="Cross filter direction"><option value="0">Single</option><option value="1">Both</option></select></div>
+        </div>
+        <div id="chRel" class="addrow2" hidden><label class="lbl" for="chRelSel">Relationship</label><select id="chRelSel" aria-label="Relationship"></select></div>
+        <div class="addrow2"><button type="button" class="btn primary" id="chAddBtn">Add change</button><span id="chMsg" class="small"></span></div>
+        <datalist id="tableList"></datalist><datalist id="oneCols"></datalist><datalist id="manyCols"></datalist>
+      </div>
+      <details class="extra" id="planBox">
+        <summary>Plan a new table that many tables carry a key for <span class="muted">(Location, Region, Business unit&hellip;)</span></summary>
+        <div class="extra-body">
+          <p class="note">You&rsquo;re adding one table and putting its key on many tables. Relating it to all of them gives two routes into the same tables, so this finds the set of relationships that filters the most tables with no ambiguity, and says why each other table can&rsquo;t be linked.</p>
+          <div class="addgrid">
+            <div class="fld"><span class="lbl">New table</span><input type="text" id="plTable" placeholder="e.g. Location" aria-label="New table name"></div>
+            <div class="fld"><span class="lbl">Its key, added to the other tables</span><input type="text" id="plKey" placeholder="e.g. LocationKey" aria-label="Key column"></div>
+          </div>
+          <div class="fld"><span class="lbl">Link these first <span class="muted">(optional: the table whose key should drive the filter, e.g. Members rather than their Program)</span></span>
+            <div class="chips" id="plPrefer"></div>
+            <div class="addrow2"><input type="text" id="plPreferIn" list="tableList" placeholder="Table" aria-label="Table to link first"><button type="button" class="btn small" id="plPreferAdd">Add</button></div>
+          </div>
+          <details class="extra inner" id="plCarryBox">
+            <summary>Tables that will carry the key <span class="muted" id="plCarryCount"></span></summary>
+            <div class="extra-body"><p class="small"><button type="button" class="linkbtn" id="plAll">All</button> &middot; <button type="button" class="linkbtn" id="plNone">None</button> &middot; <button type="button" class="linkbtn" id="plDefault">Default</button> <span class="muted">(every connected table except date tables and ones named as bridges)</span></p><div class="carry" id="plCarry"></div></div>
+          </details>
+          <div id="planOut"></div>
+        </div>
+      </details>
+      <div id="changeEffect"></div>
+      <details class="extra" id="stepsBox">
+        <summary>How to make these changes in Power BI Desktop</summary>
+        <div class="extra-body">
+          <ol class="how" id="desktopSteps"></ol>
+          <p class="small"><button type="button" class="btn small" id="copySteps">Copy the steps</button></p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" aria-labelledby="s4">
+    <div class="step-num">Step<b>4</b></div>
+    <div class="step-body">
+      <div class="step-head">
+        <h2 id="s4">Check what you want</h2>
+        <p>One goal per line, in plain words: &ldquo;Location should filter every table except Date&rdquo;, &ldquo;Programs filters Members&rdquo;, &ldquo;Budget should not be filtered by Promotion&rdquo;, &ldquo;Date filters all fact tables&rdquo;. Open any table that fails for the reason and tested fixes. Ambiguity is always checked.</p>
+      </div>
+      <div class="quick">
+        <select id="qFrom" aria-label="Table that filters"></select>
+        <select id="qNeg" aria-label="Should or should not"><option value="">should filter</option><option value="1">should not filter</option></select>
+        <select id="qTo" aria-label="Tables it filters"></select>
+        <button type="button" class="btn small" id="qAdd">Add goal</button>
+      </div>
+      <textarea id="goalInput" class="mid" spellcheck="false" aria-label="Goals, one per line" placeholder="Location should filter every table except Date&#10;Programs filters Members&#10;Promotion should not filter Budget"></textarea>
+      <div id="goalResults"></div>
+      <p class="small"><button type="button" class="btn small" id="copySummary">Copy the results</button></p>
+    </div>
+  </section>
+
+  <footer>Everything runs in this page. Your model export is saved only in this browser.</footer>
+</div>
+
+<script>
+/*CORE-START*/
+const NL_MARK = '\u21B5';
+const TAB = '\t';
+
+const CLEAN = (col, tabRepl) => 'SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( ' + col + ', UNICHAR ( 13 ), "" ), UNICHAR ( 10 ), UNICHAR ( 8629 ) ), UNICHAR ( 9 ), "' + tabRepl + '" )';
+const DAX_QUERY = [
+'// KPI Measure Builder: model export',
+'// Run in DAX query view, then select Copy above the results grid.',
+'EVALUATE',
+'// Lookups that find which remote model (if any) each table comes from',
+'VAR _tableIds = SELECTCOLUMNS ( INFO.TABLES (), "TID", [ID], "TName", [Name] )',
+'VAR _remoteParts =',
+'\tSELECTCOLUMNS (',
+'\t\tFILTER ( INFO.PARTITIONS (), [ExpressionSourceID] > 0 ),',
+'\t\t"PTID", [TableID],',
+'\t\t"PEID", [ExpressionSourceID]',
+'\t)',
+'VAR _expressions = SELECTCOLUMNS ( INFO.EXPRESSIONS (), "EID", [ID], "EName", [Name] )',
+'VAR _tables =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.VIEW.TABLES (),',
+'\t\t"Kind", "Table",',
+'\t\t"Table", [Name],',
+'\t\t"Name", [Name],',
+'\t\t"Type", [DataCategory],',
+'\t\t"Folder", "",',
+'\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [IsPrivate], " private", "" ),',
+'\t\t"Description", ' + CLEAN('[Description]', ' ') + ',',
+'\t\t"Expression", "",',
+'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Storage", [StorageMode],',
+'\t\t"Source",',
+'\t\t\tVAR _tn = [Name]',
+'\t\t\tVAR _tid = MAXX ( FILTER ( _tableIds, [TName] = _tn ), [TID] )',
+'\t\t\tVAR _eid = MAXX ( FILTER ( _remoteParts, [PTID] = _tid ), [PEID] )',
+'\t\t\tRETURN CONCATENATEX ( FILTER ( _expressions, [EID] = _eid ), [EName], ", " )',
+'\t)',
+'VAR _columns =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.VIEW.COLUMNS (),',
+'\t\t"Kind", "Column",',
+'\t\t"Table", [Table],',
+'\t\t"Name", [Name],',
+'\t\t"Type", [DataType],',
+'\t\t"Folder", [DisplayFolder],',
+'\t\t"Flags", IF ( [IsHidden], "hidden", "" ) & IF ( [IsKey], " key", "" ),',
+'\t\t"Description", ' + CLEAN('[Description]', ' ') + ',',
+'\t\t"Expression", ' + CLEAN('[Expression]', '    ') + ',',
+'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
+'VAR _measures =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.VIEW.MEASURES (),',
+'\t\t"Kind", "Measure",',
+'\t\t"Table", [Table],',
+'\t\t"Name", [Name],',
+'\t\t"Type", [FormatString],',
+'\t\t"Folder", [DisplayFolder],',
+'\t\t"Flags", IF ( [IsHidden], "hidden", "" ),',
+'\t\t"Description", ' + CLEAN('[Description]', ' ') + ',',
+'\t\t"Expression", ' + CLEAN('[Expression]', '    ') + ',',
+'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
+'VAR _relationships =',
+'\tSELECTCOLUMNS (',
+'\t\tINFO.VIEW.RELATIONSHIPS (),',
+'\t\t"Kind", "Relationship",',
+'\t\t"Table", [FromTable],',
+'\t\t"Name", [FromColumn],',
+'\t\t"Type", [FromCardinality] & ":" & [ToCardinality],',
+'\t\t"Folder", "",',
+'\t\t"Flags", [CrossFilteringBehavior] & IF ( [IsActive], "", " inactive" ),',
+'\t\t"Description", "",',
+'\t\t"Expression", "",',
+'\t\t"ToTable", [ToTable],',
+'\t\t"ToColumn", [ToColumn],',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
+'RETURN',
+'\tUNION ( _tables, _columns, _measures, _relationships )',
+'ORDER BY [Kind], [Table], [Name]'
+].join('\n');
+
+function unquoteCell(s){
+  if (s.length >= 2 && s[0] === '"' && s[s.length-1] === '"') {
+    const inner = s.slice(1, -1);
+    if (!/(^|[^"])"([^"]|$)/.test(inner.replace(/""/g, ''))) return inner.replace(/""/g, '"');
+  }
+  return s;
+}
+function restore(s){ return (s || '').split(NL_MARK).join('\n'); }
+function lc(s){ return (s || '').toLowerCase(); }
+// Date tables: marked as one (data category Time), or a DAX calculated table built on CALENDAR, CALENDARAUTO
+// or a GENERATESERIES of dates. Many models never mark theirs, so both count. (↵ is a line break in the export.)
+const CALC_DATE_RE = /\bCALENDAR(AUTO)?[\s\u21B5]*\(|\bGENERATESERIES[\s\u21B5]*\([\s\u21B5]*DATE[\s\u21B5]*\(/i;
+function isMarkedDateTable(t){ return !!t && lc(t.category) === 'time'; }
+function isCalcDateTable(t){ return !!t && CALC_DATE_RE.test(t.calc || ''); }
+function isDateTable(t){ return isMarkedDateTable(t) || isCalcDateTable(t); }
+// marked ones first
+function dateTablesOf(model){ return model.tables.filter(isMarkedDateTable).concat(model.tables.filter(t => !isMarkedDateTable(t) && isCalcDateTable(t))); }
+
+/* ---------- the shared model reader ----------
+   readModel() is the one place the model export is read. It keeps every column and flag the export has,
+   so a tool doesn't need its own parser. Rows Power BI makes for itself (auto date tables, RowNumber
+   columns) are left out; private tables are kept with private: true, and each tool decides.
+   tables   { name, category, hidden, private, description, storage, source, calc, flags[] }
+   columns  { table, name, dataType, folder, hidden, key, description, expression, summarize, sortBy, hierarchies, flags[] }
+   measures { table, name, formatString, folder, hidden, text, dynamicFormat, description, expression, flags[] }
+   rels     { fromTable, fromColumn, toTable, toColumn, card, fromCard, toCard, both, inactive, flags[] }
+   model    { name, table, type, discourage, flags[] } from the _model row, or null
+   opts.keepAuto keeps auto date tables and RowNumber columns (Model Documenter can show them).
+   opts.keepAuto keeps auto date tables and RowNumber columns (Model Documenter can show them).
+   cols     the export's column names (lower case), for tools that tell an older export query from a newer one
+   has      which optional export columns came with it (summarize, sortBy, hierarchies, storage, source, model, upgraded) */
+const AUTO_DATE_TABLE = /^(localdatetable_|datetabletemplate_)/i;
+// The export query's columns, in its order (used when a paste has no header row)
+const EXPORT_COLS = ['kind', 'table', 'name', 'type', 'folder', 'flags', 'description', 'expression', 'totable', 'tocolumn', 'summarize', 'sortby', 'hierarchies', 'storage', 'source'];
+function readModel(text, opts){
+  const keepAuto = !!(opts && opts.keepAuto);
+  const res = { tables: [], columns: [], measures: [], rels: [], model: null, has: {}, error: null, skipped: 0 };
+  const raw = (text || '').replace(/\r/g, '');
+  if (!raw.trim()) return res;
+  const lines = raw.split('\n');
+  let hIdx = -1, map = {};
+  for (let i = 0; i < Math.min(lines.length, 15); i++) {
+    const cells = lines[i].split('\t').map(c => lc(unquoteCell(c.trim())).replace(/^\[|\]$/g, '').replace(/^.*\[|\]$/g, ''));
+    if (cells.includes('kind') && cells.includes('table') && cells.includes('name')) {
+      hIdx = i; cells.forEach((c, j) => { map[c] = j; }); break;
+    }
+  }
+  // No header row (cells copied from the grid without it): rows that start with a kind the export makes
+  // are read in the export query's own column order.
+  if (hIdx < 0) {
+    const body = lines.filter(l => l.trim()), kinds = /^"?(table|column|measure|relationship|model)"?$/i;
+    const rowLike = body.filter(l => { const c = l.split('\t'); return c.length >= 8 && kinds.test(c[0].trim()); }).length;
+    if (body.length && rowLike >= Math.max(1, body.length * 0.8)) {
+      const width = Math.max(...body.map(l => l.split('\t').length));
+      EXPORT_COLS.forEach((c, j) => { if (j < width) map[c] = j; });
+      hIdx = -1; res.noHeader = true;
+    }
+  }
+  if (hIdx < 0 && !res.noHeader) {
+    res.error = 'The header row (Kind, Table, Name…) wasn’t found. Use the Copy button above the results grid so the column names come along, and make sure the query from Step 1 is the one you ran.';
+    return res;
+  }
+  const has = k => map[k] !== undefined;
+  res.cols = new Set(Object.keys(map)); // the export's column names, lower case
+  res.has = { summarize: has('summarize'), sortBy: has('sortby'), hierarchies: has('hierarchies'), storage: has('storage'), source: has('source'), model: false };
+  const get = (cells, k) => map[k] === undefined ? '' : restore(unquoteCell((cells[map[k]] || '').trim()));
+  for (let i = hIdx + 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const c = lines[i].split('\t');
+    const kind = lc(get(c, 'kind'));
+    const table = get(c, 'table');
+    const name = get(c, 'name');
+    const fl = lc(get(c, 'flags')), flags = fl.split(/\s+/).filter(Boolean);
+    if (!keepAuto && AUTO_DATE_TABLE.test(table)) { res.skipped++; continue; }
+    if (kind === 'table') {
+      res.tables.push({ name, category: get(c, 'type'), hidden: flags.includes('hidden'), private: flags.includes('private'), description: get(c, 'description'),
+        storage: get(c, 'storage'), source: get(c, 'source'), calc: get(c, 'expression'), flags });
+    } else if (kind === 'column') {
+      if (!keepAuto && /^RowNumber-/i.test(name)) { res.skipped++; continue; }
+      res.columns.push({ table, name, dataType: get(c, 'type'), folder: get(c, 'folder'), hidden: flags.includes('hidden'), key: flags.includes('key'),
+        description: get(c, 'description'), expression: get(c, 'expression'),
+        summarize: get(c, 'summarize'), sortBy: get(c, 'sortby'), hierarchies: get(c, 'hierarchies'), flags });
+    } else if (kind === 'measure') {
+      res.measures.push({ table, name, formatString: get(c, 'type'), folder: get(c, 'folder'), hidden: flags.includes('hidden'),
+        text: flags.includes('text'), dynamicFormat: flags.includes('dynamic-format'),
+        description: get(c, 'description'), expression: get(c, 'expression'), flags });
+    } else if (kind === 'relationship') {
+      const card = get(c, 'type'), parts = card.split(':');
+      const toT = get(c, 'totable');
+      if (!keepAuto && AUTO_DATE_TABLE.test(toT)) { res.skipped++; continue; }
+      res.rels.push({ fromTable: table, fromColumn: name, toTable: toT, toColumn: get(c, 'tocolumn'), card,
+        fromCard: parts[0] || '', toCard: parts[1] || '', both: /both/.test(fl), inactive: /inactive/.test(fl), flags });
+    } else if (kind === 'model') {
+      res.has.model = true; res.model = { name, table, type: get(c, 'type'), discourage: /discourage-implicit/.test(fl), flags };
+    }
+  }
+  res.has.upgraded = res.has.summarize && res.has.model;
+  if (!res.tables.length && !res.columns.length && !res.measures.length) res.error = NO_ROWS;
+  return res;
+}
+const NO_ROWS = 'The header row was found but no model rows came with it. Paste the full results.';
+// The model as most tools use it: private tables left out, a table row for every table that has
+// columns or measures, sorted by name, with composite-model source groups.
+function parseModel(text){
+  const res = readModel(text);
+  if (!('model' in res.has)) return res; // empty, or no header row
+  const priv = res.tables.filter(t => t.private).length;
+  res.tables = res.tables.filter(t => !t.private); res.skipped += priv;
+  const tablesSeen = new Map(res.tables.map(t => [lc(t.name), t]));
+  for (const x of [...res.columns, ...res.measures]) {
+    if (x.table && !tablesSeen.has(lc(x.table))) { const t = { name: x.table, category: '', hidden: false, description: '' }; res.tables.push(t); tablesSeen.set(lc(x.table), t); }
+  }
+  res.tables.sort((a, b) => a.name.localeCompare(b.name));
+  if (!res.tables.length && !res.columns.length) res.error = NO_ROWS;
+  annotateSources(res);
+  return res;
+}
+
+/* ---------- DAX references ---------- */
+// Blank out comments and string literals in one pass, so "--" or "//" inside a string (a URL, say)
+// doesn't hide the rest of the line, and a name inside a string isn't read as a reference.
+// Quoted table names and [bracketed] names are kept as they are.
+function stripDaxText(e){
+  const s = e || ''; let out = '', i = 0;
+  while (i < s.length) {
+    const c = s[i], n = s[i + 1];
+    if (c === '"') { let j = i + 1; while (j < s.length) { if (s[j] === '"') { if (s[j + 1] === '"') { j += 2; continue; } break; } j++; } out += '""'; i = j + 1; continue; }
+    if (c === "'") { let j = i + 1; while (j < s.length) { if (s[j] === "'") { if (s[j + 1] === "'") { j += 2; continue; } break; } j++; } out += s.slice(i, j + 1); i = j + 1; continue; }
+    if (c === '[') { const j = s.indexOf(']', i + 1); let k = j; while (k >= 0 && s[k + 1] === ']') k = s.indexOf(']', k + 2); if (k < 0) { out += s.slice(i); break; } out += s.slice(i, k + 1); i = k + 1; continue; }
+    if ((c === '/' && n === '/') || (c === '-' && n === '-')) { const j = s.indexOf('\n', i); out += ' '; i = j < 0 ? s.length : j; continue; }
+    if (c === '/' && n === '*') { const j = s.indexOf('*/', i + 2); out += ' '; i = j < 0 ? s.length : j + 2; continue; }
+    out += c; i++;
+  }
+  return out;
+}
+// Every 'Table'[Name], Table[Name] or bare [Name] in an expression, as { table, col } (table '' when bare).
+function daxRefs(expr){
+  const out = [], re = /(?:'((?:[^']|'')+)'|([A-Za-z_À-￿][\w.À-￿]*))?\s*\[((?:[^\]]|\]\])+)\]/g;
+  const s = stripDaxText(expr); let m;
+  while ((m = re.exec(s))) {
+    const table = m[1] ? m[1].replace(/''/g, "'") : m[2] && !DAX_WORD_BEFORE.test(m[2]) ? m[2] : '';
+    out.push({ table, col: m[3].replace(/\]\]/g, ']') });
+  }
+  return out;
+}
+// A keyword before a bracket (RETURN [Sales], VAR, IN, AND, OR, NOT) isn't a table name.
+const DAX_WORD_BEFORE = /^(var|return|in|and|or|not)$/i;
+// The model's measures an expression refers to as a bare [Name].
+function daxMeasureRefs(expr, model){
+  const names = new Map(model.measures.map(m => [lc(m.name), m])), out = new Set();
+  daxRefs(expr).forEach(r => { if (!r.table && names.has(lc(r.col))) out.add(names.get(lc(r.col))); });
+  return out;
+}
+// The measures a list of measures depends on, up to `depth` levels down (all levels when left out), not counting the list itself.
+function measureDeps(model, list, depth){
+  const inList = new Set(list.map(m => lc(m.name))), found = new Map();
+  let frontier = list;
+  for (let d = 0; d < (depth || Infinity) && frontier.length; d++) {
+    const next = [];
+    for (const m of frontier) for (const x of daxMeasureRefs(m.expression, model)) {
+      const k = lc(x.name);
+      if (inList.has(k) || found.has(k)) continue;
+      found.set(k, x); next.push(x);
+    }
+    frontier = next;
+  }
+  return [...found.values()];
+}
+
+/* ---------- composite models ----------
+   A source group is the set of tables that come from one source. Import tables form one group;
+   each DirectQuery source (a SQL database, a remote semantic model) is its own group; Dual tables
+   belong to the import group and their DirectQuery source. A relationship between tables that share
+   no group, or any many-to-many relationship, is a limited relationship. */
+function remoteLabel(source){
+  return (source || '').replace(/^DirectQuery to (AS|PBI|Analysis Services)\s*-\s*/i, '').trim();
+}
+function sourceGroups(t){
+  const mode = lc(t.storage);
+  const src = t.source ? 'remote:' + lc(t.source) : '';
+  if (mode === 'dual') return ['import', src || 'directquery'];
+  if (mode === 'directquery') return [src || 'directquery'];
+  if (mode === 'directlake') return [src || 'directlake'];
+  return [src || 'import'];
+}
+function annotateSources(model){
+  const byName = new Map(model.tables.map(t => [lc(t.name), t]));
+  const groups = new Set();
+  model.tables.forEach(t => { t.groups = sourceGroups(t); t.remote = !!t.source; groups.add(t.groups[0]); });
+  model.composite = groups.size > 1;
+  model.hasRemote = model.tables.some(t => t.remote);
+  model.rels.forEach(r => {
+    const a = byName.get(lc(r.fromTable)), b = byName.get(lc(r.toTable));
+    const cross = a && b && !a.groups.some(g => b.groups.includes(g));
+    r.crossSource = !!cross;
+    r.limited = !!cross || (lc(r.fromCard) === 'many' && lc(r.toCard) === 'many');
+  });
+  return model;
+}
+// Measures the export can't see (for example from a remote model), pasted one name per line.
+function parseExtraMeasures(text){
+  return (text || '').replace(/\r/g, '').split('\n')
+    .map(l => l.replace(/^\s*([-*•]|\d+[.)])\s*/, '').split(/\s(=|\|)\s|\t/)[0].trim())
+    .map(l => l.replace(/^'[^']*'\s*(?=\[)/, '').replace(/^\[(.*)\]$/, '$1').trim())
+    .filter(Boolean);
+}
+function withExtraMeasures(model, names){
+  if (!names.length) return model;
+  const have = new Set(model.measures.map(m => lc(m.name)));
+  const extra = [...new Set(names)].filter(n => !have.has(lc(n))).map(n => ({ table: '', name: n, formatString: '', folder: '', hidden: false, description: '', expression: '', remote: true }));
+  return Object.assign({}, model, { measures: model.measures.concat(extra), extraCount: extra.length });
+}
+
+function storageTag(t){
+  const bits = [];
+  if (t.remote) bits.push('from remote model ' + qName(remoteLabel(t.source)));
+  else if (t.storage && lc(t.storage) !== 'import') bits.push(t.storage);
+  else bits.push('Import');
+  return bits.join(', ');
+}
+
+function qName(n){ return "'" + n.replace(/'/g, "''") + "'"; }
+function bracket(n){ return '[' + n.replace(/\]/g, ']]') + ']'; }
+function oneLine(s){ return (s || '').replace(/\s+/g, ' ').trim(); }
+
+// Tables a DAX expression references directly: 'Table'[Col], Table[Col], 'Table', or a bare table name as a function argument.
+function tableRefs(expr, model){
+  const out = new Set();
+  if (!expr) return out;
+  const code = stripDax(expr);
+  const known = new Map(model.tables.map(t => [lc(t.name), t.name]));
+  let r;
+  const quoted = /'((?:[^']|'')+)'/g;
+  while ((r = quoted.exec(code))) { const n = r[1].replace(/''/g, "'"); if (known.has(lc(n))) out.add(known.get(lc(n))); }
+  const bare = /(^|[^\w'\]])([A-Za-z_][A-Za-z0-9_]*)\s*(?=[\[,)])/g;
+  while ((r = bare.exec(code))) { if (known.has(lc(r[2]))) out.add(known.get(lc(r[2]))); }
+  return out;
+}
+
+// Existing measures worth sending: when only some tables are selected, drop measures that only use unselected tables.
+function measuresForPrompt(model, tables){
+  if (!tables) return { list: model.measures, dropped: 0 };
+  const sel = new Set(tables.map(lc));
+  if (model.tables.every(t => sel.has(lc(t.name)))) return { list: model.measures, dropped: 0 };
+  const list = model.measures.filter(m => {
+    if (m.remote) return true;
+    const refs = [...tableRefs(m.expression, model)];
+    return !refs.length || refs.some(t => sel.has(lc(t)));
+  });
+  return { list, dropped: model.measures.length - list.length };
+}
+
+/* ---------- table suggestions for big models ---------- */
+const STOP_WORDS = new Set(('the and for with from per by of to in on at an or vs versus over under between than that this these those each all any '
+  + 'total totals count counts number numbers average avg sum rate rates percent percentage pct ratio share amount value values '
+  + 'using based only excluding including exclude include measure measures calculate calculated show new like who which where when '
+  + 'not without have has had are was were will would should can could how many much more less most least into out what is it its be '
+  + 'distinct unique minus plus divided times grand overall current selected same so as do does '
+  + 'filter filtered filtering type types split broken breakdown separate separately individual one').split(/\s+/));
+const TIME_WORDS = new Set(('year years yearly month months monthly week weeks weekly day days daily quarter quarters quarterly date dates '
+  + 'ytd mtd qtd yoy mom qoq wow prior previous last rolling trailing trend period periods fiscal ly py since ago growth change '
+  + 'annual annualized cumulative running').split(/\s+/));
+function stem(w){
+  if (w.length > 4 && w.endsWith('ies')) return w.slice(0, -3) + 'y';
+  if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1);
+  return w;
+}
+function wordsOf(s){
+  return (s || '').replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(stem);
+}
+function wordMatch(a, b){ return a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5)); }
+
+function suggestTables(model, requestsText, targetTable){
+  const raw = (requestsText || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const tokens = [...new Set(raw.map(stem).filter(w => w.length >= 3 && !/^\d+$/.test(w) && !STOP_WORDS.has(w) && !TIME_WORDS.has(w)))];
+  const wantsTime = raw.some(w => TIME_WORDS.has(w) || TIME_WORDS.has(stem(w)));
+  const picked = new Map(); // table name -> reason
+  const hit = (words) => tokens.find(t => words.some(w => wordMatch(t, w)));
+  for (const t of model.tables) {
+    const tw = hit(wordsOf(t.name));
+    if (tw) { picked.set(t.name, 'name matches “' + tw + '”'); continue; }
+    for (const c of model.columns) {
+      if (lc(c.table) !== lc(t.name)) continue;
+      const cw = hit(wordsOf(c.name));
+      if (cw) { picked.set(t.name, 'column ' + bracket(c.name) + ' matches “' + cw + '”'); break; }
+    }
+  }
+  for (const m of model.measures) {
+    const mw = hit(wordsOf(m.name));
+    if (!mw) continue;
+    for (const t of tableRefs(m.expression, model)) if (!picked.has(t)) picked.set(t, 'used by measure ' + bracket(m.name));
+  }
+  const matched = new Set(picked.keys());
+  // bring in the dimensions each matched table filters through (many side -> one side)
+  for (const r of model.rels) {
+    const from = model.tables.find(t => lc(t.name) === lc(r.fromTable));
+    const to = model.tables.find(t => lc(t.name) === lc(r.toTable));
+    if (!from || !to) continue;
+    const manyToOne = lc(r.toCard) === 'one' || !r.toCard;
+    if (matched.has(from.name) && manyToOne && !picked.has(to.name)) picked.set(to.name, 'related to ' + qName(from.name));
+    if (matched.has(to.name) && lc(r.fromCard) === 'one' && lc(r.toCard) === 'many' && !picked.has(from.name)) picked.set(from.name, 'related to ' + qName(to.name));
+  }
+  if (wantsTime) dateTablesOf(model).forEach(t => { if (!picked.has(t.name)) picked.set(t.name, 'date table (time words in requests)'); });
+  const home = model.tables.find(t => lc(t.name) === lc(targetTable || ''));
+  if (home && picked.size && !picked.has(home.name)) picked.set(home.name, 'home table for new measures');
+  return { picked, matchedCount: matched.size, tokens };
+}
+
+/* ---------- column values ----------
+   The export has names only. For filters on specific text values, the user can run a second small
+   query that lists the values of chosen columns, and paste the result back. */
+const VALUES_LIMIT = 50;
+
+// 'Table'[Column] / Table[Column] / [Column] (if unique) lines -> canonical column refs
+function parseColumnList(text, model){
+  const out = [], bad = [], seen = new Set();
+  for (let line of (text || '').replace(/\r/g, '').split('\n')) {
+    line = line.replace(/^\s*([-*•]|\d+[.)])\s*/, '').trim();
+    if (!line) continue;
+    let tn = null, cn = null, r;
+    if ((r = line.match(/^'((?:[^']|'')+)'\s*\[((?:[^\]]|\]\])+)\]/))) { tn = r[1].replace(/''/g, "'"); cn = r[2].replace(/\]\]/g, ']'); }
+    else if ((r = line.match(/^([A-Za-z_][\w ]*?)\s*\[((?:[^\]]|\]\])+)\]/))) { tn = r[1].trim(); cn = r[2].replace(/\]\]/g, ']'); }
+    else if ((r = line.match(/^\[((?:[^\]]|\]\])+)\]$/)) || (r = [null, line])) { cn = r[1].replace(/\]\]/g, ']'); }
+    let col;
+    if (tn) col = model.columns.find(c => lc(c.table) === lc(tn) && lc(c.name) === lc(cn));
+    else {
+      const hits = model.columns.filter(c => lc(c.name) === lc(cn));
+      if (hits.length === 1) col = hits[0];
+    }
+    if (!col) { bad.push(line); continue; }
+    const ref = qName(col.table) + bracket(col.name);
+    if (seen.has(lc(ref))) continue;
+    seen.add(lc(ref));
+    out.push({ table: col.table, column: col.name, ref });
+  }
+  return { cols: out, bad };
+}
+
+function valuesQuery(cols){
+  if (!cols.length) return '';
+  const part = c => 'SELECTCOLUMNS ( TOPN ( ' + VALUES_LIMIT + ', DISTINCT ( ' + c.ref + ' ), ' + c.ref + ', ASC ), '
+    + '"Column", "' + c.ref.replace(/"/g, '""') + '", "Value", ' + c.ref + ' & "", "Distinct", COUNTROWS ( DISTINCT ( ' + c.ref + ' ) ) )';
+  const body = cols.length === 1 ? part(cols[0]) : 'UNION (\n' + cols.map(c => '\t' + part(c)).join(',\n') + '\n)';
+  return ['// KPI Measure Builder: column values (first ' + VALUES_LIMIT + ' per column)',
+    '// Run in DAX query view, then select Copy above the results grid.',
+    'EVALUATE', body, 'ORDER BY [Column], [Value]'].join('\n');
+}
+
+// Pasted results -> Map(lc ref -> { ref, values, distinct })
+function parseValues(text){
+  const map = new Map();
+  const lines = (text || '').replace(/\r/g, '').split('\n');
+  let h = -1, idx = {};
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const cells = lines[i].split('\t').map(c => lc(unquoteCell(c.trim())).replace(/^.*\[|\]$/g, ''));
+    if (cells.includes('column') && cells.includes('value')) { h = i; cells.forEach((c, j) => { idx[c] = j; }); break; }
+  }
+  if (h < 0) return map;
+  for (let i = h + 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const c = lines[i].split('\t');
+    const ref = unquoteCell((c[idx.column] || '').trim());
+    if (!ref) continue;
+    const v = unquoteCell((c[idx.value] || '').replace(/^\s+|\s+$/g, ''));
+    const d = parseInt((c[idx.distinct] || '').trim(), 10);
+    const k = lc(ref);
+    if (!map.has(k)) map.set(k, { ref, values: [], distinct: isNaN(d) ? null : d });
+    map.get(k).values.push(v);
+  }
+  return map;
+}
+
+// Text columns whose names share words with the requests, best matches first
+function suggestValueColumns(model, requestsText, limit){
+  const raw = (requestsText || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const tokens = [...new Set(raw.map(stem).filter(w => w.length >= 3 && !STOP_WORDS.has(w) && !TIME_WORDS.has(w)))];
+  const scored = [];
+  for (const c of model.columns) {
+    if (!/^(string|text)$/i.test(c.dataType || '') || c.key) continue;
+    const cw = wordsOf(c.name);
+    const score = tokens.filter(t => cw.some(w => wordMatch(t, w))).length;
+    if (score) scored.push({ c, score });
+  }
+  scored.sort((a, b) => b.score - a.score || a.c.name.length - b.c.name.length);
+  return scored.slice(0, limit || 6).map(x => qName(x.c.table) + bracket(x.c.name));
+}
+
+function daxString(v){ return '"' + v.replace(/"/g, '""') + '"'; }
+
+/* ---------- relationship paths ----------
+   Filters flow from the one side (ToTable) to the many side (FromTable); both ways only when the
+   relationship filters both directions. */
+function hopFlows(r, fromT, toT){
+  if (lc(fromT) === lc(r.toTable) && lc(toT) === lc(r.fromTable)) return true;
+  return !!r.both;
+}
+function relPath(model, a, b, allowInactive){
+  if (lc(a) === lc(b)) return [];
+  const rels = model.rels.filter(r => allowInactive || !r.inactive);
+  const prev = new Map([[lc(a), null]]);
+  const queue = [a];
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const r of rels) {
+      let next = null;
+      if (lc(r.fromTable) === lc(cur)) next = r.toTable; else if (lc(r.toTable) === lc(cur)) next = r.fromTable;
+      if (!next || prev.has(lc(next))) continue;
+      prev.set(lc(next), { from: cur, rel: r, to: next });
+      if (lc(next) === lc(b)) {
+        const hops = []; let k = lc(b);
+        while (prev.get(k)) { const h = prev.get(k); hops.unshift(h); k = lc(h.from); }
+        return hops;
+      }
+      queue.push(next);
+    }
+  }
+  return null;
+}
+function describePath(model, a, b){
+  let hops = relPath(model, a, b, false), inactive = false;
+  if (!hops) { hops = relPath(model, a, b, true); inactive = !!hops; }
+  if (!hops) return { text: 'No relationship path connects ' + qName(a) + ' and ' + qName(b) + '. Relating them needs TREATAS or a relationship change.', tables: [], ok: false, forward: false, back: false };
+  const names = [a].concat(hops.map(h => h.to));
+  const forward = hops.every(h => hopFlows(h.rel, h.from, h.to));
+  const back = hops.slice().reverse().every(h => hopFlows(h.rel, h.to, h.from));
+  const limited = hops.some(h => h.rel.limited);
+  const inact = hops.filter(h => h.rel.inactive);
+  const parts = [names.map(qName).join(' → ') + '.'];
+  parts.push('A filter on ' + qName(a) + ' reaches ' + qName(b) + ': ' + (forward ? 'yes' : 'NO') + '. A filter on ' + qName(b) + ' reaches ' + qName(a) + ': ' + (back ? 'yes' : 'NO') + '.');
+  if (inactive) parts.push('Uses INACTIVE relationship(s) ' + inact.map(h => qName(h.rel.fromTable) + bracket(h.rel.fromColumn) + ' → ' + qName(h.rel.toTable) + bracket(h.rel.toColumn)).join(', ') + '; activate with USERELATIONSHIP.');
+  if (limited) parts.push('Includes a LIMITED relationship.');
+  return { text: parts.join(' '), tables: names, ok: true, forward, back, inactive };
+}
+
+/* ---------- detailed measures ---------- */
+const COMBINE = {
+  sum: ['Sum', 'add up the per-row results (SUMX)'],
+  max: ['Largest', 'take the largest per-row result (MAXX)'],
+  min: ['Smallest', 'take the smallest per-row result (MINX)'],
+  avg: ['Average', 'average the per-row results (AVERAGEX)'],
+  count: ['Count rows with a result', 'count the rows whose result is not blank'],
+  auto: ['Let Copilot decide', 'combine the per-row results in the way that fits the goal, and say how in NOTES']
+};
+function blankDetail(){ return { name: '', goal: '', tables: [], iterate: '', combine: 'sum', from: '', to: '', filters: '', example: '', edge: '', other: '' }; }
+
+function detailTables(model, d){
+  const set = new Map();
+  const add = n => { const t = model.tables.find(x => lc(x.name) === lc(n)); if (t) set.set(lc(t.name), t.name); };
+  (d.tables || []).forEach(add);
+  const col = r => { const m = /^'((?:[^']|'')+)'\[/.exec(r || ''); return m ? m[1].replace(/''/g, "'") : null; };
+  [d.iterate, d.from.startsWith('col:') ? d.from.slice(4) : '', d.to.startsWith('col:') ? d.to.slice(4) : ''].map(col).filter(Boolean).forEach(add);
+  return [...set.values()];
+}
+function detailPaths(model, d){
+  const ts = detailTables(model, d);
+  const out = [];
+  for (let i = 0; i < ts.length; i++) for (let j = i + 1; j < ts.length; j++) out.push(describePath(model, ts[i], ts[j]));
+  return out;
+}
+function windowEnd(v, d, dateCol){
+  if (v === 'sel') return 'the selected date, meaning ' + (dateCol ? 'MAX ( ' + dateCol + ' )' : 'the latest date') + ' in the current filter context';
+  if (v === 'periodStart') return 'the first date of the selected period' + (dateCol ? ', meaning MIN ( ' + dateCol + ' )' : '');
+  if (v === 'periodEnd') return 'the last date of the selected period' + (dateCol ? ', meaning MAX ( ' + dateCol + ' )' : '');
+  if (v.startsWith('col:')) return 'the value of ' + v.slice(4) + (d.iterate ? ' for the current row of the iteration' : ' in the current context');
+  return '';
+}
+function detailSection(model, d, n, dateCol){
+  const L = [];
+  L.push('### Detailed measure D' + n + (d.name ? ': ' + d.name : ''));
+  L.push('Goal: ' + (d.goal || '(not described)').trim());
+  const ts = detailTables(model, d);
+  if (ts.length) L.push('Tables involved: ' + ts.map(qName).join(', '));
+  const paths = detailPaths(model, d);
+  if (paths.length) { L.push('How these tables connect (from the model’s relationships):'); paths.forEach(p => L.push('- ' + p.text)); }
+  if (d.iterate) {
+    const c = COMBINE[d.combine] || COMBINE.sum;
+    L.push('Calculation shape: this is ONE measure. Iterate over each value of ' + d.iterate + ', calculate the result for that value, then ' + c[1] + '.');
+  }
+  if (d.from || d.to) {
+    const f = windowEnd(d.from, d, dateCol) || 'no lower limit', t = windowEnd(d.to, d, dateCol) || 'no upper limit';
+    L.push('Date window: from ' + f + ', up to and including ' + t + '.' + (d.iterate && (d.from.startsWith('col:') || d.to.startsWith('col:')) ? ' The window is different for each row of the iteration.' : ''));
+    if (d.from === 'sel' || d.to === 'sel' || d.from === 'periodEnd' || d.to === 'periodEnd' || d.from === 'periodStart' || d.to === 'periodStart')
+      L.push('Capture the selected date(s) in VARs before iterating. Inside the calculation, remove the slicer’s own date filter and apply this window instead.');
+  }
+  if (d.filters.trim()) L.push('Filters to keep or ignore: ' + oneLine(d.filters));
+  if (d.example.trim()) L.push('Worked example: ' + oneLineKeepBreaks(d.example).split('\n').join(' / '));
+  if (d.edge.trim()) L.push('Edge cases: ' + oneLineKeepBreaks(d.edge).split('\n').join(' / '));
+  if (d.other.trim()) L.push('Other notes: ' + oneLineKeepBreaks(d.other).split('\n').join(' / '));
+  return L;
+}
+function hasDetails(details){ return (details || []).some(d => (d.goal || '').trim() || (d.name || '').trim()); }
+
+function buildPrompt(model, requestsText, opts){
+  const o = Object.assign({ tables: null, hidden: true, formulas: true, descriptions: true, targetTable: '_Measures' }, opts || {});
+  const reqs = (requestsText || '').split('\n').map(s => s.replace(/^\s*(\d+[.)]|[-*•])\s*/, '').trim()).filter(Boolean);
+  const dateTables = model.tables.filter(isMarkedDateTable).map(t => t.name);
+  const calcDateTables = dateTablesOf(model).filter(t => !isMarkedDateTable(t)).map(t => t.name);
+  const dateTbl = dateTables[0] || calcDateTables[0];
+  const details = (o.details || []).filter(d => (d.goal || '').trim() || (d.name || '').trim());
+  const forced = new Set();
+  details.forEach(d => {
+    detailTables(model, d).forEach(t => forced.add(lc(t)));
+    detailPaths(model, d).forEach(p => p.tables.forEach(t => forced.add(lc(t))));
+    if ((d.from || d.to) && dateTbl) forced.add(lc(dateTbl));
+  });
+  const include = o.tables ? new Set(o.tables.map(lc).concat([...forced])) : null;
+  const inc = t => !include || include.has(lc(t));
+  const dateColObj = dateTbl && (model.columns.find(c => lc(c.table) === lc(dateTbl) && /^date$/i.test(c.name)) || model.columns.find(c => lc(c.table) === lc(dateTbl) && /date/i.test(c.dataType || '')));
+  const dateCol = dateColObj ? qName(dateColObj.table) + bracket(dateColObj.name) : null;
+  const L = [];
+  L.push('You are an expert in Power BI and DAX. Write DAX measures for the semantic model described below.');
+  L.push('');
+  L.push('## TASK: measures to write (the user’s requests)');
+  reqs.forEach((r, i) => L.push((i + 1) + '. ' + r));
+  details.forEach((d, i) => L.push((reqs.length + i + 1) + '. ' + (d.name || 'Detailed measure D' + (i + 1)) + ': see Detailed measure D' + (i + 1) + ' below.'));
+  if (!reqs.length && !details.length) L.push('1. (describe the measures you need here)');
+  if (details.length) {
+    L.push('');
+    L.push('## TASK: detailed measures');
+    L.push('These are complex. Read every line of each one before writing it.');
+    details.forEach((d, i) => { L.push(''); detailSection(model, d, i + 1, dateCol).forEach(x => L.push(x)); });
+  }
+  L.push('');
+  L.push('## RULES');
+  L.push('- Use only the tables, columns and measures listed under CONTEXT: model. Do not invent names.');
+  L.push("- Reference columns as 'Table'[Column]. Reference measures as [Measure] with no table prefix.");
+  L.push('- Reuse an existing measure when it already calculates what you need.');
+  L.push('- Use DIVIDE() for division. Use VAR ... RETURN when a measure has more than one step.');
+  if (dateTables.length) L.push("- The marked date table is " + dateTables.map(qName).join(', ') + '. Use it for all time intelligence.');
+  else if (calcDateTables.length) L.push('- ' + calcDateTables.map(qName).join(', ') + (calcDateTables.length > 1 ? ' are calculated date tables' : ' is a calculated date table') + ' (built in DAX, not marked as a date table). Use ' + qName(calcDateTables[0]) + ' for all time intelligence.');
+  else L.push('- No table is marked as a date table. For time intelligence, use the date table you can identify from the relationships and state which one in the description.');
+  L.push('- Filter through relationships. Do not use FILTER over a whole fact table when a simple column filter works.');
+  L.push('- Give each measure a clear Title Case name that is not already used by an existing measure or column.');
+  L.push('- FORMAT must be a Power BI format string, for example #,0 or #,0.00 or 0.0% or \\$#,0.');
+  if (o.descriptions) L.push('- DESCRIPTION is one plain-English sentence a report user would understand.');
+  L.push('- You can see table and column names, not the data. When a filter needs specific text values, use only values listed under "Known column values" or written in the request, spelled exactly as given.');
+  L.push('- If a request needs text values you were not given, do not guess them, and do not replace them with a generic filter such as VALUES() or KEEPFILTERS(VALUES()). Write a SKIPPED block whose REASON names the column whose values are needed.');
+  L.push('- When a one-line request asks for a separate measure "for each" value of a column, write one measure per value, named with the value, for example "Sales - Consumer". This does not apply to detailed measures, where "iterate over each value" means one measure that loops.');
+  if (model.composite) {
+    L.push('');
+    L.push('## RULES: composite model');
+    L.push('This model combines tables from more than one data source. Each table below says where it comes from.');
+    L.push('- Relationships marked LIMITED connect different data sources, or are many-to-many. Filters still flow across them.');
+    L.push('- Across a LIMITED relationship, do not use RELATED or RELATEDTABLE, and do not iterate the rows of one table while reading columns of a table on the other side.');
+    L.push('- Prefer aggregating within one source and then combining the results, for example DIVIDE ( [Measure from one source], [Measure from another source] ).');
+    L.push('- Across a LIMITED relationship, rows with no matching key are not grouped under a blank value, so visible rows may not add up to the total.');
+  }
+  if (details.length) {
+    L.push('');
+    L.push('## RULES: detailed measures');
+    L.push('- Add a NOTES line (2 to 4 plain sentences) explaining your approach, just before DAX:.');
+    L.push('- Capture values from the outer filter context, such as the selected date, in VARs BEFORE any iterator. Inside an iterator, CALCULATE and measure references cause context transition, which changes those values.');
+    L.push('- Iterate over the smallest table that works: VALUES of the column you iterate over, or SUMMARIZE of the columns you need. Do not iterate a whole fact table unless the request says to.');
+    L.push('- Inside the iterator, use CALCULATE (or a measure reference) so the current row becomes a filter. When a date window differs from the slicer selection, remove the date table filter (REMOVEFILTERS on the date table) and apply the window explicitly, for example DATESBETWEEN or a filter on the date column.');
+    L.push('- Follow the relationship paths given. If a path does not pass filters in the direction you need, use TREATAS or CROSSFILTER inside CALCULATE, and say so in NOTES.');
+    L.push('- Handle the edge cases listed, and make the worked example come out as described.');
+    L.push('- Break the DAX into named VAR steps with a short // comment on each.');
+  }
+  L.push('');
+  L.push('## REPLY FORMAT (a template: replace the placeholder text with your answer)');
+  L.push('Put your ENTIRE answer inside ONE code block. Write nothing before or after the code block.');
+  L.push('Inside the code block, write each measure in exactly this layout:');
+  L.push('');
+  L.push('@@@ MEASURE @@@');
+  L.push('NAME: Measure Name');
+  L.push('FORMAT: #,0');
+  if (o.descriptions) L.push('DESCRIPTION: One sentence.');
+  if (details.length) L.push('NOTES: (detailed measures only) How the calculation works.');
+  L.push('DAX:');
+  L.push('CALCULATE (');
+  L.push('    [Existing Measure],');
+  L.push("    'Table'[Column] = \"value\"");
+  L.push(')');
+  L.push('@@@ END @@@');
+  L.push('');
+  L.push('Rules for this layout:');
+  L.push('- Write the DAX exactly as you would type it in Power BI, on as many lines as you like. Do not escape quotes, brackets or backslashes.');
+  L.push('- Do not start the DAX with the measure name and "=".');
+  L.push('- Do not use JSON, tables or bullet points.');
+  L.push('');
+  L.push('If a measure cannot be calculated from this model, do NOT write a placeholder such as BLANK(), 0 or ERROR(). Write a SKIPPED block instead, and say what is missing:');
+  L.push('');
+  L.push('@@@ SKIPPED @@@');
+  L.push('NAME: Measure Name');
+  L.push('REASON: What the model is missing, for example a column or relationship.');
+  L.push('@@@ END @@@');
+  L.push('');
+  L.push('## CONTEXT: model');
+  L.push('');
+  L.push('### Tables and columns');
+  for (const t of model.tables) {
+    if (!inc(t.name)) continue;
+    const cols = model.columns.filter(c => lc(c.table) === lc(t.name) && (o.hidden || !c.hidden));
+    const tags = [];
+    if (isMarkedDateTable(t)) tags.push('date table');
+    else if (isCalcDateTable(t)) tags.push('calculated date table');
+    if (!cols.length && model.measures.some(m => lc(m.table) === lc(t.name))) tags.push('measure table');
+    if (model.composite) tags.push(storageTag(t));
+    L.push(qName(t.name) + (tags.length ? ' (' + tags.join(', ') + ')' : '') + (t.description ? ': ' + oneLine(t.description) : ''));
+    for (const c of cols) {
+      const bits = [c.dataType || 'unknown type'];
+      if (c.key) bits.push('key');
+      if (c.hidden) bits.push('hidden');
+      if (c.expression) bits.push('calculated');
+      L.push('  - ' + bracket(c.name) + ': ' + bits.join(', ') + (c.description ? ' — ' + oneLine(c.description) : ''));
+    }
+  }
+  const rels = model.rels.filter(r => inc(r.fromTable) && inc(r.toTable));
+  if (rels.length) {
+    L.push('');
+    L.push('### Relationships');
+    for (const r of rels) {
+      L.push('- ' + qName(r.fromTable) + bracket(r.fromColumn) + ' (' + (r.fromCard || '?') + ') → ' + qName(r.toTable) + bracket(r.toColumn) + ' (' + (r.toCard || '?') + ')'
+        + (r.both ? ', filters both directions' : ', single direction')
+        + (r.crossSource ? ', LIMITED (crosses data sources)' : r.limited ? ', LIMITED (many-to-many)' : '')
+        + (r.inactive ? ', INACTIVE (use USERELATIONSHIP)' : ''));
+    }
+  }
+  if (o.knownValues && o.knownValues.size) {
+    L.push('');
+    L.push('### Known column values');
+    for (const kv of o.knownValues.values()) {
+      const shown = kv.values.map(v => v === '' ? '(blank)' : daxString(v)).join(', ');
+      const partial = kv.distinct !== null && kv.distinct > kv.values.length;
+      L.push('- ' + kv.ref + ': ' + shown + (partial ? ' (first ' + kv.values.length + ' of ' + kv.distinct + ' values; the list is incomplete)' : ''));
+    }
+  }
+  const mp = measuresForPrompt(model, o.tables);
+  if (mp.list.length) {
+    L.push('');
+    L.push('### Existing measures');
+    for (const m of mp.list) {
+      let line = '- ' + bracket(m.name);
+      if (m.remote) { L.push(line + ' (from the remote model; formula not available)'); continue; }
+      const home = model.tables.find(t => lc(t.name) === lc(m.table));
+      const tags = [];
+      if (m.formatString) tags.push('format ' + m.formatString);
+      if (home && home.remote) tags.push('from remote model ' + qName(remoteLabel(home.source)));
+      if (tags.length) line += ' (' + tags.join('; ') + ')';
+      if (o.formulas && m.expression) {
+        let e = oneLine(m.expression);
+        if (e.length > 300) e = e.slice(0, 300).replace(/\s+\S*$/, '') + ' … [formula shortened]';
+        line += ' = ' + e;
+      }
+      L.push(line);
+    }
+  }
+  if (o.formulas && mp.list.some(m => oneLine(m.expression).length > 300)) {
+    L.push('');
+    L.push('Formulas marked [formula shortened] are cut to save space. Reuse those measures by name; do not copy their partial formulas.');
+  }
+  L.push('');
+  L.push('=== END OF PROMPT ===');
+  return L.join('\n');
+}
+
+function repairJson(s){
+  let out = '', inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) {
+      if (esc) { out += ch; esc = false; continue; }
+      if (ch === '\\') { out += ch; esc = true; continue; }
+      if (ch === '"') { inStr = false; out += ch; continue; }
+      if (ch === '\n') { out += '\\n'; continue; }
+      if (ch === '\r') continue;
+      if (ch === '\t') { out += '\\t'; continue; }
+      out += ch;
+    } else {
+      if (ch === '"') inStr = true;
+      out += ch;
+    }
+  }
+  return out.replace(/,\s*([\]}])/g, '$1');
+}
+
+function pick(obj, keys){
+  const lower = {};
+  for (const k of Object.keys(obj)) lower[lc(k).replace(/[\s_-]/g, '')] = obj[k];
+  for (const k of keys) if (lower[k] !== undefined && lower[k] !== null) return String(lower[k]);
+  return '';
+}
+
+// Chat UIs often add markdown escapes (\[ \] \_ \*) when text is copied outside a code block.
+function unMarkdown(s){
+  let prev;
+  do { prev = s; s = s.replace(/(^|[^\\])\\([\[\]_*])/g, '$1$2'); } while (s !== prev);
+  return s;
+}
+function cleanField(v){
+  let s = (v || '').trim();
+  s = s.replace(/^`+|`+$/g, '').trim();
+  if (s.length >= 2 && ((s[0] === '"' && s[s.length - 1] === '"') || (s[0] === "'" && s[s.length - 1] === "'"))) {
+    const inner = s.slice(1, -1);
+    if (!inner.includes(s[0])) s = inner;
+  }
+  return s;
+}
+function toMeasure(name, expr, fmt, desc){
+  name = cleanField(name).replace(/^\[(.*)\]$/s, '$1').replace(/^'(.*)'$/s, '$1').trim();
+  expr = (expr || '').replace(/\r/g, '');
+  // strip a leading "Name =" if Copilot repeated the measure name
+  const m = expr.match(/^\s*(?:'([^']+)'|\[([^\]]+)\]|([^=\n(\[]+?))\s*:?=\s*/);
+  if (m) { const n = (m[1] || m[2] || m[3] || '').trim(); if (n && lc(n) === lc(name)) expr = expr.slice(m[0].length); }
+  return { name, expression: expr, formatString: cleanField(fmt), description: oneLineKeepBreaks(cleanField(desc)) };
+}
+
+// Preferred format: @@@ MEASURE @@@ ... @@@ END @@@ blocks, no escaping needed.
+// @@@ SKIPPED @@@ blocks carry a NAME and REASON for measures Copilot couldn't write.
+function parseBlocks(t){
+  const out = [];
+  const parts = t.split(/@@@\s*(MEASURE|SKIPPED)\s*@@@/i);
+  for (let p = 1; p < parts.length; p += 2) {
+    const skipped = parts[p].toUpperCase() === 'SKIPPED';
+    const body = parts[p + 1].split(/@@@\s*END\s*@@@/i)[0].replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '');
+    const re = /(^|\s)(NAME|FORMAT|DESCRIPTION|NOTES|REASON|DAX)[ \t]*:/g;
+    const found = {};
+    let r;
+    while ((r = re.exec(body))) {
+      const label = r[2];
+      if (found[label]) continue;
+      found[label] = { start: r.index + r[1].length, value: re.lastIndex };
+      if (label === 'DAX') break; // everything after DAX: belongs to the expression
+    }
+    const order = Object.entries(found).sort((a, b) => a[1].start - b[1].start);
+    const val = {};
+    order.forEach(([label, pos], i) => {
+      const end = i + 1 < order.length ? order[i + 1][1].start : body.length;
+      val[label] = body.slice(pos.value, end);
+    });
+    if (skipped) {
+      if (!found.NAME) continue;
+      const m = toMeasure(val.NAME, '', '', '');
+      m.skipped = true;
+      m.reason = oneLine(cleanField(val.REASON || val.DESCRIPTION || ''));
+      out.push(m);
+      continue;
+    }
+    if (!found.NAME && !found.DAX) continue;
+    let dax = (val.DAX || '').replace(/^[ \t]*\n/, '');
+    const mm = toMeasure(val.NAME || '', dax, val.FORMAT || '', val.DESCRIPTION || '');
+    if (val.NOTES) mm.notes = oneLine(cleanField(val.NOTES));
+    out.push(mm);
+  }
+  return out;
+}
+
+// DAX that computes nothing: BLANK(), 0, "", TRUE()/FALSE(), ERROR("..."), or only comments.
+function isPlaceholder(expr){
+  const code = stripDax(expr || '').replace(/\s+/g, '');
+  return /^(|BLANK\(\)|0|0\.0+|""|TRUE\(\)|FALSE\(\)|ERROR\(""\))$/i.test(code);
+}
+
+// Fallback for JSON-ish replies with unescaped quotes, missing [ or other damage:
+// read each value from its key to the next known key, instead of trusting the quoting.
+const JSON_KEYS = { name: 'name', measurename: 'name', measure: 'name', expression: 'expression', dax: 'expression', formula: 'expression',
+  daxexpression: 'expression', formatstring: 'formatString', format: 'formatString', description: 'description', desc: 'description' };
+function lenientJson(t){
+  const keyAlt = Object.keys(JSON_KEYS).sort((a, b) => b.length - a.length).join('|');
+  const startRe = new RegExp('"(' + keyAlt + ')"\\s*:\\s*"', 'gi');
+  const endRe = new RegExp('"\\s*(?:,\\s*"(?:' + keyAlt + ')"\\s*:|\\}\\s*(?=,\\s*\\{|\\]|$))', 'gi');
+  const objs = [];
+  let cur = null, r, lastEnd = 0;
+  while ((r = startRe.exec(t))) {
+    if (r.index < lastEnd) continue;
+    const field = JSON_KEYS[r[1].toLowerCase()];
+    endRe.lastIndex = startRe.lastIndex;
+    const e = endRe.exec(t);
+    const end = e ? e.index : t.length;
+    let v = t.slice(startRe.lastIndex, end);
+    v = v.replace(/\\(["\\\/nrt])/g, (m, c) => ({ n: '\n', r: '', t: '\t', '"': '"', '\\': '\\', '/': '/' }[c]));
+    if (!cur || field === 'name' && cur.name !== undefined || cur[field] !== undefined) { cur = {}; objs.push(cur); }
+    cur[field] = v;
+    lastEnd = end;
+    startRe.lastIndex = end;
+  }
+  return objs.map(o => toMeasure(o.name || '', o.expression || '', o.formatString || '', o.description || ''));
+}
+
+function parseResponse(text){
+  const res = { measures: [], error: null, format: '' };
+  let t = (text || '').replace(/\r/g, '').trim();
+  if (!t) return res;
+  t = unMarkdown(t).replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'").replace(/\u00A0/g, ' ');
+
+  if (/@@@\s*(MEASURE|SKIPPED)\s*@@@/i.test(t)) {
+    res.measures = parseBlocks(t);
+    res.format = 'blocks';
+    if (!res.measures.length) res.error = 'Measure blocks were found, but none had a NAME or DAX line. Check the reply and paste again.';
+    return res;
+  }
+
+  // JSON: strict first, then lenient
+  const j = t.replace(/^[ \t]*```[\w-]*[ \t]*$/gm, '');
+  const a = j.search(/\[\s*\{/), c = j.indexOf('{'), d = j.lastIndexOf('}');
+  let body = null;
+  if (a >= 0) { const b = j.lastIndexOf(']'); body = j.slice(a, b > a ? b + 1 : undefined); }
+  else if (c >= 0 && d > c) body = '[' + j.slice(c, d + 1) + ']';
+  if (body) {
+    for (const x of [body, repairJson(body)]) {
+      try {
+        let data = JSON.parse(x);
+        if (!Array.isArray(data) && data && Array.isArray(data.measures)) data = data.measures;
+        if (!Array.isArray(data)) data = [data];
+        res.measures = data.filter(i => i && typeof i === 'object').map(i =>
+          toMeasure(pick(i, ['name', 'measurename', 'measure']), pick(i, ['expression', 'dax', 'formula', 'daxexpression', 'definition']),
+            pick(i, ['formatstring', 'format']), pick(i, ['description', 'desc'])));
+        res.format = 'json';
+        break;
+      } catch (e) {}
+    }
+  }
+  if (!res.measures.length) { res.measures = lenientJson(j); if (res.measures.length) res.format = 'json-repaired'; }
+  if (!res.measures.length) res.error = 'No measures were found in the reply. Copy the prompt again from Step 3 and make sure Copilot answers inside a code block with @@@ MEASURE @@@ blocks.';
+  return res;
+}
+function oneLineKeepBreaks(s){ return (s || '').replace(/\r/g, '').split('\n').map(x => x.trim()).filter(Boolean).join('\n'); }
+
+// Remove comments without touching "//" or "--" inside string literals (URLs, SVG namespaces)
+function stripComments(e){
+  return (e || '').replace(/"(?:[^"]|"")*"|\/\*[\s\S]*?\*\/|\/\/[^\n]*|--[^\n]*/g, m => m[0] === '"' ? m : ' ');
+}
+function stripDax(e){
+  return stripComments(e).replace(/"(?:[^"]|"")*"/g, '""');
+}
+
+function validate(measures, model, opts){
+  const target = (opts && opts.targetTable) || '_Measures';
+  const hasModel = model && (model.tables.length || model.columns.length);
+  const existing = new Map(); (model ? model.measures : []).forEach(m => existing.set(lc(m.name), m));
+  const tableSet = new Map(); (model ? model.tables : []).forEach(t => tableSet.set(lc(t.name), t));
+  const colsByTable = new Map();
+  (model ? model.columns : []).forEach(c => { const k = lc(c.table); if (!colsByTable.has(k)) colsByTable.set(k, new Set()); colsByTable.get(k).add(lc(c.name)); });
+  const allColNames = new Set((model ? model.columns : []).map(c => lc(c.name)));
+  const batch = new Map();
+  const notWritten = m => m.skipped || isPlaceholder(m.expression);
+  measures.filter(m => !notWritten(m)).forEach(m => { const k = lc(m.name); batch.set(k, (batch.get(k) || 0) + 1); });
+  return measures.map(m => {
+    // Copilot said it couldn't write this one, or wrote a placeholder instead of a calculation
+    if (m.skipped) {
+      return { measure: m, status: 'skip', errors: [], warns: [], infos: [m.reason ? 'Copilot’s reason: ' + m.reason : 'Copilot skipped this measure without giving a reason.'] };
+    }
+    if (m.expression.trim() && isPlaceholder(m.expression)) {
+      const infos = ['The DAX is only ' + oneLine(m.expression) + ', a placeholder rather than a calculation.'];
+      if (m.description) infos.push('Copilot’s note: ' + oneLine(m.description));
+      return { measure: m, status: 'skip', errors: [], warns: [], infos };
+    }
+    const errors = [], warns = [], infos = [];
+    let replaces = false;
+    if (!m.name) errors.push('Missing a name.');
+    if (!m.expression.trim()) errors.push('Missing a DAX expression.');
+    if (m.name && batch.get(lc(m.name)) > 1) errors.push('This name appears more than once in the reply.');
+    if (m.name && /[\[\]]/.test(m.name)) errors.push('Measure names can\u2019t contain [ or ].');
+    const ex = existing.get(lc(m.name));
+    if (ex) {
+      if (ex.remote) errors.push('A measure in the remote model already uses this name. Measure names must be unique across the model.');
+      else if (lc(ex.table) === lc(target)) { replaces = true; infos.push('Replaces the existing measure with this name in ' + qName(ex.table) + '.'); }
+      else errors.push('Name already used by a measure in ' + qName(ex.table) + '. Measure names must be unique across the model.');
+    }
+    if (m.name && colsByTable.has(lc(target)) && colsByTable.get(lc(target)).has(lc(m.name))) errors.push('A column in ' + qName(target) + ' already has this name.');
+    if (hasModel && m.expression) {
+      const code = stripDax(m.expression);
+      const seen = new Set();
+      const tcRe = /(?:'((?:[^']|'')+)'|([A-Za-z_][A-Za-z0-9_]*))\s*\[((?:[^\]]|\]\])+)\]/g;
+      let r;
+      while ((r = tcRe.exec(code))) {
+        const tn = (r[1] !== undefined ? r[1].replace(/''/g, "'") : r[2]);
+        const cn = r[3].replace(/\]\]/g, ']');
+        const key = lc(tn) + '|' + lc(cn);
+        if (seen.has(key)) continue; seen.add(key);
+        if (!tableSet.has(lc(tn))) { warns.push('Table ' + qName(tn) + ' isn\u2019t in the model export.'); continue; }
+        const cols = colsByTable.get(lc(tn));
+        const isCol = cols && cols.has(lc(cn));
+        const isMeas = existing.has(lc(cn)) || batch.has(lc(cn));
+        if (!isCol && !isMeas) warns.push(qName(tn) + bracket(cn) + ' isn\u2019t a column in that table.');
+      }
+      const qtRe = /'((?:[^']|'')+)'(\s*\[)?/g;
+      while ((r = qtRe.exec(code))) {
+        if (r[2]) continue; // 'Table'[Column] already checked above
+        const tn = r[1].replace(/''/g, "'");
+        const key = 't|' + lc(tn);
+        if (seen.has(key)) continue; seen.add(key);
+        if (!tableSet.has(lc(tn))) warns.push('Table ' + qName(tn) + ' isn’t in the model export.');
+      }
+      const bareRe = /(^|[^\w'\]])\[((?:[^\]]|\]\])+)\]/g;
+      while ((r = bareRe.exec(code))) {
+        const n = r[2].replace(/\]\]/g, ']');
+        const key = 'm|' + lc(n);
+        if (seen.has(key)) continue; seen.add(key);
+        // skip when this bracket is actually a Table [Column] with a space before it
+        const before = code.slice(0, r.index + r[1].length).replace(/\s+$/, '');
+        if (/('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_]*)$/.test(before) && !/\b(VAR|RETURN|IN|AND|OR|NOT|TRUE|FALSE)$/i.test(before)) {
+          const tm = before.match(/('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_]*)$/)[1];
+          const tn = tm[0] === "'" ? tm.slice(1, -1).replace(/''/g, "'") : tm;
+          if (tableSet.has(lc(tn))) continue;
+        }
+        if (lc(n) === lc(m.name)) { errors.push('The measure refers to itself.'); continue; }
+        if (existing.has(lc(n)) || batch.has(lc(n))) continue;
+        if (allColNames.has(lc(n))) continue; // column in row context
+        warns.push(bracket(n) + ' isn\u2019t a measure in the model or in this reply.');
+      }
+    }
+    if (m.expression && /KEEPFILTERS\s*\(\s*VALUES\s*\(/i.test(stripDax(m.expression))) {
+      warns.push('KEEPFILTERS ( VALUES ( ... ) ) keeps the filter already in place, so it changes nothing. If you wanted one measure per value, list the values (Step 3, \u201cColumn values\u201d) and ask again.');
+    }
+    const kvs = opts && opts.knownValues;
+    if (kvs && kvs.size && m.expression) {
+      const code = stripComments(m.expression);
+      const rx = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      for (const kv of kvs.values()) {
+        if (kv.distinct !== null && kv.distinct > kv.values.length) continue; // incomplete list: can't judge
+        const mm = kv.ref.match(/^'((?:[^']|'')+)'\[(.*)\]$/);
+        if (!mm) continue;
+        const tn = mm[1].replace(/''/g, "'"), cn = mm[2].replace(/\]\]/g, ']');
+        const tPat = "(?:'" + rx(tn.replace(/'/g, "''")) + "'" + (/^[A-Za-z_]\w*$/.test(tn) ? '|' + rx(tn) : '') + ')';
+        const colPat = tPat + '\\s*\\[' + rx(cn.replace(/\]/g, ']]')) + '\\]';
+        const eqRe = new RegExp(colPat + '\\s*(?:==|=|<>)\\s*"((?:[^"]|"")*)"', 'gi');
+        const inRe = new RegExp(colPat + '\\s+IN\\s*\\{([^}]*)\\}', 'gi');
+        const known = new Set(kv.values.map(lc));
+        const found = [];
+        let r;
+        while ((r = eqRe.exec(code))) found.push(r[1].replace(/""/g, '"'));
+        while ((r = inRe.exec(code))) (r[1].match(/"((?:[^"]|"")*)"/g) || []).forEach(l => found.push(l.slice(1, -1).replace(/""/g, '"')));
+        for (const v of new Set(found)) if (!known.has(lc(v))) warns.push(daxString(v) + ' isn\u2019t one of the known values of ' + kv.ref + '.');
+      }
+    }
+    if (m.notes) infos.unshift('Copilot\u2019s approach: ' + m.notes);
+    if (!m.formatString) infos.push('No format string. Power BI will use General.');
+    let status = 'ok';
+    if (errors.length) status = 'err'; else if (warns.length) status = 'warn'; else if (replaces) status = 'replace';
+    return { measure: m, status, errors, warns, infos };
+  });
+}
+
+function tmdlName(n){ return /^[A-Za-z_][A-Za-z0-9_]*$/.test(n) ? n : qName(n); }
+function tmdlValue(v){
+  if (/"/.test(v) || /^\s|\s$/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+  return v;
+}
+function exprLines(expr){
+  let lines = expr.replace(/\r/g, '').split('\n').map(l => l.replace(/\s+$/, ''));
+  while (lines.length && !lines[0].trim()) lines.shift();
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  lines = lines.map(l => { const m = l.match(/^[ \t]*/)[0]; return m.replace(/\t/g, '    ') + l.slice(m.length); });
+  const ind = Math.min(...lines.filter(l => l.trim()).map(l => l.match(/^ */)[0].length));
+  return lines.map(l => {
+    if (!l.trim()) return '';
+    const s = l.slice(isFinite(ind) ? ind : 0);
+    const lead = s.match(/^ */)[0].length;
+    return TAB.repeat(Math.floor(lead / 4)) + ' '.repeat(lead % 4) + s.slice(lead);
+  });
+}
+
+function normFolder(f){ return (f || '').trim().replace(/\//g, '\\').replace(/\\{2,}/g, '\\').replace(/^\\|\\$/g, ''); }
+
+function toTmdl(measures, opts){
+  const mode = opts.mode || 'script';
+  const table = (opts.targetTable || '_Measures').trim();
+  const folder = normFolder(opts.folder);
+  const base = mode === 'script' ? 2 : 1;
+  const out = [];
+  if (mode === 'script') { out.push('createOrReplace', '', TAB + 'ref table ' + tmdlName(table), ''); }
+  for (const m of measures) {
+    const ind = TAB.repeat(base);
+    if (m.description) m.description.split('\n').forEach(d => out.push(ind + '/// ' + d.trim()));
+    const lines = exprLines(m.expression);
+    if (lines.length <= 1) out.push(ind + 'measure ' + tmdlName(m.name) + ' = ' + (lines[0] || '').trim());
+    else {
+      out.push(ind + 'measure ' + tmdlName(m.name) + ' =');
+      lines.forEach(l => out.push(l ? TAB.repeat(base + 2) + l : ''));
+    }
+    if (m.formatString) out.push(TAB.repeat(base + 1) + 'formatString: ' + tmdlValue(m.formatString));
+    if (folder) out.push(TAB.repeat(base + 1) + 'displayFolder: ' + tmdlValue(folder));
+    out.push('');
+  }
+  while (out.length && out[out.length - 1] === '') out.pop();
+  return out.join('\n') + '\n';
+}
+
+function testQuery(measures){
+  if (!measures.length) return '';
+  const rows = measures.map((m, i) => TAB + '"' + m.name.replace(/"/g, '""') + '", ' + bracket(m.name) + (i < measures.length - 1 ? ',' : ''));
+  return ['// Run in DAX query view after applying the TMDL.', 'EVALUATE', 'ROW (', ...rows, ')'].join('\n');
+}
+/*CORE-END*/
+/* ---------- Relationship Planner: how filters flow, what-if changes, goals in plain words ----------
+   Filters flow along ACTIVE relationships from the one side to the many side (Customer -> Sales).
+   A bidirectional relationship, and every one-to-one, also sends them back. A many-to-many with a
+   single direction filters from its "to" table to its "from" table, as Power BI stores it.
+   Two different routes from one table to another is ambiguity. */
+const RP = (() => {
+  const low = s => (s || '').toLowerCase();
+  const MAX_STEPS = 60000, MAX_DEPTH = 12, MAX_PATHS = 12;
+  const relKey = r => [r.fromTable, r.fromColumn, r.toTable, r.toColumn].map(low).join('\u0001');
+  const BRIDGE = /^(bridge|brg|xref|map)[ _]|[ _](bridge|xref|map)$/i;
+  const DATE_NAME = /^(date|dates|calendar|dim ?date|date table)$/i;
+
+  /* ---------- the model, from the shared reader (parseModel in builder_core) ---------- */
+  function fromParsed(m){
+    const names = new Map();
+    const add = n => { if (n && !names.has(low(n))) names.set(low(n), n); };
+    (m.tables || []).forEach(t => add(t.name));
+    const cols = new Map();
+    (m.columns || []).forEach(c => { add(c.table); const k = low(c.table); if (!cols.has(k)) cols.set(k, []); cols.get(k).push(c.name); });
+    const rels = [];
+    (m.rels || []).forEach(r => {
+      add(r.fromTable); add(r.toTable);
+      const fc = low(r.fromCard), tc = low(r.toCard);
+      let x = { fromTable: names.get(low(r.fromTable)), fromColumn: r.fromColumn, toTable: names.get(low(r.toTable)), toColumn: r.toColumn };
+      let card = fc === 'one' && tc === 'one' ? '1:1' : fc === 'many' && tc === 'many' ? 'M:M' : 'M:1';
+      if (fc === 'one' && tc === 'many') x = { fromTable: x.toTable, fromColumn: x.toColumn, toTable: x.fromTable, toColumn: x.fromColumn };
+      rels.push(Object.assign(x, { card, both: !!r.both, active: !r.inactive }));
+    });
+    const dates = new Set();
+    (m.tables || []).forEach(t => { if ((typeof isDateTable === 'function' && isDateTable(t)) || DATE_NAME.test(t.name)) dates.add(low(t.name)); });
+    rels.forEach(r => { r.key = relKey(r); });
+    return { tables: [...names.values()].sort((a, b) => a.localeCompare(b)), rels, cols, dates, added: new Set() };
+  }
+  const canon = (model, n) => model.tables.find(t => low(t) === low(n)) || null;
+  const flowsBoth = r => r.both || r.card === '1:1';
+
+  /* ---------- changes (what-if) ----------
+     { op: 'add', one: [table, column], many: [table, column], both }   a new relationship (new tables are made)
+     { op: 'dir', key, both }  { op: 'active', key, active }  { op: 'remove', key }   on an existing one */
+  function apply(model, changes){
+    const out = { tables: model.tables.slice(), rels: model.rels.map(r => Object.assign({}, r)), cols: new Map(model.cols), dates: model.dates, added: new Set(model.added), skipped: [] };
+    (changes || []).forEach((c, i) => {
+      if (c.op === 'add') {
+        const [ot, oc] = c.one || [], [mt, mc] = c.many || [];
+        if (!ot || !mt || !oc || !mc || low(ot) === low(mt)) { out.skipped.push(i); return; }
+        [ot, mt].forEach(t => { if (!canon(out, t)) { out.tables.push(t); out.tables.sort((a, b) => a.localeCompare(b)); out.added.add(low(t)); } });
+        const r = { fromTable: canon(out, mt), fromColumn: mc, toTable: canon(out, ot), toColumn: oc, card: c.card === 'M:M' ? 'M:M' : c.card === '1:1' ? '1:1' : 'M:1', both: !!c.both, active: c.active !== false, isNew: true, change: i };
+        r.key = relKey(r);
+        if (out.rels.some(x => x.key === r.key)) { out.skipped.push(i); return; }
+        out.rels.push(r);
+        return;
+      }
+      const r = out.rels.find(x => x.key === c.key);
+      if (!r) { out.skipped.push(i); return; }
+      if (c.op === 'dir') { r.both = !!c.both; r.changed = true; r.change = i; }
+      else if (c.op === 'active') { r.active = !!c.active; r.changed = true; r.change = i; }
+      else if (c.op === 'remove') out.rels.splice(out.rels.indexOf(r), 1);
+    });
+    return out;
+  }
+
+  /* ---------- the filter graph ---------- */
+  function graph(model){
+    const adj = new Map(model.tables.map(t => [low(t), []]));
+    const edge = (a, b, r) => { if (!adj.has(low(a))) adj.set(low(a), []); adj.get(low(a)).push({ to: b, rel: r }); };
+    model.rels.forEach(r => { if (!r.active) return; edge(r.toTable, r.fromTable, r); if (flowsBoth(r)) edge(r.fromTable, r.toTable, r); });
+    const linked = new Set(); model.rels.forEach(r => { if (r.active) { linked.add(low(r.fromTable)); linked.add(low(r.toTable)); } });
+    return { model, adj, linked, reachC: new Map(), ambC: new Map(), cut: new Set() };
+  }
+  // tables a filter on src reaches: lower name -> { name, hops, from, rel }
+  function reach(g, src){
+    const k = low(src);
+    if (g.reachC.has(k)) return g.reachC.get(k);
+    const out = new Map(), seen = new Set([k]), q = [[k, 0]];
+    while (q.length) {
+      const [cur, d] = q.shift();
+      for (const e of g.adj.get(cur) || []) {
+        const n = low(e.to); if (seen.has(n)) continue;
+        seen.add(n); out.set(n, { name: e.to, hops: d + 1, from: cur, rel: e.rel }); q.push([n, d + 1]);
+      }
+    }
+    g.reachC.set(k, out);
+    return out;
+  }
+  // every simple path src -> dst (shortest first), as [{ to, rel }]
+  function paths(g, src, dst){
+    const found = [], target = low(dst), stack = [[low(src), [], new Set([low(src)])]];
+    let steps = 0;
+    while (stack.length && found.length < MAX_PATHS && steps++ < MAX_STEPS) {
+      const [node, path, seen] = stack.pop();
+      if (path.length >= MAX_DEPTH) continue;
+      for (const e of g.adj.get(node) || []) {
+        const n = low(e.to); if (seen.has(n)) continue;
+        const p = path.concat([{ to: e.to, rel: e.rel }]);
+        if (n === target) found.push(p); else { const s2 = new Set(seen); s2.add(n); stack.push([n, p, s2]); }
+      }
+    }
+    return found.sort((a, b) => a.length - b.length);
+  }
+  // tables src reaches by more than one route: lower name -> [path, path, ...]
+  function ambiguity(g, src){
+    const k = low(src);
+    if (g.ambC.has(k)) return g.ambC.get(k);
+    const count = new Map(), stack = [[k, new Set([k]), 0]];
+    let steps = 0;
+    while (stack.length) {
+      if (++steps > MAX_STEPS) { g.cut.add(src); break; }
+      const [node, seen, d] = stack.pop();
+      if (d >= MAX_DEPTH) continue;
+      for (const e of g.adj.get(node) || []) {
+        const n = low(e.to); if (seen.has(n)) continue;
+        count.set(n, (count.get(n) || 0) + 1);
+        const s2 = new Set(seen); s2.add(n); stack.push([n, s2, d + 1]);
+      }
+    }
+    const out = new Map();
+    count.forEach((c, n) => { if (c > 1) out.set(n, paths(g, src, (reach(g, src).get(n) || {}).name || n)); });
+    g.ambC.set(k, out);
+    return out;
+  }
+  // every pair of tables with more than one route, once per pair and source
+  function allAmbiguity(g){
+    const out = [];
+    g.model.tables.forEach(s => { if (!g.linked.has(low(s))) return; ambiguity(g, s).forEach((ps, n) => out.push({ from: s, to: (reach(g, s).get(n) || {}).name || n, paths: ps })); });
+    return out;
+  }
+
+  /* ---------- roles: fact (only on the many side), lookup (only on the one side), both, none ---------- */
+  function roles(model){
+    const many = new Set(), one = new Set(), nMany = new Map(), bothMany = new Set();
+    model.rels.forEach(r => {
+      many.add(low(r.fromTable)); one.add(low(r.toTable)); nMany.set(low(r.fromTable), (nMany.get(low(r.fromTable)) || 0) + 1);
+      if (r.both && r.card !== '1:1') bothMany.add(low(r.fromTable));
+      if (r.card === '1:1') { many.add(low(r.toTable)); one.add(low(r.fromTable)); }
+    });
+    const out = new Map();
+    model.tables.forEach(t => {
+      const k = low(t);
+      // a bridge: named like one, or only on the many side of two or more relationships, one of them both ways
+      const bridge = many.has(k) && (BRIDGE.test(t) || (!one.has(k) && (nMany.get(k) || 0) >= 2 && bothMany.has(k)));
+      out.set(k, model.dates.has(k) ? 'date' : bridge ? 'bridge' : many.has(k) && one.has(k) ? 'both' : many.has(k) ? 'fact' : one.has(k) ? 'lookup' : 'none');
+    });
+    return out;
+  }
+  const ROLE_WORD = { fact: 'fact', lookup: 'lookup', both: 'lookup and fact', bridge: 'bridge', date: 'date', none: 'no relationships' };
+  function facts(model){ const r = roles(model); return model.tables.filter(t => r.get(low(t)) === 'fact'); }
+
+  /* ---------- words ---------- */
+  const arrow = r => flowsBoth(r) ? ' ⇄ ' : ' → ';
+  function pathText(src, p){ return src + p.map(s => arrow(s.rel) + s.to).join(''); }
+  function relText(r){ return r.toTable + '[' + r.toColumn + ']' + arrow(r) + r.fromTable + '[' + r.fromColumn + ']'; }
+  function relWords(r){
+    const dir = r.card === '1:1' ? 'one-to-one, filters both ways' : r.card === 'M:M' ? 'many-to-many, ' + (r.both ? 'filters both ways' : 'filters from ' + r.toTable + ' to ' + r.fromTable)
+      : r.both ? 'filters both ways' : 'filters from ' + r.toTable + ' to ' + r.fromTable;
+    return dir + (r.active ? '' : ', inactive');
+  }
+
+  // Why a filter on src doesn't reach dst
+  function whyNot(g, src, dst){
+    const model = g.model;
+    const und = (activeOnly) => {
+      const adj = new Map();
+      model.rels.forEach(r => { if (activeOnly && !r.active) return; [[r.toTable, r.fromTable], [r.fromTable, r.toTable]].forEach(([a, b]) => { if (!adj.has(low(a))) adj.set(low(a), []); adj.get(low(a)).push({ to: b, rel: r, from: a }); }); });
+      const prev = new Map([[low(src), null]]), q = [low(src)];
+      while (q.length) {
+        const cur = q.shift();
+        for (const e of adj.get(cur) || []) {
+          const n = low(e.to); if (prev.has(n)) continue;
+          prev.set(n, e); if (n === low(dst)) { const hops = []; let k = n; while (prev.get(k)) { const h = prev.get(k); hops.unshift(h); k = low(h.from); } return hops; }
+          q.push(n);
+        }
+      }
+      return null;
+    };
+    let hops = und(true);
+    if (!hops) {
+      const ih = und(false);
+      if (ih) return { kind: 'inactive', hops: ih, rels: ih.filter(h => !h.rel.active).map(h => h.rel) };
+      return { kind: 'none' };
+    }
+    const r = reach(g, src);
+    for (let i = 0; i < hops.length; i++) {
+      const h = hops[i];
+      const ok = (low(h.from) === low(h.rel.toTable) && low(h.to) === low(h.rel.fromTable)) || flowsBoth(h.rel);
+      if (!ok) return { kind: 'direction', hops, at: i, rel: h.rel, upto: i === 0 ? src : hops[i - 1].to, reachedUpTo: i === 0 || r.has(low(hops[i - 1].to)) };
+    }
+    return { kind: 'direction', hops, at: 0, rel: hops[0].rel, upto: src };
+  }
+
+  /* ---------- goals in plain words ---------- */
+  const ESC = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const isWord = ch => !!ch && /[\p{L}\p{N}_]/u.test(ch);
+  // table names mentioned in a sentence: longest names first, plural or singular, quoted or not
+  function mentions(text, names){
+    const t = text.replace(/[‘’]/g, "'");
+    const taken = new Array(t.length).fill(false), out = [];
+    names.slice().sort((a, b) => b.length - a.length).forEach(n => {
+      const forms = new Set([n, n + 's', n + 'es', n.replace(/ies$/i, 'y'), n.replace(/s$/i, ''), n.replace(/ies$/i, 'ys')].filter(x => x.length > 1));
+      forms.forEach(f => {
+        const re = new RegExp(ESC(f), 'gi'); let m;
+        while ((m = re.exec(t))) {
+          const a = m.index, b = a + m[0].length;
+          if (isWord(t[a - 1]) || isWord(t[b])) continue;
+          if (taken.slice(a, b).some(Boolean)) continue;
+          for (let i = a; i < b; i++) taken[i] = true;
+          out.push({ name: n, at: a, end: b });
+        }
+      });
+    });
+    return out.sort((x, y) => x.at - y.at);
+  }
+  const VERB = /\b(filter(?:s|ed|ing)?|slic(?:e|es|ed|ing)|reach(?:es|ed)?|narrow(?:s|ed)?|affect(?:s|ed)?|driv(?:e|es|en)|flows? (?:in)?to|cascades? to|propagates? to)\b/i;
+  const PASSIVE = /\b(?:is|are|be|being|been|gets?|got)\s+(?:not\s+|never\s+)?(?:filtered|sliced|reached|narrowed|affected|driven)\s+by\b/i;
+  const NEG = /\b(not|never|no longer|cannot|nothing)\b|n['’]t\b/i;
+  const EXCEPT = /\b(except(?: for)?|but not|other than|apart from|excluding|besides|minus|without)\b/i;
+  const ALL = /\b(every|all|each|everything|entire|whole|rest of)\b/i;
+  function parseGoals(text, model){
+    const names = model.tables;
+    return (text || '').replace(/\r/g, '').split('\n').map((raw, i) => {
+      const line = raw.replace(/^\s*([-*•]|\d+[.)])\s*/, '').trim();
+      if (!line || /^(#|\/\/)/.test(line)) return null;
+      const g = { line, n: i + 1 };
+      if (/ambigu|two (routes|paths|ways)|more than one (route|path|way)|only one (route|path|way)/i.test(line) && !VERB.test(line.replace(/ambigu\w*/ig, ''))) {
+        g.kind = /\ballow|\bfine\b|\bok\b|\bokay\b/i.test(line) && !/\bnot\b/i.test(line) ? 'allowAmbiguity' : 'noAmbiguity';
+        return g;
+      }
+      const pm = PASSIVE.exec(line), vm = pm ? null : VERB.exec(line);
+      if (!pm && !vm) { g.kind = 'unknown'; g.why = 'No verb found. Write it as “A should filter B” or “A should not filter B”.'; return g; }
+      const at = (pm || vm).index, end = at + (pm || vm)[0].length;
+      // active: "A should filter B"; passive: "B should be filtered by A"
+      const subj = pm ? [end, line.length] : [0, at], targ = pm ? [0, at] : [end, line.length];
+      const ms = mentions(line, names);
+      const inside = (m, r) => m.at >= r[0] && m.end <= r[1];
+      g.neg = NEG.test(line.slice(0, end));
+      const subjects = ms.filter(m => inside(m, subj));
+      if (!subjects.length) {
+        const w = line.slice(subj[0], subj[1]).replace(/\b(should|must|needs? to|has to|have to|will|can|does|do|is|are|be|the|a|an|new|table|tables|only|also|not|never|always|by)\b/gi, ' ').replace(/[^\p{L}\p{N}_ ]/gu, ' ').trim().split(/\s+/).filter(Boolean)[0];
+        g.kind = 'unknown'; g.missing = w || '';
+        g.why = w ? '\u201c' + w + '\u201d isn\u2019t a table in your model or your changes yet.' : 'Name the table that does the filtering.';
+        return g;
+      }
+      g.from = [...new Set(subjects.map(m => m.name))];
+      const tText = line.slice(targ[0], targ[1]);
+      const ex = EXCEPT.exec(tText);
+      const exAt = ex ? targ[0] + ex.index : targ[1];
+      const exNames = new Set(ms.filter(m => m.at >= exAt && m.end <= targ[1]).map(m => m.name));
+      g.except = [...exNames];
+      g.withDates = /\binclud\w*\s+(the\s+)?(dates?|calendar)\b/i.test(line);
+      const scopeText = line.slice(targ[0], exAt);
+      const named = ms.filter(m => m.at >= targ[0] && m.end <= exAt).map(m => m.name).filter(n => !g.from.includes(n));
+      if (ALL.test(scopeText) || (!named.length && /\b(report|model|everywhere|anything)\b/i.test(scopeText))) {
+        g.scope = /\bfacts?\b/i.test(scopeText) ? 'facts' : /\b(lookups?|dimensions?|dims?)\b/i.test(scopeText) ? 'lookups' : 'all';
+        g.to = [];
+      } else {
+        g.scope = 'list';
+        g.to = [...new Set(named)];
+        if (!g.to.length) { g.kind = 'unknown'; g.why = 'No table found ' + (pm ? 'before' : 'after') + ' \u201c' + (pm || vm)[0] + '\u201d. Name the tables, or say \u201cevery table\u201d or \u201cevery fact table\u201d.'; return g; }
+      }
+      g.kind = g.neg ? 'notFilters' : 'filters';
+      return g;
+    }).filter(Boolean);
+  }
+  // the tables a goal is about
+  function targets(goal, model, src){
+    const r = roles(model), ex = new Set((goal.except || []).map(low));
+    let list;
+    if (goal.scope === 'list') list = goal.to.slice();
+    else {
+      const g = graph(model);
+      list = model.tables.filter(t => {
+        const k = low(t), role = r.get(k);
+        if (low(t) === low(src) || !g.linked.has(k)) return false;
+        if (role === 'date' && !goal.withDates) return false;
+        if (goal.scope === 'facts') return role === 'fact';
+        if (goal.scope === 'lookups') return role === 'lookup';
+        return true;
+      });
+    }
+    return list.filter(t => !ex.has(low(t)) && low(t) !== low(src));
+  }
+
+  /* ---------- checking goals, with advice tested by trying each fix ---------- */
+  function evaluate(model, goals, opts){
+    opts = opts || {};
+    const g = graph(model);
+    const amb = allAmbiguity(g);
+    const res = { model, graph: g, ambiguity: amb, goals: [], cut: [...g.cut] };
+    (goals || []).forEach(goal => {
+      if (goal.kind === 'unknown' || goal.kind === 'noAmbiguity' || goal.kind === 'allowAmbiguity') { res.goals.push({ goal, items: [] }); return; }
+      goal.from.forEach(src => {
+        const tg = targets(goal, model, src), rch = reach(g, src), am = ambiguity(g, src);
+        const items = tg.map(t => {
+          const k = low(t), hit = rch.get(k);
+          if (goal.kind === 'filters') {
+            if (!hit) return { table: t, ok: false, why: whyNot(g, src, t) };
+            if (am.has(k)) return { table: t, ok: false, ambiguous: am.get(k) };
+            return { table: t, ok: true, path: paths(g, src, t)[0] };
+          }
+          if (hit) return { table: t, ok: false, path: paths(g, src, t)[0], all: paths(g, src, t) };
+          return { table: t, ok: true };
+        });
+        const notConnected = goal.scope !== 'list' ? model.tables.filter(t => !g.linked.has(low(t)) && low(t) !== low(src)) : [];
+        res.goals.push({ goal, src, items, notConnected, skippedDates: goal.scope !== 'list' && !goal.withDates ? model.tables.filter(t => model.dates.has(low(t)) && low(t) !== low(src) && g.linked.has(low(t))) : [] });
+      });
+    });
+    return res;
+  }
+  // how many goal items fail (for comparing fixes)
+  function score(model, goals){
+    const e = evaluate(model, goals);
+    let bad = 0; e.goals.forEach(x => x.items.forEach(i => { if (!i.ok) bad++; }));
+    return { bad, amb: e.ambiguity.length, ev: e };
+  }
+  // failing goal items as keys, so two versions of the model can be compared item by item
+  function failing(ev){
+    const out = new Map();
+    ev.goals.forEach(x => x.items.forEach(i => { if (!i.ok) out.set(x.goal.n + '|' + low(x.src) + '|' + low(i.table), { line: x.goal.line, src: x.src, table: i.table, kind: x.goal.kind }); }));
+    return out;
+  }
+  // Try each candidate (a full list of changes) and say what it fixes and what it breaks
+  // what each table filters, to see what a change takes away
+  function reachAll(g){ const out = new Map(); g.model.tables.forEach(t => out.set(low(t), { name: t, set: new Set(reach(g, t).keys()) })); return out; }
+  function tryFixes(base, changes, goals, candidates, mustFix){
+    const m0 = apply(base, changes), ev0 = evaluate(m0, goals), f0 = failing(ev0), r0 = reachAll(ev0.graph);
+    return candidates.map(c => {
+      const ev = evaluate(apply(base, c.changes), goals), f1 = failing(ev), r1 = reachAll(ev.graph);
+      const fixed = [...f0.keys()].filter(k => !f1.has(k)).map(k => f0.get(k));
+      const broke = [...f1.keys()].filter(k => !f0.has(k)).map(k => f1.get(k));
+      // tables that stop filtering others (a goal saying they shouldn't is already counted in fixed)
+      const lost = [];
+      r0.forEach((v, k) => { const after = r1.get(k); const gone = [...v.set].filter(x => !after || !after.set.has(x)); if (gone.length) lost.push({ table: v.name, n: gone.length, tables: gone.map(x => (r0.get(x) || { name: x }).name) }); });
+      lost.sort((a, b) => b.n - a.n);
+      const lostN = lost.reduce((s, x) => s + x.n, 0);
+      return Object.assign({}, c, { fixed, broke, lost, lostN, ambBefore: ev0.ambiguity.length, ambAfter: ev.ambiguity.length, solves: mustFix ? !f1.has(mustFix) : true,
+        score: fixed.length - broke.length - lostN / 2 - Math.max(0, ev.ambiguity.length - ev0.ambiguity.length) / 2 });
+    }).filter(c => c.solves).sort((a, b) => (b.score - a.score) || (a.ambAfter - b.ambAfter));
+  }
+
+  /* ---------- advice for one failing goal item ----------
+     base: the model as read; changes: the current what-if list; goals: parsed goals; x: the evaluated goal; item: one table in it.
+     Returns { text, fixes: [{ title, changes, fixed, broke, ambBefore, ambAfter }], code: [{ title, dax, note }] } */
+  function advise(base, changes, goals, x, item){
+    const model = apply(base, changes), g = graph(model), src = x.src, t = item.table;
+    const key = x.goal.n + '|' + low(src) + '|' + low(t);
+    const out = { text: [], fixes: [], code: [] };
+    const cands = [], seen = new Set();
+    const addCand = (title, list) => { const k = JSON.stringify(list); if (seen.has(k)) return; seen.add(k); cands.push({ title, changes: list }); };
+    const relCands = (rels, mode) => rels.forEach(r => {
+      if (r.isNew && r.change != null) addCand('Leave out the new relationship ' + relText(r), changes.filter((c, i) => i !== r.change));
+      else if (flowsBoth(r) && r.card !== '1:1') addCand('Set ' + r.toTable + ' – ' + r.fromTable + ' to single direction', changes.concat([{ op: 'dir', key: r.key, both: false }]));
+      else if (mode !== 'noOff') addCand('Turn off ' + r.toTable + '[' + r.toColumn + '] – ' + r.fromTable + '[' + r.fromColumn + '] (keep it for USERELATIONSHIP)', changes.concat([{ op: 'active', key: r.key, active: false }]));
+    });
+    const role = roles(model);
+    if (x.goal.kind === 'filters' && item.ambiguous) {
+      const ps = item.ambiguous;
+      out.text.push('A filter on ' + src + ' has ' + ps.length + ' routes to ' + t + '. Power BI uses only one, so totals can change depending on which. Desktop also refuses to make a new relationship active when it would create a second route.');
+      ps.slice(0, 3).forEach(p => out.text.push('Route: ' + pathText(src, p)));
+      const onPaths = new Map(); ps.slice(0, 4).forEach(p => p.forEach(s => onPaths.set(s.rel.key, s.rel)));
+      relCands([...onPaths.values()]);
+    } else if (x.goal.kind === 'filters') {
+      const w = item.why;
+      // a direct relationship when the target carries the source's key column
+      const directCands = () => {
+        const srcKeys = new Set(model.rels.filter(r => low(r.toTable) === low(src)).map(r => r.toColumn));
+        changes.forEach(c => { if (c.op === 'add' && low(c.one[0]) === low(src)) srcKeys.add(c.one[1]); });
+        const tCols = model.cols.get(low(t)) || [];
+        // not the target's own key (its one side), and not a name every table has (id, key)
+        const ownKeys = new Set(model.rels.filter(r => low(r.toTable) === low(t)).map(r => low(r.toColumn)));
+        let n = 0;
+        srcKeys.forEach(k => {
+          if (/^(id|key|pk|code|name|guid|uid)$/i.test(k)) return;
+          const hit = tCols.find(c => low(c) === low(k) && !ownKeys.has(low(c)));
+          if (hit) { n++; addCand('Add ' + src + '[' + k + '] \u2192 ' + t + '[' + hit + '] (' + t + ' has a ' + hit + ' column)', changes.concat([{ op: 'add', one: [src, k], many: [t, hit], both: false }])); }
+        });
+        return n;
+      };
+      if (w.kind === 'none') {
+        out.text.push('No relationship connects ' + src + ' and ' + t + ', not even an inactive one.');
+        if (!directCands()) out.text.push('Add a relationship from ' + src + ' to ' + t + ' (or to a table that filters ' + t + ') in Step 3 to test it.');
+      } else if (w.kind === 'inactive') {
+        out.text.push('Only an inactive relationship connects them: ' + w.rels.map(relText).join(', ') + '. A measure can still use it with USERELATIONSHIP, which is often the right answer for a second date or role.');
+        w.rels.forEach(r => { addCand('Turn on ' + relText(r), changes.concat([{ op: 'active', key: r.key, active: true }])); out.code.push({ title: 'Use it in one measure', dax: userelSnippet(r) }); });
+        directCands();
+      } else {
+        const r = w.rel, last = w.at === w.hops.length - 1;
+        const there = w.at === 0 ? src : w.hops[w.at - 1].to, next = w.hops[w.at].to;
+        out.text.push((low(there) === low(src) ? 'A filter on ' + src + ' can\u2019t go on to ' + next : 'A filter on ' + src + ' reaches ' + there + ', but can\u2019t go on to ' + next) + ': the ' + r.toTable + ' \u2013 ' + r.fromTable + ' relationship ' + relWords(r) + '.');
+        out.text.push('Closest connection: ' + [src].concat(w.hops.map(h => h.to)).join(' \u2013 '));
+        const direct = directCands();
+        if (last) {
+          addCand('Set ' + r.toTable + ' \u2013 ' + r.fromTable + ' to both directions', changes.concat([{ op: 'dir', key: r.key, both: true }]));
+          const rt = role.get(low(t));
+          if (rt === 'lookup' || rt === 'both' || rt === 'bridge') out.code.push({ title: 'Show only the ' + t + ' rows that have data (no relationship change)', dax: hasDataMeasure(t, there), note: 'Add this measure to the filters of the ' + t + ' visual or slicer and set it to 1. A filter on ' + src + ' reaches ' + there + ', so only ' + t + ' rows with matching ' + there + ' rows stay.' });
+          out.code.push({ title: 'Or only in the measures that need it', dax: crossfilterSnippet(r), note: 'CROSSFILTER turns on both directions for this one calculation, so the rest of the model keeps its single-direction filters.' });
+        } else {
+          out.text.push('Getting there would mean going up from ' + there + ' to ' + next + ' and back down: ' + t + ' would be filtered by whichever ' + next + ' rows match ' + src + '\u2019s ' + there + ' rows, which is rarely what you want. ' + (direct ? 'Relate them directly instead.' : 'Relate ' + src + ' to ' + t + ' (or to a table that filters it) directly instead.'));
+        }
+        const srcAdd = changes.find(c => c.op === 'add' && low(c.one[0]) === low(src));
+        const keyCol = srcAdd ? srcAdd.one[1] : null;
+        if (keyCol && (model.cols.get(low(t)) || []).some(c => low(c) === low(keyCol))) out.code.push({ title: 'Filter ' + t + ' by its own ' + keyCol + ' (no relationship)', dax: treatasMeasure(t, src, keyCol), note: 'Add it to the filters of a ' + t + ' visual and set it to 1. Use this when a relationship would give a second route.' });
+      }
+    } else if (x.goal.kind === 'notFilters') {
+      out.text.push('A filter on ' + src + ' reaches ' + t + (item.all && item.all.length > 1 ? ' by ' + item.all.length + ' routes' : '') + '.');
+      (item.all || [item.path]).slice(0, 3).forEach(p => out.text.push('Route: ' + pathText(src, p)));
+      const onPaths = new Map(); (item.all || [item.path]).slice(0, 4).forEach(p => p.forEach(s => onPaths.set(s.rel.key, s.rel)));
+      relCands([...onPaths.values()]);
+    }
+    out.fixes = tryFixes(base, changes, goals, cands, key).slice(0, 4);
+    out.tried = cands.length;
+    return out;
+  }
+  // advice for an ambiguity found anywhere in the model (not tied to a goal)
+  function adviseAmbiguity(base, changes, goals, amb){
+    const cands = [], seen = new Set();
+    amb.paths.slice(0, 4).forEach(p => p.forEach(s => {
+      const r = s.rel; if (seen.has(r.key)) return; seen.add(r.key);
+      if (r.isNew && r.change != null) cands.push({ title: 'Leave out the new relationship ' + relText(r), changes: changes.filter((c, i) => i !== r.change) });
+      else if (flowsBoth(r) && r.card !== '1:1') cands.push({ title: 'Set ' + r.toTable + ' – ' + r.fromTable + ' to single direction', changes: changes.concat([{ op: 'dir', key: r.key, both: false }]) });
+      else cands.push({ title: 'Turn off ' + r.toTable + '[' + r.toColumn + '] – ' + r.fromTable + '[' + r.fromColumn + ']', changes: changes.concat([{ op: 'active', key: r.key, active: false }]) });
+    }));
+    const pairGone = c => { const g = graph(apply(base, c.changes)); return !ambiguity(g, amb.from).has(low(amb.to)); };
+    return tryFixes(base, changes, goals, cands.filter(pairGone)).slice(0, 4);
+  }
+
+  /* ---------- planning a table that many tables will carry a key for (Location, Region...) ---------- */
+  function defaultCarriers(model, newTable){
+    const g = graph(model), r = roles(model);
+    // bridges built in Power Query (named bridge_..., ..._xref) don't carry keys; a source table shaped like a bridge can
+    return model.tables.filter(t => low(t) !== low(newTable) && g.linked.has(low(t)) && r.get(low(t)) !== 'date' && !BRIDGE.test(t));
+  }
+  // tables reached only by going from the one side to the many side (no step back up a both-ways relationship)
+  function forwardReach(g, src){
+    const out = new Set(), q = [low(src)], seen = new Set(q);
+    while (q.length) {
+      const cur = q.shift();
+      for (const e of g.adj.get(cur) || []) {
+        const n = low(e.to); if (seen.has(n)) continue;
+        if (low(e.rel.fromTable) !== n && e.rel.card !== '1:1') continue;
+        seen.add(n); out.add(n); q.push(n);
+      }
+    }
+    return out;
+  }
+  function plan(model, newTable, key, carriers, prefer){
+    carriers = (carriers && carriers.length ? carriers : defaultCarriers(model, newTable)).filter(t => canon(model, t));
+    const want = carriers.slice();
+    const spec = t => ({ op: 'add', one: [newTable, key], many: [t, key], both: false });
+    let chosen = [], cur = model;
+    const rejected = new Map();
+    const tryLink = t => { const m = apply(cur, [spec(t)]); const g = graph(m); return { m, g, amb: ambiguity(g, newTable) }; };
+    (prefer || []).filter(t => canon(model, t)).forEach(t => {
+      if (chosen.includes(t)) return;
+      const x = tryLink(t);
+      if (x.amb.size) { const [n, ps] = [...x.amb.entries()][0]; rejected.set(low(t), { at: (reach(x.g, newTable).get(n) || {}).name || n, paths: ps.slice(0, 2) }); return; }
+      chosen.push(t); cur = x.m;
+    });
+    for (;;) {
+      const g0 = graph(cur), have = chosen.length ? reach(g0, newTable) : new Map();
+      let best = null;
+      carriers.forEach((t, idx) => {
+        if (chosen.includes(t) || have.has(low(t))) return;
+        const x = tryLink(t); if (x.amb.size) return;
+        const rr = reach(x.g, newTable), fw = forwardReach(x.g, newTable);
+        const fresh = w => !have.has(low(w)) && !chosen.includes(w);
+        const gain = want.filter(w => (rr.has(low(w)) || low(w) === low(t)) && fresh(w)).length;
+        // prefer links whose filter flows the normal way (one side to many side) to each table it reaches
+        const fgain = want.filter(w => (fw.has(low(w)) || low(w) === low(t)) && fresh(w)).length;
+        const sc = [fgain, gain, -idx];
+        const better = (a, b2) => { for (let i = 0; i < a.length; i++) { if (a[i] !== b2[i]) return a[i] > b2[i]; } return false; };
+        if (gain && (!best || better(sc, best.sc))) best = { t, sc, m: x.m };
+      });
+      if (!best) break;
+      chosen.push(best.t); cur = best.m;
+    }
+    const g = graph(cur), rch = chosen.length ? reach(g, newTable) : new Map();
+    const rows = carriers.map(t => {
+      const k = low(t);
+      if (chosen.includes(t)) return { table: t, status: 'link' };
+      if (rch.has(k)) { const p = paths(g, newTable, t)[0]; return { table: t, status: 'filtered', path: p, by: p && p[0] ? p[0].to : newTable }; }
+      const x = tryLink(t);
+      if (x.amb.size) { const [n, ps] = [...x.amb.entries()][0]; return { table: t, status: 'conflict', at: (reach(x.g, newTable).get(n) || {}).name || n, paths: ps.slice(0, 2), preferred: rejected.has(k) }; }
+      return { table: t, status: 'unreached' };
+    });
+    const order = { link: 0, filtered: 1, conflict: 2, unreached: 3 };
+    rows.sort((a, b) => order[a.status] - order[b.status] || a.table.localeCompare(b.table));
+    return { newTable, key, links: chosen, changes: chosen.map(spec), rows, missed: rows.filter(r => r.status === 'conflict' || r.status === 'unreached').map(r => r.table), total: carriers.length, model: cur };
+  }
+
+  /* ---------- DAX for the usual workarounds ---------- */
+  const q = n => "'" + n.replace(/'/g, "''") + "'";
+  const b = n => '[' + n.replace(/\]/g, ']]') + ']';
+  function treatasMeasure(lookup, newTable, key, lookupKey){
+    return lookup + ' in selected ' + newTable + ' =\nINT (\n\tNOT ISEMPTY (\n\t\tCALCULATETABLE (\n\t\t\t' + q(lookup) + ',\n\t\t\tTREATAS ( VALUES ( ' + q(newTable) + b(key) + ' ), ' + q(lookup) + b(lookupKey || key) + ' )\n\t\t)\n\t)\n)';
+  }
+  function hasDataMeasure(lookup, fact){ return lookup + ' has ' + fact + ' rows =\nINT ( NOT ISEMPTY ( ' + q(fact) + ' ) )'; }
+  function crossfilterSnippet(r){ return 'CALCULATE (\n\t[Your measure],\n\tCROSSFILTER ( ' + q(r.fromTable) + b(r.fromColumn) + ', ' + q(r.toTable) + b(r.toColumn) + ', BOTH )\n)'; }
+  function userelSnippet(r){ return 'CALCULATE (\n\t[Your measure],\n\tUSERELATIONSHIP ( ' + q(r.fromTable) + b(r.fromColumn) + ', ' + q(r.toTable) + b(r.toColumn) + ' )\n)'; }
+
+  // the steps in Power BI Desktop for one change
+  function desktopSteps(base, c){
+    if (c.op === 'add') {
+      const card = c.card === 'M:M' ? 'Many to many (*:*)' : c.card === '1:1' ? 'One to one (1:1)' : 'Many to one (*:1)';
+      const isNewTable = !canon(base, c.one[0]);
+      return (isNewTable ? 'Add the ' + c.one[0] + ' table (one row per ' + c.one[1] + '), and the ' + c.many[1] + ' column to ' + c.many[0] + ' if it isn’t there yet. ' : '')
+        + 'In Model view, select Manage relationships > New: ' + c.many[0] + '[' + c.many[1] + '] to ' + c.one[0] + '[' + c.one[1] + '], cardinality ' + card + ', cross filter direction ' + (c.both ? 'Both' : 'Single') + ', active.';
+    }
+    const r = base.rels.find(x => x.key === c.key);
+    if (!r) return 'This relationship isn’t in the model any more.';
+    const name = r.fromTable + '[' + r.fromColumn + '] to ' + r.toTable + '[' + r.toColumn + ']';
+    if (c.op === 'dir') return 'In Model view, double-click the ' + name + ' line and set Cross filter direction to ' + (c.both ? 'Both' : 'Single') + '.';
+    if (c.op === 'active') return 'In Model view, double-click the ' + name + ' line and ' + (c.active ? 'tick' : 'clear') + ' Make this relationship active.';
+    if (c.op === 'remove') return 'In Model view, right-click the ' + name + ' line and select Delete.';
+    return '';
+  }
+  function changeText(base, c){
+    if (c.op === 'add') return 'Add ' + c.one[0] + '[' + c.one[1] + ']' + (c.both ? ' ⇄ ' : ' → ') + c.many[0] + '[' + c.many[1] + ']' + (c.both ? ' (both directions)' : '') + (canon(base, c.one[0]) ? '' : ' (new table)');
+    const r = base.rels.find(x => x.key === c.key);
+    const nm = r ? r.toTable + '[' + r.toColumn + '] – ' + r.fromTable + '[' + r.fromColumn + ']' : '(a relationship no longer in the model)';
+    if (c.op === 'dir') return 'Set ' + nm + ' to ' + (c.both ? 'both directions' : 'single direction');
+    if (c.op === 'active') return (c.active ? 'Turn on ' : 'Turn off ') + nm;
+    if (c.op === 'remove') return 'Remove ' + nm;
+    return '';
+  }
+
+  return { fromParsed, apply, graph, reach, paths, ambiguity, allAmbiguity, roles, facts, ROLE_WORD, whyNot, parseGoals, targets, evaluate, score, tryFixes, failing, advise, adviseAmbiguity,
+    plan, defaultCarriers, pathText, relText, relWords, flowsBoth, treatasMeasure, hasDataMeasure, crossfilterSnippet, userelSnippet, desktopSteps, changeText, canon, relKey, mentions };
+})();
+
+/* Relationship Planner example: a generic retail model (customers, products, stores, sales, returns, budget) */
+const RP_EX_MODEL = "Kind\tTable\tName\tType\tFolder\tFlags\tDescription\tExpression\tToTable\tToColumn\tSummarize\tSortBy\tHierarchies\tStorage\tSource\nTable\tDate\tDate\tTime\t\t\t\t\t\t\t\t\t\tImport\t\nColumn\tDate\tDate\tDateTime\t\tkey\t\t\t\t\tNone\t\t\t\t\nColumn\tDate\tMonth Start\tDateTime\t\t\t\t\t\t\tNone\t\t\t\t\nColumn\tDate\tYear\tInt64\t\t\t\t\t\t\tNone\t\t\t\t\nTable\tCustomer\tCustomer\t\t\t\t\t\t\t\t\t\t\tImport\t\nColumn\tCustomer\tCustomerKey\tInt64\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tCustomer\tCustomer\tString\t\t\t\t\t\t\tNone\t\t\t\t\nColumn\tCustomer\tCity\tString\t\t\t\t\t\t\tNone\t\t\t\t\nColumn\tCustomer\tRegion\tString\t\t\t\t\t\t\tNone\t\t\t\t\nTable\tProduct\tProduct\t\t\t\t\t\t\t\t\t\t\tImport\t\nColumn\tProduct\tProductKey\tInt64\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tProduct\tProduct\tString\t\t\t\t\t\t\tNone\t\t\t\t\nColumn\tProduct\tCategory\tString\t\t\t\t\t\t\tNone\t\t\t\t\nTable\tStore\tStore\t\t\t\t\t\t\t\t\t\t\tImport\t\nColumn\tStore\tStoreKey\tInt64\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tStore\tStore\tString\t\t\t\t\t\t\tNone\t\t\t\t\nColumn\tStore\tRegion\tString\t\t\t\t\t\t\tNone\t\t\t\t\nTable\tPromotion\tPromotion\t\t\t\t\t\t\t\t\t\t\tImport\t\nColumn\tPromotion\tPromoKey\tInt64\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tPromotion\tPromotion\tString\t\t\t\t\t\t\tNone\t\t\t\t\nTable\tPromotion Products\tPromotion Products\t\t\t\t\t\t\t\t\t\t\tImport\t\nColumn\tPromotion Products\tPromoKey\tInt64\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tPromotion Products\tProductKey\tInt64\t\thidden\t\t\t\t\tNone\t\t\t\t\nTable\tSales\tSales\t\t\t\t\t\t\t\t\t\t\tImport\t\nColumn\tSales\tOrder Date\tDateTime\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tSales\tShip Date\tDateTime\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tSales\tCustomerKey\tInt64\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tSales\tProductKey\tInt64\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tSales\tStoreKey\tInt64\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tSales\tNet Amount\tDecimal\t\t\t\t\t\t\tNone\t\t\t\t\nTable\tReturns\tReturns\t\t\t\t\t\t\t\t\t\t\tImport\t\nColumn\tReturns\tReturn Date\tDateTime\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tReturns\tProductKey\tInt64\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tReturns\tStoreKey\tInt64\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tReturns\tQuantity\tInt64\t\t\t\t\t\t\tNone\t\t\t\t\nTable\tBudget\tBudget\t\t\t\t\t\t\t\t\t\t\tImport\t\nColumn\tBudget\tMonth Start\tDateTime\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tBudget\tCategory\tString\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tBudget\tRegion\tString\t\thidden\t\t\t\t\tNone\t\t\t\t\nColumn\tBudget\tBudget Amount\tDecimal\t\t\t\t\t\t\tNone\t\t\t\t\nTable\tMetric Picker\tMetric Picker\t\t\t\t\t\t\t\t\t\t\tImport\t\nColumn\tMetric Picker\tMetric\tString\t\t\t\t\t\t\tNone\t\t\t\t\nColumn\tMetric Picker\tOrder\tInt64\t\thidden\t\t\t\t\tNone\t\t\t\t\nTable\t_Measures\t_Measures\t\t\t\t\t\t\t\t\t\t\tImport\t\nRelationship\tSales\tOrder Date\tMany:One\t\tOneDirection\t\t\tDate\tDate\t\t\t\t\t\nRelationship\tSales\tShip Date\tMany:One\t\tOneDirection inactive\t\t\tDate\tDate\t\t\t\t\t\nRelationship\tSales\tCustomerKey\tMany:One\t\tOneDirection\t\t\tCustomer\tCustomerKey\t\t\t\t\t\nRelationship\tSales\tProductKey\tMany:One\t\tOneDirection\t\t\tProduct\tProductKey\t\t\t\t\t\nRelationship\tSales\tStoreKey\tMany:One\t\tOneDirection\t\t\tStore\tStoreKey\t\t\t\t\t\nRelationship\tReturns\tReturn Date\tMany:One\t\tOneDirection\t\t\tDate\tDate\t\t\t\t\t\nRelationship\tReturns\tProductKey\tMany:One\t\tOneDirection\t\t\tProduct\tProductKey\t\t\t\t\t\nRelationship\tReturns\tStoreKey\tMany:One\t\tOneDirection\t\t\tStore\tStoreKey\t\t\t\t\t\nRelationship\tPromotion Products\tProductKey\tMany:One\t\tBothDirections\t\t\tProduct\tProductKey\t\t\t\t\t\nRelationship\tPromotion Products\tPromoKey\tMany:One\t\tOneDirection\t\t\tPromotion\tPromoKey\t\t\t\t\t\nRelationship\tBudget\tMonth Start\tMany:One\t\tOneDirection\t\t\tDate\tDate\t\t\t\t\t\nRelationship\tBudget\tCategory\tMany:Many\t\tOneDirection\t\t\tProduct\tCategory\t\t\t\t\t\nModel\t\tModel\t\t\t\t\t\t\t\t\t\t\t\t";
+// a Region table being planned, linked to both Store and Customer (two routes into Sales)
+const RP_EX_CHANGES = [
+  { op: 'add', one: ['Region', 'Region'], many: ['Store', 'Region'], both: false },
+  { op: 'add', one: ['Region', 'Region'], many: ['Customer', 'Region'], both: false }
+];
+const RP_EX_GOALS = [
+  'Region should filter every fact table',
+  'Date filters all fact tables',
+  'Product should filter Budget',
+  'Promotion should not filter Budget'
+].join('\n');
+
+/* ---------- Relationship Planner page ---------- */
+const $ = id => document.getElementById(id);
+const PREFIX = 'krp.';
+const store = {
+  get(k){ try { return localStorage.getItem(PREFIX + k); } catch (e) { return null; } },
+  set(k, v){ try { localStorage.setItem(PREFIX + k, v); } catch (e) {} }
+};
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+const low = s => (s || '').toLowerCase();
+function copyText(text, btn){
+  const done = () => { const o = btn.dataset.label || btn.textContent; btn.dataset.label = o; btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(() => { btn.textContent = o; btn.classList.remove('done'); }, 1600); };
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); if (ok) done(); };
+  try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+}
+const plural = (n, w, ws) => n + ' ' + (n === 1 ? w : (ws || w + 's'));
+const ARR = r => RP.flowsBoth(r) ? '⇄' : '→';
+
+const blankPlan = () => ({ table: '', key: '', prefer: [], carriers: null });
+const state = { example: false, base: null, changes: [], from: '', view: 'after', plan: blankPlan(), ev: null, after: null };
+
+/* ---------- saving ---------- */
+function persist(){
+  if (state.example) { store.set('model', ''); store.set('changes', '[]'); store.set('plan', JSON.stringify(blankPlan())); store.set('goals', ownGoals()); return; }
+  store.set('model', $('modelInput').value);
+  store.set('changes', JSON.stringify(state.changes));
+  store.set('goals', $('goalInput').value);
+  store.set('plan', JSON.stringify(state.plan));
+  store.set('view', JSON.stringify({ from: state.from, view: state.view }));
+}
+// goals the person typed while the example was showing (never the example's own lines)
+function ownGoals(){ return state.example ? SF_SUITE.ownText($('goalInput').value, RP_EX_GOALS) : $('goalInput').value; }
+function setExample(on){ state.example = on; $('exampleBanner').hidden = !on; }
+
+/* ---------- Step 1 ---------- */
+function readModelBox(){
+  const text = $('modelInput').value;
+  const m = text.trim() ? parseModel(text) : null;
+  let msg = '';
+  if (m && m.error) msg = '<div class="msg err">' + esc(m.error) + '</div>';
+  state.base = m && !m.error ? RP.fromParsed(m) : null;
+  if (state.base && !state.base.rels.length) msg += '<div class="msg warn">No relationships came with this export. Check the export query is the toolkit&rsquo;s current one, or add relationships in Step 3 to plan them.</div>';
+  $('modelMsg').innerHTML = msg;
+  const b = state.base;
+  $('modelStats').innerHTML = b ? '<span class="stat"><b>' + b.tables.length + '</b> tables</span><span class="stat"><b>' + b.rels.length + '</b> relationships</span><span class="stat"><b>' + b.rels.filter(r => r.both && r.card !== '1:1').length + '</b> both directions</span><span class="stat"><b>' + b.rels.filter(r => !r.active).length + '</b> inactive</span>' : '';
+}
+function compute(){
+  const b = state.base;
+  if (!b) { state.after = null; state.ev = null; return; }
+  state.after = RP.apply(b, state.changes);
+  state.goals = RP.parseGoals($('goalInput').value, state.after);
+  state.ev = RP.evaluate(state.after, state.goals);
+  state.evBefore = state.changes.length ? RP.evaluate(b, []) : state.ev;
+}
+const viewModel = () => state.view === 'before' || !state.changes.length ? state.base : state.after;
+
+/* ---------- Step 2: health and flow ---------- */
+function healthLine(m, ev){
+  const g = ev.graph, roles = RP.roles(m);
+  const both = m.rels.filter(r => r.active && r.both && r.card !== '1:1'), inact = m.rels.filter(r => !r.active), mm = m.rels.filter(r => r.active && r.card === 'M:M');
+  const alone = m.tables.filter(t => !g.linked.has(low(t)));
+  return { both, inact, mm, alone, amb: ev.ambiguity, roles };
+}
+function renderHealth(){
+  const el = $('health');
+  if (!state.base) { el.innerHTML = ''; return; }
+  const cur = healthLine(state.base, state.evBefore || state.ev);
+  const aft = state.changes.length ? healthLine(state.after, state.ev) : null;
+  const h = aft || cur;
+  const chip = (n, label, warn) => '<span class="stat' + (warn && n ? ' warnstat' : '') + '"><b>' + n + '</b> ' + label + '</span>';
+  let html = '<div class="healthbar"><span class="hl">' + (aft ? 'With your changes' : 'Your model') + '</span>'
+    + chip(h.amb.length, h.amb.length === 1 ? 'ambiguous route' : 'ambiguous routes', true)
+    + chip(h.both.length, 'both directions') + chip(h.inact.length, 'inactive') + (h.mm.length ? chip(h.mm.length, 'many-to-many') : '') + chip(h.alone.length, 'with no relationships') + '</div>';
+  if (aft && aft.amb.length !== cur.amb.length) html += '<p class="small muted">Your model as it is: ' + plural(cur.amb.length, 'ambiguous route') + '.</p>';
+  if (h.amb.length) {
+    html += '<div class="msg warn"><b>' + plural(h.amb.length, 'pair') + ' of tables can be reached by two routes.</b> Power BI uses only one, so a total can depend on which. Open one for the routes and tested fixes.</div><div class="amblist">';
+    const seen = new Set();
+    h.amb.slice(0, 40).forEach((a, i) => {
+      const k = low(a.from) + '>' + low(a.to); if (seen.has(k)) return; seen.add(k);
+      html += '<details class="adv" data-amb="' + i + '"><summary><b>' + esc(a.from) + '</b> &rarr; <b>' + esc(a.to) + '</b> <span class="muted small">' + a.paths.length + ' routes</span></summary><div class="adv-body"></div></details>';
+    });
+    html += (h.amb.length > 40 ? '<p class="small muted">and ' + (h.amb.length - 40) + ' more.</p>' : '') + '</div>';
+  }
+  el.innerHTML = html;
+}
+function renderPick(){
+  const m = state.base ? viewModel() : null;
+  $('viewSeg').hidden = !state.changes.length;
+  document.querySelectorAll('input[name=view]').forEach(i => { i.checked = i.value === (state.changes.length ? state.view : 'before'); });
+  if (!m) { $('fromSel').innerHTML = ''; return; }
+  const ev = m === state.base ? (state.evBefore || state.ev) : state.ev, g = ev.graph, roles = RP.roles(m);
+  const linked = m.tables.filter(t => g.linked.has(low(t)));
+  if (!state.from || !RP.canon(m, state.from) || !g.linked.has(low(state.from))) {
+    // start on the table that filters the most (often the date table)
+    state.from = linked.slice().sort((a, b) => RP.reach(g, b).size - RP.reach(g, a).size)[0] || '';
+  }
+  $('fromSel').innerHTML = linked.map(t => '<option value="' + esc(t) + '"' + (low(t) === low(state.from) ? ' selected' : '') + '>' + esc(t) + ' (' + RP.ROLE_WORD[roles.get(low(t))] + ', filters ' + RP.reach(g, t).size + ')</option>').join('');
+}
+function whyShort(w){
+  if (w.kind === 'none') return 'not connected to it';
+  if (w.kind === 'inactive') return 'only through an inactive relationship';
+  const there = w.at === 0 ? null : w.hops[w.at - 1].to, next = w.hops[w.at].to;
+  return (there ? 'the filter gets to ' + there + ' but can’t go on to ' + next : 'the filter can’t go to ' + next) + ' (' + w.rel.toTable + ' filters ' + w.rel.fromTable + ', not the other way)';
+}
+function renderFlow(){
+  const el = $('flow'), nr = $('notReached');
+  const m = state.base ? viewModel() : null;
+  if (!m || !state.from) { el.innerHTML = state.base ? '<p class="muted">No relationships to show.</p>' : '<p class="muted">Connect your model in Step 1.</p>'; nr.innerHTML = ''; return; }
+  const ev = m === state.base ? (state.evBefore || state.ev) : state.ev, g = ev.graph, roles = RP.roles(m);
+  const src = state.from, rch = RP.reach(g, src), amb = RP.ambiguity(g, src);
+  const linked = m.tables.filter(t => g.linked.has(low(t)) && low(t) !== low(src));
+  const byHop = [];
+  rch.forEach((v, k) => { (byHop[v.hops - 1] = byHop[v.hops - 1] || []).push(v); });
+  let html = '<p class="flowsum"><b>Slicing by ' + esc(src) + ' filters ' + plural(rch.size, 'table') + '</b> of ' + linked.length + ' connected' + (amb.size ? ', <span class="warntext">' + amb.size + ' of them by two routes</span>' : '') + '.</p>';
+  html += '<div class="hops"><div class="hop src"><span class="hop-h">Slice by</span><div class="tcard src"><b>' + esc(src) + '</b><span class="role">' + esc(RP.ROLE_WORD[roles.get(low(src))]) + '</span></div></div>';
+  byHop.forEach((list, i) => {
+    html += '<div class="hop"><span class="hop-h">' + (i === 0 ? 'Filters directly' : 'Then, ' + plural(i + 1, 'step') + ' away') + '</span>' + list.sort((a, b) => a.name.localeCompare(b.name)).map(v => {
+      const a = amb.has(low(v.name));
+      return '<div class="tcard' + (a ? ' amb' : '') + (v.rel.isNew || v.rel.changed ? ' chg' : '') + '"><b>' + esc(v.name) + '</b><span class="role">' + esc(RP.ROLE_WORD[roles.get(low(v.name))]) + '</span><span class="via">' + ARR(v.rel) + ' from ' + esc((rch.get(v.from) || { name: src }).name) + (v.rel.isNew ? ' (new)' : v.rel.changed ? ' (changed)' : '') + '</span>' + (a ? '<span class="ambtag">2 routes</span>' : '') + '</div>';
+    }).join('') + '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+  // what it doesn't reach, grouped by reason
+  const miss = linked.filter(t => !rch.has(low(t)));
+  if (!miss.length) { nr.innerHTML = linked.length ? '<p class="okc small">&#10003; ' + esc(src) + ' filters every connected table.</p>' : ''; return; }
+  const groups = { direction: [], inactive: [], none: [] };
+  miss.forEach(t => { const w = RP.whyNot(g, src, t); groups[w.kind].push({ t, w }); });
+  const head = { direction: 'The filter would have to go against a relationship’s direction', inactive: 'Only through an inactive relationship', none: 'Not connected to ' + src };
+  nr.innerHTML = '<details class="extra" open><summary>Not filtered by ' + esc(src) + ' <span class="muted">(' + miss.length + ')</span></summary><div class="extra-body">' + Object.keys(groups).filter(k => groups[k].length).map(k =>
+    '<p class="nr-h">' + esc(head[k]) + ' <span class="muted">(' + groups[k].length + ')</span></p><ul class="nr">' + groups[k].map(x => '<li><b>' + esc(x.t) + '</b> <span class="muted">' + esc(whyShort(x.w)) + '</span></li>').join('') + '</ul>').join('')
+    + '<p class="small muted">That&rsquo;s usually right: a lookup table isn&rsquo;t meant to be filtered by another lookup. If it should be, write it as a goal in Step 4 for the reason and tested fixes.</p></div></details>';
+}
+function renderAllList(){
+  const m = state.base ? viewModel() : null;
+  if (!m) { $('allList').innerHTML = ''; $('relList').innerHTML = ''; return; }
+  const ev = m === state.base ? (state.evBefore || state.ev) : state.ev, g = ev.graph, roles = RP.roles(m);
+  const rows = m.tables.filter(t => g.linked.has(low(t))).map(t => ({ t, n: RP.reach(g, t).size, a: RP.ambiguity(g, t).size, role: roles.get(low(t)) })).sort((a, b) => b.n - a.n || a.t.localeCompare(b.t));
+  const alone = m.tables.filter(t => !g.linked.has(low(t)));
+  $('allList').innerHTML = '<div class="tablewrap"><table><thead><tr><th>Table</th><th>Kind</th><th>Filters</th><th></th></tr></thead><tbody>' + rows.map(r =>
+    '<tr><td><button type="button" class="linkbtn" data-from="' + esc(r.t) + '">' + esc(r.t) + '</button></td><td class="muted">' + esc(RP.ROLE_WORD[r.role]) + '</td><td>' + r.n + '</td><td>' + (r.a ? '<span class="warntext">' + r.a + ' by two routes</span>' : '') + '</td></tr>').join('') + '</tbody></table></div>'
+    + (alone.length ? '<p class="small muted"><b>No relationships</b> (helper, measure or parameter tables; nothing filters them): ' + alone.map(esc).join(', ') + '</p>' : '');
+  $('relList').innerHTML = '<ul class="rels">' + m.rels.slice().sort((a, b) => a.toTable.localeCompare(b.toTable) || a.fromTable.localeCompare(b.fromTable)).map(r =>
+    '<li class="' + (r.active ? '' : 'off') + '"><span class="mono">' + esc(r.toTable + '[' + r.toColumn + '] ' + ARR(r) + ' ' + r.fromTable + '[' + r.fromColumn + ']') + '</span> <span class="muted">' + esc(r.card === 'M:1' ? 'many to one' : r.card === '1:1' ? 'one to one' : 'many to many') + ', ' + esc(RP.relWords(r)) + '</span>' + (r.isNew ? ' <span class="pill ok">new</span>' : r.changed ? ' <span class="pill warn">changed</span>' : '') + '</li>').join('') + '</ul>';
+}
+
+/* ---------- Step 3: changes ---------- */
+function renderChanges(){
+  const b = state.base;
+  const list = $('changeList');
+  if (!state.changes.length) list.innerHTML = '<p class="muted small">No changes yet.</p>';
+  else {
+    const skipped = new Set(b ? RP.apply(b, state.changes).skipped : []);
+    list.innerHTML = '<ol class="chlist">' + state.changes.map((c, i) => '<li' + (skipped.has(i) ? ' class="skip"' : '') + '><span>' + esc(b ? RP.changeText(b, c) : '') + (skipped.has(i) ? ' <span class="pill warn">doesn&rsquo;t match this model</span>' : '') + '</span><button type="button" class="btn small" data-unchange="' + i + '" aria-label="Remove this change">Remove</button></li>').join('') + '</ol>'
+      + '<p class="small"><button type="button" class="linkbtn" id="clearChanges">Remove all changes</button></p>';
+  }
+  // pickers
+  const m = state.after || b;
+  $('tableList').innerHTML = m ? m.tables.map(t => '<option value="' + esc(t) + '">').join('') : '';
+  fillCols();
+  const op = $('chOp').value;
+  $('chAdd').hidden = op !== 'add'; $('chRel').hidden = op === 'add';
+  if (op !== 'add' && m) {
+    const rels = op === 'remove' ? m.rels : m.rels;
+    $('chRelSel').innerHTML = rels.map(r => '<option value="' + esc(r.key) + '">' + esc(r.toTable + '[' + r.toColumn + '] ' + ARR(r) + ' ' + r.fromTable + '[' + r.fromColumn + ']' + (r.active ? '' : ' (inactive)')) + '</option>').join('');
+    $('chAddBtn').textContent = op === 'dir' ? 'Switch direction' : op === 'active' ? 'Turn off or on' : 'Remove it';
+  } else $('chAddBtn').textContent = 'Add change';
+  // effect and Desktop steps
+  renderEffect();
+}
+function fillCols(){
+  const m = state.after || state.base; if (!m) return;
+  const cols = t => (m.cols.get(low(t)) || []);
+  $('oneCols').innerHTML = cols($('chOneT').value).map(c => '<option value="' + esc(c) + '">').join('');
+  $('manyCols').innerHTML = cols($('chManyT').value).map(c => '<option value="' + esc(c) + '">').join('');
+}
+function renderEffect(){
+  const b = state.base, el = $('changeEffect');
+  if (!b || !state.changes.length) { el.innerHTML = ''; $('desktopSteps').innerHTML = ''; $('stepsBox').hidden = true; return; }
+  $('stepsBox').hidden = false;
+  const g0 = (state.evBefore || state.ev).graph, g1 = state.ev.graph;
+  const a0 = (state.evBefore || state.ev).ambiguity.length, a1 = state.ev.ambiguity.length;
+  const gained = [], lost = [];
+  state.after.tables.forEach(t => {
+    const r0 = RP.canon(b, t) ? RP.reach(g0, t) : new Map(), r1 = RP.reach(g1, t);
+    const plus = [...r1.keys()].filter(k => !r0.has(k)), minus = [...r0.keys()].filter(k => !r1.has(k));
+    const nm = k => (r1.get(k) || r0.get(k) || { name: k }).name;
+    if (plus.length) gained.push(t + ' now filters ' + plus.map(nm).join(', '));
+    if (minus.length) lost.push(t + ' no longer filters ' + minus.map(nm).join(', '));
+  });
+  el.innerHTML = '<div class="effect"><p><b>What your changes do</b></p><ul>'
+    + '<li>' + (a1 === a0 ? 'Ambiguous routes: ' + a1 + ' (no change).' : a1 > a0 ? '<span class="warntext">Ambiguous routes go from ' + a0 + ' to ' + a1 + '.</span>' : 'Ambiguous routes go from ' + a0 + ' to ' + a1 + '.') + '</li>'
+    + gained.slice(0, 12).map(x => '<li>' + esc(x) + '</li>').join('') + (gained.length > 12 ? '<li class="muted">and ' + (gained.length - 12) + ' more tables filter more</li>' : '')
+    + lost.slice(0, 12).map(x => '<li class="warntext">' + esc(x) + '</li>').join('') + (lost.length > 12 ? '<li class="muted">and ' + (lost.length - 12) + ' more tables filter less</li>' : '')
+    + '</ul></div>';
+  $('desktopSteps').innerHTML = state.changes.map(c => '<li>' + esc(RP.desktopSteps(b, c)) + '</li>').join('');
+}
+function addChange(){
+  const op = $('chOp').value, msg = $('chMsg'), m = state.after || state.base;
+  msg.textContent = '';
+  if (!m) { msg.textContent = 'Connect your model in Step 1 first.'; return; }
+  if (op === 'add') {
+    const ot = $('chOneT').value.trim(), oc = $('chOneC').value.trim(), mt = $('chManyT').value.trim(), mc = $('chManyC').value.trim();
+    if (!ot || !oc || !mt || !mc) { msg.textContent = 'Fill in both tables and both columns.'; return; }
+    if (low(ot) === low(mt)) { msg.textContent = 'Pick two different tables.'; return; }
+    if (!RP.canon(m, mt)) { msg.textContent = 'The many side has to be a table in your model: ' + mt + ' isn’t one.'; return; }
+    state.changes.push({ op: 'add', one: [RP.canon(m, ot) || ot, oc], many: [RP.canon(m, mt), mc], card: $('chCard').value, both: $('chBoth').value === '1' });
+    ['chOneC', 'chManyT', 'chManyC'].forEach(id => { $(id).value = ''; });
+  } else {
+    const key = $('chRelSel').value, r = m.rels.find(x => x.key === key); if (!r) return;
+    if (op === 'dir') state.changes.push({ op: 'dir', key, both: !r.both });
+    else if (op === 'active') state.changes.push({ op: 'active', key, active: !r.active });
+    else {
+      // removing a relationship added here just drops that change
+      if (r.isNew && r.change != null) state.changes.splice(r.change, 1); else state.changes.push({ op: 'remove', key });
+    }
+  }
+  changed();
+}
+
+/* ---------- Step 3: plan a shared table ---------- */
+function planCarriers(){
+  const b = state.base; if (!b) return [];
+  return state.plan.carriers ? state.plan.carriers.filter(t => RP.canon(b, t)) : RP.defaultCarriers(b, state.plan.table);
+}
+function renderPlan(){
+  const b = state.base, out = $('planOut');
+  $('plTable').value = state.plan.table; $('plKey').value = state.plan.key;
+  $('plPrefer').innerHTML = state.plan.prefer.map((t, i) => '<span class="tchip">' + (i + 1) + '. ' + esc(t) + ' <button type="button" data-unprefer="' + i + '" aria-label="Remove ' + esc(t) + '">&times;</button></span>').join('');
+  if (!b) { out.innerHTML = ''; $('plCarry').innerHTML = ''; return; }
+  const all = b.tables.filter(t => low(t) !== low(state.plan.table)), carry = new Set(planCarriers().map(low));
+  $('plCarry').innerHTML = all.map(t => '<label class="ck"><input type="checkbox" data-carry="' + esc(t) + '"' + (carry.has(low(t)) ? ' checked' : '') + '> ' + esc(t) + '</label>').join('');
+  $('plCarryCount').textContent = '(' + carry.size + ' of ' + all.length + ')';
+  const t = state.plan.table.trim(), k = state.plan.key.trim();
+  if (!t || !k) { out.innerHTML = '<p class="small muted">Name the new table and its key to see the plan.</p>'; return; }
+  if (RP.canon(b, t) && b.rels.some(r => low(r.toTable) === low(t) || low(r.fromTable) === low(t))) { out.innerHTML = '<div class="msg warn">' + esc(t) + ' already has relationships in your model. The plan is for a table that doesn&rsquo;t have any yet; use Add a relationship above to change an existing one.</div>'; return; }
+  // plan on top of the other changes (but not earlier links of this same table)
+  const others = state.changes.filter(c => !(c.op === 'add' && low(c.one[0]) === low(t)));
+  const base = RP.apply(b, others);
+  const p = RP.plan(base, t, k, planCarriers(), state.plan.prefer);
+  state.planResult = p;
+  const n = p.total - p.missed.length;
+  const word = { link: 'Relate directly', filtered: 'Filtered through another table', conflict: 'Can’t be linked: two routes', unreached: 'Not reached' };
+  const rowHtml = r => {
+    let how = '';
+    if (r.status === 'link') how = esc(t + '[' + k + '] → ' + r.table + '[' + k + ']');
+    else if (r.status === 'filtered') how = esc(RP.pathText(t, r.path)) + '<br><span class="muted">by ' + esc(r.by) + '&rsquo;s ' + esc(k) + '; ' + esc(r.table) + '&rsquo;s own ' + esc(k) + ' isn&rsquo;t used</span>';
+    else if (r.status === 'conflict') how = 'Linking it too gives two routes to ' + esc(r.at) + ':<br>' + r.paths.map(x => '<span class="mono">' + esc(RP.pathText(t, x)) + '</span>').join('<br>') + (r.preferred ? '<br><span class="warntext">You asked to link it first, but an earlier link already reaches ' + esc(r.at) + '.</span>' : '');
+    else how = 'No link reaches it without a second route somewhere.';
+    return '<tr class="pl-' + r.status + '"><td><b>' + esc(r.table) + '</b></td><td>' + esc(word[r.status]) + '</td><td class="how">' + how + '</td></tr>';
+  };
+  const missed = p.rows.filter(r => r.status === 'conflict' || r.status === 'unreached');
+  const sample = missed[0];
+  out.innerHTML = '<div class="planhead"><p><b>' + plural(p.links.length, 'relationship') + (p.links.length === 1 ? ' filters ' : ' filter ') + n + ' of ' + p.total + ' tables with no ambiguity.</b>' + (p.missed.length ? ' The other ' + p.missed.length + ' can&rsquo;t be related to ' + esc(t) + ' without a second route.' : '') + '</p>'
+    + (p.links.length ? '<button type="button" class="btn primary" id="planUse">Add these ' + plural(p.links.length, 'relationship') + ' to my changes</button>' : '') + '</div>'
+    + '<div class="tablewrap"><table class="plan"><thead><tr><th>Table</th><th>Result</th><th>How</th></tr></thead><tbody>' + p.rows.map(rowHtml).join('') + '</tbody></table></div>'
+    + (missed.length ? '<div class="fix"><p><b>For the ' + missed.length + ' that can&rsquo;t be linked</b></p><ul>'
+      + '<li><b>If ' + esc(t) + ' is for security</b> (people only see their own ' + esc(t.toLowerCase()) + '): use row-level security with a rule on each table&rsquo;s own ' + esc(k) + '. Each rule filters its table on its own, so ambiguity doesn&rsquo;t come into it. The <a href="rls-role-generator.html">RLS Role Generator</a> writes them.</li>'
+      + '<li><b>If it&rsquo;s for slicing:</b> keep the relationships above. For a visual of ' + esc(sample.table) + ' (or any of these), filter it with a measure that reads its own ' + esc(k) + ' instead of a relationship:</li></ul>'
+      + '<div class="codebox"><div class="codebox-bar"><span class="t">DAX measure: visual filter, set to 1</span><span class="r"><button class="btn small" type="button" data-copytext="' + esc(RP.treatasMeasure(sample.table, t, k)) + '">Copy</button></span></div><pre class="short">' + esc(RP.treatasMeasure(sample.table, t, k)) + '</pre></div>'
+      + '<p class="small muted">Use &ldquo;Link these first&rdquo; to choose whose key drives the filter. The plan adds links one at a time, starting with the one whose filter reaches the most tables the normal way (from the one side to the many side), so try another table first if the result doesn&rsquo;t match how you think about ' + esc(t) + '.</p></div>' : '');
+}
+
+/* ---------- Step 4: goals ---------- */
+const GOAL_WORD = { filters: 'should filter', notFilters: 'should not filter' };
+function itemReason(x, i){
+  if (x.goal.kind === 'notFilters') return 'by ' + RP.pathText(x.src, i.path);
+  if (i.ambiguous) return i.ambiguous.length + ' routes';
+  return whyShort(i.why);
+}
+function goalBlock(x, gi){
+  const g = x.goal;
+  if (g.kind === 'unknown') {
+    const plan = g.missing ? ' <button type="button" class="btn small" data-planfor="' + esc(g.missing) + '">Plan ' + esc(g.missing) + ' as a new table</button>' : '';
+    return '<div class="goal unk"><div class="goal-h"><span class="mark q" aria-hidden="true">?</span><span class="gl">' + esc(g.line) + '</span></div><p class="small">' + esc(g.why) + plan + '</p></div>';
+  }
+  if (g.kind === 'noAmbiguity' || g.kind === 'allowAmbiguity') return '';
+  const bad = x.items.filter(i => !i.ok), ok = x.items.filter(i => i.ok);
+  const multi = g.from.length > 1;
+  const pass = !bad.length && x.items.length;
+  const what = g.scope === 'list' ? '' : ' <span class="muted small">(' + plural(x.items.length, g.scope === 'facts' ? 'fact table' : g.scope === 'lookups' ? 'lookup table' : 'table') + (g.except.length ? ', except ' + g.except.map(esc).join(', ') : '') + ')</span>';
+  let html = '<div class="goal ' + (pass ? 'pass' : 'fail') + '"><div class="goal-h"><span class="mark ' + (pass ? 'ok' : 'no') + '" aria-hidden="true">' + (pass ? '&#10003;' : '&#10007;') + '</span><span class="gl">' + esc(g.line) + (multi ? ' <span class="muted">(' + esc(x.src) + ')</span>' : '') + what + '</span>'
+    + '<span class="gsum">' + (x.items.length ? (g.kind === 'filters' ? ok.length + ' of ' + x.items.length + ' filtered cleanly' : ok.length + ' of ' + x.items.length + ' kept out') : 'nothing to check') + '</span></div>';
+  if (!x.items.length) html += '<p class="small muted">No tables matched. Check the table names, or use &ldquo;every table&rdquo;.</p>';
+  if (bad.length) {
+    // grouped by reason
+    const grp = new Map();
+    bad.forEach(i => { const k = g.kind === 'notFilters' ? 'reach' : i.ambiguous ? 'amb' : i.why.kind; if (!grp.has(k)) grp.set(k, []); grp.get(k).push(i); });
+    const head = { amb: 'Reached by two routes (ambiguous)', direction: 'Blocked by a relationship&rsquo;s direction', inactive: 'Only through an inactive relationship', none: 'Not connected', reach: 'Filtered, but shouldn&rsquo;t be' };
+    ['amb', 'direction', 'inactive', 'none', 'reach'].filter(k => grp.has(k)).forEach(k => {
+      html += '<p class="nr-h">' + head[k] + ' <span class="muted">(' + grp.get(k).length + ')</span></p>';
+      html += grp.get(k).map(i => '<details class="adv" data-goal="' + gi + '" data-item="' + esc(i.table) + '"><summary><b>' + esc(i.table) + '</b> <span class="muted small">' + esc(itemReason(x, i)) + '</span></summary><div class="adv-body"></div></details>').join('');
+    });
+    if (g.scope !== 'list' && state.after.added.has(low(x.src)) && bad.length > 2) html += '<p class="small tip">' + esc(x.src) + ' is a new table: <button type="button" class="linkbtn" data-planfor="' + esc(x.src) + '">plan which tables to relate it to</button> in Step 3.</p>';
+  }
+  if (ok.length && g.kind === 'filters') html += '<details class="okl"><summary class="small">&#10003; ' + plural(ok.length, 'table') + ' filtered by one route</summary><ul class="nr">' + ok.map(i => '<li><b>' + esc(i.table) + '</b> <span class="muted mono small">' + esc(RP.pathText(x.src, i.path)) + '</span></li>').join('') + '</ul></details>';
+  const notes = [];
+  if (x.skippedDates && x.skippedDates.length) notes.push('Date tables left out (' + x.skippedDates.map(esc).join(', ') + '); add &ldquo;including Date&rdquo; to check them.');
+  if (x.notConnected && x.notConnected.length) notes.push(plural(x.notConnected.length, 'table') + ' with no relationships left out (helper, measure or parameter tables).');
+  if (notes.length) html += '<p class="small muted">' + notes.join(' ') + '</p>';
+  return html + '</div>';
+}
+function renderGoals(){
+  const el = $('goalResults');
+  if (!state.ev) { el.innerHTML = '<p class="muted">Connect your model in Step 1.</p>'; renderQuick(); return; }
+  const ev = state.ev, allow = state.goals.some(g => g.kind === 'allowAmbiguity');
+  const a = ev.ambiguity.length;
+  let html = '<div class="goal ' + (a && !allow ? 'fail' : 'pass') + '"><div class="goal-h"><span class="mark ' + (a && !allow ? 'no' : 'ok') + '" aria-hidden="true">' + (a && !allow ? '&#10007;' : '&#10003;') + '</span><span class="gl">No ambiguous routes <span class="muted small">(always checked)</span></span><span class="gsum">' + (a ? plural(a, 'pair') + ' with two routes' : 'none') + '</span></div>'
+    + (a ? '<p class="small">Listed in Step 2 with tested fixes: <button type="button" class="linkbtn" data-goto="health">see them</button>.</p>' : '') + (ev.cut.length ? '<p class="small muted">The model is large, so the search for routes stopped early from ' + ev.cut.map(esc).join(', ') + '.</p>' : '') + '</div>';
+  if (!state.goals.length) html += '<p class="small muted">Write a goal above, or use the row of lists to add one.</p>';
+  html += ev.goals.map((x, i) => goalBlock(x, i)).join('');
+  el.innerHTML = html;
+  renderQuick();
+}
+function renderQuick(){
+  const m = state.after || state.base;
+  const keep = (id, html) => { const v = $(id).value; $(id).innerHTML = html; if ([...$(id).options].some(o => o.value === v)) $(id).value = v; };
+  if (!m) { $('qFrom').innerHTML = ''; $('qTo').innerHTML = ''; return; }
+  const g = state.ev ? state.ev.graph : null;
+  const opts = m.tables.filter(t => !g || g.linked.has(low(t)) || m.added.has(low(t))).map(t => '<option value="' + esc(t) + '">' + esc(t) + '</option>').join('');
+  keep('qFrom', opts);
+  keep('qTo', '<option value="every table">every table</option><option value="every fact table">every fact table</option><optgroup label="Tables">' + opts + '</optgroup>');
+}
+// advice for one failing item, worked out when it's opened
+function fillAdvice(d){
+  const body = d.querySelector('.adv-body'); if (!body || body.dataset.done) return;
+  body.dataset.done = '1';
+  let adv, fixes;
+  if (d.dataset.amb != null) {
+    const h = state.changes.length ? state.ev : (state.evBefore || state.ev);
+    const a = h.ambiguity[+d.dataset.amb]; if (!a) return;
+    fixes = RP.adviseAmbiguity(state.base, state.changes, state.goals, a);
+    adv = { text: ['Routes from ' + a.from + ' to ' + a.to + ':'].concat(a.paths.slice(0, 3).map(p => RP.pathText(a.from, p))), fixes, code: [] };
+  } else {
+    const x = state.ev.goals[+d.dataset.goal]; if (!x) return;
+    const it = x.items.find(i => i.table === d.dataset.item); if (!it) return;
+    adv = RP.advise(state.base, state.changes, state.goals, x, it);
+  }
+  let html = adv.text.map(t => '<p' + (/^Route|^Closest|→|⇄/.test(t) && t.length < 400 && !/\. /.test(t) ? ' class="mono small"' : '') + '>' + esc(t) + '</p>').join('');
+  if (adv.fixes.length) {
+    html += '<p class="fix-h"><b>Fixes, each tested on the whole model</b></p>' + adv.fixes.map((f, i) => {
+      const bits = [];
+      if (f.fixed.length) bits.push('<span class="okc">Fixes ' + plural(f.fixed.length, 'goal check') + '</span>');
+      if (f.broke.length) bits.push('<span class="warntext">Breaks ' + plural(f.broke.length, 'goal check') + ': ' + esc(f.broke.slice(0, 3).map(b => b.src + ' → ' + b.table).join(', ')) + (f.broke.length > 3 ? '…' : '') + '</span>');
+      if (f.ambAfter !== f.ambBefore) bits.push((f.ambAfter > f.ambBefore ? '<span class="warntext">' : '<span>') + 'Ambiguous routes ' + f.ambBefore + ' → ' + f.ambAfter + '</span>');
+      f.lost.slice(0, 2).forEach(l => bits.push('<span class="warntext">' + esc(l.table) + ' stops filtering ' + (l.n > 4 ? l.n + ' tables' : esc(l.tables.join(', '))) + '</span>'));
+      if (f.lost.length > 2) bits.push('<span class="muted">and ' + (f.lost.length - 2) + ' more tables filter less</span>');
+      if (!bits.length) bits.push('<span class="muted">No other effect</span>');
+      const best = i === 0 && !f.broke.length && f.ambAfter <= f.ambBefore && !f.lostN;
+      return '<div class="fixrow' + (best ? ' best' : '') + '"><div><b>' + esc(f.title) + '</b>' + (best ? ' <span class="pill ok">no side effects</span>' : '') + '<div class="small">' + bits.join(' &middot; ') + '</div></div><button type="button" class="btn small" data-usefix="' + i + '">Add to my changes</button></div>';
+    }).join('');
+    d._fixes = adv.fixes;
+    if (!adv.fixes.some(f => !f.broke.length && f.ambAfter <= f.ambBefore && !f.lostN) && adv.code.length) html += '<p class="small muted">Every relationship change tested here has a cost. The DAX below gets the same result without changing a relationship.</p>';
+  } else if (adv.tried) html += '<p class="small muted">None of the ' + plural(adv.tried, 'relationship change') + ' tried fixes it on its own.</p>';
+  adv.code.forEach(c => { html += '<div class="codebox"><div class="codebox-bar"><span class="t">' + esc(c.title) + '</span><span class="r"><button class="btn small" type="button" data-copytext="' + esc(c.dax) + '">Copy</button></span></div><pre class="short">' + esc(c.dax) + '</pre></div>' + (c.note ? '<p class="small muted">' + esc(c.note) + '</p>' : ''); });
+  body.innerHTML = html;
+}
+function summaryText(){
+  if (!state.ev) return '';
+  const L = [];
+  L.push('Relationship Planner' + (state.changes.length ? ' (with ' + plural(state.changes.length, 'change') + ')' : ''));
+  if (state.changes.length) state.changes.forEach(c => L.push('- ' + RP.changeText(state.base, c)));
+  L.push('', 'Ambiguous routes: ' + state.ev.ambiguity.length);
+  state.ev.ambiguity.slice(0, 20).forEach(a => L.push('- ' + a.from + ' to ' + a.to + ': ' + a.paths.slice(0, 2).map(p => RP.pathText(a.from, p)).join(' | ')));
+  state.ev.goals.forEach(x => {
+    const g = x.goal;
+    if (g.kind === 'unknown') { L.push('', '? ' + g.line + ': ' + g.why); return; }
+    if (!x.items) return;
+    const bad = x.items.filter(i => !i.ok);
+    if (g.kind === 'noAmbiguity' || g.kind === 'allowAmbiguity') return;
+    L.push('', (bad.length ? 'FAIL ' : 'OK ') + g.line + (g.from.length > 1 ? ' (' + x.src + ')' : '') + ': ' + (x.items.length - bad.length) + ' of ' + x.items.length);
+    bad.forEach(i => L.push('- ' + i.table + ': ' + itemReason(x, i)));
+  });
+  return L.join('\n');
+}
+
+/* ---------- render everything ---------- */
+function renderAll(){ readModelBox(); compute(); renderHealth(); renderPick(); renderFlow(); renderAllList(); renderChanges(); renderPlan(); renderGoals(); }
+function changed(){ compute(); renderHealth(); renderPick(); renderFlow(); renderAllList(); renderChanges(); renderPlan(); renderGoals(); persist(); }
+
+/* ---------- init ---------- */
+function resetAll(){
+  $('modelInput').value = ''; $('goalInput').value = ''; state.changes = []; state.plan = blankPlan(); state.from = ''; state.view = 'after';
+  setExample(false); $('modelBox').open = false; $('planBox').open = false; renderAll();
+}
+function loadExample(){
+  $('modelInput').value = RP_EX_MODEL; $('goalInput').value = RP_EX_GOALS;
+  state.changes = RP_EX_CHANGES.map(c => JSON.parse(JSON.stringify(c))); state.plan = blankPlan(); state.from = 'Region'; state.view = 'after';
+  setExample(true);
+}
+// a saved change must have the shape the page writes (storage can hold anything)
+const isStrPair = v => Array.isArray(v) && v.length === 2 && v.every(x => typeof x === 'string' && x.trim());
+function validChange(c){
+  if (!c || typeof c !== 'object') return false;
+  if (c.op === 'add') return isStrPair(c.one) && isStrPair(c.many);
+  return ['dir', 'active', 'remove'].includes(c.op) && typeof c.key === 'string';
+}
+function init(){
+  $('exportView').textContent = DAX_QUERY;
+  const saved = store.get('model');
+  const J = (k, d) => { try { const v = JSON.parse(store.get(k) || 'null'); return v == null ? d : v; } catch (e) { return d; } };
+  if (saved && saved.trim()) {
+    $('modelInput').value = saved;
+    const ch = J('changes', []); state.changes = Array.isArray(ch) ? ch.filter(validChange) : [];
+    $('goalInput').value = typeof store.get('goals') === 'string' ? store.get('goals') : '';
+    const pl = J('plan', null); if (pl && typeof pl === 'object') state.plan = Object.assign(blankPlan(), { table: String(pl.table || ''), key: String(pl.key || ''), prefer: Array.isArray(pl.prefer) ? pl.prefer.map(String) : [], carriers: Array.isArray(pl.carriers) ? pl.carriers.map(String) : null });
+    const v = J('view', {}); if (v && typeof v === 'object') { state.from = String(v.from || ''); state.view = v.view === 'before' ? 'before' : 'after'; }
+  } else if (store.get('blank') !== '1') {
+    loadExample();
+    const own = store.get('goals'); if (own && own.trim()) $('goalInput').value = own;
+  } else $('goalInput').value = store.get('goals') || '';
+  renderAll();
+
+  $('modelInput').addEventListener('input', () => {
+    if (state.example) {
+      // the person's own model replaces the whole example; goals they typed themselves stay
+      const own = ownGoals(); setExample(false); state.changes = []; state.plan = blankPlan(); state.from = ''; $('goalInput').value = own;
+    }
+    try { localStorage.removeItem(PREFIX + 'blank'); } catch (e) {}
+    renderAll(); persist();
+  });
+  let gt;
+  $('goalInput').addEventListener('input', () => { clearTimeout(gt); gt = setTimeout(() => { compute(); renderGoals(); renderHealth(); persist(); }, 250); });
+  $('fromSel').addEventListener('change', e => { state.from = e.target.value; renderFlow(); persist(); });
+  document.querySelectorAll('input[name=view]').forEach(i => i.addEventListener('change', e => { state.view = e.target.value; renderPick(); renderFlow(); renderAllList(); persist(); }));
+  $('chOp').addEventListener('change', renderChanges);
+  ['chOneT', 'chManyT'].forEach(id => $(id).addEventListener('input', fillCols));
+  $('chAddBtn').addEventListener('click', addChange);
+  // plan inputs
+  const planChanged = () => { renderPlan(); persist(); };
+  let pt;
+  $('plTable').addEventListener('input', e => { state.plan.table = e.target.value; clearTimeout(pt); pt = setTimeout(planChanged, 300); });
+  $('plKey').addEventListener('input', e => { state.plan.key = e.target.value; clearTimeout(pt); pt = setTimeout(planChanged, 300); });
+  const addPrefer = () => { const m = state.base; const v = $('plPreferIn').value.trim(); const t = m && RP.canon(m, v); if (t && !state.plan.prefer.includes(t)) { state.plan.prefer.push(t); $('plPreferIn').value = ''; planChanged(); } };
+  $('plPreferAdd').addEventListener('click', addPrefer);
+  $('plPreferIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addPrefer(); } });
+  $('plCarry').addEventListener('change', e => {
+    const t = e.target.dataset.carry; if (t == null) return;
+    const cur = new Set(planCarriers()); if (e.target.checked) cur.add(t); else cur.delete(t);
+    state.plan.carriers = [...cur]; planChanged();
+  });
+  $('plAll').addEventListener('click', () => { state.plan.carriers = state.base ? state.base.tables.filter(t => low(t) !== low(state.plan.table)) : []; planChanged(); });
+  $('plNone').addEventListener('click', () => { state.plan.carriers = []; planChanged(); });
+  $('plDefault').addEventListener('click', () => { state.plan.carriers = null; planChanged(); });
+  $('qAdd').addEventListener('click', () => {
+    const f = $('qFrom').value, t = $('qTo').value; if (!f || !t) return;
+    const line = f + ($('qNeg').value ? ' should not filter ' : ' should filter ') + t;
+    const ta = $('goalInput'); ta.value = (ta.value.replace(/\s+$/, '') ? ta.value.replace(/\s+$/, '') + '\n' : '') + line;
+    compute(); renderGoals(); renderHealth(); persist();
+  });
+  $('copySteps').addEventListener('click', e => copyText(state.base ? state.changes.map((c, i) => (i + 1) + '. ' + RP.desktopSteps(state.base, c)).join('\n') : '', e.target));
+  $('copySummary').addEventListener('click', e => copyText(summaryText(), e.target));
+  document.addEventListener('toggle', e => { const d = e.target; if (d.classList && d.classList.contains('adv') && d.open) fillAdvice(d); }, true);
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.copy === 'export') { copyText(DAX_QUERY, b); return; }
+    if (b.dataset.copytext != null) { copyText(b.dataset.copytext, b); return; }
+    if (b.dataset.from) { state.from = b.dataset.from; renderPick(); renderFlow(); persist(); $('s2').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (b.dataset.unchange != null) { state.changes.splice(+b.dataset.unchange, 1); changed(); return; }
+    if (b.id === 'clearChanges') { state.changes = []; changed(); return; }
+    if (b.dataset.unprefer != null) { state.plan.prefer.splice(+b.dataset.unprefer, 1); planChanged(); return; }
+    if (b.id === 'planUse' && state.planResult) {
+      const t = state.planResult.newTable;
+      state.changes = state.changes.filter(c => !(c.op === 'add' && low(c.one[0]) === low(t))).concat(state.planResult.changes.map(c => Object.assign({}, c)));
+      changed(); $('changeList').scrollIntoView({ behavior: 'smooth', block: 'center' }); return;
+    }
+    if (b.dataset.planfor != null) {
+      state.plan.table = b.dataset.planfor; if (!state.plan.key) state.plan.key = b.dataset.planfor.replace(/\s+/g, '') + 'Key';
+      $('planBox').open = true; renderPlan(); persist(); $('planBox').scrollIntoView({ behavior: 'smooth', block: 'start' }); return;
+    }
+    if (b.dataset.goto === 'health') { $('health').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (b.dataset.usefix != null) {
+      const d = b.closest('details.adv'); const f = d && d._fixes && d._fixes[+b.dataset.usefix]; if (!f) return;
+      state.changes = f.changes.map(c => JSON.parse(JSON.stringify(c))); changed();
+      $('changeList').scrollIntoView({ behavior: 'smooth', block: 'center' }); return;
+    }
+  });
+  $('clearAll').addEventListener('click', () => { resetAll(); try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {} persist(); $('modelInput').focus(); });
+}
+init();
+
+/* ---------- Clear entries ---------- */
+(function(){
+  const btn = $('clearEntries'), box = $('clearConfirm'), done = $('clearDone');
+  const show = on => { box.hidden = !on; btn.setAttribute('aria-expanded', on); if (on) { done.hidden = true; $('clearNo').focus(); } };
+  btn.addEventListener('click', () => show(box.hidden));
+  $('clearNo').addEventListener('click', () => { show(false); btn.focus(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !box.hidden) { show(false); btn.focus(); } });
+  $('clearYes').addEventListener('click', () => {
+    try { Object.keys(localStorage).filter(k => k.startsWith(PREFIX)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    resetAll();
+    try { localStorage.setItem(PREFIX + 'blank', '1'); } catch (e) {}
+    persist();
+    show(false); done.hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => { done.hidden = true; }, 6000);
+  });
+})();
+</script>
