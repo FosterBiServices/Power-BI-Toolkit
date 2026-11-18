@@ -398,7 +398,14 @@ last hop into the target; a direct relationship when the target has the source's
 leaving out a new link, single direction, turning off) and re-checks every goal with each: what it fixes, breaks, and which
 tables stop filtering (`lost`), ranked by fixes minus breaks minus half of what's lost. "No side effects" only when it costs nothing.
 DAX workarounds: a has-data visual filter measure, CROSSFILTER, USERELATIONSHIP, and TREATAS on a table's own key.
-**Plan a new table that many tables carry a key for** (`plan`, the owner's Location case): links one at a time, preferred tables
+**Plan a table that many tables carry a key for** (`plan`, the owner's Location case; new, or already in the model with a few
+links, which count as linked and its key fills in): `planOptions` compares, on the same tables, keeping its current links and adding
+what fits, starting over, and relating it to each fact table directly like a Date table; each option says tables and fact tables
+filtered, ambiguity, links added and removed, and which measures read a table it doesn't filter (`measuresReading`, from each
+measure's `daxRefs`). Tables it can't link get a TREATAS visual filter measure each on their own key column ("Copy all"). Advice
+for a lookup blocked at its last hop says what the source already filters under it and which measures already follow it (only
+the list itself isn't narrowed) and puts the TREATAS filter first (`sharedKey`: a key of the source that the table also has).
+`plan` adds links one at a time, preferred tables
 first, then the link whose filter reaches the most tables the normal way (one side to many side, not back up a both-ways
 relationship), never one that makes a second route; rows say link, filtered through (whose key), conflict (the two routes) or not
 reached. Default carriers: connected tables except date tables and ones named as bridges. Check: `rptest.js`.

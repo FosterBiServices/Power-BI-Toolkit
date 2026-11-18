@@ -93,6 +93,12 @@ tr.pl-conflict td:first-child,tr.pl-unreached td:first-child{border-left:3px sol
 details.okl>summary{cursor:pointer;color:var(--ok)}
 .goal .tip{margin-top:4px}
 #planOut{display:flex;flex-direction:column;gap:10px}
+#planOut>p{margin:0}
+.opts2{display:flex;flex-direction:column;gap:8px}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;background:var(--surface);min-width:0}
+.opt.on{border-color:var(--accent);background:var(--accent-soft)}
+.opt input{margin-top:4px;accent-color:var(--accent);flex:none}
+.opt-b{display:flex;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere}
 @media (max-width:520px){.hop,.hop.src{flex:1 1 100%}.addrow2 input[type=text]{width:100%}}
 '''
 logo=p[318]
