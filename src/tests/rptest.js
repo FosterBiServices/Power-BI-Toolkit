@@ -37,6 +37,10 @@ const OLD = fs.readFileSync('ex_export.tsv', 'utf8');
   console.log('plan rows:', (await p.locator('table.plan tbody tr').evaluateAll(rs => rs.map(r => r.cells[0].innerText + ':' + r.cells[1].innerText.split(' ')[0]))).join(', '));
   await p.click('#planUse'); await p.waitForTimeout(150);
   console.log('changes after plan', await p.locator('.chlist li').count());
+  // a table that already has relationships: the key fills in and the options start from its links
+  await p.fill('#plKey', ''); await p.fill('#plTable', 'Store'); await p.waitForTimeout(500);
+  console.log('existing table: key', await p.inputValue('#plKey'), '| options', (await p.locator('.opt .opt-b > b').allInnerTexts()).join(' / '), '(expect StoreKey | Keep its current links... first)');
+  await p.fill('#plTable', 'Territory'); await p.fill('#plKey', 'TerritoryKey'); await p.waitForTimeout(500);
   await p.fill('#goalInput', 'Territory should filter every table\nBudget should not be filtered by Promotion\nRegion filters Customer\nSomething filters Sales\nno ambiguity');
   await p.waitForTimeout(400);
   console.log('goals plan:', await goals());

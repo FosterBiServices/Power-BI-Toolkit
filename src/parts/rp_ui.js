@@ -15,7 +15,7 @@ function copyText(text, btn){
 const plural = (n, w, ws) => n + ' ' + (n === 1 ? w : (ws || w + 's'));
 const ARR = r => RP.flowsBoth(r) ? '⇄' : '→';
 
-const blankPlan = () => ({ table: '', key: '', prefer: [], carriers: null });
+const blankPlan = () => ({ table: '', key: '', prefer: [], carriers: null, option: '' });
 const state = { example: false, base: null, changes: [], from: '', view: 'after', plan: blankPlan(), ev: null, after: null };
 
 /* ---------- saving ---------- */
@@ -226,38 +226,56 @@ function renderPlan(){
   const b = state.base, out = $('planOut');
   $('plTable').value = state.plan.table; $('plKey').value = state.plan.key;
   $('plPrefer').innerHTML = state.plan.prefer.map((t, i) => '<span class="tchip">' + (i + 1) + '. ' + esc(t) + ' <button type="button" data-unprefer="' + i + '" aria-label="Remove ' + esc(t) + '">&times;</button></span>').join('');
+  state.planResult = null;
   if (!b) { out.innerHTML = ''; $('plCarry').innerHTML = ''; return; }
   const all = b.tables.filter(t => low(t) !== low(state.plan.table)), carry = new Set(planCarriers().map(low));
   $('plCarry').innerHTML = all.map(t => '<label class="ck"><input type="checkbox" data-carry="' + esc(t) + '"' + (carry.has(low(t)) ? ' checked' : '') + '> ' + esc(t) + '</label>').join('');
   $('plCarryCount').textContent = '(' + carry.size + ' of ' + all.length + ')';
-  const t = state.plan.table.trim(), k = state.plan.key.trim();
-  if (!t || !k) { out.innerHTML = '<p class="small muted">Name the new table and its key to see the plan.</p>'; return; }
-  if (RP.canon(b, t) && b.rels.some(r => low(r.toTable) === low(t) || low(r.fromTable) === low(t))) { out.innerHTML = '<div class="msg warn">' + esc(t) + ' already has relationships in your model. The plan is for a table that doesn&rsquo;t have any yet; use Add a relationship above to change an existing one.</div>'; return; }
-  // plan on top of the other changes (but not earlier links of this same table)
-  const others = state.changes.filter(c => !(c.op === 'add' && low(c.one[0]) === low(t)));
+  const t = (RP.canon(b, state.plan.table.trim()) || state.plan.table.trim()), k = state.plan.key.trim();
+  if (!t || !k) { out.innerHTML = '<p class="small muted">Name the table and its key to see the options. It can be a table you already have (such as a Location table related to one or two tables) or a new one.</p>'; return; }
+  // plan on top of the other changes (but not earlier plan changes for this same table)
+  const touches = c => (c.op === 'add' && low(c.one[0]) === low(t)) || (c.op === 'remove' && b.rels.some(r => r.key === c.key && (low(r.toTable) === low(t) || low(r.fromTable) === low(t))));
+  const others = state.changes.filter(c => !touches(c));
   const base = RP.apply(b, others);
-  const p = RP.plan(base, t, k, planCarriers(), state.plan.prefer);
-  state.planResult = p;
-  const n = p.total - p.missed.length;
+  const opts = RP.planOptions(base, t, k, planCarriers(), state.plan.prefer);
+  if (!opts.length) { out.innerHTML = ''; return; }
+  const sel = opts.find(o => o.id === state.plan.option) || opts[0];
+  state.planResult = { table: t, option: sel, others };
+  const exists = !!RP.canon(b, t) && opts.some(o => o.id === 'keep');
+  const best = opts.slice().sort((x, y) => (y.covered.length - x.covered.length) || (x.offMeasures.length - y.offMeasures.length) || (x.changes.length - y.changes.length))[0];
+  const card = o => '<label class="opt' + (o === sel ? ' on' : '') + '"><input type="radio" name="planOpt" value="' + o.id + '"' + (o === sel ? ' checked' : '') + '><span class="opt-b"><b>' + esc(o.title) + '</b>' + (o === best ? ' <span class="pill ok">filters the most</span>' : '')
+    + '<span class="small">Filters <b>' + o.covered.length + ' of ' + o.total + '</b> tables (' + o.facts[0] + ' of ' + o.facts[1] + ' fact tables, ' + o.lookups[0] + ' of ' + o.lookups[1] + ' others) &middot; ' + (o.amb ? '<span class="warntext">' + plural(o.amb, 'ambiguous route') + '</span>' : 'no ambiguity') + ' &middot; '
+    + (o.changes.length ? plural(o.p.added.length, 'new relationship') + (o.removed.length ? ', removes the links to ' + esc(o.removed.join(', ')) : '') : 'no changes') + '</span>'
+    + (o.offMeasures.length ? '<span class="small muted">' + plural(o.offMeasures.length, 'measure') + ' read a table it doesn&rsquo;t filter, so they won&rsquo;t follow ' + esc(t) + ' (' + esc(o.offMeasures.slice(0, 3).join(', ')) + (o.offMeasures.length > 3 ? '&hellip;' : '') + ')</span>' : '')
+    + '</span></label>';
+  const p = sel.p;
   const word = { link: 'Relate directly', filtered: 'Filtered through another table', conflict: 'Can’t be linked: two routes', unreached: 'Not reached' };
   const rowHtml = r => {
-    let how = '';
-    if (r.status === 'link') how = esc(t + '[' + k + '] → ' + r.table + '[' + k + ']');
+    let how = '', res = word[r.status];
+    if (r.status === 'link') { const col = (b.cols.get(low(r.table)) || []).find(c => low(c) === low(k)) || k; how = esc(t + '[' + k + '] → ' + r.table + '[' + col + ']'); if (r.existing) res = 'Already related'; }
     else if (r.status === 'filtered') how = esc(RP.pathText(t, r.path)) + '<br><span class="muted">by ' + esc(r.by) + '&rsquo;s ' + esc(k) + '; ' + esc(r.table) + '&rsquo;s own ' + esc(k) + ' isn&rsquo;t used</span>';
-    else if (r.status === 'conflict') how = 'Linking it too gives two routes to ' + esc(r.at) + ':<br>' + r.paths.map(x => '<span class="mono">' + esc(RP.pathText(t, x)) + '</span>').join('<br>') + (r.preferred ? '<br><span class="warntext">You asked to link it first, but an earlier link already reaches ' + esc(r.at) + '.</span>' : '');
+    else if (r.status === 'conflict') how = 'Linking it too gives a second route to ' + esc(r.clash.slice(0, 4).join(', ')) + (r.clash.length > 4 ? ' and ' + (r.clash.length - 4) + ' more' : '') + ':<br>' + r.paths.map(x => '<span class="mono">' + esc(RP.pathText(t, x)) + '</span>').join('<br>') + (r.preferred ? '<br><span class="warntext">You asked to link it first, but an earlier link already reaches ' + esc(r.at) + '.</span>' : '');
     else how = 'No link reaches it without a second route somewhere.';
-    return '<tr class="pl-' + r.status + '"><td><b>' + esc(r.table) + '</b></td><td>' + esc(word[r.status]) + '</td><td class="how">' + how + '</td></tr>';
+    return '<tr class="pl-' + r.status + '"><td><b>' + esc(r.table) + '</b></td><td>' + esc(res) + '</td><td class="how">' + how + '</td></tr>';
   };
+  // a visual filter measure for every table left out that has the key column
   const missed = p.rows.filter(r => r.status === 'conflict' || r.status === 'unreached');
-  const sample = missed[0];
-  out.innerHTML = '<div class="planhead"><p><b>' + plural(p.links.length, 'relationship') + (p.links.length === 1 ? ' filters ' : ' filter ') + n + ' of ' + p.total + ' tables with no ambiguity.</b>' + (p.missed.length ? ' The other ' + p.missed.length + ' can&rsquo;t be related to ' + esc(t) + ' without a second route.' : '') + '</p>'
-    + (p.links.length ? '<button type="button" class="btn primary" id="planUse">Add these ' + plural(p.links.length, 'relationship') + ' to my changes</button>' : '') + '</div>'
+  const withKey = missed.map(r => ({ t: r.table, col: (b.cols.get(low(r.table)) || []).find(c => low(c) === low(k)) })).filter(x => x.col);
+  const dax = withKey.map(x => RP.treatasMeasure(x.t, t, k, x.col)).join('\n\n');
+  // what the chosen option already filters underneath each left-out lookup
+  const g = RP.graph(p.model), rch = RP.canon(p.model, t) ? RP.reach(g, t) : new Map();
+  const coveredBelow = missed.map(r => ({ t: r.table, under: [...new Set(p.model.rels.filter(z => z.active && low(z.toTable) === low(r.table)).map(z => z.fromTable))] })).filter(x => x.under.length && x.under.every(u => rch.has(low(u))));
+  out.innerHTML = '<p class="small">' + (exists ? esc(t) + ' already has relationships, so the first option builds on them. ' : '') + 'Pick an option to see it table by table.</p><div class="opts2">' + opts.map(card).join('') + '</div>'
+    + '<div class="planhead"><p><b>' + esc(sel.title) + ':</b> ' + plural(p.links.length, 'relationship') + (p.links.length === 1 ? ' filters ' : ' filter ') + sel.covered.length + ' of ' + sel.total + ' tables with no ambiguity.' + (missed.length ? ' The other ' + missed.length + ' can&rsquo;t be related to ' + esc(t) + ' without a second route.' : '') + '</p>'
+    + (sel.changes.length ? '<button type="button" class="btn primary" id="planUse">Use this option (' + plural(sel.changes.length, 'change') + ')</button>' : '<span class="small okc">&#10003; Your model already does this.</span>') + '</div>'
     + '<div class="tablewrap"><table class="plan"><thead><tr><th>Table</th><th>Result</th><th>How</th></tr></thead><tbody>' + p.rows.map(rowHtml).join('') + '</tbody></table></div>'
     + (missed.length ? '<div class="fix"><p><b>For the ' + missed.length + ' that can&rsquo;t be linked</b></p><ul>'
-      + '<li><b>If ' + esc(t) + ' is for security</b> (people only see their own ' + esc(t.toLowerCase()) + '): use row-level security with a rule on each table&rsquo;s own ' + esc(k) + '. Each rule filters its table on its own, so ambiguity doesn&rsquo;t come into it. The <a href="rls-role-generator.html">RLS Role Generator</a> writes them.</li>'
-      + '<li><b>If it&rsquo;s for slicing:</b> keep the relationships above. For a visual of ' + esc(sample.table) + ' (or any of these), filter it with a measure that reads its own ' + esc(k) + ' instead of a relationship:</li></ul>'
-      + '<div class="codebox"><div class="codebox-bar"><span class="t">DAX measure: visual filter, set to 1</span><span class="r"><button class="btn small" type="button" data-copytext="' + esc(RP.treatasMeasure(sample.table, t, k)) + '">Copy</button></span></div><pre class="short">' + esc(RP.treatasMeasure(sample.table, t, k)) + '</pre></div>'
-      + '<p class="small muted">Use &ldquo;Link these first&rdquo; to choose whose key drives the filter. The plan adds links one at a time, starting with the one whose filter reaches the most tables the normal way (from the one side to the many side), so try another table first if the result doesn&rsquo;t match how you think about ' + esc(t) + '.</p></div>' : '');
+      + (coveredBelow.length ? '<li><b>Measures already follow ' + esc(t) + ' for ' + esc(coveredBelow.map(x => x.t).join(', ')) + ':</b> every table ' + (coveredBelow.length === 1 ? 'it filters' : 'they filter') + ' is filtered by ' + esc(t) + ', so a count or total from those tables follows the ' + esc(t) + ' selection, row by row. Only the list itself (a slicer, or a table visual with no measure) isn&rsquo;t narrowed.</li>' : '')
+      + '<li><b>To narrow those lists:</b> add the measure for the table to the filters of its slicers and visuals (Filters pane: is 1). It matches each row&rsquo;s own ' + esc(k) + ' to the ' + esc(t) + ' selection, with no new route.</li>'
+      + '<li><b>If ' + esc(t) + ' is for security</b> (people only see their own): use row-level security with a rule on each table&rsquo;s own ' + esc(k) + '. Each rule filters its table on its own, so ambiguity doesn&rsquo;t come into it. The <a href="rls-role-generator.html">RLS Role Generator</a> writes them.</li></ul>'
+      + (dax ? '<div class="codebox"><div class="codebox-bar"><span class="t">DAX measures: visual filters, set to 1 (' + withKey.length + ')</span><span class="r"><button class="btn small" type="button" data-copytext="' + esc(dax) + '">Copy all</button></span></div><pre class="short">' + esc(dax) + '</pre></div>' : '')
+      + (missed.length > withKey.length ? '<p class="small muted">' + esc(missed.filter(r => !withKey.some(x => x.t === r.table)).map(r => r.table).join(', ')) + ' ha' + (missed.length - withKey.length === 1 ? 's' : 've') + ' no ' + esc(k) + ' column yet.</p>' : '')
+      + '<p class="small muted">Use &ldquo;Link these first&rdquo; to choose whose key drives the filter. The plan adds links one at a time, starting with the one whose filter reaches the most tables the normal way (from the one side to the many side).</p></div>' : '');
 }
 
 /* ---------- Step 4: goals ---------- */
@@ -290,7 +308,7 @@ function goalBlock(x, gi){
       html += '<p class="nr-h">' + head[k] + ' <span class="muted">(' + grp.get(k).length + ')</span></p>';
       html += grp.get(k).map(i => '<details class="adv" data-goal="' + gi + '" data-item="' + esc(i.table) + '"><summary><b>' + esc(i.table) + '</b> <span class="muted small">' + esc(itemReason(x, i)) + '</span></summary><div class="adv-body"></div></details>').join('');
     });
-    if (g.scope !== 'list' && state.after.added.has(low(x.src)) && bad.length > 2) html += '<p class="small tip">' + esc(x.src) + ' is a new table: <button type="button" class="linkbtn" data-planfor="' + esc(x.src) + '">plan which tables to relate it to</button> in Step 3.</p>';
+    if (g.scope !== 'list' && bad.length > 2) html += '<p class="small tip"><b>Not sure which relationships to make?</b> <button type="button" class="linkbtn" data-planfor="' + esc(x.src) + '">Compare the ways to relate ' + esc(x.src) + '</button> in Step 3: each option says how many tables it filters, with no ambiguity, and what to do for the rest.</p>';
   }
   if (ok.length && g.kind === 'filters') html += '<details class="okl"><summary class="small">&#10003; ' + plural(ok.length, 'table') + ' filtered by one route</summary><ul class="nr">' + ok.map(i => '<li><b>' + esc(i.table) + '</b> <span class="muted mono small">' + esc(RP.pathText(x.src, i.path)) + '</span></li>').join('') + '</ul></details>';
   const notes = [];
@@ -402,7 +420,7 @@ function init(){
     $('modelInput').value = saved;
     const ch = J('changes', []); state.changes = Array.isArray(ch) ? ch.filter(validChange) : [];
     $('goalInput').value = typeof store.get('goals') === 'string' ? store.get('goals') : '';
-    const pl = J('plan', null); if (pl && typeof pl === 'object') state.plan = Object.assign(blankPlan(), { table: String(pl.table || ''), key: String(pl.key || ''), prefer: Array.isArray(pl.prefer) ? pl.prefer.map(String) : [], carriers: Array.isArray(pl.carriers) ? pl.carriers.map(String) : null });
+    const pl = J('plan', null); if (pl && typeof pl === 'object') state.plan = Object.assign(blankPlan(), { table: String(pl.table || ''), key: String(pl.key || ''), option: String(pl.option || ''), prefer: Array.isArray(pl.prefer) ? pl.prefer.map(String) : [], carriers: Array.isArray(pl.carriers) ? pl.carriers.map(String) : null });
     const v = J('view', {}); if (v && typeof v === 'object') { state.from = String(v.from || ''); state.view = v.view === 'before' ? 'before' : 'after'; }
   } else if (store.get('blank') !== '1') {
     loadExample();
@@ -428,7 +446,14 @@ function init(){
   // plan inputs
   const planChanged = () => { renderPlan(); persist(); };
   let pt;
-  $('plTable').addEventListener('input', e => { state.plan.table = e.target.value; clearTimeout(pt); pt = setTimeout(planChanged, 300); });
+  $('plTable').addEventListener('input', e => {
+    state.plan.table = e.target.value; state.plan.option = '';
+    // a table already in the model: start from the key it's related by
+    const m = state.base, t = m && RP.canon(m, e.target.value.trim());
+    if (t && !state.plan.key.trim()) { const r = m.rels.find(x => low(x.toTable) === low(t)); if (r) { state.plan.key = r.toColumn; } }
+    clearTimeout(pt); pt = setTimeout(planChanged, 300);
+  });
+  $('planOut').addEventListener('change', e => { if (e.target.name === 'planOpt') { state.plan.option = e.target.value; planChanged(); } });
   $('plKey').addEventListener('input', e => { state.plan.key = e.target.value; clearTimeout(pt); pt = setTimeout(planChanged, 300); });
   const addPrefer = () => { const m = state.base; const v = $('plPreferIn').value.trim(); const t = m && RP.canon(m, v); if (t && !state.plan.prefer.includes(t)) { state.plan.prefer.push(t); $('plPreferIn').value = ''; planChanged(); } };
   $('plPreferAdd').addEventListener('click', addPrefer);
@@ -459,12 +484,13 @@ function init(){
     if (b.id === 'clearChanges') { state.changes = []; changed(); return; }
     if (b.dataset.unprefer != null) { state.plan.prefer.splice(+b.dataset.unprefer, 1); planChanged(); return; }
     if (b.id === 'planUse' && state.planResult) {
-      const t = state.planResult.newTable;
-      state.changes = state.changes.filter(c => !(c.op === 'add' && low(c.one[0]) === low(t))).concat(state.planResult.changes.map(c => Object.assign({}, c)));
+      state.changes = state.planResult.others.concat(state.planResult.option.changes.map(c => JSON.parse(JSON.stringify(c))));
       changed(); $('changeList').scrollIntoView({ behavior: 'smooth', block: 'center' }); return;
     }
     if (b.dataset.planfor != null) {
-      state.plan.table = b.dataset.planfor; if (!state.plan.key) state.plan.key = b.dataset.planfor.replace(/\s+/g, '') + 'Key';
+      state.plan.table = b.dataset.planfor; state.plan.option = '';
+      const ex = state.base && state.base.rels.find(x => low(x.toTable) === low(b.dataset.planfor));
+      state.plan.key = ex ? ex.toColumn : (state.plan.key || b.dataset.planfor.replace(/\s+/g, '') + 'Key');
       $('planBox').open = true; renderPlan(); persist(); $('planBox').scrollIntoView({ behavior: 'smooth', block: 'start' }); return;
     }
     if (b.dataset.goto === 'health') { $('health').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }

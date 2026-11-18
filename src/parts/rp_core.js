@@ -29,7 +29,13 @@ const RP = (() => {
     const dates = new Set();
     (m.tables || []).forEach(t => { if ((typeof isDateTable === 'function' && isDateTable(t)) || DATE_NAME.test(t.name)) dates.add(low(t.name)); });
     rels.forEach(r => { r.key = relKey(r); });
-    return { tables: [...names.values()].sort((a, b) => a.localeCompare(b)), rels, cols, dates, added: new Set() };
+    // measures and the tables their DAX reads, to say which ones follow a filter
+    const measures = (m.measures || []).map(x => {
+      const tabs = new Set();
+      try { (typeof daxRefs === 'function' ? daxRefs(x.expression || '') : []).forEach(r => { if (r && r.table) tabs.add(low(r.table)); }); } catch (e) {}
+      return { name: x.name, table: x.table, tabs };
+    });
+    return { tables: [...names.values()].sort((a, b) => a.localeCompare(b)), rels, cols, dates, added: new Set(), measures };
   }
   const canon = (model, n) => model.tables.find(t => low(t) === low(n)) || null;
   const flowsBoth = r => r.both || r.card === '1:1';
@@ -38,7 +44,7 @@ const RP = (() => {
      { op: 'add', one: [table, column], many: [table, column], both }   a new relationship (new tables are made)
      { op: 'dir', key, both }  { op: 'active', key, active }  { op: 'remove', key }   on an existing one */
   function apply(model, changes){
-    const out = { tables: model.tables.slice(), rels: model.rels.map(r => Object.assign({}, r)), cols: new Map(model.cols), dates: model.dates, added: new Set(model.added), skipped: [] };
+    const out = { tables: model.tables.slice(), rels: model.rels.map(r => Object.assign({}, r)), cols: new Map(model.cols), dates: model.dates, added: new Set(model.added), measures: model.measures || [], skipped: [] };
     (changes || []).forEach((c, i) => {
       if (c.op === 'add') {
         const [ot, oc] = c.one || [], [mt, mc] = c.many || [];
@@ -336,6 +342,29 @@ const RP = (() => {
     }).filter(c => c.solves).sort((a, b) => (b.score - a.score) || (a.ambAfter - b.ambAfter));
   }
 
+  // the columns a table is the one side on (its keys), plus keys given to it in the changes
+  function keysOf(model, changes, src){
+    const out = [];
+    model.rels.forEach(r => { if (low(r.toTable) === low(src) && !out.some(c => low(c) === low(r.toColumn))) out.push(r.toColumn); });
+    (changes || []).forEach(c => { if (c.op === 'add' && low(c.one[0]) === low(src) && !out.some(k => low(k) === low(c.one[1]))) out.push(c.one[1]); });
+    return out;
+  }
+  // a key column of src that table t also has (not t's own key, not a bare id)
+  function sharedKey(model, changes, src, t){
+    const own = new Set(model.rels.filter(r => low(r.toTable) === low(t)).map(r => low(r.toColumn)));
+    const tCols = model.cols.get(low(t)) || [];
+    for (const k of keysOf(model, changes, src)) {
+      if (/^(id|key|pk|code|name|guid|uid)$/i.test(k)) continue;
+      const hit = tCols.find(c => low(c) === low(k) && !own.has(low(c)));
+      if (hit) return { srcCol: k, col: hit };
+    }
+    return null;
+  }
+  function measuresReading(model, tables){
+    const want = new Set([...tables].map(low));
+    return (model.measures || []).filter(m => [...m.tabs].some(t => want.has(t)));
+  }
+
   /* ---------- advice for one failing goal item ----------
      base: the model as read; changes: the current what-if list; goals: parsed goals; x: the evaluated goal; item: one table in it.
      Returns { text, fixes: [{ title, changes, fixed, broke, ambBefore, ambAfter }], code: [{ title, dax, note }] } */
@@ -390,14 +419,23 @@ const RP = (() => {
         if (last) {
           addCand('Set ' + r.toTable + ' \u2013 ' + r.fromTable + ' to both directions', changes.concat([{ op: 'dir', key: r.key, both: true }]));
           const rt = role.get(low(t));
+          // what src already filters underneath t: measures over those tables already follow src
+          const rch = reach(g, src);
+          const under = [...new Set(model.rels.filter(z => z.active && low(z.toTable) === low(t) && rch.has(low(z.fromTable))).map(z => z.fromTable))];
+          const below = [...new Set(model.rels.filter(z => z.active && low(z.toTable) === low(t)).map(z => z.fromTable))];
+          if (under.length && (rt === 'lookup' || rt === 'both')) {
+            const ms = measuresReading(model, under).filter(m => !m.tabs.has(low(t)) || true).map(m => m.name);
+            out.text.push(src + ' already filters ' + (under.length === below.length ? 'every table ' + t + ' filters: ' : under.length + ' of the ' + below.length + ' tables ' + t + ' filters: ') + under.join(', ') + '. So measures that count those tables already follow ' + src + (ms.length ? ' (' + ms.slice(0, 5).join(', ') + (ms.length > 5 ? ' and ' + (ms.length - 5) + ' more' : '') + ')' : '') + ', including per ' + t + ' row. What isn\u2019t narrowed is the ' + t + ' list itself: a ' + t + ' slicer, or a ' + t + ' table with no measure in it.');
+            out.text.push('A relationship from ' + src + ' to ' + t + ' would give ' + under.join(', ') + ' a second route (through ' + t + '), which is why the fixes below cost something. A visual filter measure narrows the ' + t + ' list without one.');
+          }
+          const sk = sharedKey(model, changes, src, t);
+          if (sk) out.code.push({ title: 'Recommended: filter ' + t + ' by its own ' + sk.col + ' (no relationship)', dax: treatasMeasure(t, src, sk.srcCol, sk.col), note: 'Add it to the filters of every ' + t + ' slicer and visual (Filters pane: this measure is 1). The ' + t + ' list then matches the ' + src + ' selection by ' + t + '[' + sk.col + '], with no new route.' });
           if (rt === 'lookup' || rt === 'both' || rt === 'bridge') out.code.push({ title: 'Show only the ' + t + ' rows that have data (no relationship change)', dax: hasDataMeasure(t, there), note: 'Add this measure to the filters of the ' + t + ' visual or slicer and set it to 1. A filter on ' + src + ' reaches ' + there + ', so only ' + t + ' rows with matching ' + there + ' rows stay.' });
           out.code.push({ title: 'Or only in the measures that need it', dax: crossfilterSnippet(r), note: 'CROSSFILTER turns on both directions for this one calculation, so the rest of the model keeps its single-direction filters.' });
         } else {
           out.text.push('Getting there would mean going up from ' + there + ' to ' + next + ' and back down: ' + t + ' would be filtered by whichever ' + next + ' rows match ' + src + '\u2019s ' + there + ' rows, which is rarely what you want. ' + (direct ? 'Relate them directly instead.' : 'Relate ' + src + ' to ' + t + ' (or to a table that filters it) directly instead.'));
         }
-        const srcAdd = changes.find(c => c.op === 'add' && low(c.one[0]) === low(src));
-        const keyCol = srcAdd ? srcAdd.one[1] : null;
-        if (keyCol && (model.cols.get(low(t)) || []).some(c => low(c) === low(keyCol))) out.code.push({ title: 'Filter ' + t + ' by its own ' + keyCol + ' (no relationship)', dax: treatasMeasure(t, src, keyCol), note: 'Add it to the filters of a ' + t + ' visual and set it to 1. Use this when a relationship would give a second route.' });
+        if (!last) { const sk = sharedKey(model, changes, src, t); if (sk) out.code.push({ title: 'Filter ' + t + ' by its own ' + sk.col + ' (no relationship)', dax: treatasMeasure(t, src, sk.srcCol, sk.col), note: 'Add it to the filters of a ' + t + ' visual and set it to 1. Use this when a relationship would give a second route.' }); }
       }
     } else if (x.goal.kind === 'notFilters') {
       out.text.push('A filter on ' + src + ' reaches ' + t + (item.all && item.all.length > 1 ? ' by ' + item.all.length + ' routes' : '') + '.');
@@ -444,8 +482,12 @@ const RP = (() => {
   function plan(model, newTable, key, carriers, prefer){
     carriers = (carriers && carriers.length ? carriers : defaultCarriers(model, newTable)).filter(t => canon(model, t));
     const want = carriers.slice();
-    const spec = t => ({ op: 'add', one: [newTable, key], many: [t, key], both: false });
-    let chosen = [], cur = model;
+    // the carrier's own spelling of the key column (locationkey, LocationKey...)
+    const colOf = t => (model.cols.get(low(t)) || []).find(c => low(c) === low(key)) || key;
+    const spec = t => ({ op: 'add', one: [newTable, key], many: [t, colOf(t)], both: false });
+    // tables the new table is already related to count as linked
+    const existing = [...new Set(model.rels.filter(r => r.active && low(r.toTable) === low(newTable)).map(r => canon(model, r.fromTable)))].filter(Boolean);
+    let chosen = existing.slice(), cur = model;
     const rejected = new Map();
     const tryLink = t => { const m = apply(cur, [spec(t)]); const g = graph(m); return { m, g, amb: ambiguity(g, newTable) }; };
     (prefer || []).filter(t => canon(model, t)).forEach(t => {
@@ -455,7 +497,7 @@ const RP = (() => {
       chosen.push(t); cur = x.m;
     });
     for (;;) {
-      const g0 = graph(cur), have = chosen.length ? reach(g0, newTable) : new Map();
+      const g0 = graph(cur), have = canon(cur, newTable) ? reach(g0, newTable) : new Map();
       let best = null;
       carriers.forEach((t, idx) => {
         if (chosen.includes(t) || have.has(low(t))) return;
@@ -472,18 +514,45 @@ const RP = (() => {
       if (!best) break;
       chosen.push(best.t); cur = best.m;
     }
-    const g = graph(cur), rch = chosen.length ? reach(g, newTable) : new Map();
+    const g = graph(cur), rch = canon(cur, newTable) ? reach(g, newTable) : new Map();
     const rows = carriers.map(t => {
       const k = low(t);
-      if (chosen.includes(t)) return { table: t, status: 'link' };
+      if (chosen.includes(t)) return { table: t, status: 'link', existing: existing.includes(t) };
       if (rch.has(k)) { const p = paths(g, newTable, t)[0]; return { table: t, status: 'filtered', path: p, by: p && p[0] ? p[0].to : newTable }; }
       const x = tryLink(t);
-      if (x.amb.size) { const [n, ps] = [...x.amb.entries()][0]; return { table: t, status: 'conflict', at: (reach(x.g, newTable).get(n) || {}).name || n, paths: ps.slice(0, 2), preferred: rejected.has(k) }; }
+      if (x.amb.size) { const [n, ps] = [...x.amb.entries()][0]; const rx = reach(x.g, newTable); return { table: t, status: 'conflict', at: (rx.get(n) || {}).name || n, paths: ps.slice(0, 2), clash: [...x.amb.keys()].map(z => (rx.get(z) || { name: z }).name), preferred: rejected.has(k) }; }
       return { table: t, status: 'unreached' };
     });
     const order = { link: 0, filtered: 1, conflict: 2, unreached: 3 };
     rows.sort((a, b) => order[a.status] - order[b.status] || a.table.localeCompare(b.table));
-    return { newTable, key, links: chosen, changes: chosen.map(spec), rows, missed: rows.filter(r => r.status === 'conflict' || r.status === 'unreached').map(r => r.table), total: carriers.length, model: cur };
+    const added = chosen.filter(t => !existing.includes(t));
+    return { newTable, key, links: chosen, existing, added, changes: added.map(spec), rows, missed: rows.filter(r => r.status === 'conflict' || r.status === 'unreached').map(r => r.table), total: carriers.length, model: cur };
+  }
+
+  // Ways to relate a table that many tables carry a key for, compared on the same tables:
+  // keep its current links and add what fits; start over; or relate it to each fact table directly (as a Date table is)
+  function planOptions(model, t, key, carriers, prefer){
+    const mine = model.rels.filter(r => low(r.toTable) === low(t) || low(r.fromTable) === low(t));
+    const stripped = Object.assign({}, model, { rels: model.rels.filter(r => !mine.includes(r)) });
+    const cars = (carriers && carriers.length ? carriers : defaultCarriers(model, t)).filter(c => canon(model, c));
+    const role = roles(stripped), isFact = c => role.get(low(c)) === 'fact';
+    const removes = mine.map(r => ({ op: 'remove', key: r.key }));
+    const opts = [];
+    if (mine.length) opts.push({ id: 'keep', title: 'Keep its current links and add what fits', p: plan(model, t, key, cars, prefer), pre: [] });
+    opts.push({ id: 'fresh', title: mine.length ? 'Start over: the links that reach the most tables' : 'The links that reach the most tables', p: plan(stripped, t, key, cars, prefer), pre: removes });
+    const factsC = cars.filter(isFact);
+    if (factsC.length) opts.push({ id: 'facts', title: 'Relate it to each fact table directly, like a Date table', p: plan(stripped, t, key, factsC, []), pre: removes });
+    return opts.map(o => {
+      const g = graph(o.p.model), rch = canon(o.p.model, t) ? reach(g, t) : new Map();
+      const hit = c => rch.has(low(c));
+      const covered = cars.filter(hit), off = cars.filter(c => !hit(c));
+      const offMeasures = measuresReading(model, off).map(m => m.name);
+      return Object.assign(o, {
+        changes: o.pre.concat(o.p.changes), covered, off, total: cars.length,
+        facts: [factsC.filter(hit).length, factsC.length], lookups: [cars.filter(c => !isFact(c) && hit(c)).length, cars.filter(c => !isFact(c)).length],
+        removed: mine.filter(r => o.pre.length).map(r => r.fromTable), offMeasures, amb: allAmbiguity(g).length
+      });
+    });
   }
 
   /* ---------- DAX for the usual workarounds ---------- */
@@ -523,5 +592,5 @@ const RP = (() => {
   }
 
   return { fromParsed, apply, graph, reach, paths, ambiguity, allAmbiguity, roles, facts, ROLE_WORD, whyNot, parseGoals, targets, evaluate, score, tryFixes, failing, advise, adviseAmbiguity,
-    plan, defaultCarriers, pathText, relText, relWords, flowsBoth, treatasMeasure, hasDataMeasure, crossfilterSnippet, userelSnippet, desktopSteps, changeText, canon, relKey, mentions };
+    plan, planOptions, keysOf, sharedKey, measuresReading, defaultCarriers, pathText, relText, relWords, flowsBoth, treatasMeasure, hasDataMeasure, crossfilterSnippet, userelSnippet, desktopSteps, changeText, canon, relKey, mentions };
 })();

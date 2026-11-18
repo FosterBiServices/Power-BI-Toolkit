@@ -103,12 +103,12 @@
         <datalist id="tableList"></datalist><datalist id="oneCols"></datalist><datalist id="manyCols"></datalist>
       </div>
       <details class="extra" id="planBox">
-        <summary>Plan a new table that many tables carry a key for <span class="muted">(Location, Region, Business unit&hellip;)</span></summary>
+        <summary>Plan a table that many tables carry a key for <span class="muted">(Location, Region, Business unit&hellip;)</span></summary>
         <div class="extra-body">
-          <p class="note">You&rsquo;re adding one table and putting its key on many tables. Relating it to all of them gives two routes into the same tables, so this finds the set of relationships that filters the most tables with no ambiguity, and says why each other table can&rsquo;t be linked.</p>
+          <p class="note">One table whose key is on many tables, new or already in your model. Relating it to all of them gives two routes into the same tables, so this compares the ways to relate it: each option says how many tables it filters with no ambiguity, which of your measures won&rsquo;t follow it, and what to do for the tables it can&rsquo;t reach.</p>
           <div class="addgrid">
-            <div class="fld"><span class="lbl">New table</span><input type="text" id="plTable" placeholder="e.g. Location" aria-label="New table name"></div>
-            <div class="fld"><span class="lbl">Its key, added to the other tables</span><input type="text" id="plKey" placeholder="e.g. LocationKey" aria-label="Key column"></div>
+            <div class="fld"><span class="lbl">Table</span><input type="text" id="plTable" list="tableList" placeholder="e.g. Location" aria-label="Table name"></div>
+            <div class="fld"><span class="lbl">Its key, on the other tables</span><input type="text" id="plKey" placeholder="e.g. LocationKey" aria-label="Key column"></div>
           </div>
           <div class="fld"><span class="lbl">Link these first <span class="muted">(optional: the table whose key should drive the filter, e.g. Members rather than their Program)</span></span>
             <div class="chips" id="plPrefer"></div>
