@@ -34,6 +34,7 @@ Grouped in the order a report gets built, the same as on the home page and in ea
 
 | Tool | What it does | Your model | Copilot |
 | --- | --- | :---: | :---: |
+| [Relationship Planner](https://fosterbiservices.github.io/Power-BI-Toolkit/relationship-planner.html) | How filters flow through the model, in plain words: pick a table and see every table it filters, step by step, and every table it doesn't with the reason (a relationship's direction, an inactive relationship, or no connection). Try changes before you make them (add, remove, switch direction, turn off), with the steps for Power BI Desktop. Write goals in plain English ("Location should filter every table except Date", "Promotion should not filter Budget"); each is checked, and each failure comes with fixes tested on the whole model (what each one fixes, breaks and stops filtering) and DAX workarounds. Ambiguous routes are always found. Plans a new table that many tables carry a key for: the relationships that filter the most tables with no ambiguity. | ✓ | — |
 | [KPI Measure Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/kpi-measure-builder.html) | Describe measures in plain English. Copilot writes the DAX; the page checks every table, column and measure name and outputs tab-indented TMDL for your measures folder. | ✓ | ✓ |
 | [Time Intelligence Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/time-intelligence-builder.html) | Year to date, quarter and month to date, last year, previous month, growth, moving annual total and more, built on the SQLBI DAX Patterns time calculations (standard, or month-based on month columns) and worked out from the last date with data in the filter (or every date), with your fiscal year, as TMDL: measures for the measures you pick, or one calculation group. Also a trend of the last N months up to the month picked in a date slicer (a months selector table, a month axis table and a measure per base measure). Includes a test query. | ✓ | — |
 | [Field Parameter Builder](https://fosterbiservices.github.io/Power-BI-Toolkit/field-parameter-builder.html) | Pick and order measures or columns and get the TMDL for a measure switcher: a Power BI field parameter, or a SWITCH measure with a selector table and dynamic format string. Includes a test query. | ✓ | — |
@@ -117,6 +118,7 @@ field-parameter-builder.html
 model-documenter.html
 model-linter.html
 rls-role-generator.html
+relationship-planner.html
 about-this-report.html
 data-and-privacy.html          What the toolkit keeps in your browser, and who can see it
 lib/xlsx.full.min.js           SheetJS 0.18.5 (Apache-2.0, lib/xlsx-LICENSE.txt), used by Sheet Recon and Sample Data Maker
