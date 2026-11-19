@@ -563,6 +563,9 @@ const DAX_QUERY = [
 '\t\t"PEID", [ExpressionSourceID]',
 '\t)',
 'VAR _expressions = SELECTCOLUMNS ( INFO.EXPRESSIONS (), "EID", [ID], "EName", [Name] )',
+'// Power Query: the query behind each loaded table (one per table) and what each other query returns',
+'VAR _mParts = SELECTCOLUMNS ( FILTER ( INFO.PARTITIONS (), [Type] = 4 ), "QTID", [TableID], "QCode", [QueryDefinition] )',
+'VAR _mTypes = SELECTCOLUMNS ( FILTER ( INFO.ANNOTATIONS (), [Name] = "PBI_ResultType" ), "AID", [ObjectID], "AValue", [Value] )',
 '// Hierarchy levels, to tell which columns a hierarchy uses',
 'VAR _levels = SELECTCOLUMNS ( INFO.LEVELS (), "LCID", [ColumnID], "LHID", [HierarchyID] )',
 'VAR _hierarchies = SELECTCOLUMNS ( INFO.HIERARCHIES (), "HID", [ID], "HName", [Name] )',
@@ -657,6 +660,45 @@ const DAX_QUERY = [
 '\t\t"Storage", "",',
 '\t\t"Source", ""',
 '\t)',
+'// Power Query code: loaded tables (Table = the table), then queries that aren\u2019t loaded, parameters and functions (Table empty)',
+'VAR _queries =',
+'\tSELECTCOLUMNS (',
+'\t\tFILTER ( _tableIds, VAR _qt = [TID] RETURN NOT ISEMPTY ( FILTER ( _mParts, [QTID] = _qt ) ) ),',
+'\t\t"Kind", "Query",',
+'\t\t"Table", [TName],',
+'\t\t"Name", [TName],',
+'\t\t"Type", "Table",',
+'\t\t"Folder", "",',
+'\t\t"Flags", "",',
+'\t\t"Description", "",',
+'\t\t"Expression", VAR _qt = [TID] RETURN ' + CLEAN('MAXX ( FILTER ( _mParts, [QTID] = _qt ), [QCode] )', '    ') + ',',
+'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Summarize", "",',
+'\t\t"SortBy", "",',
+'\t\t"Hierarchies", "",',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
+'VAR _mOther =',
+'\tSELECTCOLUMNS (',
+'\t\tFILTER ( INFO.EXPRESSIONS (), [Kind] = 0 ),',
+'\t\t"Kind", "Query",',
+'\t\t"Table", "",',
+'\t\t"Name", [Name],',
+'\t\t"Type", VAR _qe = [ID] RETURN CONCATENATEX ( FILTER ( _mTypes, [AID] = _qe ), [AValue], ", " ),',
+'\t\t"Folder", "",',
+'\t\t"Flags", "",',
+'\t\t"Description", "",',
+'\t\t"Expression", ' + CLEAN('[Expression]', '    ') + ',',
+'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Summarize", "",',
+'\t\t"SortBy", "",',
+'\t\t"Hierarchies", "",',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
 'VAR _model =',
 '\tSELECTCOLUMNS (',
 '\t\tINFO.MODEL (),',
@@ -677,7 +719,7 @@ const DAX_QUERY = [
 '\t\t"Source", ""',
 '\t)',
 'RETURN',
-'\tUNION ( _tables, _columns, _measures, _relationships, _model )',
+'\tUNION ( _tables, _columns, _measures, _relationships, _model, _queries, _mOther )',
 'ORDER BY [Kind], [Table], [Name]'
 ].join('\n');
 
@@ -717,7 +759,7 @@ const AUTO_DATE_TABLE = /^(localdatetable_|datetabletemplate_)/i;
 const EXPORT_COLS = ['kind', 'table', 'name', 'type', 'folder', 'flags', 'description', 'expression', 'totable', 'tocolumn', 'summarize', 'sortby', 'hierarchies', 'storage', 'source'];
 function readModel(text, opts){
   const keepAuto = !!(opts && opts.keepAuto);
-  const res = { tables: [], columns: [], measures: [], rels: [], model: null, has: {}, error: null, skipped: 0 };
+  const res = { tables: [], columns: [], measures: [], rels: [], queries: [], model: null, has: {}, error: null, skipped: 0 };
   const raw = (text || '').replace(/\r/g, '');
   if (!raw.trim()) return res;
   const lines = raw.split('\n');
@@ -731,7 +773,7 @@ function readModel(text, opts){
   // No header row (cells copied from the grid without it): rows that start with a kind the export makes
   // are read in the export query's own column order.
   if (hIdx < 0) {
-    const body = lines.filter(l => l.trim()), kinds = /^"?(table|column|measure|relationship|model)"?$/i;
+    const body = lines.filter(l => l.trim()), kinds = /^"?(table|column|measure|relationship|model|query)"?$/i;
     const rowLike = body.filter(l => { const c = l.split('\t'); return c.length >= 8 && kinds.test(c[0].trim()); }).length;
     if (body.length && rowLike >= Math.max(1, body.length * 0.8)) {
       const width = Math.max(...body.map(l => l.split('\t').length));
@@ -773,6 +815,10 @@ function readModel(text, opts){
       if (!keepAuto && AUTO_DATE_TABLE.test(toT)) { res.skipped++; continue; }
       res.rels.push({ fromTable: table, fromColumn: name, toTable: toT, toColumn: get(c, 'tocolumn'), card,
         fromCard: parts[0] || '', toCard: parts[1] || '', both: /both/.test(fl), inactive: /inactive/.test(fl), flags });
+    } else if (kind === 'query') {
+      // Power Query code: a loaded table's query (table set), or a query that isn't loaded, a parameter or a function
+      res.has.queries = true;
+      const code = get(c, 'expression'); if (name && code.trim()) res.queries.push({ name, table, loaded: !!table, resultType: get(c, 'type'), code });
     } else if (kind === 'model') {
       res.has.model = true; res.model = { name, table, type: get(c, 'type'), discourage: /discourage-implicit/.test(fl), flags };
     }
@@ -3812,7 +3858,7 @@ init();
   S.withHeader = t => {
     if (!t || hasHeader(t)) return t;
     const body = t.replace(/\r/g, '').split('\n').filter(l => l.trim());
-    const rows = body.filter(l => { const c = l.split('\t'); return c.length >= 8 && /^"?(table|column|measure|relationship|model)"?$/i.test(c[0].trim()); }).length;
+    const rows = body.filter(l => { const c = l.split('\t'); return c.length >= 8 && /^"?(table|column|measure|relationship|model|query)"?$/i.test(c[0].trim()); }).length;
     if (!body.length || rows < body.length * 0.8) return t;
     const width = Math.min(EXPORT_HEAD.length, Math.max(...body.map(l => l.split('\t').length)));
     return EXPORT_HEAD.slice(0, width).join('\t') + '\n' + t;
@@ -3820,7 +3866,7 @@ init();
   S.looksLikeExport = t => hasHeader(S.withHeader(t));
   S.counts = t => {
     const lines = (t || '').replace(/\r/g, '').split('\n');
-    const out = { table: 0, column: 0, measure: 0, relationship: 0 };
+    const out = { table: 0, column: 0, measure: 0, relationship: 0, query: 0 };
     let ki = -1;
     for (const l of lines) {
       const c = l.split('\t').map(x => x.replace(/^"|"$/g, '').trim());
@@ -3832,7 +3878,7 @@ init();
   S.describe = v => {
     const c = S.counts(v.text), d = new Date(v.savedAt || Date.now());
     const when = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-    return (v.name ? '<b>' + esc(v.name) + '</b> &middot; ' : '') + c.table + ' tables, ' + c.measure + ' measures &middot; ' + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + esc(when);
+    return (v.name ? '<b>' + esc(v.name) + '</b> &middot; ' : '') + c.table + ' tables, ' + c.measure + ' measures' + (c.query ? ', ' + c.query + ' Power Query quer' + (c.query === 1 ? 'y' : 'ies') : '') + ' &middot; ' + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + esc(when);
   };
   // Date columns from the export, in the Date Table Generator's "Table, Column, Type, Hidden" layout
   S.dateColumns = t => {
@@ -4086,12 +4132,17 @@ init();
       remember(); note = ''; render();
     };
     bar.addEventListener('click', e => { if (e.target.closest('[data-suite=use]')) use(); });
-    // Pasting an export here saves it for every tool
+    // Pasting an export here saves it for every tool (TMDL is read into one first, or added to the saved one)
     ta.addEventListener('input', e => {
+      if (e.isTrusted && mode === 'export' && S.looksTmdl && S.looksTmdl(ta.value)) {
+        const prev = S.get(), r = S.fromTmdl(ta.value, prev ? prev.text : '');
+        if (r.error) { note = ''; bar.hidden = false; bar.innerHTML = '<span class="suite-err">' + esc(r.error) + '</span>'; return; }
+        ta.value = r.text; note = S.tmdlNote(r);
+      }
       if (e.isTrusted && mode === 'export' && S.looksLikeExport(ta.value)) {
         const prev = S.get();
         try { localStorage.setItem(cfg.prefix + 'modelFrom', 'export'); } catch (err) {}
-        if (!prev || prev.text !== ta.value) { const ok = S.set(ta.value, ''); note = ok ? 'saved for the other tools too' : 'too large to share with the other tools (browser storage limit)'; if (ok) remember(); }
+        if (!prev || prev.text !== ta.value) { const ok = S.set(ta.value, ''); note = (note ? note + ' ' : '') + (ok ? 'saved for the other tools too' : 'too large to share with the other tools (browser storage limit)'); if (ok) remember(); }
       }
       render();
     });
@@ -4106,8 +4157,12 @@ init();
     // ...or when this page is still on an older saved export it took from the toolkit
     // A model read from a PBIP folder in another tool is used here too, unless this page chose No model or its own export
     const ch = conn ? conn.choice() : '', fromPbip = v && v.source === 'pbip';
-    const allowed = !conn || (fromPbip ? ch !== 'none' && (ch !== 'export' || following() || exampleShowing()) : !['pbip', 'none'].includes(ch));
-    if (v && valueFor(v) && ta.value.trim() !== valueFor(v).trim() && allowed && (exampleShowing() || (!ta.value.trim() && (!blank || newer)) || (ta.value.trim() && (following() || (fromPbip && ch === 'pbip'))))) use();
+    // the newest connection wins: a model saved (on the home page or in another tool) after this page chose how to
+    // connect is used here too, whatever this page chose then, so a model is connected once for every tool
+    let chosenAt = 0; try { chosenAt = +localStorage.getItem(cfg.prefix + 'connectAt') || 0; } catch (e) {}
+    const newest = !!(conn && ch && v && (v.savedAt || 0) > chosenAt && (!blank || newer));
+    const allowed = !conn || newest || (fromPbip ? ch !== 'none' && (ch !== 'export' || following() || exampleShowing()) : !['pbip', 'none'].includes(ch));
+    if (v && valueFor(v) && ta.value.trim() !== valueFor(v).trim() && allowed && (newest || exampleShowing() || (!ta.value.trim() && (!blank || newer)) || (ta.value.trim() && (following() || (fromPbip && ch === 'pbip'))))) use();
     else render();
     window.addEventListener('storage', e => { if (e.key === KEY) render(); });
     window.addEventListener('sfpbi-cleared', () => { note = ''; render(); });
@@ -4214,6 +4269,7 @@ init();
     m.measures.forEach(x => r({ Kind: 'Measure', Table: x.table, Name: x.name, Type: x.format, Folder: x.folder, Flags: [x.hidden ? 'hidden' : '', x.dynamic ? 'dynamic-format' : '', x.text ? 'text' : ''].filter(Boolean).join(' '), Description: x.description, Expression: x.expression }));
     m.rels.forEach(x => r({ Kind: 'Relationship', Table: x.fromTable, Name: x.fromColumn, Type: x.fromCard + ':' + x.toCard, Flags: x.cross + (x.active ? '' : ' inactive'), ToTable: x.toTable, ToColumn: x.toColumn }));
     if (m.model) r({ Kind: 'Model', Name: m.model.name, Flags: m.model.discourage ? 'discourage-implicit' : '' });
+    (m.queries || []).forEach(q => r({ Kind: 'Query', Table: q.table, Name: q.name, Type: q.type, Expression: q.code }));
     return rows.join('\n');
   }
   // Desktop leaves dataType out for the columns of calculated tables and for calculated columns, so work it
@@ -4227,12 +4283,17 @@ init();
     return f ? '' : 'string';
   }
   function fromTmdl(files){
-    const m = { tables: [], columns: [], measures: [], rels: [], model: null };
+    const m = { tables: [], columns: [], measures: [], rels: [], queries: [], model: null };
     const roots = files.map(f => parseTmdl(f.text));
     const all = []; const walk = (o, table) => { o.children.forEach(c => { all.push([c, table]); walk(c, c.kind === 'table' ? c : table); }); };
     roots.forEach(r => walk(r, null));
     const exprNames = new Set(all.filter(([o]) => o.kind === 'expression').map(([o]) => o.name));
     for (const [o, t] of all) {
+      // queries that aren't loaded, parameters and functions (expressions.tmdl)
+      if (o.kind === 'expression' && !t && !o.ref && (o.value || '').trim()) {
+        const rt = o.children.find(x => x.kind === 'annotation' && /^PBI_ResultType$/i.test(x.name));
+        m.queries.push({ table: '', name: o.name, type: rt ? (rt.value || '').trim() : '', code: o.value });
+      }
       if (o.kind === 'model') m.model = { name: o.name, discourage: yes(o.props.discourageimplicitmeasures) };
       if (o.kind === 'relationship') {
         const [ft, fc] = colRef(o.props.fromcolumn), [tt, tc] = colRef(o.props.tocolumn);
@@ -4244,6 +4305,7 @@ init();
       const levels = {};
       o.children.filter(c => c.kind === 'hierarchy').forEach(h => h.children.filter(l => l.kind === 'level').forEach(l => { const c = unq(l.props.column || ''); (levels[c] = levels[c] || []).push(h.name); }));
       const src = ptype === 'entity' && p.props.expressionsource ? unq(p.props.expressionsource) : '';
+      if (ptype === 'm' && (p.props.source || '').trim()) m.queries.push({ table: o.name, name: o.name, type: 'Table', code: p.props.source });
       m.tables.push({ name: o.name, category: o.props.datacategory || '', hidden: yes(o.props.ishidden), private: yes(o.props.isprivate), description: o.doc || o.props.description || '',
         calc: ptype === 'calculated' ? (p.props.source || '') : '', storage: cap(p.props.mode || (ptype === 'calculated' ? 'import' : parts.length ? 'import' : '')).replace(/^Directquery$/i, 'DirectQuery'), source: exprNames.has(src) || src ? src : '' });
       o.children.forEach(c => {
@@ -4263,14 +4325,16 @@ init();
   }
   const join = v => Array.isArray(v) ? v.join('\n') : (v || '');
   function fromBim(text){
-    const j = JSON.parse(text), md = j.model || {}, m = { tables: [], columns: [], measures: [], rels: [], model: { name: j.name || 'Model', discourage: !!md.discourageImplicitMeasures } };
+    const j = JSON.parse(text), md = j.model || {}, m = { tables: [], columns: [], measures: [], rels: [], queries: [], model: { name: j.name || 'Model', discourage: !!md.discourageImplicitMeasures } };
     (md.tables || []).forEach(t => {
       const p = (t.partitions || [])[0] || {}, s = p.source || {}, levels = {};
       (t.hierarchies || []).forEach(h => (h.levels || []).forEach(l => { (levels[l.column] = levels[l.column] || []).push(h.name); }));
+      if (s.type === 'm' && join(s.expression).trim()) m.queries.push({ table: t.name, name: t.name, type: 'Table', code: join(s.expression) });
       m.tables.push({ name: t.name, category: t.dataCategory || '', hidden: !!t.isHidden, private: !!t.isPrivate, description: join(t.description), calc: s.type === 'calculated' ? join(s.expression) : '', storage: cap(p.mode || 'import').replace(/^Directquery$/i, 'DirectQuery'), source: s.type === 'entity' ? (s.expressionSource || '') : '' });
       (t.columns || []).forEach(c => { if (c.type === 'rowNumber') return; const num = /int64|double|decimal/i.test(c.dataType || ''); m.columns.push({ table: t.name, name: c.name, type: TYPES[(c.dataType || '').toLowerCase()] || c.dataType || '', folder: c.displayFolder || '', hidden: !!c.isHidden, key: !!c.isKey, description: join(c.description), expression: c.type === 'calculated' ? join(c.expression) : '', summarize: c.summarizeBy ? cap(c.summarizeBy) : num ? 'Default' : 'None', sortBy: c.sortByColumn || '', hierarchies: (levels[c.name] || []).join(', ') }); });
       (t.measures || []).forEach(x => m.measures.push({ table: t.name, name: x.name, format: x.formatString || '', folder: x.displayFolder || '', hidden: !!x.isHidden, dynamic: !!x.formatStringDefinition, text: /^(imageurl|weburl)$/i.test(x.dataCategory || '') || /^string$/i.test(x.dataType || ''), description: join(x.description), expression: join(x.expression) }));
     });
+    (md.expressions || []).forEach(x => { if (x.kind === 'm' && join(x.expression).trim()) { const rt = (x.annotations || []).find(a => a.name === 'PBI_ResultType'); m.queries.push({ table: '', name: x.name, type: rt ? rt.value : '', code: join(x.expression) }); } });
     (md.relationships || []).forEach(r => m.rels.push({ fromTable: r.fromTable, fromColumn: r.fromColumn, toTable: r.toTable, toColumn: r.toColumn, fromCard: cap(r.fromCardinality || 'many'), toCard: cap(r.toCardinality || 'one'), cross: cap(r.crossFilteringBehavior || 'oneDirection'), active: r.isActive !== false }));
     return m;
   }
@@ -4287,6 +4351,42 @@ init();
     if (m.model && !m.model.name) m.model.name = pick;
     return { text: rowsFrom(m), name: pick, tables: m.tables.length, measures: m.measures.length, others: names.slice(1) };
   };
+  // TMDL pasted as text (TMDL view, or a file such as expressions.tmdl or one table's): read like a PBIP folder.
+  // With a model already saved, a part of a model is added to it (its tables and queries replace the ones with the
+  // same names); a whole model (it has a model object) replaces it.
+  S.looksTmdl = t => !S.looksLikeExport(t) && /^\s*(createOrReplace|createOrAlter|create|alter)?\s*$|^\t*(table|expression|model|partition|ref table)\s/m.test(t || '') && /^\t*(table|expression|model)\s+\S/m.test(t || '');
+  S.fromTmdl = (text, base) => {
+    let m; try { m = fromTmdl([{ text: text || '' }]); } catch (e) { return { error: 'The TMDL couldn’t be read: ' + (e.message || e) }; }
+    const parts = m.tables.length + m.queries.length + m.measures.length + m.rels.length;
+    if (!parts) return { error: 'No tables or queries were found in this TMDL. Copy the whole script from TMDL view, or a whole file such as expressions.tmdl.' };
+    const counts = { tables: m.tables.length, queries: m.queries.length, measures: m.measures.length };
+    const whole = !!m.model && m.tables.length > 0;
+    base = S.withHeader(base || '');
+    if (whole || !S.looksLikeExport(base)) {
+      if (!m.tables.length) return { error: 'This TMDL has only queries and no tables. Connect your model first (the export or a PBIP folder), then paste it to add its queries.' };
+      if (m.model && !m.model.name) m.model.name = 'Model';
+      return { text: rowsFrom(m), added: false, counts };
+    }
+    // add to the saved export: map our columns onto its header, and drop its rows that the TMDL replaces
+    const lines = base.replace(/\r/g, '').split('\n'), hi = lines.findIndex(l => /\bkind\b/i.test(l) && /\btable\b/i.test(l));
+    const head = lines[hi].split('\t').map(x => x.replace(/^"|"$/g, '').replace(/^.*\[|\]$/g, '').trim().toLowerCase());
+    const col = k => head.indexOf(k.toLowerCase());
+    const lc = x => String(x || '').toLowerCase();
+    const tabs = new Set(m.tables.map(t => lc(t.name))), qs = new Set(m.queries.filter(q => !q.table).map(q => lc(q.name)));
+    const rels = new Set(m.rels.map(r => lc(r.fromTable + '|' + r.fromColumn + '|' + r.toTable + '|' + r.toColumn)));
+    const cellOf = (c, k) => { const i = col(k); return i < 0 ? '' : (c[i] || '').replace(/^"(.*)"$/, '$1').trim(); };
+    const keep = lines.slice(hi + 1).filter(l => {
+      if (!l.trim()) return false;
+      const c = l.split('\t'), kind = lc(cellOf(c, 'kind')), table = lc(cellOf(c, 'table'));
+      if (['table', 'column', 'measure'].includes(kind) && tabs.has(table)) return false;
+      if (kind === 'query') return table ? !tabs.has(table) : !qs.has(lc(cellOf(c, 'name')));
+      if (kind === 'relationship') return !rels.has(table + '|' + lc(cellOf(c, 'name')) + '|' + lc(cellOf(c, 'totable')) + '|' + lc(cellOf(c, 'tocolumn')));
+      return true;
+    });
+    const mine = rowsFrom(Object.assign({}, m, { model: null })).split('\n').slice(1).map(l => { const c = l.split('\t'), out = head.map(() => ''); HEAD.forEach((h, j) => { const i = col(h); if (i >= 0) out[i] = c[j] || ''; }); return out.join('\t'); });
+    return { text: lines.slice(0, hi + 1).concat(keep, mine).join('\n'), added: true, counts };
+  };
+  S.tmdlNote = r => (r.added ? 'Added from TMDL to the saved model: ' : 'Read from TMDL: ') + [r.counts.tables ? r.counts.tables + ' table' + (r.counts.tables === 1 ? '' : 's') : '', r.counts.queries ? r.counts.queries + ' Power Query quer' + (r.counts.queries === 1 ? 'y' : 'ies') : '', r.counts.measures ? r.counts.measures + ' measure' + (r.counts.measures === 1 ? '' : 's') : ''].filter(Boolean).join(', ') + '.';
   S.pbipFiles = async list => { const out = []; for (const { path, file } of list) if (wanted(path) && file.size < 30 * 1024 * 1024) out.push({ path, text: await decode(file) }); return out; };
 
   /* --- the Connect your model step --- */
@@ -4331,7 +4431,7 @@ init();
   S.connect = (cfg, ta, bar) => {
     const c = cfg.connect, h2 = document.getElementById(c.step); if (!h2) return null;
     const body = h2.closest('.step-body'), head = h2.closest('.step-head') || h2;
-    const key = cfg.prefix + 'connect', get = k => { try { return localStorage.getItem(cfg.prefix + k); } catch (e) { return null; } }, set = (k, v) => { try { localStorage.setItem(cfg.prefix + k, v); } catch (e) {} };
+    const key = cfg.prefix + 'connect', get = k => { try { return localStorage.getItem(cfg.prefix + k); } catch (e) { return null; } }, set = (k, v) => { try { localStorage.setItem(cfg.prefix + k, v); if (k === 'connect') localStorage.setItem(cfg.prefix + 'connectAt', String(Date.now())); } catch (e) {} };
     if (c.title) h2.textContent = c.title;
     const lede = c.lede !== undefined ? c.lede : 'Choose where your model comes from: a PBIP folder, read straight from your project, or the export query you run once in DAX query view' + (c.none ? '. The page also works without one.' : '.');
     if (lede) { const p = head.querySelector('p'); if (p) p.innerHTML = lede; else head.insertAdjacentHTML('beforeend', '<p>' + lede + '</p>'); }

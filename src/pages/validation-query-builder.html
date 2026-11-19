@@ -539,7 +539,7 @@ const AUTO_DATE_TABLE = /^(localdatetable_|datetabletemplate_)/i;
 const EXPORT_COLS = ['kind', 'table', 'name', 'type', 'folder', 'flags', 'description', 'expression', 'totable', 'tocolumn', 'summarize', 'sortby', 'hierarchies', 'storage', 'source'];
 function readModel(text, opts){
   const keepAuto = !!(opts && opts.keepAuto);
-  const res = { tables: [], columns: [], measures: [], rels: [], model: null, has: {}, error: null, skipped: 0 };
+  const res = { tables: [], columns: [], measures: [], rels: [], queries: [], model: null, has: {}, error: null, skipped: 0 };
   const raw = (text || '').replace(/\r/g, '');
   if (!raw.trim()) return res;
   const lines = raw.split('\n');
@@ -553,7 +553,7 @@ function readModel(text, opts){
   // No header row (cells copied from the grid without it): rows that start with a kind the export makes
   // are read in the export query's own column order.
   if (hIdx < 0) {
-    const body = lines.filter(l => l.trim()), kinds = /^"?(table|column|measure|relationship|model)"?$/i;
+    const body = lines.filter(l => l.trim()), kinds = /^"?(table|column|measure|relationship|model|query)"?$/i;
     const rowLike = body.filter(l => { const c = l.split('\t'); return c.length >= 8 && kinds.test(c[0].trim()); }).length;
     if (body.length && rowLike >= Math.max(1, body.length * 0.8)) {
       const width = Math.max(...body.map(l => l.split('\t').length));
@@ -595,6 +595,10 @@ function readModel(text, opts){
       if (!keepAuto && AUTO_DATE_TABLE.test(toT)) { res.skipped++; continue; }
       res.rels.push({ fromTable: table, fromColumn: name, toTable: toT, toColumn: get(c, 'tocolumn'), card,
         fromCard: parts[0] || '', toCard: parts[1] || '', both: /both/.test(fl), inactive: /inactive/.test(fl), flags });
+    } else if (kind === 'query') {
+      // Power Query code: a loaded table's query (table set), or a query that isn't loaded, a parameter or a function
+      res.has.queries = true;
+      const code = get(c, 'expression'); if (name && code.trim()) res.queries.push({ name, table, loaded: !!table, resultType: get(c, 'type'), code });
     } else if (kind === 'model') {
       res.has.model = true; res.model = { name, table, type: get(c, 'type'), discourage: /discourage-implicit/.test(fl), flags };
     }

@@ -609,6 +609,21 @@ function loadExample(){
   setExample(true);
 }
 // Drop every sample value except the one the person just typed into
+// the Query rows of the toolkit's model export (Kind, Table, Name, Type, Expression...), or null when it isn't one
+function sharedQueries(text){
+  const lines = (text || '').replace(/\r/g, '').split('\n'); let map = null; const out = [], seen = new Set();
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const c = line.split('\t');
+    if (!map) { const h = c.map(x => lc(mUnquoteCell(x.trim())).replace(/^.*\[|\]$/g, '')); if (h.includes('kind') && h.includes('table') && h.includes('expression')) { map = {}; h.forEach((k, j) => { map[k] = j; }); continue; } return null; }
+    const g = k => map[k] === undefined ? '' : mUnquoteCell((c[map[k]] || '').trim());
+    if (lc(g('kind')) !== 'query') continue;
+    const name = g('name'), code = g('expression').split(NL_MARK).join('\n'), table = g('table');
+    if (!name || !code.trim() || seen.has(lc(name))) continue; seen.add(lc(name));
+    out.push({ name, loaded: !!table, table, resultType: g('type') || (table ? 'Table' : ''), code, measuresTable: !!table && looksMeasuresTable(name, code) });
+  }
+  return map ? out : null;
+}
 function dropExample(keep){
   if (!state.example) return;
   const ex = { qInput: EX_QUERY, qName: EX_NAME }, v = keep ? SF_SUITE.ownText($(keep).value, ex[keep]) : '';
@@ -696,7 +711,27 @@ function init(){
   $('exAdd').addEventListener('change', addFollow);
 
   // whole model
-  $('mInput').addEventListener('input', () => { dropExample(); unblank(); $('mReplyMsg').innerHTML = ''; renderModel(); persist(); });
+  $('mInput').addEventListener('input', () => {
+    // the toolkit's model export (with its Power Query rows) reads as this page's own list of queries
+    const qs = sharedQueries($('mInput').value); if (qs && qs.length) $('mInput').value = queriesToExport(qs);
+    dropExample(); unblank(); $('mReplyMsg').innerHTML = ''; renderModel(); persist();
+  });
+  // the model saved on the home page (or read from a PBIP folder in any tool) carries every query: one click uses it
+  const savedQ = () => { const v = window.SF_SUITE && SF_SUITE.get ? SF_SUITE.get() : null; return v ? { v, qs: sharedQueries(v.text) || [] } : null; };
+  const renderSavedQ = () => {
+    const s = savedQ(), n = s ? s.qs.filter(q => !q.measuresTable).length : 0;
+    $('savedQBox').hidden = !n;
+    if (n) $('savedQNote').innerHTML = 'The model saved in the toolkit' + (s.v.name ? ' (<b>' + esc(s.v.name) + '</b>)' : '') + ' has ' + n + ' quer' + (n === 1 ? 'y' : 'ies') + ', so you don&rsquo;t need to export them again.';
+  };
+  $('useSavedQ').addEventListener('click', () => {
+    const s = savedQ(); if (!s || !s.qs.length) return;
+    dropExample(); unblank(); $('mInput').value = queriesToExport(s.qs);
+    if (!state.bTitle.trim() && s.v.name) { state.bTitle = s.v.name; $('bTitle').value = s.v.name; }
+    $('mReplyMsg').innerHTML = ''; $('bReplyMsg').innerHTML = '';
+    $('pbipMsg').innerHTML = msg('ok', 'Using the ' + s.qs.filter(q => !q.measuresTable).length + ' queries from your saved model.');
+    renderModel(); persist();
+  });
+  setTimeout(renderSavedQ, 0); window.addEventListener('storage', renderSavedQ); window.addEventListener('sfpbi-cleared', renderSavedQ);
   $('mBody').addEventListener('change', e => {
     const cb = e.target.closest('[data-act=pick]'); if (!cb) return;
     const i = state.m.items[+cb.closest('tr').dataset.k];

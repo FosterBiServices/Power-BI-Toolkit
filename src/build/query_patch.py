@@ -67,7 +67,66 @@ def once(s, old, new):
     return s.replace(old, new)
 
 
+QMARK = r"'VAR _mParts ="
+
+Q_LOOKUP = r"""'// Power Query: the query behind each loaded table (one per table) and what each other query returns',
+'VAR _mParts = SELECTCOLUMNS ( FILTER ( INFO.PARTITIONS (), [Type] = 4 ), "QTID", [TableID], "QCode", [QueryDefinition] )',
+'VAR _mTypes = SELECTCOLUMNS ( FILTER ( INFO.ANNOTATIONS (), [Name] = "PBI_ResultType" ), "AID", [ObjectID], "AValue", [Value] )',
+"""
+
+Q_TAIL = r"""'\t\t"ToTable", "",',
+'\t\t"ToColumn", "",',
+'\t\t"Summarize", "",',
+'\t\t"SortBy", "",',
+'\t\t"Hierarchies", "",',
+'\t\t"Storage", "",',
+'\t\t"Source", ""',
+'\t)',
+"""
+
+QUERIES = r"""'// Power Query code: loaded tables (Table = the table), then queries that aren\u2019t loaded, parameters and functions (Table empty)',
+'VAR _queries =',
+'\tSELECTCOLUMNS (',
+'\t\tFILTER ( _tableIds, VAR _qt = [TID] RETURN NOT ISEMPTY ( FILTER ( _mParts, [QTID] = _qt ) ) ),',
+'\t\t"Kind", "Query",',
+'\t\t"Table", [TName],',
+'\t\t"Name", [TName],',
+'\t\t"Type", "Table",',
+'\t\t"Folder", "",',
+'\t\t"Flags", "",',
+'\t\t"Description", "",',
+'\t\t"Expression", VAR _qt = [TID] RETURN """ + "' + CLEAN('MAXX ( FILTER ( _mParts, [QTID] = _qt ), [QCode] )', '    ') + '," + r"""',
+""" + Q_TAIL + r"""'VAR _mOther =',
+'\tSELECTCOLUMNS (',
+'\t\tFILTER ( INFO.EXPRESSIONS (), [Kind] = 0 ),',
+'\t\t"Kind", "Query",',
+'\t\t"Table", "",',
+'\t\t"Name", [Name],',
+'\t\t"Type", VAR _qe = [ID] RETURN CONCATENATEX ( FILTER ( _mTypes, [AID] = _qe ), [AValue], ", " ),',
+'\t\t"Folder", "",',
+'\t\t"Flags", "",',
+'\t\t"Description", "",',
+'\t\t"Expression", ' + CLEAN('[Expression]', '    ') + ',',
+""" + Q_TAIL
+
+
+def add_queries(s):
+    """Power Query code in the shared export (Kind "Query" rows), so Power Query Writer and Power Query
+    Explainer read each table's query, and the queries that aren't loaded, from the one export."""
+    if "'VAR _model =',"  not in s or QMARK in s:
+        return s
+    exp = "'VAR _expressions = SELECTCOLUMNS ( INFO.EXPRESSIONS (), \"EID\", [ID], \"EName\", [Name] )',\n"
+    s = once(s, exp, exp + Q_LOOKUP)
+    s = once(s, "'VAR _model =',", QUERIES + "'VAR _model =',")
+    s = once(s, "UNION ( _tables, _columns, _measures, _relationships, _model )", "UNION ( _tables, _columns, _measures, _relationships, _model, _queries, _mOther )")
+    return s
+
+
 def upgrade(s):
+    return add_queries(_upgrade(s))
+
+
+def _upgrade(s):
     if "'VAR _columns ='," not in s or MARK in s:
         return s
     exp = r"""'VAR _expressions = SELECTCOLUMNS ( INFO.EXPRESSIONS (), "EID", [ID], "EName", [Name] )',

@@ -203,7 +203,16 @@ Things to know:
 - The export query lives in the pages and is rewritten by `query_patch.py`. It returns
   Kind, Table, Name, Type, Folder, Flags, Description, Expression, ToTable, ToColumn,
   Summarize, SortBy, Hierarchies, Storage, Source, plus a `_model` row. Calculated tables'
-  DAX comes from `INFO.PARTITIONS()` (Type 2).
+  DAX comes from `INFO.PARTITIONS()` (Type 2). **Query rows** (`add_queries` in query_patch.py, Nov 2026): the Power Query
+  code of every loaded table (one M partition per table, Table = the table, hidden ones too) and every M expression
+  (queries that aren't loaded, parameters, functions: Table empty, Type = PBI_ResultType), the code in Expression.
+  `readModel` keeps them as `queries` (`has.queries`; an older export has none). A PBIP folder's export rows and TMDL
+  pasted as text carry them too. Power Query Writer and Power Query Explainer read them, so neither asks for queries again.
+- **The newest connection wins.** A page's connect choice is stamped (`<prefix>connectAt`); a model saved after it (on the
+  home page or in another tool) is used on the next visit even if the page chose No model, a PBIP folder or its own export.
+- **TMDL pasted as text** (home page or any model box): `S.looksTmdl`, `S.fromTmdl(text, savedText)`. A whole model (it has a
+  `model` object) replaces the saved export; a part (expressions.tmdl, one table's file) is added to it, replacing tables and
+  queries with the same names.
 
 ## Tools
 
@@ -223,7 +232,7 @@ Things to know:
 | model-documenter | kmdoc. | yes | no |
 | about-this-report | kab. | yes | optional |
 | power-query-writer | kpw. | optional, or a PBIP folder | yes |
-| power-query-explainer | kpq. | no (own export, or a PBIP folder) | yes |
+| power-query-explainer | kpq. | optional (its Query rows), own export, or a PBIP folder | yes |
 | date-table-generator | kdt. | optional | no |
 | kpi-visualizer | kkv. | optional, or a PBIP folder | no |
 | chart-patterns | kcp. | optional, or a PBIP folder | no |
@@ -265,6 +274,8 @@ through both.
   Documentation wrapper (fxTests.pq, 45 checks).
 
 - Prompt files in Copilot (attaching the downloaded prompt; Copilot's file reply).
+- The export's Query rows (`_queries`, `_mOther`, Nov 2026): run in DAX query view. Built from the pieces of Power Query
+  Explainer's export query, which did run in Desktop.
 - Prep for AI Writer's culture script: applying it in TMDL view (Preview should show only the culture), and whether Desktop keeps
   an entity the page added for a field it hadn't indexed yet.
 - Sample Data Maker's Make new data: `ref table _Measures` into a report that already has one. (Applying the script in TMDL
@@ -345,6 +356,12 @@ writes a merge line. The fx functions come as one TMDL view script (`PWF.tmdl`: 
 the code three tabs in, the leading comment lines as the `///` description); functions the PBIP folder already has are
 named and left out. Advanced Editor, one function at a time, is the other way. A new source's columns still have to be
 pasted (the model doesn't have them yet). Check: `pwmodeltest.js` (fixture `src/tests/pwpbip/`).
+With Query rows in the export (or a PBIP folder), the pick lists every table, hidden ones labelled "(hidden)", then queries that
+aren't loaded, "(query, not loaded)"; functions and parameters aren't listed but go to the prompt as FUNCTIONS and PARAMETERS
+THAT ALREADY EXIST (after any typed ones). A model arriving on an empty page starts Step 3 on "Build on an existing query".
+"Another query in this file" as a new query's source shows the same list (`#srcQuery`), filling Details and the columns.
+Power Query Explainer's Whole model offers **From your saved model** (`sharedQueries`), and a pasted model export with Query rows
+is read as its own list. Check: `pwsharedtest.js`.
 
 Power Query Writer reply checks (`src/parts/pw_lint.js`, `PWL.lint`, added to pw_core in build_pw.py): functions that don't
 exist (Table, List, Text, Record and Duration are listed in full; `ALIAS` maps names Copilot invents, such as Table.FilterRows,
