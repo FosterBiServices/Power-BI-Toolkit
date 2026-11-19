@@ -412,7 +412,12 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       </div>
 
       <h3 class="sub">The columns at the start <span class="muted">(strongly recommended)</span></h3>
-      <p class="note small">In the Power Query preview, select the table icon at the top left of the grid, then <b>Copy Entire Table</b>, and paste the header and a few rows. Or type the names, one per line. Copilot then uses your exact column names, and the reply is checked against them.</p>
+      <p class="note small">Connected to your model? Pick the table above and its columns fill in. Otherwise, in Power Query select the table icon at the top left of the preview grid, choose <b>Copy preview data</b> (or <b>Copy Entire Table</b> in older versions) and paste it here. Or type the names, one per line.</p>
+      <details class="extra"><summary>Names and types in one step <span class="muted">(when the copy doesn&rsquo;t paste well)</span></summary><div class="extra-body">
+        <p class="note small">In Power Query, select <b>fx</b> next to the formula bar to add a step, paste this, and select Enter. Right-click the text it shows, select <b>Copy</b>, paste it here, then delete the step. Change <code>PreviousStep</code> to the name of the step before it if Power Query doesn&rsquo;t fill it in.</p>
+        <div class="codebox"><div class="codebox-bar"><span class="t">Step: column names and types</span><span class="r"><button class="btn" type="button" data-copy="colstep">Copy</button></span></div><pre class="short" id="colStepView"></pre></div>
+      </div></details>
+      <p class="note small">Copilot then uses your exact column names, and the reply is checked against them.</p>
       <textarea id="columns" class="short" spellcheck="false" aria-label="Columns" placeholder="Paste the header row and a few rows, or one column name per line"></textarea>
       <div class="chips" id="colChips"></div>
       <div id="typeMapBox" hidden>
@@ -3011,7 +3016,11 @@ const PW = (() => {
   function parseColumns(text){
     const lines = (text || '').replace(/\r/g, '').split('\n').filter(l => l.trim());
     if (!lines.length) return [];
-    const cells = l => l.split('\t').map(c => c.trim().replace(/^"(.*)"$/, '$1'));
+    // tabs (Copy Entire Table, Excel), or else commas or semicolons (CSV, Copy preview data), with "quoted" cells
+    const sep = /\t/.test(lines[0]) ? '\t' : lines.length > 1 && [',', ';'].find(d => lines[0].split(d).length > 1 && lines.slice(1, 6).every(l => splitQ(l, d).length === splitQ(lines[0], d).length)) || '\t';
+    let cells = l => splitQ(l, sep).map(c => c.trim().replace(/^"(.*)"$/s, '$1').replace(/""/g, '"'));
+    // a row-number column first (blank header, then 1, 2, 3...) is left out
+    if (lines.length > 1 && cells(lines[0])[0] === '' && cells(lines[0]).length > 1 && lines.slice(1, 6).every((l, i) => cells(l)[0] === String(i + 1))) { const c0 = cells; cells = l => c0(l).slice(1); }
     const head = cells(lines[0]);
     // Table.Schema output: Name, Position, TypeName, Kind…
     const lh = head.map(h => h.toLowerCase());
@@ -3024,7 +3033,15 @@ const PW = (() => {
       return head.map((h, i) => ({ name: h, type: guessType(rows.map(r => r[i]).filter(v => v != null && v !== '' && !/^null$/i.test(v))) })).filter(c => c.name);
     }
     // one name per line, optionally "Name: type" or "Name (type)"
-    return lines.map(l => { const m = l.trim().match(/^(.+?)\s*(?:[:|]\s*|\()\s*(text|number|whole number|decimal|date|datetime|datetimezone|time|logical|true\/false|currency|duration)\)?\s*$/i); return m ? { name: m[1].trim(), type: m[2].toLowerCase() } : { name: l.trim().replace(/^[-*•]\s*/, ''), type: '' }; }).filter(c => c.name);
+    // ("Name: any" from Table.Schema's Kind keeps the name and no type)
+    return lines.map(l => { const m = l.trim().match(/^(.+?)\s*(?:[:|]\s*|\()\s*(text|number|whole number|decimal|date|datetime|datetimezone|time|logical|true\/false|currency|duration|any|null|binary|list|record|table|function)\)?\s*$/i); return m ? { name: m[1].trim(), type: /^(any|null|binary|list|record|table|function)$/i.test(m[2]) ? '' : m[2].toLowerCase() } : { name: l.trim().replace(/^[-*•]\s*/, ''), type: '' }; }).filter(c => c.name);
+  }
+  // split on a separator outside "quotes"
+  function splitQ(l, d){
+    if (d === '\t' || l.indexOf('"') < 0) return l.split(d);
+    const out = []; let cur = '', q = false;
+    for (let i = 0; i < l.length; i++) { const ch = l[i]; if (ch === '"') { q = !q; cur += ch; } else if (ch === d && !q) { out.push(cur); cur = ''; } else cur += ch; }
+    out.push(cur); return out;
   }
   function guessType(vals){
     if (!vals.length) return '';
@@ -3535,6 +3552,8 @@ function copyText(text, btn){
   try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
 }
 
+// a step that turns the table into "Name: type" lines, one per column, for the Columns box
+const COL_STEP = '= Text.Combine(List.Transform(Table.ToRecords(Table.Schema(PreviousStep)), each [Name] & ": " & [Kind]), "#(lf)")';
 const FIELDS = ['goal', 'sourceDetail', 'existing', 'columns', 'merges', 'params', 'culture', 'myFns', 'pwReply', 'pwError'];
 const blank = () => ({ pick: '', goal: '', start: 'new', source: 'sql', sourceDetail: '', existing: '', columns: '', merges: '', params: '', culture: '', makeParams: true, typeMap: true, typeHow: 'fx', fx: PWF.blankOpts(), haveFx: false, myFns: '', pwReply: '', pwError: '' });
 const state = { example: false, v: blank(), prompt: '', reply: null };
@@ -3800,6 +3819,7 @@ function init(){
     persist();
   }));
   $('exportView').textContent = BC.DAX_QUERY;
+  $('colStepView').textContent = COL_STEP;
   try { state.mq = JSON.parse(store.get('mq') || 'null'); if (!state.mq || !Array.isArray(state.mq.queries)) state.mq = null; } catch (e) { state.mq = null; }
   $('modelInput').addEventListener('input', () => loadModel());
   document.addEventListener('sf-pbip-folder', e => loadFolderQueries(e.detail.root, e.detail.list).catch(() => {}));
@@ -3842,6 +3862,7 @@ function init(){
     else if (b.dataset.copy === 'query' && state.reply) copyText(state.reply.code, b);
     else if (b.dataset.copy === 'fix' && state.fix) copyText(state.fix, b);
     else if (b.dataset.copy === 'typemap') copyText($('typeMapCode').textContent, b);
+    else if (b.dataset.copy === 'colstep') copyText(COL_STEP, b);
     else if (b.dataset.copy === 'steps' && state.fxCode) copyText(state.fxCode, b);
     else if (b.dataset.copy === 'fxtmdl' && state.fxTmdl) copyText(state.fxTmdl, b);
     else if (b.dataset.copy === 'export') copyText(BC.DAX_QUERY, b);

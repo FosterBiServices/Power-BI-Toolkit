@@ -21,7 +21,11 @@ const PW = (() => {
   function parseColumns(text){
     const lines = (text || '').replace(/\r/g, '').split('\n').filter(l => l.trim());
     if (!lines.length) return [];
-    const cells = l => l.split('\t').map(c => c.trim().replace(/^"(.*)"$/, '$1'));
+    // tabs (Copy Entire Table, Excel), or else commas or semicolons (CSV, Copy preview data), with "quoted" cells
+    const sep = /\t/.test(lines[0]) ? '\t' : lines.length > 1 && [',', ';'].find(d => lines[0].split(d).length > 1 && lines.slice(1, 6).every(l => splitQ(l, d).length === splitQ(lines[0], d).length)) || '\t';
+    let cells = l => splitQ(l, sep).map(c => c.trim().replace(/^"(.*)"$/s, '$1').replace(/""/g, '"'));
+    // a row-number column first (blank header, then 1, 2, 3...) is left out
+    if (lines.length > 1 && cells(lines[0])[0] === '' && cells(lines[0]).length > 1 && lines.slice(1, 6).every((l, i) => cells(l)[0] === String(i + 1))) { const c0 = cells; cells = l => c0(l).slice(1); }
     const head = cells(lines[0]);
     // Table.Schema output: Name, Position, TypeName, Kind…
     const lh = head.map(h => h.toLowerCase());
@@ -34,7 +38,15 @@ const PW = (() => {
       return head.map((h, i) => ({ name: h, type: guessType(rows.map(r => r[i]).filter(v => v != null && v !== '' && !/^null$/i.test(v))) })).filter(c => c.name);
     }
     // one name per line, optionally "Name: type" or "Name (type)"
-    return lines.map(l => { const m = l.trim().match(/^(.+?)\s*(?:[:|]\s*|\()\s*(text|number|whole number|decimal|date|datetime|datetimezone|time|logical|true\/false|currency|duration)\)?\s*$/i); return m ? { name: m[1].trim(), type: m[2].toLowerCase() } : { name: l.trim().replace(/^[-*•]\s*/, ''), type: '' }; }).filter(c => c.name);
+    // ("Name: any" from Table.Schema's Kind keeps the name and no type)
+    return lines.map(l => { const m = l.trim().match(/^(.+?)\s*(?:[:|]\s*|\()\s*(text|number|whole number|decimal|date|datetime|datetimezone|time|logical|true\/false|currency|duration|any|null|binary|list|record|table|function)\)?\s*$/i); return m ? { name: m[1].trim(), type: /^(any|null|binary|list|record|table|function)$/i.test(m[2]) ? '' : m[2].toLowerCase() } : { name: l.trim().replace(/^[-*•]\s*/, ''), type: '' }; }).filter(c => c.name);
+  }
+  // split on a separator outside "quotes"
+  function splitQ(l, d){
+    if (d === '\t' || l.indexOf('"') < 0) return l.split(d);
+    const out = []; let cur = '', q = false;
+    for (let i = 0; i < l.length; i++) { const ch = l[i]; if (ch === '"') { q = !q; cur += ch; } else if (ch === d && !q) { out.push(cur); cur = ''; } else cur += ch; }
+    out.push(cur); return out;
   }
   function guessType(vals){
     if (!vals.length) return '';

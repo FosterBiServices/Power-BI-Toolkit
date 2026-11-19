@@ -274,6 +274,10 @@ through both.
   Documentation wrapper (fxTests.pq, 45 checks).
 
 - Prompt files in Copilot (attaching the downloaded prompt; Copilot's file reply).
+- Power Query Writer's Columns box: what Power Query's newer **Copy preview data** pastes (it replaced Copy Entire Table; the
+  owner said it doesn't paste as expected). `PW.parseColumns` now also takes commas or semicolons with quoted cells and drops
+  a leading row-number column (`pwcolstest.js`), and the page offers a names-and-types step (`COL_STEP`, Table.Schema Kind
+  as "Name: type" lines) to paste instead. Neither checked in Desktop.
 - The export's Query rows (`_queries`, `_mOther`, Nov 2026): run in DAX query view. Built from the pieces of Power Query
   Explainer's export query, which did run in Desktop.
 - Prep for AI Writer's culture script: applying it in TMDL view (Preview should show only the culture), and whether Desktop keeps

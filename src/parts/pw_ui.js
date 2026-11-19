@@ -26,6 +26,8 @@ function copyText(text, btn){
   try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
 }
 
+// a step that turns the table into "Name: type" lines, one per column, for the Columns box
+const COL_STEP = '= Text.Combine(List.Transform(Table.ToRecords(Table.Schema(PreviousStep)), each [Name] & ": " & [Kind]), "#(lf)")';
 const FIELDS = ['goal', 'sourceDetail', 'existing', 'columns', 'merges', 'params', 'culture', 'myFns', 'pwReply', 'pwError'];
 const blank = () => ({ pick: '', goal: '', start: 'new', source: 'sql', sourceDetail: '', existing: '', columns: '', merges: '', params: '', culture: '', makeParams: true, typeMap: true, typeHow: 'fx', fx: PWF.blankOpts(), haveFx: false, myFns: '', pwReply: '', pwError: '' });
 const state = { example: false, v: blank(), prompt: '', reply: null };
@@ -291,6 +293,7 @@ function init(){
     persist();
   }));
   $('exportView').textContent = BC.DAX_QUERY;
+  $('colStepView').textContent = COL_STEP;
   try { state.mq = JSON.parse(store.get('mq') || 'null'); if (!state.mq || !Array.isArray(state.mq.queries)) state.mq = null; } catch (e) { state.mq = null; }
   $('modelInput').addEventListener('input', () => loadModel());
   document.addEventListener('sf-pbip-folder', e => loadFolderQueries(e.detail.root, e.detail.list).catch(() => {}));
@@ -333,6 +336,7 @@ function init(){
     else if (b.dataset.copy === 'query' && state.reply) copyText(state.reply.code, b);
     else if (b.dataset.copy === 'fix' && state.fix) copyText(state.fix, b);
     else if (b.dataset.copy === 'typemap') copyText($('typeMapCode').textContent, b);
+    else if (b.dataset.copy === 'colstep') copyText(COL_STEP, b);
     else if (b.dataset.copy === 'steps' && state.fxCode) copyText(state.fxCode, b);
     else if (b.dataset.copy === 'fxtmdl' && state.fxTmdl) copyText(state.fxTmdl, b);
     else if (b.dataset.copy === 'export') copyText(BC.DAX_QUERY, b);
