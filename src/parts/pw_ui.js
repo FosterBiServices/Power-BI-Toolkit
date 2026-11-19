@@ -33,8 +33,14 @@ const state = { example: false, v: blank(), prompt: '', reply: null };
 function inputs(){
   const v = state.v, ex = v.start === 'existing' && v.existing.trim() ? parseM(v.existing) : null;
   return { goal: v.goal, start: v.start, source: v.source, sourceDetail: v.sourceDetail, existing: v.existing, existingDb: ex && !ex.error && sourceInfo(ex).kind === 'database',
-    columns: v.columns, merges: v.merges, params: v.params, culture: v.culture, makeParams: v.makeParams, typeMap: v.typeMap !== false,
-    typeHow: v.typeHow === 'steps' ? 'steps' : 'fx', fx: v.fx, haveFx: !!v.haveFx, myFns: v.myFns };
+    columns: v.columns, merges: v.merges, params: withModel(v.params, modelParams()), culture: v.culture, makeParams: v.makeParams, typeMap: v.typeMap !== false,
+    typeHow: v.typeHow === 'steps' ? 'steps' : 'fx', fx: v.fx, haveFx: !!v.haveFx, myFns: withModel(v.myFns, modelFnLines()) };
+}
+// the model's parameters and functions go to Copilot as ones that already exist, after the ones typed (a typed line wins)
+function withModel(typed, lines){
+  const have = new Set((typed || '').split('\n').map(l => l.split(/[=(:]/)[0].trim().toLowerCase()).filter(Boolean));
+  const add = lines.filter(l => !have.has(l.split(/[=(:]/)[0].trim().toLowerCase()));
+  return [(typed || '').trim()].concat(add).filter(Boolean).join('\n');
 }
 function toForm(){
   const v = state.v;
@@ -48,13 +54,28 @@ function toForm(){
 // The model export (or a PBIP folder read as one) gives the tables and their columns; a PBIP folder also gives each
 // table's Power Query code and the queries that are functions (state.mq, saved per model name).
 state.model = null; state.mq = null;
+// Every table to build on, hidden ones too, then the queries that aren't loaded (staging queries), labelled.
+// Functions and parameters are left out: they're listed for Copilot as functions that already exist.
 function modelTables(){
   const m = state.model; if (!m || m.error) return [];
   const cols = t => m.columns.filter(c => c.table === t.name && !c.expression);
   // leave out calculated tables and measures tables (measures, and at most one column, hidden or named for measures)
-  const measuresTable = t => m.measures.some(x => x.table === t.name) && cols(t).length <= 1 && (cols(t).every(c => c.hidden) || /measure/i.test(t.name));
-  return m.tables.filter(t => !t.calc && !measuresTable(t) && (cols(t).length || mqFor(t.name))).map(t => ({ name: t.name, cols: cols(t) }));
+  const measuresTable = t => m.measures.some(x => x.table === t.name) && cols(t).length <= 1 && (cols(t).every(c => c.hidden) || /measure/i.test(t.name)) && !(mqFor(t.name) && !looksMeasuresTable(t.name, mqFor(t.name)));
+  const allHidden = t => t.hidden || (cols(t).length > 0 && cols(t).every(c => c.hidden));
+  const out = m.tables.filter(t => !t.calc && !measuresTable(t) && (cols(t).length || mqFor(t.name))).map(t => ({ name: t.name, cols: cols(t), hidden: allHidden(t), loaded: true }));
+  const seen = new Set(out.map(t => t.name.toLowerCase()));
+  modelQueries().filter(q => !q.loaded && !isFnOrParam(q) && !seen.has(q.name.toLowerCase())).forEach(q => { seen.add(q.name.toLowerCase()); out.push({ name: q.name, cols: [], hidden: false, loaded: false }); });
+  return out;
 }
+const tableLabel = t => t.name + (!t.loaded ? ' (query, not loaded)' : t.hidden ? ' (hidden)' : '');
+// the Power Query code that came with the model: a PBIP folder's (state.mq) first, then the export's Query rows
+function modelQueries(){
+  const a = state.mq ? state.mq.queries : [], b = state.model && !state.model.error ? state.model.queries || [] : [];
+  const seen = new Set(a.map(q => q.name.toLowerCase()));
+  return a.concat(b.filter(q => !seen.has(q.name.toLowerCase())));
+}
+const isFn = q => /function/i.test(q.resultType || '') || /^\s*\([^)]*\)\s*(as\s+[\w.]+\s*)?=>/.test(q.code.replace(/^(\s*\/\/[^\n]*\n)+/, ''));
+const isFnOrParam = q => isFn(q) || /IsParameterQuery\s*=\s*true/i.test(q.code);
 // the model's data types in the words the column list reads (a DateTime column named like a date is a date)
 function colType(c){
   const t = (c.dataType || '').toLowerCase();
@@ -65,21 +86,44 @@ function colType(c){
   return 'text';
 }
 function colLines(t){ return t.cols.map(c => c.name + ': ' + colType(c)).join('\n'); }
-function mqFor(name){ const q = state.mq && state.mq.queries.find(x => x.table === name || x.name === name); return q ? q.code : ''; }
-function modelFns(){ return state.mq ? state.mq.queries.filter(q => !q.loaded && (/function/i.test(q.resultType || '') || /^\s*\([^)]*\)\s*(as\s+[\w.]+\s*)?=>/.test(q.code.replace(/^(\s*\/\/[^\n]*\n)+/, '')))).map(q => q.name) : []; }
+function mqFor(name){ const q = modelQueries().find(x => x.table === name || x.name === name); return q ? q.code : ''; }
+function modelFns(){ return modelQueries().filter(q => !q.loaded && isFn(q)).map(q => q.name); }
+const bodyOf = q => q.code.replace(/^(\s*\/\/[^\n]*\n)+/, '').trim();
+function modelFnLines(){
+  return modelQueries().filter(q => !q.loaded && isFn(q) && !PWF.BY.has(q.name)).map(q => {
+    const a = /^\(([^)]*)\)/.exec(bodyOf(q)), args = a ? a[1].split(',').map(x => x.trim().replace(/^optional\s+/i, '').split(/\s+as\s+/i)[0].trim()).filter(Boolean) : [];
+    return q.name + '(' + args.join(', ') + ')';
+  });
+}
+function modelParams(){
+  return modelQueries().filter(q => !q.loaded && /IsParameterQuery\s*=\s*true/i.test(q.code)).map(q => { const v = bodyOf(q).split(/\s+meta\s*\[/i)[0].trim(); return q.name + (v && v.length < 120 ? ' = ' + v : ''); });
+}
 function renderModel(){
   const ts = modelTables(), m = state.model;
   $('modelMsg').innerHTML = m && m.error ? '<div class="msg err">' + esc(m.error) + '</div>' : '';
   $('pickBox').hidden = !ts.length;
   $('mergePickBox').hidden = !ts.length;
-  const opts = '<option value="">Choose a table</option>' + ts.map(t => '<option' + (t.name === state.v.pick ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('');
+  const opts = '<option value="">Choose a table or query</option>' + ts.map(t => '<option value="' + esc(t.name) + '"' + (t.name === state.v.pick ? ' selected' : '') + '>' + esc(tableLabel(t)) + '</option>').join('');
   $('pickTable').innerHTML = opts;
-  $('mergePick').innerHTML = '<option value="">Choose a table to add</option>' + ts.map(t => '<option>' + esc(t.name) + '</option>').join('');
+  $('srcQuery').innerHTML = '<option value="">Choose a query</option>' + ts.map(t => '<option value="' + esc(t.name) + '"' + (t.name === state.v.sourceDetail.trim() ? ' selected' : '') + '>' + esc(tableLabel(t)) + '</option>').join('');
+  $('srcQueryBox').hidden = !ts.length || state.v.source !== 'query';
+  $('mergePick').innerHTML = '<option value="">Choose a table to add</option>' + ts.map(t => '<option value="' + esc(t.name) + '">' + esc(tableLabel(t)) + '</option>').join('');
   const pick = ts.find(t => t.name === state.v.pick);
+  const nCols = n => n + ' column' + (n === 1 ? '' : 's');
+  const oldExport = m && !m.error && !m.has.queries && !state.mq;
   $('pickMsg').innerHTML = !pick ? '' : mqFor(pick.name)
-    ? '<div class="msg ok">&#10003; Its query' + (pick.cols.length ? ' and ' + pick.cols.length + ' column' + (pick.cols.length === 1 ? '' : 's') : '') + ' came from your model.</div>'
-    : '<div class="msg info">Its ' + pick.cols.length + ' column' + (pick.cols.length === 1 ? '' : 's') + ' came from your model. The model export doesn&rsquo;t include the queries, so paste this one from the Advanced Editor below, or connect the PBIP folder in Step 1 and it&rsquo;s filled in.</div>';
+    ? '<div class="msg ok">&#10003; Its query' + (pick.cols.length ? ' and ' + nCols(pick.cols.length) : '') + ' came from your model.' + (pick.loaded ? '' : ' It isn&rsquo;t loaded, so the model doesn&rsquo;t know its columns: paste a few rows below if you need them.') + '</div>'
+    : '<div class="msg info">Its ' + nCols(pick.cols.length) + ' came from your model. ' + (oldExport
+      ? 'Your saved model export is from before the export included Power Query. Run the export query in Step 1 again and every table&rsquo;s query comes with it, or paste this one from the Advanced Editor below.'
+      : 'Your model has no Power Query code for this table (it may come from another model or a calculated table), so paste its query from the Advanced Editor below.') + '</div>';
   $('existing').placeholder = ts.length ? 'Pick a table above, or paste the query from the Advanced Editor (Home > Advanced Editor), starting with let' : 'Paste the query from the Advanced Editor (Home > Advanced Editor), starting with let';
+}
+function pickSource(name){
+  const t = modelTables().find(x => x.name === name); if (!t) return;
+  leaveExample();
+  state.v.sourceDetail = t.name;
+  if (t.cols.length) state.v.columns = colLines(t);
+  toForm(); renderAll(); persist();
 }
 function pickTable(name){
   const t = modelTables().find(x => x.name === name);
@@ -95,6 +139,8 @@ const modelSig = t => (t || '').length + ':' + (t || '').slice(0, 300);
 function loadModel(first){
   const text = $('modelInput').value;
   state.model = text.trim() ? BC.parseModel(text) : null;
+  const v = state.v, fresh = !state.example && !v.goal.trim() && !v.sourceDetail.trim() && !v.existing.trim() && !v.columns.trim() && !v.pick;
+  if (fresh && v.start === 'new' && !first && modelTables().length) { v.start = 'existing'; toForm(); renderStart(); persist(); }
   // the queries read from a folder belong to the model read with them
   if (state.mq && !first && state.mq.sig !== modelSig(text)) { state.mq = null; store.set('mq', ''); }
   renderModel(); renderFx();
@@ -113,6 +159,7 @@ async function loadFolderQueries(root, list){
 function renderStart(){
   const v = state.v, src = PW.SOURCES.find(s => s[0] === v.source);
   $('newBox').hidden = v.start !== 'new'; $('existingBox').hidden = v.start !== 'existing';
+  $('srcQueryBox').hidden = v.source !== 'query' || !modelTables().length;
   $('sourceDetail').placeholder = src ? src[2] : '';
   if (v.start === 'existing' && v.existing.trim()) {
     const q = parseM(v.existing);
@@ -248,6 +295,7 @@ function init(){
   $('modelInput').addEventListener('input', () => loadModel());
   document.addEventListener('sf-pbip-folder', e => loadFolderQueries(e.detail.root, e.detail.list).catch(() => {}));
   $('pickTable').addEventListener('change', () => pickTable($('pickTable').value));
+  $('srcQuery').addEventListener('change', () => pickSource($('srcQuery').value));
   $('mergePick').addEventListener('change', () => {
     const t = modelTables().find(x => x.name === $('mergePick').value); $('mergePick').value = ''; if (!t) return;
     leaveExample();

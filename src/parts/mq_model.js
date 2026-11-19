@@ -60,7 +60,7 @@ function parseMExport(text){
   }
   if (h < 0) {
     res.error = /\bkind\b.*\btable\b.*\bname\b/i.test(lines[0] || '')
-      ? 'This looks like the model export from the other toolkit pages. Run the query from Step 1 on this page instead; it returns the Power Query code.'
+      ? 'This is the toolkit’s model export from before it included Power Query. Run the export query on the home page again (it now brings every query), or run the query from Step 1 on this page.'
       : 'The header row (Kind, Name, Code) wasn’t found. Use the Copy button above the results grid so the column names come along.';
     return res;
   }

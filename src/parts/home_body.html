@@ -36,7 +36,7 @@
         <div class="step-body">
           <div class="step-head">
             <h2 id="h2s">Paste it once</h2>
-            <p>It&rsquo;s saved in this browser and shared by every tool on this site. Paste a new export whenever the model changes.</p>
+            <p>It&rsquo;s saved in this browser and shared by every tool on this site. Paste a new export whenever the model changes. You can also paste TMDL from <b>TMDL view</b>: the whole model, or a part such as <b>expressions.tmdl</b> to add queries that aren&rsquo;t loaded.</p>
           </div>
           <div class="field"><label for="modelName">Model name <span class="muted">(optional, shown in each tool)</span></label><input type="text" id="modelName" placeholder="Sales model" autocomplete="off"></div>
           <textarea id="exportInput" class="big" spellcheck="false" aria-label="Model export" placeholder="Paste the results here (tab-separated, with headers)"></textarea>
@@ -44,6 +44,7 @@
           <div class="saved" id="saved" hidden>
             <div class="saved-head"><span class="saved-title">&#10003; Saved model export</span><span id="savedWhen" class="muted"></span></div>
             <div class="stats" id="savedStats"></div>
+            <p class="note small" id="savedOld" hidden>This export is from before it included Power Query code. Run the query again to bring every table&rsquo;s query, so Power Query Writer and Power Query Explainer don&rsquo;t ask for them.</p>
             <p class="note small" id="savedHist" hidden></p>
             <div class="reply-actions"><button type="button" class="btn" id="clearSaved">Remove the saved export</button></div>
           </div>

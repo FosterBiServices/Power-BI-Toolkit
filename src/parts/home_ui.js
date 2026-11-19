@@ -47,7 +47,8 @@ function renderSaved(){
   $('connectSub').textContent = m.tables.length + ' tables, ' + m.measures.length + ' measures, ' + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + new Date(v.savedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) + '. Every tool marked Uses your model reads it. Open to replace or remove it.';
   const d = new Date(v.savedAt);
   $('savedWhen').textContent = (v.name ? v.name + ' · ' : '') + (v.source === 'pbip' ? 'read from its PBIP folder ' : 'saved ') + d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
-  $('savedStats').innerHTML = '<span class="stat"><b>' + m.tables.length + '</b> tables</span><span class="stat"><b>' + m.columns.length + '</b> columns</span><span class="stat"><b>' + m.measures.length + '</b> measures</span><span class="stat"><b>' + m.rels.length + '</b> relationships</span>' + (m.composite ? '<span class="stat remote">Composite model</span>' : '');
+  $('savedStats').innerHTML = '<span class="stat"><b>' + m.tables.length + '</b> tables</span><span class="stat"><b>' + m.columns.length + '</b> columns</span><span class="stat"><b>' + m.measures.length + '</b> measures</span><span class="stat"><b>' + m.rels.length + '</b> relationships</span>' + (m.has.queries ? '<span class="stat"><b>' + m.queries.length + '</b> Power Query queries</span>' : '') + (m.composite ? '<span class="stat remote">Composite model</span>' : '');
+  $('savedOld').hidden = !!(m.has.queries || v.source === 'pbip');
   if (!$('modelName').value) $('modelName').value = v.name || '';
   const h = SF_SUITE.history ? SF_SUITE.history().length : 0;
   $('savedHist').hidden = !h;
@@ -61,13 +62,19 @@ function renderTools(){
   $('tools').innerHTML = SF_SUITE.GROUPS.map((g, i) => '<section class="tools-sec" aria-labelledby="grp' + i + '"><h2 id="grp' + i + '">' + esc(g[0]) + '</h2><div class="tools">' + g[1].map(x => byFile(x[0])).filter(Boolean).map(card).join('') + '</div></section>').join('');
 }
 function save(){
-  const text = $('exportInput').value;
+  let text = $('exportInput').value, note = '';
   if (!text.trim()) return;
+  // TMDL from TMDL view: a whole model, or a part of one (expressions.tmdl, a table) added to the saved model
+  if (SF_SUITE.looksTmdl(text)) {
+    const cur = SF_SUITE.get(), r = SF_SUITE.fromTmdl(text, cur ? cur.text : '');
+    if (r.error) { $('saveMsg').innerHTML = msg('err', esc(r.error)); return; }
+    text = r.text; note = SF_SUITE.tmdlNote(r) + ' ';
+  }
   const m = parseModel(text);
   if (m.error) { $('saveMsg').innerHTML = msg('err', esc(m.error)); return; }
   if (!SF_SUITE.set(text, $('modelName').value.trim())) { $('saveMsg').innerHTML = msg('err', 'This export is too large to save in the browser (the limit is about 5 MB). The tools still work if you paste it into each one.'); return; }
   $('exportInput').value = '';
-  $('saveMsg').innerHTML = msg('ok', 'Saved. Open any tool below and it&rsquo;s already loaded.');
+  $('saveMsg').innerHTML = msg('ok', esc(note) + 'Saved. Open any tool below and it&rsquo;s already loaded.');
   renderSaved();
 }
 function init(){
