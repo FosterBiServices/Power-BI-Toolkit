@@ -400,6 +400,12 @@ drawn on the background by default (`header.logo.inBg`), and Step 4 says when th
 put an Image visual. Visuals can be renamed in Step 4's positions table (`renameItem`, by layout id: g2, g2.1, t0, s1,
 h0, l3, title). Check: `lofixtest.js`.
 
+Model Documenter's checks (Model Validation): an inactive relationship is Info, a both-directions one is Error (the owner's
+choice). Measure Lineage's unresolved references follow `checkMeasure`: a bare [Name] resolves to any measure or column in the
+whole model (row context), a name the expression makes ("Total" in ADDCOLUMNS) or [Value]; only a name that matches nothing is
+unresolved, and that is also an Error under DAX Errors. The document puts Relationships and the Relationship Matrix right after
+the diagram. Check: `mdsevtest.js`.
+
 Model Linter skips measures that return text (labels, SVG images, HTML) in the format string check: the export flags
 them, a PBIP folder's Image URL and Web URL measures are flagged by suite.js, and `ML.returnsText` reads the expression
 for the rest. A date column on the one side of a relationship (Date[Date]) isn't a visible key; on the many side it's info.

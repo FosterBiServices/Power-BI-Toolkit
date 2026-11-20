@@ -1,0 +1,38 @@
+// Model Documenter: severities (inactive = Info, both directions = Error), unresolved references
+// (row-context columns, names an expression makes and [Value] resolve; a name that matches nothing is an Error),
+// and Relationships + Relationship Matrix right under the diagram.
+const { chromium } = require('playwright');
+(async () => {
+  const b = await chromium.launch(), p = await b.newPage(), errs = [];
+  p.on('pageerror', e => errs.push(e.message));
+  await p.goto('http://localhost:8765/model-documenter.html'); await p.waitForTimeout(300);
+  const r = await p.evaluate(() => {
+    const files = new Map(Object.entries(EX_FILES));
+    const k = [...files.keys()].find(f => /tables\/Sales\.tmdl$/.test(f));
+    files.set(k, files.get(k).replace('\tpartition Sales', [
+      '\tmeasure RowCtx = SUMX(Sales, [Quantity] * [Net Amount])',
+      '\tmeasure Made = SUMX(ADDCOLUMNS(VALUES(Sales[CustomerKey]), "CustTotal", [RowCtx]), [CustTotal])',
+      '\tmeasure Vals = MAXX({1,2}, [Value])',
+      '\tmeasure Broken = [No Such Measure] + 1',
+      '', '\tpartition Sales'].join('\n')));
+    const root = EX_ROOT, proj = MD.listProjects(files, root)[0];
+    const project = MD.loadModel(files, proj);
+    const html = MD.generateHtml(project, { profile: 'Developer Documentation', include_measures_tables: true, include_dax: true }, { date: '2026-01-01' });
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const rows = [...doc.querySelectorAll('#validation-table tbody tr')].map(tr => [...tr.cells].map(c => c.textContent));
+    const ids = [...doc.querySelectorAll('h2[id]')].map(h => h.id);
+    const unres = [...doc.querySelectorAll('.stat')].find(s => /Unresolved/.test(s.textContent)).querySelector('b').textContent;
+    return {
+      inactive: rows.filter(r => /inactive\./.test(r[3]) && /Relationship is inactive/.test(r[3])).map(r => r[0]),
+      both: rows.filter(r => /bidirectional/.test(r[3])).map(r => r[0]),
+      daxErr: rows.filter(r => r[1] === 'DAX Errors').map(r => r[0] + ' ' + r[2] + ': ' + r[3]),
+      unres, order: ids.slice(0, 5)
+    };
+  });
+  console.log('inactive', r.inactive, '(expect Info)');
+  console.log('both directions', r.both, '(expect Error)');
+  console.log('DAX errors', r.daxErr, '(expect only Sales[Broken])');
+  console.log('unresolved references', r.unres, '(expect 1)');
+  console.log('section order', r.order.join(' > '), '(expect overview > diagram > relationships > relationship-matrix > tables)');
+  console.log('errors', errs); await b.close();
+})();

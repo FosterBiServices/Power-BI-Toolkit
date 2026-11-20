@@ -2158,8 +2158,15 @@ var MD = (function () {
       nodes.set(key, { key, table: t.name, name: m.name, expression: m.expression || '', deps: new Set(), cols: new Set(), usedBy: new Set(), visuals: new Set(), unresolved: new Set() });
       const k = cf(m.name); if (!nameIndex.has(k)) nameIndex.set(k, []); nameIndex.get(k).push(key);
     }
+    // A bare [Name] is resolved the way checkMeasure reads it: any measure or column in the whole model (row context
+    // reads a column without its table), a name the expression makes itself ("Total" in ADDCOLUMNS), or [Value].
+    // So only a name that matches nothing is unresolved, and checkMeasure lists the same names as errors.
+    const all = [...project.tables.values()];
+    const modelMeasures = new Set(all.flatMap(t => t.measures.map(m => cf(m.name))));
+    const modelColumns = new Set(all.flatMap(t => t.columns.map(c => cf(c.name))));
+    const madeHere = expr => { try { return new Set(tokenize(expr).filter(t => t.kind === 'string').map(t => cf(t.text))); } catch (e) { return new Set(); } };
     for (const n of nodes.values()) {
-      const colNames = new Set();
+      const colNames = new Set(), local = madeHere(n.expression);
       // references read by the toolkit's shared scanner (daxRefs in builder_core): strings and comments are skipped
       const refs = daxRefs(n.expression);
       for (const r of refs) if (r.table) { const tn = r.table.trim(), cn = r.col.trim(); n.cols.add(tn + '[' + cn + ']'); colNames.add(cf(cn)); }
@@ -2168,7 +2175,7 @@ var MD = (function () {
         const cand = r.col.trim(); if (colNames.has(cf(cand))) continue;
         const hits = nameIndex.get(cf(cand)) || [];
         if (hits.length === 1 && hits[0] !== n.key) n.deps.add(hits[0]);
-        else if (hits.length !== 1) n.unresolved.add(cand);
+        else if (!hits.length && !modelMeasures.has(cf(cand)) && !modelColumns.has(cf(cand)) && !local.has(cf(cand)) && !/^value\d*$/.test(cf(cand))) n.unresolved.add(cand);
       }
     }
     for (const n of nodes.values()) for (const d of n.deps) if (nodes.has(d)) nodes.get(d).usedBy.add(n.key);
@@ -2212,7 +2219,7 @@ var MD = (function () {
     const cyc = cycles.length ? '<h3>Dependency Cycles</h3><ul>' + cycles.map(c => '<li>' + esc(c.join(' -> ')) + '</li>').join('') + '</ul>' : '';
     let unused = '<h3>Potentially Unused Measures</h3>';
     unused += orphaned.length ? '<ul>' + sortBy(orphaned, n => cf(n.key)).map(n => '<li>' + esc(n.key) + '</li>').join('') + '</ul>' : '<p>No potentially unused measures were detected.</p>';
-    return '<h2 id="measure-lineage">Measure Lineage and Impact Analysis</h2><p>Lineage is derived from exact bracket references in parsed DAX and exact Table[Field] references in parsed report visuals. Review unresolved references before using the results for deletion decisions.</p>'
+    return '<h2 id="measure-lineage">Measure Lineage and Impact Analysis</h2><p>Lineage is derived from exact bracket references in parsed DAX and exact Table[Field] references in parsed report visuals. An unresolved reference is a [Name] that matches no measure or column in the model: the measure will fail, and it is listed as an Error under Model Validation.</p>'
       + cards + '<input id="lineage-filter" class="matrix-filter" type="search" placeholder="Filter measures or dependencies" oninput="filterLineage()"><div class="table-scroll"><table id="measure-lineage-table"><thead><tr><th>Table</th><th>Measure</th><th>Depends On</th><th>Used By</th><th>Visuals</th><th>Status</th></tr></thead><tbody>'
       + rows.join('') + '</tbody></table></div>' + cyc + unused + '<h3>Measure Details</h3>' + details.join('')
       + '<script>function filterLineage(){const q=document.getElementById("lineage-filter").value.toLowerCase();document.querySelectorAll("#measure-lineage-table tbody tr").forEach(row=>{row.style.display=row.innerText.toLowerCase().includes(q)?"":"none";});}<\/script>';
@@ -2241,7 +2248,7 @@ var MD = (function () {
       epCount.set(k, (epCount.get(k) || 0) + 1); if (!epLabel.has(k)) epLabel.set(k, relLabel(r));
       const nm = relLabel(r), d = relDetail(r);
       if (!r.is_active) add('Info', 'Relationships', nm, 'Relationship is inactive.' + d, 'Confirm that DAX intentionally activates this relationship when needed.');
-      if (cf(r.cross_filtering).includes('both')) add('Warning', 'Relationships', nm, 'Relationship uses bidirectional filtering.' + d, 'Review filter propagation and ambiguity risk; retain only when intentional.');
+      if (cf(r.cross_filtering).includes('both')) add('Error', 'Relationships', nm, 'Relationship uses bidirectional filtering.' + d, 'Filters flow both ways, which can give wrong totals and ambiguous paths. Set it to single direction, and use CROSSFILTER in a measure where one needs both ways.');
       if (cf(r.from_cardinality) === 'many' && cf(r.to_cardinality) === 'many') add('Warning', 'Relationships', nm, 'Relationship is many-to-many.' + d, 'Validate the grain and confirm that many-to-many behavior is required.');
     }
     for (const [k, c] of epCount) if (c > 1) add('Warning', 'Relationships', epLabel.get(k), c + ' relationship definitions use the same endpoints.', 'Review whether each duplicate-endpoint relationship is necessary.');
@@ -2347,7 +2354,7 @@ var MD = (function () {
     const visuals = project.pages.flatMap(p => p.visuals.filter(v => !v.is_group));
     const included = new Set(tables.map(t => t.name));
     const scoped = project.relationships.filter(r => included.has(r.from_table) && included.has(r.to_table));
-    const toc = ['<a href="#overview">Model Overview</a>', '<a href="#diagram">Relationship Diagram</a>', '<a href="#tables">Table Inventory</a>', '<a href="#measures">Measure Catalog</a>', '<a href="#measure-lineage">Measure Lineage</a>', '<a href="#relationships">Relationships</a>', '<a href="#relationship-matrix">Relationship Matrix</a>', '<a href="#source-inventory">Source Inventory</a>'];
+    const toc = ['<a href="#overview">Model Overview</a>', '<a href="#diagram">Relationship Diagram</a>', '<a href="#relationships">Relationships</a>', '<a href="#relationship-matrix">Relationship Matrix</a>', '<a href="#tables">Table Inventory</a>', '<a href="#measures">Measure Catalog</a>', '<a href="#measure-lineage">Measure Lineage</a>', '<a href="#source-inventory">Source Inventory</a>'];
     if (shown.validation) toc.push('<a href="#model-validation">Model Validation</a>');
     if (shown.report && project.pages.length) toc.push('<a href="#pages">Report Pages</a>', '<a href="#usage">Visual Usage</a>');
     const partCount = tables.reduce((s, t) => s + t.partitions.length, 0);
@@ -2358,6 +2365,8 @@ var MD = (function () {
     const cards = '<div class="grid">' + [[tables.length, 'Tables'], [colCount, 'Columns'], [measures.length, 'Measures'], [scoped.length, 'Relationships'], [project.pages.length, 'Pages'], [visuals.length, 'Visuals']].map(([v, l]) => '<div class="stat"><b>' + v + '</b><span>' + l + '</span></div>').join('') + '</div>';
     S.push('<h2 id="overview">Model Overview</h2>' + cards + '<table><tr><th>Property</th><th>Value</th></tr><tr><td>Compatibility Level</td><td>' + esc(project.compatibility_level) + '</td></tr><tr><td>Culture</td><td>' + esc(project.culture) + '</td></tr></table>');
     S.push('<h2 id="diagram">Relationship Diagram</h2>' + diagram(project, o.show_auto_date_tables, o.include_measures_tables));
+    S.push('<h2 id="relationships">Relationships</h2>' + scoped.map(r => '<div class="rel"><span>' + esc(r.from_table) + '[' + esc(r.from_column) + ']</span><b>→</b><span>' + esc(r.to_table) + '[' + esc(r.to_column) + ']</span><em>' + esc(r.from_cardinality) + ':' + esc(r.to_cardinality) + '</em><em>' + esc(r.cross_filtering) + '</em><em>' + (r.is_active ? 'Active' : 'Inactive') + '</em></div>').join(''));
+    S.push(relationshipMatrix(project, included));
     const th = [];
     for (const t of sortBy(tables, t => cf(t.name))) {
       const cols = t.columns.filter(c => o.include_hidden || !c.is_hidden);
@@ -2370,8 +2379,6 @@ var MD = (function () {
     S.push('<h2 id="measures">Measure Catalog</h2><table><tr><th>#</th><th>Measure</th><th>Table</th><th>Display Folder</th><th>Format</th></tr>' + measures.map(([t, m], i) => '<tr><td>' + (i + 1) + '</td><td>' + esc(m.name) + '</td><td>' + esc(t.name) + '</td><td>' + esc(m.display_folder) + '</td><td>' + esc(m.format_string) + '</td></tr>').join('') + '</table>');
     S.push(lineageHtml(project, tables));
     if (shown.validation) S.push(validationHtml(project, tables));
-    S.push('<h2 id="relationships">Relationships</h2>' + scoped.map(r => '<div class="rel"><span>' + esc(r.from_table) + '[' + esc(r.from_column) + ']</span><b>→</b><span>' + esc(r.to_table) + '[' + esc(r.to_column) + ']</span><em>' + esc(r.from_cardinality) + ':' + esc(r.to_cardinality) + '</em><em>' + esc(r.cross_filtering) + '</em><em>' + (r.is_active ? 'Active' : 'Inactive') + '</em></div>').join(''));
-    S.push(relationshipMatrix(project, included));
     S.push(sourceInventory(project, tables));
     if (shown.power_query && (hasM || project.expressions.length)) {
       const q = [];
@@ -2383,7 +2390,7 @@ var MD = (function () {
     const warnings = project.warnings.map(w => '<li>' + esc(w) + '</li>').join('');
     if (warnings) S.push('<h2 id="validation">Validation Notes</h2><ul>' + warnings + '</ul>');
     const [title, inc2] = documentationTitle(o, project);
-    const scope = 'Includes model overview, tables, measures, lineage, relationships, and sources' + (inc2.length ? ', plus ' + inc2.join(', ') : '') + '.';
+    const scope = 'Includes model overview, relationships, tables, measures, lineage, and sources' + (inc2.length ? ', plus ' + inc2.join(', ') : '') + '.';
     const date = opts.date || new Date().toISOString().slice(0, 10);
     const css = (opts.css || CSS) + (opts.extraCss || '');
     const footer = opts.footer || 'Generated locally by Local TMDL Documenter V2.';
