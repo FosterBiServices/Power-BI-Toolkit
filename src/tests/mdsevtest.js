@@ -1,6 +1,6 @@
 // Model Documenter: severities (inactive = Info, both directions = Error), unresolved references
 // (row-context columns, names an expression makes and [Value] resolve; a name that matches nothing is an Error),
-// and Relationships + Relationship Matrix right under the diagram.
+// Relationships + Relationship Matrix right under the diagram, and the Measure Catalog's search.
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(), p = await b.newPage(), errs = [];
@@ -26,7 +26,7 @@ const { chromium } = require('playwright');
       inactive: rows.filter(r => /inactive\./.test(r[3]) && /Relationship is inactive/.test(r[3])).map(r => r[0]),
       both: rows.filter(r => /bidirectional/.test(r[3])).map(r => r[0]),
       daxErr: rows.filter(r => r[1] === 'DAX Errors').map(r => r[0] + ' ' + r[2] + ': ' + r[3]),
-      unres, order: ids.slice(0, 5)
+      unres, order: ids.slice(0, 5), html
     };
   });
   console.log('inactive', r.inactive, '(expect Info)');
@@ -34,5 +34,13 @@ const { chromium } = require('playwright');
   console.log('DAX errors', r.daxErr, '(expect only Sales[Broken])');
   console.log('unresolved references', r.unres, '(expect 1)');
   console.log('section order', r.order.join(' > '), '(expect overview > diagram > relationships > relationship-matrix > tables)');
+  // the Measure Catalog's search: type part of a formula, the match shows with its formula open
+  const d = await b.newPage(); d.on('pageerror', e => errs.push('doc: ' + e.message));
+  await d.setContent(r.html); await d.fill('#measure-filter', 'addcolumns'); 
+  const vis = await d.$$eval('#measure-catalog tbody tr', rows => rows.filter(x => x.style.display !== 'none').map(x => x.cells[1].querySelector('summary').textContent + (x.querySelector('details').open ? ' (open)' : '')));
+  console.log('search "addcolumns"', vis, '(expect [ Made (open) ])');
+  await d.fill('#measure-filter', 'zzz'); console.log('no match note shown', await d.isVisible('#measure-none'), '(expect true)');
+  await d.setViewportSize({ width: 390, height: 800 }); await d.fill('#measure-filter', '');
+  console.log('390px hscroll', await d.evaluate(() => document.documentElement.scrollWidth > innerWidth), '(expect false)');
   console.log('errors', errs); await b.close();
 })();

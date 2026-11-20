@@ -404,7 +404,8 @@ Model Documenter's checks (Model Validation): an inactive relationship is Info, 
 choice). Measure Lineage's unresolved references follow `checkMeasure`: a bare [Name] resolves to any measure or column in the
 whole model (row context), a name the expression makes ("Total" in ADDCOLUMNS) or [Value]; only a name that matches nothing is
 unresolved, and that is also an Error under DAX Errors. The document puts Relationships and the Relationship Matrix right after
-the diagram. Check: `mdsevtest.js`.
+the diagram. The Measure Catalog has a search (name, table, folder, and the formula when DAX is included); with DAX each
+measure name opens its formula. At 600px and below the document's tables scroll on their own. Check: `mdsevtest.js`.
 
 Model Linter skips measures that return text (labels, SVG images, HTML) in the format string check: the export flags
 them, a PBIP folder's Image URL and Web URL measures are flagged by suite.js, and `ML.returnsText` reads the expression
